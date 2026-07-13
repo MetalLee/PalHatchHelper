@@ -1,7 +1,58 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(25);
+select plan(41);
+
+create temporary table test_lease_tokens (
+  name text primary key,
+  lease_token uuid not null
+) on commit drop;
+
+grant select, insert on test_lease_tokens to service_role;
+
+insert into public.breeding_jobs (
+  id,
+  requester_user_id,
+  world_id,
+  player_id,
+  guild_id,
+  target_pal_id,
+  desired_passive_ids,
+  optimization_mode,
+  inventory_snapshot_id,
+  breeding_data_version_id,
+  algorithm_version,
+  scoring_profile_version,
+  status,
+  request_fingerprint,
+  idempotency_key,
+  attempt_count,
+  max_attempts,
+  created_at,
+  updated_at
+)
+select
+  '60000000-0000-4000-8000-000000000004',
+  requester_user_id,
+  world_id,
+  player_id,
+  guild_id,
+  'test_max_attempt_target',
+  desired_passive_ids,
+  optimization_mode,
+  inventory_snapshot_id,
+  breeding_data_version_id,
+  algorithm_version,
+  scoring_profile_version,
+  'pending',
+  repeat('4', 64),
+  'fixture-max-attempt-job',
+  0,
+  1,
+  '2026-07-13T10:03:30Z',
+  '2026-07-13T10:03:30Z'
+from public.breeding_jobs
+where id = '60000000-0000-4000-8000-000000000001';
 
 insert into public.breeding_steps (
   id,
@@ -196,6 +247,11 @@ select throws_ok(
     select public.fail_breeding_job(
       '60000000-0000-4000-8000-000000000002',
       'fixture-seed-worker',
+      (
+        select lease_token
+          from public.breeding_jobs
+         where id = '60000000-0000-4000-8000-000000000002'
+      ),
       'unstable-error-code',
       true
     )
@@ -241,6 +297,16 @@ select is_empty(
   'a second Worker cannot claim the same job'
 );
 
+insert into test_lease_tokens (name, lease_token)
+select 'worker-a', lease_token
+  from public.breeding_jobs
+ where id = '60000000-0000-4000-8000-000000000001';
+
+insert into test_lease_tokens (name, lease_token)
+select 'worker-b', lease_token
+  from public.breeding_jobs
+ where id = '60000000-0000-4000-8000-000000000002';
+
 select matches(
   lower(
     pg_get_functiondef(
@@ -255,17 +321,25 @@ select lives_ok(
   $$
     select public.heartbeat_breeding_job(
       '60000000-0000-4000-8000-000000000001',
-      'fixture-worker-a'
+      'fixture-worker-a',
+      (select lease_token from test_lease_tokens where name = 'worker-a')
     )
   $$,
   'the lock owner can heartbeat its job'
+);
+
+select is(
+  public.release_stale_breeding_jobs(now() - interval '1 minute'),
+  0,
+  'jobs with a current heartbeat are not recovered as stale'
 );
 
 select throws_ok(
   $$
     select public.complete_breeding_job(
       '60000000-0000-4000-8000-000000000001',
-      'fixture-worker-b'
+      'fixture-worker-b',
+      (select lease_token from test_lease_tokens where name = 'worker-a')
     )
   $$,
   'P0001',
@@ -277,7 +351,8 @@ select lives_ok(
   $$
     select public.complete_breeding_job(
       '60000000-0000-4000-8000-000000000001',
-      'fixture-worker-a'
+      'fixture-worker-a',
+      (select lease_token from test_lease_tokens where name = 'worker-a')
     )
   $$,
   'the lock owner can complete the job idempotently'
@@ -287,7 +362,8 @@ select lives_ok(
   $$
     select public.complete_breeding_job(
       '60000000-0000-4000-8000-000000000001',
-      'fixture-worker-a'
+      'fixture-worker-a',
+      (select lease_token from test_lease_tokens where name = 'worker-a')
     )
   $$,
   'a retried completion call is idempotent'
@@ -297,11 +373,237 @@ select is(
   public.fail_breeding_job(
     '60000000-0000-4000-8000-000000000002',
     'fixture-worker-b',
+    (select lease_token from test_lease_tokens where name = 'worker-b'),
     'ALGORITHM_TIMEOUT',
     true
   ),
   'retry_pending'::public.breeding_job_status,
   'a retryable Worker failure releases the job for a later attempt'
+);
+
+select is(
+  (
+    select id
+      from public.claim_breeding_job('fixture-worker-shutdown')
+     limit 1
+  ),
+  '60000000-0000-4000-8000-000000000002'::uuid,
+  'the retry-pending job can be reclaimed before graceful shutdown'
+);
+
+select is(
+  public.release_breeding_job(
+    '60000000-0000-4000-8000-000000000002',
+    'fixture-worker-shutdown',
+    (
+      select lease_token
+        from public.breeding_jobs
+       where id = '60000000-0000-4000-8000-000000000002'
+    ),
+    'WORKER_SHUTDOWN'
+  ),
+  'retry_pending'::public.breeding_job_status,
+  'SIGTERM release returns the active lease to retry_pending'
+);
+
+select is(
+  (
+    select attempt_count
+      from public.breeding_jobs
+     where id = '60000000-0000-4000-8000-000000000002'
+  ),
+  2,
+  'graceful release does not consume the interrupted business attempt'
+);
+
+select is(
+  (
+    select id
+      from public.claim_breeding_job('fixture-worker-cancel')
+     limit 1
+  ),
+  '60000000-0000-4000-8000-000000000002'::uuid,
+  'the released job can be reclaimed for cancellation'
+);
+
+select ok(
+  public.cancel_breeding_job(
+    '60000000-0000-4000-8000-000000000002',
+    'fixture-worker-cancel',
+    (
+      select lease_token
+        from public.breeding_jobs
+       where id = '60000000-0000-4000-8000-000000000002'
+    ),
+    'JOB_CANCELLED'
+  ),
+  'the lease owner can cancel a claimed job'
+);
+
+select is(
+  (
+    select status
+      from public.breeding_jobs
+     where id = '60000000-0000-4000-8000-000000000002'
+  ),
+  'cancelled'::public.breeding_job_status,
+  'cancellation persists the terminal cancelled status'
+);
+
+select is(
+  (
+    select id
+      from public.claim_breeding_job('fixture-worker-final-attempt')
+     limit 1
+  ),
+  '60000000-0000-4000-8000-000000000004'::uuid,
+  'a one-attempt fixture is claimed for final-attempt coverage'
+);
+
+select is(
+  public.fail_breeding_job(
+    '60000000-0000-4000-8000-000000000004',
+    'fixture-worker-final-attempt',
+    (
+      select lease_token
+        from public.breeding_jobs
+       where id = '60000000-0000-4000-8000-000000000004'
+    ),
+    'HANDLER_FAILED',
+    true
+  ),
+  'failed'::public.breeding_job_status,
+  'a retryable error becomes failed after the maximum attempt is reached'
+);
+
+select is(
+  (
+    select status
+      from public.breeding_jobs
+     where id = '60000000-0000-4000-8000-000000000004'
+  ),
+  'failed'::public.breeding_job_status,
+  'the maximum-attempt failure is terminal'
+);
+
+reset role;
+
+insert into public.breeding_jobs (
+  id,
+  requester_user_id,
+  world_id,
+  player_id,
+  guild_id,
+  target_pal_id,
+  desired_passive_ids,
+  optimization_mode,
+  inventory_snapshot_id,
+  breeding_data_version_id,
+  algorithm_version,
+  scoring_profile_version,
+  status,
+  request_fingerprint,
+  idempotency_key,
+  attempt_count,
+  max_attempts,
+  created_at,
+  updated_at
+)
+select
+  '60000000-0000-4000-8000-000000000005',
+  requester_user_id,
+  world_id,
+  player_id,
+  guild_id,
+  'test_lease_fencing_target',
+  desired_passive_ids,
+  optimization_mode,
+  inventory_snapshot_id,
+  breeding_data_version_id,
+  algorithm_version,
+  scoring_profile_version,
+  'pending',
+  repeat('5', 64),
+  'fixture-lease-fencing-job',
+  0,
+  3,
+  '2026-07-13T10:04:00Z',
+  '2026-07-13T10:04:00Z'
+from public.breeding_jobs
+where id = '60000000-0000-4000-8000-000000000001';
+
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+set local role service_role;
+
+select is(
+  (
+    select id
+      from public.claim_breeding_job('fixture-fence-worker')
+     limit 1
+  ),
+  '60000000-0000-4000-8000-000000000005'::uuid,
+  'the fencing fixture is claimed with its first lease'
+);
+
+insert into test_lease_tokens (name, lease_token)
+select 'fence-old', lease_token
+  from public.breeding_jobs
+ where id = '60000000-0000-4000-8000-000000000005';
+
+select is(
+  public.release_breeding_job(
+    '60000000-0000-4000-8000-000000000005',
+    'fixture-fence-worker',
+    (select lease_token from test_lease_tokens where name = 'fence-old'),
+    'WORKER_SHUTDOWN'
+  ),
+  'retry_pending'::public.breeding_job_status,
+  'the first fencing lease is released'
+);
+
+select is(
+  (
+    select id
+      from public.claim_breeding_job('fixture-fence-worker')
+     limit 1
+  ),
+  '60000000-0000-4000-8000-000000000005'::uuid,
+  'the same Worker ID can receive a new lease after restart'
+);
+
+insert into test_lease_tokens (name, lease_token)
+select 'fence-new', lease_token
+  from public.breeding_jobs
+ where id = '60000000-0000-4000-8000-000000000005';
+
+select isnt(
+  (select lease_token from test_lease_tokens where name = 'fence-new'),
+  (select lease_token from test_lease_tokens where name = 'fence-old'),
+  'a reclaimed job receives a fresh fencing token'
+);
+
+select throws_ok(
+  $$
+    select public.complete_breeding_job(
+      '60000000-0000-4000-8000-000000000005',
+      'fixture-fence-worker',
+      (select lease_token from test_lease_tokens where name = 'fence-old')
+    )
+  $$,
+  'P0001',
+  'JOB_LOCK_NOT_OWNED',
+  'an old lease cannot complete a newer lease with the same Worker ID'
+);
+
+select lives_ok(
+  $$
+    select public.complete_breeding_job(
+      '60000000-0000-4000-8000-000000000005',
+      'fixture-fence-worker',
+      (select lease_token from test_lease_tokens where name = 'fence-new')
+    )
+  $$,
+  'the current fencing token can complete the job'
 );
 
 select lives_ok(

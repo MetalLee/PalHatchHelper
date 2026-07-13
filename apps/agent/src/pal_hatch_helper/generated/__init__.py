@@ -7,6 +7,7 @@ from pal_hatch_helper.generated.contracts import (
     PalGender,
     PalListItem,
     PalLocationType,
+    ReadinessStatus,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "PalGender",
     "PalListItem",
     "PalLocationType",
+    "ReadinessStatus",
 ]

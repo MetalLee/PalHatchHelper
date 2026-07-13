@@ -26,4 +26,4 @@ EXPOSE 18765
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18765/healthz', timeout=2)"]
 
-CMD ["uvicorn", "pal_hatch_helper.main:app", "--host", "0.0.0.0", "--port", "18765"]
+CMD ["pal-hatch-helper", "api", "--host", "0.0.0.0", "--port", "18765"]

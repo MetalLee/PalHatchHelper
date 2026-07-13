@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(30);
+select plan(33);
 
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'player_bindings', 'player_bindings exists');
@@ -16,6 +16,12 @@ select has_table('public', 'breeding_data_versions', 'breeding_data_versions exi
 select has_table('public', 'breeding_recipes', 'breeding_recipes exists');
 select has_table('public', 'scoring_profiles', 'scoring_profiles exists');
 select has_table('public', 'breeding_jobs', 'breeding_jobs exists');
+select has_column(
+  'public',
+  'breeding_jobs',
+  'lease_token',
+  'breeding job leases have a fencing token'
+);
 select has_table('public', 'breeding_plans', 'breeding_plans exists');
 select has_table('public', 'breeding_routes', 'breeding_routes exists');
 select has_table('public', 'breeding_steps', 'breeding_steps exists');
@@ -34,6 +40,28 @@ select col_type_is(
   'status',
   'breeding_job_status',
   'job status uses a database enum'
+);
+
+select throws_ok(
+  $$
+    update public.breeding_jobs
+       set lease_token = null
+     where id = '60000000-0000-4000-8000-000000000002'
+  $$,
+  '23514',
+  null,
+  'an active job cannot lose its lease fencing token'
+);
+
+select throws_ok(
+  $$
+    update public.breeding_jobs
+       set lease_token = '70000000-0000-4000-8000-000000000099'
+     where id = '60000000-0000-4000-8000-000000000003'
+  $$,
+  '23514',
+  null,
+  'a terminal job cannot retain an active lease fencing token'
 );
 select col_type_is(
   'public',

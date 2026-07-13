@@ -32,6 +32,8 @@ describe("readiness-status contract", () => {
       service: "agent",
       version: "0.0.0",
       timestamp: "2026-07-13T00:00:00.000Z",
+      database_configured: true,
+      job_worker_configured: true,
     };
 
     expect(validate({ ...baseStatus, status: "ready", error_code: null })).toBe(

@@ -13,7 +13,7 @@
 
 ```bash
 docker compose --env-file infra/agent/.env.example -f infra/agent/docker-compose.yml config
-docker build -f apps/agent/Dockerfile -t palhatch-agent:phase0 apps/agent
+docker build -f apps/agent/Dockerfile -t palhatch-agent:phase2 apps/agent
 ```
 
-不要在 Phase 0 执行 `docker compose up`，也不要把本模板复制到 `/opt/services/palworld-manager`。
+同一镜像保留 `api`、`job-worker`、`save-worker` 三种命令。当前 Compose 只声明 API 健康进程；Phase 2 尚无真实配种 Handler，`job-worker` 默认拒绝领取，`save-worker` 只保留 Phase 3 边界。不要把本模板复制到 `/opt/services/palworld-manager`，也不要执行生产部署。

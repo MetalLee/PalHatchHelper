@@ -9,4 +9,6 @@ export interface ReadinessStatus {
   version: string;
   timestamp: string;
   error_code: string | null;
+  database_configured: boolean;
+  job_worker_configured: boolean;
 }

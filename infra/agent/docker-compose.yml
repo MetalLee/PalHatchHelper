@@ -3,7 +3,8 @@ services:
     build:
       context: ../../apps/agent
       dockerfile: Dockerfile
-    image: palhatch-agent:phase0
+    image: palhatch-agent:phase2
+    command: ["pal-hatch-helper", "api", "--host", "0.0.0.0", "--port", "18765"]
     restart: unless-stopped
     init: true
     ports:
@@ -12,6 +13,14 @@ services:
       APP_ENV: ${APP_ENV:-development}
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      WORKER_ID: ${WORKER_ID:-palhatch-agent-local}
+      JOB_POLL_INTERVAL_SECONDS: ${JOB_POLL_INTERVAL_SECONDS:-2}
+      JOB_HEARTBEAT_INTERVAL_SECONDS: ${JOB_HEARTBEAT_INTERVAL_SECONDS:-10}
+      JOB_LEASE_TIMEOUT_SECONDS: ${JOB_LEASE_TIMEOUT_SECONDS:-30}
+      JOB_LEASE_SAFETY_MARGIN_SECONDS: ${JOB_LEASE_SAFETY_MARGIN_SECONDS:-5}
+      JOB_STALE_REAP_INTERVAL_SECONDS: ${JOB_STALE_REAP_INTERVAL_SECONDS:-15}
+      JOB_SHUTDOWN_GRACE_SECONDS: ${JOB_SHUTDOWN_GRACE_SECONDS:-30}
+      DATABASE_REQUEST_TIMEOUT_SECONDS: ${DATABASE_REQUEST_TIMEOUT_SECONDS:-10}
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777

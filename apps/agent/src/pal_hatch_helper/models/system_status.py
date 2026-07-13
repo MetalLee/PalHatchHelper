@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from pal_hatch_helper.generated.contracts import ReadinessStatus
 
 
 class ServiceStatus(StrEnum):
@@ -29,6 +30,4 @@ class SystemStatus(BaseModel):
         )
 
 
-class ReadinessStatus(SystemStatus):
-    status: Literal[ServiceStatus.READY, ServiceStatus.NOT_READY]
-    error_code: str | None = None
+__all__ = ["ReadinessStatus", "ServiceStatus", "SystemStatus"]

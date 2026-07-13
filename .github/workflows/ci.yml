@@ -51,10 +51,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.28"
+          enable-cache: true
+          cache-dependency-glob: apps/agent/uv.lock
       - uses: supabase/setup-cli@v1
         with:
           version: 2.109.1
       - run: pnpm install --frozen-lockfile
+      - run: uv python install 3.12
+      - run: uv sync --frozen --dev
+        working-directory: apps/agent
       - run: supabase start
       - run: supabase db reset
       - run: supabase db lint
@@ -62,6 +70,13 @@ jobs:
       - run: DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres' pnpm database:test:concurrency
       - run: DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres' pnpm database:types
       - run: git diff --exit-code -- packages/contracts/src/database.types.ts
+      - name: Run Agent lifecycle against local Supabase
+        run: |
+          eval "$(supabase status -o env)"
+          export TEST_SUPABASE_URL="$API_URL"
+          export TEST_SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+          cd apps/agent
+          uv run pytest -m integration
 
   agent:
     name: Python Agent

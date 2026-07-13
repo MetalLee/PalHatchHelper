@@ -1,7 +1,7 @@
 """Generated from packages/contracts/schema. Do not edit directly."""
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field
@@ -44,6 +44,18 @@ class PalLocationType(StrEnum):
     BASE = "base"
     VIEWING_CAGE = "viewing_cage"
     UNKNOWN = "unknown"
+
+
+class ReadinessStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["ready", "not_ready"]
+    service: Annotated[str, Field(min_length=1)]
+    version: Annotated[str, Field(min_length=1)]
+    timestamp: AwareDatetime
+    error_code: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*$")] | None
+    database_configured: bool
+    job_worker_configured: bool
 
 
 class BreedingJob(BaseModel):

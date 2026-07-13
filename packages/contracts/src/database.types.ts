@@ -121,6 +121,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
           completed_at: string | null;
+          lease_token: string | null;
         };
         Insert: {
           id?: string;
@@ -148,6 +149,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           completed_at?: string | null;
+          lease_token?: string | null;
         };
         Update: {
           id?: string;
@@ -175,6 +177,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           completed_at?: string | null;
+          lease_token?: string | null;
         };
         Relationships: [
           {
@@ -917,6 +920,15 @@ export type Database = {
         };
         Returns: boolean;
       };
+      cancel_breeding_job: {
+        Args: {
+          p_job_id: string;
+          p_worker_id: string;
+          p_lease_token: string;
+          p_error_code?: string;
+        };
+        Returns: boolean;
+      };
       claim_breeding_job: {
         Args: {
           p_worker_id: string;
@@ -927,6 +939,7 @@ export type Database = {
         Args: {
           p_job_id: string;
           p_worker_id: string;
+          p_lease_token: string;
         };
         Returns: boolean;
       };
@@ -959,6 +972,7 @@ export type Database = {
         Args: {
           p_job_id: string;
           p_worker_id: string;
+          p_lease_token: string;
           p_error_code: string;
           p_retryable: boolean;
           p_error_summary?: string | null;
@@ -969,6 +983,7 @@ export type Database = {
         Args: {
           p_job_id: string;
           p_worker_id: string;
+          p_lease_token: string;
         };
         Returns: boolean;
       };
@@ -995,6 +1010,15 @@ export type Database = {
           share_enabled: boolean;
           is_owned_by_requester: boolean;
         }[];
+      };
+      release_breeding_job: {
+        Args: {
+          p_job_id: string;
+          p_worker_id: string;
+          p_lease_token: string;
+          p_error_code?: string;
+        };
+        Returns: Database["public"]["Enums"]["breeding_job_status"];
       };
       release_stale_breeding_jobs: {
         Args: {

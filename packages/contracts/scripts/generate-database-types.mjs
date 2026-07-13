@@ -95,6 +95,7 @@ const functions = await sql`
       'admin_bind_player',
       'admin_publish_breeding_version',
       'admin_unbind_player',
+      'cancel_breeding_job',
       'claim_breeding_job',
       'complete_breeding_job',
       'confirm_step_offspring',
@@ -105,6 +106,7 @@ const functions = await sql`
       'heartbeat_breeding_job',
       'is_admin',
       'list_available_pals',
+      'release_breeding_job',
       'release_stale_breeding_jobs',
       'set_pal_share_enabled',
       'update_breeding_step_status'

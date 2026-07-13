@@ -17,7 +17,7 @@ const contracts = [
   "breeding-job",
   "pal-list-item",
 ];
-const pythonContracts = ["breeding-job", "pal-list-item"];
+const pythonContracts = ["readiness-status", "breeding-job", "pal-list-item"];
 
 await mkdir(outputDirectory, { recursive: true });
 for (const contract of contracts) {

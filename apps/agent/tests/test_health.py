@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 
 from pal_hatch_helper.main import create_app
 from pal_hatch_helper.settings import Settings
@@ -40,6 +40,8 @@ def test_development_is_ready_without_supabase() -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ready"
+    assert response.json()["database_configured"] is False
+    assert response.json()["job_worker_configured"] is False
     assert_readiness_contract(response.json())
 
 
@@ -51,4 +53,27 @@ def test_production_is_not_ready_without_supabase() -> None:
     assert response.status_code == 503
     assert response.json()["status"] == "not_ready"
     assert response.json()["error_code"] == "configuration_invalid"
+    assert response.json()["database_configured"] is False
+    assert response.json()["job_worker_configured"] is False
+    assert_readiness_contract(response.json())
+
+
+def test_health_readiness_reports_worker_basic_configuration_without_secrets() -> None:
+    service_role = "fixture-service-role-secret-that-must-not-leak"
+    client = TestClient(
+        create_app(
+            Settings(
+                app_env="production",
+                supabase_url="https://example.supabase.co",
+                supabase_service_role_key=service_role,
+            )
+        )
+    )
+
+    response = client.get("/readyz")
+
+    assert response.status_code == 200
+    assert response.json()["database_configured"] is True
+    assert response.json()["job_worker_configured"] is True
+    assert service_role not in response.text
     assert_readiness_contract(response.json())

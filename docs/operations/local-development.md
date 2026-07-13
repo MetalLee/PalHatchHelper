@@ -11,7 +11,7 @@ uv sync --frozen --dev
 cd ../..
 ```
 
-Web/Agent 骨架开发允许不配置 Supabase：`APP_ENV=development` 时 Agent readiness 只验证基础配置。Phase 1 数据库开发必须使用 Supabase CLI 本地实例，步骤见 `supabase-local-development.md`。生产模式要求有效的 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY`，否则返回 HTTP 503；本阶段不连接生产。
+Web/Agent 本地开发允许不配置 Supabase：`APP_ENV=development` 时 Agent readiness 只验证基础配置。Phase 1/2 数据库与 Worker 集成开发必须使用 Supabase CLI 本地实例，步骤见 `supabase-local-development.md`。生产模式要求有效的 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY`，否则返回 HTTP 503；本阶段不连接生产。
 
 ## Web
 

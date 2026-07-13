@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 
 from pal_hatch_helper.models.system_status import (
     ReadinessStatus,
@@ -38,6 +38,8 @@ def test_readiness_status_matches_shared_json_schema() -> None:
         version="0.0.0",
         timestamp=datetime.now(UTC),
         error_code="configuration_invalid",
+        database_configured=False,
+        job_worker_configured=False,
     )
     schema_path = (
         Path(__file__).parents[3]

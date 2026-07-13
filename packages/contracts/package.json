@@ -10,7 +10,7 @@
     "generate": "node scripts/generate.mjs",
     "generate:database": "node scripts/generate-database-types.mjs && prettier --write src/database.types.ts",
     "test:database-concurrency": "node scripts/test-job-claim-concurrency.mjs",
-    "check:generated": "pnpm generate && git diff --exit-code -- src/generated ../../apps/agent/src/pal_hatch_helper/generated",
+    "check:generated": "node scripts/check-generated.mjs",
     "lint": "eslint src tests scripts --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

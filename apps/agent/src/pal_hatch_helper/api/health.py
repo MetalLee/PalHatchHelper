@@ -28,6 +28,8 @@ def build_health_router(settings: Settings) -> APIRouter:
                     version=__version__,
                 ).model_dump(),
                 error_code="configuration_invalid",
+                database_configured=settings.database_configured,
+                job_worker_configured=settings.job_worker_configured,
             )
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -39,6 +41,9 @@ def build_health_router(settings: Settings) -> APIRouter:
                 service="agent",
                 version=__version__,
             ).model_dump(),
+            error_code=None,
+            database_configured=settings.database_configured,
+            job_worker_configured=settings.job_worker_configured,
         )
 
     return router

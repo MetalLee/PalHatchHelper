@@ -5,7 +5,15 @@
   "description": "Language-neutral readiness status returned by the private Agent.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["status", "service", "version", "timestamp", "error_code"],
+  "required": [
+    "status",
+    "service",
+    "version",
+    "timestamp",
+    "error_code",
+    "database_configured",
+    "job_worker_configured"
+  ],
   "properties": {
     "status": {
       "type": "string",
@@ -26,6 +34,8 @@
     "error_code": {
       "type": ["string", "null"],
       "pattern": "^[a-z][a-z0-9_]*$"
-    }
+    },
+    "database_configured": { "type": "boolean" },
+    "job_worker_configured": { "type": "boolean" }
   }
 }

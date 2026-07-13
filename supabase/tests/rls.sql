@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(16);
+select plan(18);
 
 select set_config(
   'request.jwt.claims',
@@ -116,6 +116,34 @@ select throws_ok(
   '42501',
   'permission denied for function claim_breeding_job',
   'authenticated users cannot execute Agent RPCs'
+);
+
+select throws_ok(
+  $$
+    select public.release_breeding_job(
+      '60000000-0000-4000-8000-000000000002',
+      'browser-worker',
+      '70000000-0000-4000-8000-000000000099',
+      'WORKER_SHUTDOWN'
+    )
+  $$,
+  '42501',
+  'permission denied for function release_breeding_job',
+  'authenticated users cannot release Agent job leases'
+);
+
+select throws_ok(
+  $$
+    select public.cancel_breeding_job(
+      '60000000-0000-4000-8000-000000000002',
+      'browser-worker',
+      '70000000-0000-4000-8000-000000000099',
+      'JOB_CANCELLED'
+    )
+  $$,
+  '42501',
+  'permission denied for function cancel_breeding_job',
+  'authenticated users cannot cancel jobs through Agent RPCs'
 );
 
 reset role;
