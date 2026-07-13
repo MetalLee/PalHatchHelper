@@ -9,6 +9,25 @@ pnpm check
 
 `pnpm check` 依次检查 Prettier/Ruff 格式、ESLint/Ruff、TypeScript/mypy、Vitest/pytest、Next.js 构建、目录结构和常见秘密模式。
 
+## Phase 1 数据库与契约
+
+Docker 和 Supabase CLI 可用时执行：
+
+```bash
+supabase start
+supabase db reset
+supabase db lint
+supabase test db
+DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres' pnpm database:test:concurrency
+pnpm contracts:generate
+supabase gen types typescript --local --schema public > packages/contracts/src/database.types.ts
+pnpm exec prettier --write packages/contracts/src/database.types.ts
+pnpm typecheck
+pnpm test
+```
+
+数据库类型也可通过只接受回环地址的 `DATABASE_URL=... pnpm database:types` 生成。生成文件必须纳入 diff 审查，不能手工复制两套 DTO。
+
 ## Agent 明细
 
 ```bash

@@ -1,5 +1,14 @@
-# Supabase 本地骨架
+# Supabase 本地开发
 
-此目录只提供本地 Supabase CLI 配置和后续文件边界。Phase 0 不创建远程项目、不连接生产实例、不包含 Service Role，也不声称业务表或 RLS 已完成。
+此目录包含 Phase 1 的可重放迁移、确定性本地 Seed 和 pgTAP 权限/RPC 测试。它只面向 Supabase CLI 本地实例，不包含远程项目引用、Service Role Key 或生产数据。
 
-Phase 1 将通过可重放迁移实现业务表、RLS、RPC、权限测试和共享契约。所有数据库测试使用本地实例或明确隔离的测试项目。
+从仓库根目录执行：
+
+```bash
+supabase start
+supabase db reset
+supabase db lint
+supabase test db
+```
+
+详细身份矩阵、安全边界和类型生成见 `docs/operations/supabase-local-development.md`。

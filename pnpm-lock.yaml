@@ -19,7 +19,7 @@ importers:
         version: link:../../packages/ui
       next:
         specifier: 15.5.20
-        version: 15.5.20(@babel/core@7.29.7)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+        version: 15.5.20(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react:
         specifier: 19.1.1
         version: 19.1.1
@@ -81,6 +81,9 @@ importers:
       json-schema-to-typescript:
         specifier: 15.0.4
         version: 15.0.4
+      postgres:
+        specifier: 3.4.7
+        version: 3.4.7
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -2440,6 +2443,10 @@ packages:
   postcss@8.5.18:
     resolution: {integrity: sha512-xdB1oSLHbz1vRWgCDalrCqEFTWzFlhqFC5tIHLMOSUIjhm3XXQ1qrFy8S/ESr1JYRRXqM3c1QFiMZUJdUTqyMQ==}
     engines: {node: ^10 || ^12 || >=14}
+
+  postgres@3.4.7:
+    resolution: {integrity: sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw==}
+    engines: {node: '>=12'}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -5194,7 +5201,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@15.5.20(@babel/core@7.29.7)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+  next@15.5.20(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       '@next/env': 15.5.20
       '@swc/helpers': 0.5.15
@@ -5202,7 +5209,7 @@ snapshots:
       postcss: 8.4.31
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
-      styled-jsx: 5.1.6(@babel/core@7.29.7)(react@19.1.1)
+      styled-jsx: 5.1.6(react@19.1.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.5.20
       '@next/swc-darwin-x64': 15.5.20
@@ -5328,6 +5335,8 @@ snapshots:
       nanoid: 3.3.16
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  postgres@3.4.7: {}
 
   prelude-ls@1.2.1: {}
 
@@ -5629,12 +5638,10 @@ snapshots:
     dependencies:
       js-tokens: 9.0.1
 
-  styled-jsx@5.1.6(@babel/core@7.29.7)(react@19.1.1):
+  styled-jsx@5.1.6(react@19.1.1):
     dependencies:
       client-only: 0.0.1
       react: 19.1.1
-    optionalDependencies:
-      '@babel/core': 7.29.7
 
   supports-color@7.2.0:
     dependencies:

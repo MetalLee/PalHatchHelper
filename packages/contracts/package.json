@@ -8,7 +8,9 @@
   },
   "scripts": {
     "generate": "node scripts/generate.mjs",
-    "check:generated": "pnpm generate && git diff --exit-code -- src/generated",
+    "generate:database": "node scripts/generate-database-types.mjs && prettier --write src/database.types.ts",
+    "test:database-concurrency": "node scripts/test-job-claim-concurrency.mjs",
+    "check:generated": "pnpm generate && git diff --exit-code -- src/generated ../../apps/agent/src/pal_hatch_helper/generated",
     "lint": "eslint src tests scripts --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -19,6 +21,7 @@
     "ajv-formats": "3.0.1",
     "eslint": "9.38.0",
     "json-schema-to-typescript": "15.0.4",
+    "postgres": "3.4.7",
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.2",
     "vitest": "3.2.4"

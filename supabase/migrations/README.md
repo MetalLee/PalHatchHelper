@@ -1,3 +1,5 @@
 # 迁移规范
 
-Phase 0 不包含业务迁移。Phase 1 的 SQL 文件按 UTC 时间戳命名，已应用迁移不得修改，只能追加向前迁移或补偿迁移。每个安全定义函数必须固定 `search_path`，每张业务表必须在同阶段明确 RLS 策略和权限测试。
+SQL 文件按 UTC 时间戳命名并按身份/库存、配种数据、任务结果、RLS、RPC 的依赖顺序执行。已应用迁移不得修改，只能追加向前迁移或补偿迁移。
+
+每个 `SECURITY DEFINER` 函数必须固定 `search_path`、显式 revoke/grant 并具有负向权限测试。每张业务表必须在同阶段明确 RLS 和表级授权。完整规则与回滚顺序见 `docs/operations/database-migrations.md`。

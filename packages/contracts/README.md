@@ -1,5 +1,5 @@
 # @palhatch/contracts
 
-`schema/` 是跨语言契约的规范源。运行 `pnpm --filter @palhatch/contracts generate` 从健康与 readiness Schema 生成 TypeScript 类型，测试使用 Ajv 验证运行时数据。CI 在生成后检查 `src/generated` 的 Git 差异，禁止提交过期生成文件。
+`schema/` 是跨语言业务契约的规范源。运行 `pnpm contracts:generate` 从 JSON Schema 同时生成 `src/generated` 的 TypeScript 类型和 Agent `generated/contracts.py` 的 Pydantic 模型。测试使用 Ajv 与 Pydantic 验证同一边界，CI 检查两端生成差异。
 
-Python 在 Phase 0 用 `jsonschema` 验证 Pydantic `SystemStatus` 的序列化结果。Phase 1 将接入同一 Schema 到 Pydantic 的生成脚本，并让 CI 在生成后执行 `git diff --exit-code`，从而禁止手工维护不一致 DTO。
+`src/database.types.ts` 来自本地数据库 catalog。标准 Supabase 环境可使用官方 CLI 生成；仓库的 `pnpm database:types` 提供强制回环地址的可复现生成器，拒绝远程数据库 URL。生成后必须执行 TypeScript typecheck 和 Git 差异检查。

@@ -33,9 +33,35 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm --filter @palhatch/contracts generate
-      - run: git diff --exit-code -- packages/contracts/src/generated
+      - run: pnpm contracts:generate
+      - run: git diff --exit-code -- packages/contracts/src/generated apps/agent/src/pal_hatch_helper/generated
       - run: pnpm build
+
+  database:
+    name: Local Supabase database
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: pnpm install --frozen-lockfile
+      - run: supabase start
+      - run: supabase db reset
+      - run: supabase db lint
+      - run: supabase test db
+      - run: DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres' pnpm database:test:concurrency
+      - run: DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:54322/postgres' pnpm database:types
+      - run: git diff --exit-code -- packages/contracts/src/database.types.ts
 
   agent:
     name: Python Agent

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/breeding-job.schema.json",
+  "title": "BreedingJob",
+  "description": "Player-visible breeding job with database-fixed input versions.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "OptimizationMode": {
+      "type": "string",
+      "enum": ["balanced", "fastest", "highest_success", "least_borrowing"]
+    },
+    "BreedingJobStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "algorithm_completed",
+        "ai_enriching",
+        "retry_pending",
+        "completed",
+        "failed",
+        "cancelled"
+      ]
+    }
+  },
+  "required": [
+    "job_id",
+    "requester_user_id",
+    "player_id",
+    "guild_id",
+    "target_pal_id",
+    "desired_passive_ids",
+    "optimization_mode",
+    "inventory_snapshot_id",
+    "breeding_data_version_id",
+    "algorithm_version",
+    "scoring_profile_version",
+    "status",
+    "attempt_count",
+    "error_code",
+    "created_at",
+    "completed_at"
+  ],
+  "properties": {
+    "job_id": { "type": "string", "format": "uuid" },
+    "requester_user_id": { "type": "string", "format": "uuid" },
+    "player_id": { "type": "string", "format": "uuid" },
+    "guild_id": { "type": ["string", "null"], "format": "uuid" },
+    "target_pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "desired_passive_ids": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+    },
+    "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+    "inventory_snapshot_id": { "type": "string", "format": "uuid" },
+    "breeding_data_version_id": { "type": "string", "format": "uuid" },
+    "algorithm_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "scoring_profile_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "status": { "$ref": "#/$defs/BreedingJobStatus" },
+    "attempt_count": { "type": "integer", "minimum": 0 },
+    "error_code": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "maxLength": 100
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

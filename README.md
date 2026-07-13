@@ -1,6 +1,6 @@
 # PalHatchHelper
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库处于 Phase 0：提供可运行的 Next.js 前端、私有 FastAPI Agent、共享契约示例、单仓验证入口和 CI，不连接真实 Supabase，不读取真实存档，也不实现配种算法。
+PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库已进入 Phase 1：在 Phase 0 单仓基线上提供本地 Supabase 数据模型、RLS、RPC、确定性 Seed 和跨语言共享契约。它不连接生产 Supabase，不读取真实存档，不运行 Agent Worker，也不实现配种算法。
 
 ## 前置工具
 
@@ -9,6 +9,7 @@ PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库处�
 - Python 3.12
 - [uv](https://docs.astral.sh/uv/)
 - Docker（只在本地构建或检查 Agent 镜像时需要）
+- Supabase CLI（只连接本地开发实例）
 
 ## 从零开始
 
@@ -65,6 +66,8 @@ uv run pytest
 ```
 
 更多命令见 [本地开发](docs/operations/local-development.md) 和 [验证手册](docs/operations/verification.md)。
+
+本地数据库重建与权限测试见 [Supabase 本地开发](docs/operations/supabase-local-development.md)。
 
 ## 安全边界
 
