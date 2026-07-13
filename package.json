@@ -1,0 +1,25 @@
+{
+  "name": "pal-hatch-helper",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=9.15.0 <10"
+  },
+  "scripts": {
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write . && cd apps/agent && uv run ruff format .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "check:structure": "node scripts/check-structure.mjs",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "check:agent": "cd apps/agent && uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:agent && pnpm check:structure && pnpm scan:secrets"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@palhatch/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "check:generated": "pnpm generate && git diff --exit-code -- src/generated",
+    "lint": "eslint src tests scripts --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "pnpm generate && tsc --noEmit"
+  },
+  "devDependencies": {
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1",
+    "eslint": "9.38.0",
+    "json-schema-to-typescript": "15.0.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.2",
+    "vitest": "3.2.4"
+  }
+}

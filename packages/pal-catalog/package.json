@@ -1,0 +1,21 @@
+{
+  "name": "@palhatch/pal-catalog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src tests --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "eslint": "9.38.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.2",
+    "vitest": "3.2.4"
+  }
+}

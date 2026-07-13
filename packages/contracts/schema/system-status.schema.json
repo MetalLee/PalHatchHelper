@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/system-status.schema.json",
+  "title": "SystemStatus",
+  "description": "Language-neutral health status shared by Web and Agent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "service", "version", "timestamp"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ok", "ready", "not_ready"]
+    },
+    "service": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
