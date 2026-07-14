@@ -34,6 +34,8 @@ git diff --stat
 6. `20260714010000_phase2_worker_lifecycle.sql`：Phase 2 Worker fencing token 与恢复生命周期。
 7. `20260714020000_versioned_game_catalog.sql`：Phase 2.5 统一游戏数据、目录投影、批次导入、发布/回滚、RLS 与私有制品 Bucket。
 8. `20260714030000_phase3_inventory_sync.sql` 至 `20260714032000_phase3_inventory_hardening.sql`：Phase 3 库存原子发布、目录 lookup、失败元数据、service-role JWT 双重校验与乱序水位。
+9. `20260714040000_phase4a_breeding_data_diff.sql`：Phase 4 配种事实差异审查。
+10. `20260715010000_phase4_review_hardening.sql`：Phase 4 评审 BLOCKER/HIGH 修复，包括 v2 评分注册表、受审计来源、精确运行事实 RPC、稳定 ID/目录成员约束和统一目录发布门禁。
 
 Phase 2.5 迁移保留并镜像旧 `breeding_data_*`，优先复用 UUID，回填 world/job 新指针。空库 reset 时 seed 发生在迁移之后，因此兼容触发器也必须覆盖 seed 和旧代码的后续写入。验证升级时同时断言回填行数和历史任务版本不变。
 

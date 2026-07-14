@@ -40,6 +40,25 @@ def test_catalog_diff_requires_two_explicit_versions() -> None:
     assert arguments.catalog_command == "diff"
 
 
+def test_catalog_prepare_breeding_source_binds_source_and_base_versions() -> None:
+    arguments = build_parser().parse_args(
+        [
+            "catalog",
+            "prepare-breeding-source",
+            "--source-id",
+            "74000000-0000-4000-8000-000000000001",
+            "--source-version",
+            "fixture-release-v1",
+            "--base-version-id",
+            "73000000-0000-4000-8000-000000000001",
+        ]
+    )
+
+    assert arguments.catalog_command == "prepare-breeding-source"
+    assert str(arguments.source_id) == "74000000-0000-4000-8000-000000000001"
+    assert str(arguments.base_version_id) == "73000000-0000-4000-8000-000000000001"
+
+
 def test_catalog_validate_succeeds_without_supabase_configuration(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

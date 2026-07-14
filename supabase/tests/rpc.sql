@@ -106,7 +106,7 @@ set local role authenticated;
 
 select *
   from public.create_breeding_job(
-    'rpc_target_pal',
+    'test_child_pal',
     array['test_passive_b', 'test_passive_a'],
     'balanced',
     'rpc-create-fixed-versions'
@@ -136,7 +136,7 @@ select ok(
   (
     select reused
       from public.create_breeding_job(
-        'rpc_target_pal',
+        'test_child_pal',
         array['test_passive_b', 'test_passive_a'],
         'balanced',
         'rpc-create-fixed-versions'
@@ -149,7 +149,7 @@ select throws_ok(
   $$
     select *
       from public.create_breeding_job(
-        'different_rpc_target_pal',
+        'test_special_child',
         array['test_passive_a', 'test_passive_b'],
         'balanced',
         'rpc-create-fixed-versions'
@@ -174,7 +174,7 @@ select throws_ok(
   $$
     select *
       from public.create_breeding_job(
-        'rpc_target_pal',
+        'test_child_pal',
         array['a', 'b', 'c', 'd', 'e'],
         'balanced',
         'too-many-passives'

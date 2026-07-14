@@ -1,5 +1,6 @@
 /* Generated from breeding-job.schema.json. Do not edit directly. */
 
+export type StableId = string;
 export type OptimizationMode = "balanced" | "fastest" | "highest_success" | "least_borrowing";
 export type BreedingJobStatus =
   | "pending"
@@ -17,14 +18,20 @@ export type BreedingJobStatus =
 export interface BreedingJob {
   job_id: string;
   requester_user_id: string;
+  world_id: string;
   player_id: string;
   guild_id: string | null;
-  target_pal_id: string;
+  target_pal_id: StableId;
   /**
    * @minItems 0
    * @maxItems 4
    */
-  desired_passive_ids: [] | [string] | [string, string] | [string, string, string] | [string, string, string, string];
+  desired_passive_ids:
+    | []
+    | [StableId]
+    | [StableId, StableId]
+    | [StableId, StableId, StableId]
+    | [StableId, StableId, StableId, StableId];
   optimization_mode: OptimizationMode;
   inventory_snapshot_id: string;
   game_data_version_id: string;

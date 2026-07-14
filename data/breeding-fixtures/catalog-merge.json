@@ -1,4 +1,7 @@
 {
+  "base_content_hash": "80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4",
+  "game_build_id": "fixture-build",
+  "game_version": "fixture-version",
   "recipes": [
     {
       "child_pal_id": "fixture-pal-c",

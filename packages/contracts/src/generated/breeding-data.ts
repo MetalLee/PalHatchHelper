@@ -1,9 +1,9 @@
 /* Generated from breeding-data.schema.json. Do not edit directly. */
 
 export type BreedingSourceVersion = string;
+export type BreedingSha256 = string;
 export type BreedingStableId = string;
 export type BreedingRecipeType = "normal" | "special";
-export type BreedingSha256 = string;
 
 export interface BreedingRecipeSourceDocumentContracts {
   BreedingRecipeSourceDocument: BreedingRecipeSourceDocument;
@@ -22,6 +22,9 @@ export interface BreedingRecipeSourceDocumentContracts {
  */
 export interface BreedingRecipeSourceDocument {
   source_version: BreedingSourceVersion;
+  base_content_hash: BreedingSha256;
+  game_build_id: BreedingSourceVersion;
+  game_version: BreedingSourceVersion;
   recipes: BreedingRecipeSourceRecord[];
 }
 export interface BreedingRecipeSourceRecord {
@@ -38,6 +41,7 @@ export interface BreedingMetadata {
   [k: string]: unknown;
 }
 export interface StagedBreedingSourceMetadata {
+  source_id: string;
   source_type: "github" | "url" | "upload";
   source_name: string;
   source_version: BreedingSourceVersion;

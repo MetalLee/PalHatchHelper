@@ -1,6 +1,27 @@
 export type { Database, Json } from "./database.types";
 export type { BreedingJob } from "./generated/breeding-job";
 export type {
+  BreedingDifficulty,
+  BreedingEngineInventoryPal,
+  BreedingEngineRequest,
+  BreedingEngineResult,
+  BreedingInventoryExclusion,
+  BreedingInventoryExclusionReason,
+  BreedingModeRanking,
+  BreedingModeScore,
+  BreedingParentSource,
+  BreedingRawScoreMetrics,
+  BreedingRouteCandidate,
+  BreedingRouteStep,
+  BreedingScoreBreakdown,
+  BreedingScoreComponent,
+  BreedingScoreComponentName,
+  BreedingSearchDiagnostics,
+  BreedingSearchLimit,
+  BreedingSearchLimits,
+  BreedingSourceType,
+} from "./generated/breeding-engine";
+export type {
   CanonicalGuild,
   CanonicalPal,
   CanonicalPlayer,
@@ -40,6 +61,8 @@ export type {
   CatalogPartnerSkill,
   CatalogPassiveSkill,
   CatalogValidationReport,
+  BreedingSourceProvenance,
+  GameDataSource,
   GameCatalogManifest,
   GameDataVersion,
 } from "./generated/game-catalog";

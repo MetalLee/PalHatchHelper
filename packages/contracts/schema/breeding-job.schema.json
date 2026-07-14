@@ -6,6 +6,12 @@
   "type": "object",
   "additionalProperties": false,
   "$defs": {
+    "StableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
     "OptimizationMode": {
       "type": "string",
       "enum": ["balanced", "fastest", "highest_success", "least_borrowing"]
@@ -27,6 +33,7 @@
   "required": [
     "job_id",
     "requester_user_id",
+    "world_id",
     "player_id",
     "guild_id",
     "target_pal_id",
@@ -46,15 +53,16 @@
   "properties": {
     "job_id": { "type": "string", "format": "uuid" },
     "requester_user_id": { "type": "string", "format": "uuid" },
+    "world_id": { "type": "string", "format": "uuid" },
     "player_id": { "type": "string", "format": "uuid" },
     "guild_id": { "type": ["string", "null"], "format": "uuid" },
-    "target_pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "target_pal_id": { "$ref": "#/$defs/StableId" },
     "desired_passive_ids": {
       "type": "array",
       "minItems": 0,
       "maxItems": 4,
       "uniqueItems": true,
-      "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+      "items": { "$ref": "#/$defs/StableId" }
     },
     "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
     "inventory_snapshot_id": { "type": "string", "format": "uuid" },

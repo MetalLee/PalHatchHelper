@@ -9,6 +9,8 @@ export type TextKey = string;
 
 export interface GameCatalogContracts {
   GameCatalogManifest: GameCatalogManifest;
+  BreedingSourceProvenance: BreedingSourceProvenance;
+  GameDataSource: GameDataSource;
   GameDataVersion: GameDataVersion;
   CatalogPal: CatalogPal;
   CatalogPassiveSkill: CatalogPassiveSkill;
@@ -42,6 +44,7 @@ export interface GameCatalogManifest {
    */
   files: [CatalogFileChecksum, ...CatalogFileChecksum[]];
   compression: "tar.gz" | "tar.zst";
+  breeding_source_provenance?: BreedingSourceProvenance | null;
 }
 export interface CatalogCounts {
   pals: number;
@@ -63,6 +66,24 @@ export interface CatalogFileChecksum {
     | "localizations.jsonl";
   sha256: Sha256;
   record_count: number;
+}
+export interface BreedingSourceProvenance {
+  source_id: string;
+  source_type: "github" | "url" | "upload";
+  source_name: NonEmptyText;
+  source_version: NonEmptyText;
+  filename: string;
+  raw_content_hash: Sha256;
+  fetched_at: string;
+  base_content_hash: Sha256;
+}
+export interface GameDataSource {
+  id: string;
+  name: NonEmptyText;
+  source_type: "game_package" | "github" | "url" | "upload";
+  source_path: string | null;
+  source_url: string | null;
+  enabled: boolean;
 }
 export interface GameDataVersion {
   id: string;

@@ -1,7 +1,11 @@
 import asyncio
 import hashlib
+import json
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import UUID
+
+import pytest
 
 from pal_hatch_helper.breeding.data_sources import (
     UploadDataSourceAdapter,
@@ -17,8 +21,10 @@ from pal_hatch_helper.breeding.recipes import resolve_breeding_child
 from pal_hatch_helper.breeding.supply_chain import prepare_breeding_catalog_version
 from pal_hatch_helper.game_catalog.paths import CatalogPaths
 from pal_hatch_helper.game_catalog.validation import load_catalog_directory
+from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
 FIXTURE_ROOT = Path(__file__).parents[4] / "data" / "breeding-fixtures"
+SOURCE_ID = UUID("74000000-0000-4000-8000-000000000003")
 KNOWN_PAL_IDS = frozenset(
     {
         "fixture-pal-a",
@@ -38,6 +44,9 @@ def _validate_fixture(name: str) -> BreedingRecipeValidationResult:
         known_pal_ids=KNOWN_PAL_IDS,
         raw_content_hash=hashlib.sha256(content).hexdigest(),
         source_version=name.removesuffix(".json"),
+        base_content_hash="e" * 64,
+        game_build_id="fixture-build",
+        game_version="fixture-version",
     )
 
 
@@ -117,6 +126,7 @@ def test_validated_source_builds_an_unpublished_local_version_with_source_proven
                 content,
             ),
             paths=paths,
+            source_id=SOURCE_ID,
         )
         prepared = prepare_breeding_catalog_version(
             staged,
@@ -127,9 +137,48 @@ def test_validated_source_builds_an_unpublished_local_version_with_source_proven
         catalog = load_catalog_directory(prepared.normalized_directory)
 
         assert prepared.validation_report.valid
-        assert catalog.manifest.package_hash == staged.raw_content_hash
-        assert catalog.manifest.game_version == "fixture-merge-v1"
+        base = load_catalog_directory(base_catalog)
+        assert catalog.manifest.package_hash == base.manifest.package_hash
+        assert catalog.manifest.game_version == base.manifest.game_version
+        assert catalog.manifest.game_build_id == base.manifest.game_build_id
+        assert catalog.manifest.breeding_source_provenance is not None
+        assert catalog.manifest.breeding_source_provenance.source_id == SOURCE_ID
+        assert (
+            catalog.manifest.breeding_source_provenance.raw_content_hash == staged.raw_content_hash
+        )
         assert len(catalog.breeding_recipes) == 2
         assert not hasattr(prepared, "published_version_id")
+
+    asyncio.run(scenario())
+
+
+def test_source_targeting_a_different_base_catalog_is_rejected(tmp_path: Path) -> None:
+    original = json.loads((FIXTURE_ROOT / "catalog-merge.json").read_text(encoding="utf-8"))
+    original["base_content_hash"] = "0" * 64
+    content = json.dumps(original, sort_keys=True, separators=(",", ":")).encode()
+    base_catalog = FIXTURE_ROOT.parent / "catalog-fixtures" / "minimal-valid"
+
+    async def scenario() -> None:
+        paths = CatalogPaths(tmp_path)
+        staged = await stage_breeding_source(
+            UploadDataSourceAdapter(
+                UploadSourceConfig(
+                    name="fixture-upload",
+                    filename="catalog-merge.json",
+                    source_version="fixture-merge-v1",
+                ),
+                content,
+            ),
+            paths=paths,
+            source_id=SOURCE_ID,
+        )
+        with pytest.raises(StructuredError) as caught:
+            prepare_breeding_catalog_version(
+                staged,
+                base_catalog_directory=base_catalog,
+                paths=paths,
+            )
+
+        assert caught.value.code is ErrorCode.BREEDING_BASE_CATALOG_MISMATCH
 
     asyncio.run(scenario())

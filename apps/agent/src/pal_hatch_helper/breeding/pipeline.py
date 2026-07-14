@@ -26,6 +26,9 @@ def transform_and_validate_recipes(
     known_pal_ids: frozenset[str],
     raw_content_hash: str,
     source_version: str,
+    base_content_hash: str,
+    game_build_id: str,
+    game_version: str,
 ) -> BreedingRecipeValidationResult:
     """Transform one strict source document into canonical unordered-parent recipes."""
 
@@ -40,11 +43,23 @@ def transform_and_validate_recipes(
         document = None
         _issue(issues, "BREEDING_RECIPE_SCHEMA_INVALID")
     if isinstance(document, dict):
-        if set(document) != {"source_version", "recipes"}:
+        if set(document) != {
+            "source_version",
+            "base_content_hash",
+            "game_build_id",
+            "game_version",
+            "recipes",
+        }:
             _issue(issues, "BREEDING_RECIPE_SCHEMA_INVALID")
         document_version = document.get("source_version")
         if not isinstance(document_version, str) or not 1 <= len(document_version) <= 120:
             _issue(issues, "BREEDING_RECIPE_SCHEMA_INVALID")
+        if (
+            document.get("base_content_hash") != base_content_hash
+            or document.get("game_build_id") != game_build_id
+            or document.get("game_version") != game_version
+        ):
+            _issue(issues, "BREEDING_BASE_CATALOG_MISMATCH")
         candidate_records = document.get("recipes")
         if isinstance(candidate_records, list):
             records = cast(list[object], candidate_records)

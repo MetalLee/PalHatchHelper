@@ -8,7 +8,17 @@ from uuid import UUID
 
 import uvicorn
 
+from pal_hatch_helper.breeding.data_sources import (
+    BreedingDataSourceAdapter,
+    RegisteredRemoteDataSourceAdapter,
+    RegisteredRemoteSourceConfig,
+    UploadDataSourceAdapter,
+    UploadSourceConfig,
+    source_fetch_policy_from_settings,
+    stage_breeding_source,
+)
 from pal_hatch_helper.breeding.handler import BreedingJobHandler
+from pal_hatch_helper.breeding.supply_chain import prepare_breeding_catalog_version
 from pal_hatch_helper.game_catalog.artifacts import SupabaseCatalogArtifactStore
 from pal_hatch_helper.game_catalog.gateway import SupabaseCatalogGateway
 from pal_hatch_helper.game_catalog.importer import stage_catalog_version
@@ -72,6 +82,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     diff_parser.add_argument("--from-version-id", required=True, type=UUID)
     diff_parser.add_argument("--to-version-id", required=True, type=UUID)
+    prepare_breeding_parser = catalog_commands.add_parser(
+        "prepare-breeding-source",
+        help="fetch an audited source and build a local immutable candidate",
+    )
+    prepare_breeding_parser.add_argument("--source-id", required=True, type=UUID)
+    prepare_breeding_parser.add_argument("--source-version", required=True)
+    prepare_breeding_parser.add_argument("--base-version-id", required=True, type=UUID)
+    prepare_breeding_parser.add_argument("--upload-file", type=Path)
     return parser
 
 
@@ -199,6 +217,81 @@ async def _run_remote_catalog_command(parsed: argparse.Namespace, settings: Sett
             projection_store=gateway,
             max_memory_versions=settings.game_catalog_cache_max_versions,
         )
+        if parsed.catalog_command == "prepare-breeding-source":
+            source = await gateway.get_source(parsed.source_id)
+            if source is None or not source.enabled:
+                raise StructuredError(
+                    code=ErrorCode.BREEDING_SOURCE_DISABLED,
+                    summary="The exact registered breeding source is unavailable or disabled.",
+                    retryable=False,
+                )
+            base_metadata = await gateway.get_version(parsed.base_version_id)
+            if base_metadata is None or base_metadata.status != "published":
+                raise StructuredError(
+                    code=ErrorCode.GAME_DATA_VERSION_NOT_PUBLISHED,
+                    summary="The exact breeding base catalog is not published.",
+                    retryable=False,
+                )
+            base_catalog = await repository.load_version(parsed.base_version_id)
+            adapter: BreedingDataSourceAdapter
+            if source.source_type == "upload":
+                if parsed.upload_file is None or not parsed.upload_file.is_file():
+                    raise StructuredError(
+                        code=ErrorCode.BREEDING_SOURCE_INVALID,
+                        summary="The registered upload source requires an explicit readable file.",
+                        retryable=False,
+                    )
+                adapter = UploadDataSourceAdapter(
+                    UploadSourceConfig(
+                        name=source.name,
+                        filename=parsed.upload_file.name,
+                        source_version=parsed.source_version,
+                        enabled=source.enabled,
+                    ),
+                    parsed.upload_file.read_bytes(),
+                    policy=source_fetch_policy_from_settings(settings),
+                )
+            elif (
+                source.source_type == "github" or source.source_type == "url"
+            ) and source.source_url is not None:
+                adapter = RegisteredRemoteDataSourceAdapter(
+                    RegisteredRemoteSourceConfig(
+                        source_type=source.source_type,
+                        name=source.name,
+                        url=source.source_url,
+                        source_version=parsed.source_version,
+                        enabled=source.enabled,
+                    ),
+                    policy=source_fetch_policy_from_settings(settings),
+                )
+            else:
+                raise StructuredError(
+                    code=ErrorCode.BREEDING_SOURCE_INVALID,
+                    summary="The registered breeding source configuration is unsupported.",
+                    retryable=False,
+                )
+            staged = await stage_breeding_source(
+                adapter,
+                paths=paths,
+                source_id=source.id,
+            )
+            prepared = prepare_breeding_catalog_version(
+                staged,
+                base_catalog=base_catalog,
+                paths=paths,
+            )
+            candidate = validate_catalog_directory(prepared.normalized_directory)
+            print(
+                canonical_json(
+                    {
+                        "base_version_id": str(parsed.base_version_id),
+                        "content_hash": candidate.content_hash,
+                        "source_id": str(source.id),
+                        "status": "candidate_ready",
+                    }
+                )
+            )
+            return 0
         catalog = await repository.load_version(parsed.version_id)
         print(
             canonical_json(

@@ -17,6 +17,7 @@ def valid_job_data() -> dict[str, object]:
     return {
         "job_id": UUID("11111111-1111-4111-8111-111111111111"),
         "requester_user_id": UUID("22222222-2222-4222-8222-222222222222"),
+        "world_id": UUID("77777777-7777-4777-8777-777777777777"),
         "player_id": UUID("33333333-3333-4333-8333-333333333333"),
         "guild_id": UUID("44444444-4444-4444-8444-444444444444"),
         "target_pal_id": "test_target_pal",
@@ -63,6 +64,15 @@ def test_generated_breeding_job_rejects_invalid_boundaries(
 def test_generated_breeding_job_rejects_naive_datetimes() -> None:
     data = valid_job_data()
     data["created_at"] = datetime(2026, 7, 13)
+
+    with pytest.raises(ValidationError):
+        BreedingJob.model_validate(data)
+
+
+@pytest.mark.parametrize("target_pal_id", ["Pal Target", "UPPERCASE", "x" * 121])
+def test_breeding_job_reuses_the_shared_stable_id_constraint(target_pal_id: str) -> None:
+    data = valid_job_data()
+    data["target_pal_id"] = target_pal_id
 
     with pytest.raises(ValidationError):
         BreedingJob.model_validate(data)

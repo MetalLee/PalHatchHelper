@@ -19,6 +19,7 @@ const contracts = [
   "pal-list-item",
   "game-catalog",
   "breeding-data",
+  "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
 ];
@@ -28,12 +29,15 @@ const pythonContracts = [
   "pal-list-item",
   "game-catalog",
   "breeding-data",
+  "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
 ];
 const bundledContractModels = {
   "game-catalog": [
     "GameCatalogManifest",
+    "BreedingSourceProvenance",
+    "GameDataSource",
     "GameDataVersion",
     "CatalogPal",
     "CatalogPassiveSkill",
@@ -56,6 +60,22 @@ const bundledContractModels = {
     "BreedingRecipeChange",
     "BreedingDataDiffCounts",
     "BreedingDataDiffReport",
+  ],
+  "breeding-engine": [
+    "BreedingEngineRequest",
+    "BreedingSearchLimits",
+    "BreedingEngineInventoryPal",
+    "BreedingInventoryExclusion",
+    "BreedingParentSource",
+    "BreedingRouteStep",
+    "BreedingRawScoreMetrics",
+    "BreedingScoreComponent",
+    "BreedingModeScore",
+    "BreedingScoreBreakdown",
+    "BreedingRouteCandidate",
+    "BreedingModeRanking",
+    "BreedingSearchDiagnostics",
+    "BreedingEngineResult",
   ],
 };
 

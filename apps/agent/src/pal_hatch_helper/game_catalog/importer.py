@@ -17,6 +17,7 @@ from pal_hatch_helper.game_catalog.jsonl import (
 from pal_hatch_helper.game_catalog.paths import CatalogPaths, fsync_directory
 from pal_hatch_helper.game_catalog.validation import FILE_SPECS, load_catalog_directory
 from pal_hatch_helper.generated import (
+    BreedingSourceProvenance,
     CatalogCounts,
     CatalogFileChecksum,
     CatalogValidationReport,
@@ -76,6 +77,7 @@ def prepare_normalized_catalog(
     package_hash: str,
     extractor_name: str,
     extractor_version: str,
+    breeding_source_provenance: BreedingSourceProvenance | None = None,
     created_at: datetime | None = None,
 ) -> Path:
     """Normalize structured extractor output without parsing any game package."""
@@ -125,6 +127,7 @@ def prepare_normalized_catalog(
             counts=counts,
             files=sorted(file_checksums, key=lambda item: item.filename),
             compression="tar.gz",
+            breeding_source_provenance=breeding_source_provenance,
         )
         report = CatalogValidationReport(
             schema_version="1.0.0",

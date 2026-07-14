@@ -1,0 +1,581 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/breeding-engine.schema.json",
+  "title": "BreedingEngineRequest",
+  "description": "Version-fixed deterministic breeding search input and result contracts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target_pal_id",
+    "desired_passive_ids",
+    "world_id",
+    "inventory_snapshot_id",
+    "game_data_version_id",
+    "game_data_content_hash",
+    "algorithm_version",
+    "scoring_profile_version",
+    "optimization_mode",
+    "requester_player_id",
+    "requester_guild_id",
+    "allow_shared_inventory",
+    "allow_locked_reuse",
+    "inventory",
+    "limits"
+  ],
+  "properties": {
+    "target_pal_id": { "$ref": "#/$defs/BreedingEngineStableId" },
+    "desired_passive_ids": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+    },
+    "world_id": { "type": "string", "format": "uuid" },
+    "inventory_snapshot_id": { "type": "string", "format": "uuid" },
+    "game_data_version_id": { "type": "string", "format": "uuid" },
+    "game_data_content_hash": { "$ref": "#/$defs/BreedingSha256" },
+    "algorithm_version": { "$ref": "#/$defs/BreedingEngineVersion" },
+    "scoring_profile_version": { "$ref": "#/$defs/BreedingEngineVersion" },
+    "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+    "requester_player_id": { "type": "string", "format": "uuid" },
+    "requester_guild_id": { "type": ["string", "null"], "format": "uuid" },
+    "allow_shared_inventory": { "type": "boolean" },
+    "allow_locked_reuse": { "type": "boolean" },
+    "inventory": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/BreedingEngineInventoryPal" }
+    },
+    "limits": { "$ref": "#/$defs/BreedingSearchLimits" }
+  },
+  "$defs": {
+    "BreedingEngineStableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "BreedingSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "BreedingEngineVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "BreedingEngineInstanceUid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "OptimizationMode": {
+      "type": "string",
+      "enum": ["balanced", "fastest", "highest_success", "least_borrowing"]
+    },
+    "BreedingEngineGender": {
+      "type": "string",
+      "enum": ["male", "female", "genderless", "unknown"]
+    },
+    "BreedingRequiredGender": {
+      "type": "string",
+      "enum": ["male", "female"]
+    },
+    "BreedingEngineLocationType": {
+      "type": "string",
+      "enum": [
+        "player_party",
+        "player_storage",
+        "base",
+        "viewing_cage",
+        "unknown"
+      ]
+    },
+    "BreedingDifficulty": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "BreedingSourceType": {
+      "type": "string",
+      "enum": ["inventory", "intermediate"]
+    },
+    "BreedingSearchLimit": {
+      "type": "string",
+      "enum": [
+        "max_expanded_nodes",
+        "timeout",
+        "species_route_cap",
+        "assignment_state_cap",
+        "candidate_cap"
+      ]
+    },
+    "BreedingInventoryExclusionReason": {
+      "type": "string",
+      "enum": [
+        "disappeared",
+        "disabled",
+        "unresolved",
+        "locked",
+        "shared_inventory_disabled",
+        "different_guild",
+        "share_disabled"
+      ]
+    },
+    "BreedingScoreComponentName": {
+      "type": "string",
+      "enum": [
+        "route_length",
+        "inventory_coverage",
+        "passive_concentration",
+        "borrowing",
+        "intermediate_cost",
+        "attempt_cost",
+        "stability"
+      ]
+    },
+    "BreedingSearchLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_generations",
+        "max_expanded_nodes",
+        "timeout_ms",
+        "max_species_routes_per_pal",
+        "max_assignment_states_per_mask",
+        "max_candidate_routes",
+        "max_results"
+      ],
+      "properties": {
+        "max_generations": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "max_expanded_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000000
+        },
+        "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 300000 },
+        "max_species_routes_per_pal": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 100000
+        },
+        "max_assignment_states_per_mask": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 10000
+        },
+        "max_candidate_routes": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 100000
+        },
+        "max_results": { "type": "integer", "minimum": 4, "maximum": 1000 }
+      }
+    },
+    "BreedingEngineInventoryPal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instance_uid",
+        "pal_id",
+        "owner_player_id",
+        "guild_id",
+        "gender",
+        "passive_skill_ids",
+        "location_type",
+        "location_name",
+        "share_enabled",
+        "owner_resolved",
+        "guild_resolved",
+        "present_in_snapshot",
+        "breeding_enabled",
+        "plan_locked"
+      ],
+      "properties": {
+        "instance_uid": { "$ref": "#/$defs/BreedingEngineInstanceUid" },
+        "pal_id": { "$ref": "#/$defs/BreedingEngineStableId" },
+        "owner_player_id": { "type": ["string", "null"], "format": "uuid" },
+        "guild_id": { "type": ["string", "null"], "format": "uuid" },
+        "gender": { "$ref": "#/$defs/BreedingEngineGender" },
+        "passive_skill_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+        },
+        "location_type": { "$ref": "#/$defs/BreedingEngineLocationType" },
+        "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "share_enabled": { "type": "boolean" },
+        "owner_resolved": { "type": "boolean" },
+        "guild_resolved": { "type": "boolean" },
+        "present_in_snapshot": { "type": "boolean" },
+        "breeding_enabled": { "type": "boolean" },
+        "plan_locked": { "type": "boolean" }
+      }
+    },
+    "BreedingInventoryExclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "count"],
+      "properties": {
+        "reason": { "$ref": "#/$defs/BreedingInventoryExclusionReason" },
+        "count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "BreedingParentSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "pal_id",
+        "instance_uid",
+        "owner_player_id",
+        "guild_id",
+        "gender",
+        "passive_skill_ids",
+        "required_passive_ids",
+        "borrowed",
+        "produced_by_step_index",
+        "location_type",
+        "location_name"
+      ],
+      "properties": {
+        "source_type": { "$ref": "#/$defs/BreedingSourceType" },
+        "pal_id": { "$ref": "#/$defs/BreedingEngineStableId" },
+        "instance_uid": {
+          "anyOf": [
+            { "$ref": "#/$defs/BreedingEngineInstanceUid" },
+            { "type": "null" }
+          ]
+        },
+        "owner_player_id": { "type": ["string", "null"], "format": "uuid" },
+        "guild_id": { "type": ["string", "null"], "format": "uuid" },
+        "gender": {
+          "anyOf": [
+            { "$ref": "#/$defs/BreedingEngineGender" },
+            { "type": "null" }
+          ]
+        },
+        "passive_skill_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+        },
+        "required_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+        },
+        "borrowed": { "type": "boolean" },
+        "produced_by_step_index": { "type": ["integer", "null"], "minimum": 0 },
+        "location_type": {
+          "anyOf": [
+            { "$ref": "#/$defs/BreedingEngineLocationType" },
+            { "type": "null" }
+          ]
+        },
+        "location_name": { "type": ["string", "null"], "maxLength": 160 }
+      }
+    },
+    "BreedingRouteStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_index",
+        "generation",
+        "recipe_type",
+        "parent_a",
+        "parent_b",
+        "child_pal_id",
+        "child_required_gender",
+        "required_passive_ids"
+      ],
+      "properties": {
+        "step_index": { "type": "integer", "minimum": 0 },
+        "generation": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "recipe_type": { "type": "string", "enum": ["normal", "special"] },
+        "parent_a": { "$ref": "#/$defs/BreedingParentSource" },
+        "parent_b": { "$ref": "#/$defs/BreedingParentSource" },
+        "child_pal_id": { "$ref": "#/$defs/BreedingEngineStableId" },
+        "child_required_gender": {
+          "anyOf": [
+            { "$ref": "#/$defs/BreedingRequiredGender" },
+            { "type": "null" }
+          ]
+        },
+        "required_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+        }
+      }
+    },
+    "BreedingRawScoreMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generation_count",
+        "step_count",
+        "unique_starting_instance_count",
+        "borrowed_pal_count",
+        "inventory_coverage",
+        "passive_carrier_count",
+        "passive_concentration",
+        "extra_passive_count",
+        "intermediate_pal_count",
+        "intermediate_passive_checkpoint_count",
+        "required_gender_checkpoint_count",
+        "estimated_attempts_min",
+        "estimated_attempts_max",
+        "difficulty"
+      ],
+      "properties": {
+        "generation_count": { "type": "integer", "minimum": 0 },
+        "step_count": { "type": "integer", "minimum": 0 },
+        "unique_starting_instance_count": { "type": "integer", "minimum": 1 },
+        "borrowed_pal_count": { "type": "integer", "minimum": 0 },
+        "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "passive_carrier_count": { "type": "integer", "minimum": 0 },
+        "passive_concentration": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "extra_passive_count": { "type": "integer", "minimum": 0 },
+        "intermediate_pal_count": { "type": "integer", "minimum": 0 },
+        "intermediate_passive_checkpoint_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_gender_checkpoint_count": { "type": "integer", "minimum": 0 },
+        "estimated_attempts_min": { "type": "integer", "minimum": 0 },
+        "estimated_attempts_max": { "type": "integer", "minimum": 0 },
+        "difficulty": { "$ref": "#/$defs/BreedingDifficulty" }
+      }
+    },
+    "BreedingScoreComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component",
+        "raw_value",
+        "normalized_score",
+        "weight",
+        "weighted_score"
+      ],
+      "properties": {
+        "component": { "$ref": "#/$defs/BreedingScoreComponentName" },
+        "raw_value": { "type": "number", "minimum": 0 },
+        "normalized_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "weighted_score": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "BreedingModeScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "optimization_mode",
+        "scoring_profile_version",
+        "total_score",
+        "components"
+      ],
+      "properties": {
+        "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+        "scoring_profile_version": { "$ref": "#/$defs/BreedingEngineVersion" },
+        "total_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "components": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": { "$ref": "#/$defs/BreedingScoreComponent" }
+        }
+      }
+    },
+    "BreedingScoreBreakdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scoring_profile_version",
+        "estimate_basis",
+        "raw_metrics",
+        "mode_scores"
+      ],
+      "properties": {
+        "scoring_profile_version": { "$ref": "#/$defs/BreedingEngineVersion" },
+        "estimate_basis": {
+          "type": "string",
+          "const": "strategy_heuristic_no_verified_probability"
+        },
+        "raw_metrics": { "$ref": "#/$defs/BreedingRawScoreMetrics" },
+        "mode_scores": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/BreedingModeScore" }
+        }
+      }
+    },
+    "BreedingRouteCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_key",
+        "rank",
+        "optimization_mode",
+        "total_score",
+        "generation_count",
+        "step_count",
+        "estimated_attempts_min",
+        "estimated_attempts_max",
+        "difficulty",
+        "borrowed_pal_count",
+        "inventory_coverage",
+        "inheritance_score",
+        "existing_target_instance_uid",
+        "score_breakdown",
+        "steps"
+      ],
+      "properties": {
+        "route_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "rank": { "type": "integer", "minimum": 1 },
+        "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+        "total_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "generation_count": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "step_count": { "type": "integer", "minimum": 0 },
+        "estimated_attempts_min": { "type": "integer", "minimum": 0 },
+        "estimated_attempts_max": { "type": "integer", "minimum": 0 },
+        "difficulty": { "$ref": "#/$defs/BreedingDifficulty" },
+        "borrowed_pal_count": { "type": "integer", "minimum": 0 },
+        "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "inheritance_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "existing_target_instance_uid": {
+          "anyOf": [
+            { "$ref": "#/$defs/BreedingEngineInstanceUid" },
+            { "type": "null" }
+          ]
+        },
+        "score_breakdown": { "$ref": "#/$defs/BreedingScoreBreakdown" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingRouteStep" }
+        }
+      }
+    },
+    "BreedingModeRanking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "optimization_mode",
+        "scoring_profile_version",
+        "route_keys"
+      ],
+      "properties": {
+        "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+        "scoring_profile_version": { "$ref": "#/$defs/BreedingEngineVersion" },
+        "route_keys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "BreedingSearchDiagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "graph_pal_count",
+        "effective_recipe_count",
+        "inventory_input_count",
+        "eligible_inventory_count",
+        "excluded_inventory_count",
+        "exclusions",
+        "expanded_species_nodes",
+        "expanded_assignment_nodes",
+        "expanded_nodes",
+        "pruned_species_routes",
+        "pruned_assignment_states",
+        "pruned_duplicate_routes",
+        "candidate_routes_evaluated",
+        "search_complete",
+        "returned_all_legal_routes",
+        "hit_limits"
+      ],
+      "properties": {
+        "graph_pal_count": { "type": "integer", "minimum": 0 },
+        "effective_recipe_count": { "type": "integer", "minimum": 0 },
+        "inventory_input_count": { "type": "integer", "minimum": 0 },
+        "eligible_inventory_count": { "type": "integer", "minimum": 0 },
+        "excluded_inventory_count": { "type": "integer", "minimum": 0 },
+        "exclusions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingInventoryExclusion" }
+        },
+        "expanded_species_nodes": { "type": "integer", "minimum": 0 },
+        "expanded_assignment_nodes": { "type": "integer", "minimum": 0 },
+        "expanded_nodes": { "type": "integer", "minimum": 0 },
+        "pruned_species_routes": { "type": "integer", "minimum": 0 },
+        "pruned_assignment_states": { "type": "integer", "minimum": 0 },
+        "pruned_duplicate_routes": { "type": "integer", "minimum": 0 },
+        "candidate_routes_evaluated": { "type": "integer", "minimum": 0 },
+        "search_complete": { "type": "boolean" },
+        "returned_all_legal_routes": { "type": "boolean" },
+        "hit_limits": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingSearchLimit" }
+        }
+      }
+    },
+    "BreedingEngineResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_pal_id",
+        "desired_passive_ids",
+        "inventory_snapshot_id",
+        "game_data_version_id",
+        "game_data_content_hash",
+        "algorithm_version",
+        "scoring_profile_version",
+        "optimization_mode",
+        "routes",
+        "mode_rankings",
+        "explanation_codes",
+        "diagnostics",
+        "result_digest"
+      ],
+      "properties": {
+        "target_pal_id": { "$ref": "#/$defs/BreedingEngineStableId" },
+        "desired_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+        },
+        "inventory_snapshot_id": { "type": "string", "format": "uuid" },
+        "game_data_version_id": { "type": "string", "format": "uuid" },
+        "game_data_content_hash": { "$ref": "#/$defs/BreedingSha256" },
+        "algorithm_version": { "$ref": "#/$defs/BreedingEngineVersion" },
+        "scoring_profile_version": { "$ref": "#/$defs/BreedingEngineVersion" },
+        "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+        "routes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingRouteCandidate" }
+        },
+        "mode_rankings": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/BreedingModeRanking" }
+        },
+        "explanation_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+        },
+        "diagnostics": { "$ref": "#/$defs/BreedingSearchDiagnostics" },
+        "result_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

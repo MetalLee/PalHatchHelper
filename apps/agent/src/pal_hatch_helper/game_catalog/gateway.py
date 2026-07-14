@@ -15,6 +15,7 @@ from pal_hatch_helper.generated import (
     CatalogPartnerSkill,
     CatalogPassiveSkill,
     GameCatalogManifest,
+    GameDataSource,
     GameDataVersion,
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
@@ -132,6 +133,19 @@ class SupabaseCatalogGateway:
         row = _single_row(payload)
         try:
             return GameDataVersion.model_validate(row)
+        except ValidationError as error:
+            raise _invalid_response() from error
+
+    async def get_source(self, source_id: UUID) -> GameDataSource | None:
+        payload = await self._database.rpc(
+            "get_game_data_source_for_agent",
+            {"p_source_id": str(source_id)},
+        )
+        if payload == [] or payload is None:
+            return None
+        row = _single_row(payload)
+        try:
+            return GameDataSource.model_validate(row)
         except ValidationError as error:
             raise _invalid_response() from error
 

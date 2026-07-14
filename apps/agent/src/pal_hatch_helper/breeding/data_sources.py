@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal, Protocol
 from urllib.parse import quote, urlparse
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 
@@ -52,6 +52,15 @@ class UrlSourceConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class RegisteredRemoteSourceConfig:
+    source_type: Literal["github", "url"]
+    name: str
+    url: str
+    source_version: str
+    enabled: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class UploadSourceConfig:
     name: str
     filename: str
@@ -73,10 +82,13 @@ class StagedBreedingSource:
     directory: Path
     content_path: Path
     metadata_path: Path
+    source_id: UUID
     source_type: SourceType
     source_name: str
     source_version: str
+    filename: str
     raw_content_hash: str
+    fetched_at: datetime
 
 
 class BreedingDataSourceAdapter(Protocol):
@@ -164,6 +176,36 @@ class UrlDataSourceAdapter:
         )
 
 
+class RegisteredRemoteDataSourceAdapter:
+    """Fetch an audited database source while preserving its registered type."""
+
+    def __init__(
+        self,
+        config: RegisteredRemoteSourceConfig,
+        *,
+        policy: SourceFetchPolicy,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> None:
+        self._config = config
+        self._policy = policy
+        self._http_client = http_client
+
+    async def fetch(self) -> FetchedBreedingSource:
+        _require_remote_enabled(self._config.enabled, self._policy)
+        url = _validated_https_url(self._config.url)
+        parsed = urlparse(url)
+        if self._config.source_type == "github" and parsed.hostname != "raw.githubusercontent.com":
+            raise _invalid_source_error()
+        content = await _fetch_https(url, policy=self._policy, http_client=self._http_client)
+        return FetchedBreedingSource(
+            source_type=self._config.source_type,
+            source_name=_safe_name(self._config.name),
+            source_version=_safe_version(self._config.source_version),
+            filename=_safe_filename(Path(parsed.path).name or "breeding-data.json"),
+            content=content,
+        )
+
+
 class UploadDataSourceAdapter:
     def __init__(
         self,
@@ -194,6 +236,7 @@ async def stage_breeding_source(
     adapter: BreedingDataSourceAdapter,
     *,
     paths: CatalogPaths,
+    source_id: UUID,
     fetched_at: datetime | None = None,
 ) -> StagedBreedingSource:
     """Fetch into Agent-owned staging without importing or publishing anything."""
@@ -208,13 +251,15 @@ async def stage_breeding_source(
             output.write(source.content)
             output.flush()
             os.fsync(output.fileno())
+        observed_at = fetched_at or datetime.now(UTC)
         metadata = StagedBreedingSourceMetadata(
+            source_id=source_id,
             source_type=source.source_type,
             source_name=source.source_name,
             source_version=source.source_version,
             filename=source.filename,
             raw_content_hash=raw_content_hash,
-            fetched_at=fetched_at or datetime.now(UTC),
+            fetched_at=observed_at,
         )
         write_json_atomic(temporary / "source-metadata.json", metadata.model_dump(mode="json"))
         fsync_directory(temporary)
@@ -225,10 +270,13 @@ async def stage_breeding_source(
             directory=destination,
             content_path=destination / "source.bin",
             metadata_path=destination / "source-metadata.json",
+            source_id=source_id,
             source_type=source.source_type,
             source_name=source.source_name,
             source_version=source.source_version,
+            filename=source.filename,
             raw_content_hash=raw_content_hash,
+            fetched_at=observed_at,
         )
     finally:
         if temporary.exists():

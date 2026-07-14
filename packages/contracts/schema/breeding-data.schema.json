@@ -5,9 +5,18 @@
   "description": "Source and report contracts for the versioned breeding data supply chain.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["source_version", "recipes"],
+  "required": [
+    "source_version",
+    "base_content_hash",
+    "game_build_id",
+    "game_version",
+    "recipes"
+  ],
   "properties": {
     "source_version": { "$ref": "#/$defs/BreedingSourceVersion" },
+    "base_content_hash": { "$ref": "#/$defs/BreedingSha256" },
+    "game_build_id": { "$ref": "#/$defs/BreedingSourceVersion" },
+    "game_version": { "$ref": "#/$defs/BreedingSourceVersion" },
     "recipes": {
       "type": "array",
       "items": { "$ref": "#/$defs/BreedingRecipeSourceRecord" }
@@ -57,6 +66,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "source_id",
         "source_type",
         "source_name",
         "source_version",
@@ -65,6 +75,7 @@
         "fetched_at"
       ],
       "properties": {
+        "source_id": { "type": "string", "format": "uuid" },
         "source_type": {
           "type": "string",
           "enum": ["github", "url", "upload"]

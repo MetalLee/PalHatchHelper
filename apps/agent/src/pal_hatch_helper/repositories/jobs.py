@@ -132,6 +132,7 @@ def _parse_claim(row: Mapping[str, JSONValue]) -> JobClaim:
             {
                 "job_id": row.get("id"),
                 "requester_user_id": row.get("requester_user_id"),
+                "world_id": row.get("world_id"),
                 "player_id": row.get("player_id"),
                 "guild_id": row.get("guild_id"),
                 "target_pal_id": row.get("target_pal_id"),

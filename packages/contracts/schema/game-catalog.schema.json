@@ -41,7 +41,14 @@
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/CatalogFileChecksum" }
     },
-    "compression": { "type": "string", "enum": ["tar.gz", "tar.zst"] }
+    "compression": { "type": "string", "enum": ["tar.gz", "tar.zst"] },
+    "breeding_source_provenance": {
+      "anyOf": [
+        { "$ref": "#/$defs/BreedingSourceProvenance" },
+        { "type": "null" }
+      ],
+      "default": null
+    }
   },
   "$defs": {
     "StableId": {
@@ -112,6 +119,56 @@
         },
         "sha256": { "$ref": "#/$defs/Sha256" },
         "record_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "BreedingSourceProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "source_type",
+        "source_name",
+        "source_version",
+        "filename",
+        "raw_content_hash",
+        "fetched_at",
+        "base_content_hash"
+      ],
+      "properties": {
+        "source_id": { "type": "string", "format": "uuid" },
+        "source_type": {
+          "type": "string",
+          "enum": ["github", "url", "upload"]
+        },
+        "source_name": { "$ref": "#/$defs/NonEmptyText" },
+        "source_version": { "$ref": "#/$defs/NonEmptyText" },
+        "filename": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "raw_content_hash": { "$ref": "#/$defs/Sha256" },
+        "fetched_at": { "type": "string", "format": "date-time" },
+        "base_content_hash": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "GameDataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "source_type",
+        "source_path",
+        "source_url",
+        "enabled"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "$ref": "#/$defs/NonEmptyText" },
+        "source_type": {
+          "type": "string",
+          "enum": ["game_package", "github", "url", "upload"]
+        },
+        "source_path": { "type": ["string", "null"], "maxLength": 1000 },
+        "source_url": { "type": ["string", "null"], "maxLength": 1000 },
+        "enabled": { "type": "boolean" }
       }
     },
     "GameDataVersion": {

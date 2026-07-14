@@ -1420,6 +1420,16 @@ export type Database = {
         };
         Returns: boolean;
       };
+      configure_game_data_source: {
+        Args: {
+          p_source_id: string;
+          p_name: string;
+          p_source_type: Database["public"]["Enums"]["game_data_source_type"];
+          p_source_url?: string | null;
+          p_enabled?: boolean;
+        };
+        Returns: string;
+      };
       confirm_step_offspring: {
         Args: {
           p_step_id: string;
@@ -1456,12 +1466,40 @@ export type Database = {
         };
         Returns: Database["public"]["Enums"]["breeding_job_status"];
       };
+      get_active_scoring_profiles_for_agent: {
+        Args: Record<string, never>;
+        Returns: {
+          version: string;
+          optimization_mode: Database["public"]["Enums"]["optimization_mode"];
+          algorithm_version: string;
+          weights: Json;
+        }[];
+      };
       get_breeding_data_diff: {
         Args: {
           p_from_version_id: string;
           p_to_version_id: string;
         };
         Returns: Json;
+      };
+      get_breeding_inventory_for_agent: {
+        Args: {
+          p_job_id: string;
+        };
+        Returns: Json;
+      };
+      get_game_data_source_for_agent: {
+        Args: {
+          p_source_id: string;
+        };
+        Returns: {
+          id: string;
+          name: string;
+          source_type: Database["public"]["Enums"]["game_data_source_type"];
+          source_path: string;
+          source_url: string;
+          enabled: boolean;
+        }[];
       };
       get_inventory_catalog_ids_for_agent: {
         Args: {

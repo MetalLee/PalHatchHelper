@@ -22,6 +22,7 @@ def make_job_claim(
     job = BreedingJob(
         job_id=job_id,
         requester_user_id=UUID("22222222-2222-4222-8222-222222222222"),
+        world_id=UUID("77777777-7777-4777-8777-777777777777"),
         player_id=UUID("33333333-3333-4333-8333-333333333333"),
         guild_id=UUID("44444444-4444-4444-8444-444444444444"),
         target_pal_id="test_target_pal",
@@ -30,8 +31,8 @@ def make_job_claim(
         inventory_snapshot_id=UUID("55555555-5555-4555-8555-555555555555"),
         game_data_version_id=UUID("66666666-6666-4666-8666-666666666666"),
         breeding_data_version_id=UUID("66666666-6666-4666-8666-666666666666"),
-        algorithm_version="phase1-contract-v1",
-        scoring_profile_version="balanced-v1",
+        algorithm_version="phase4b-deterministic-v1",
+        scoring_profile_version="balanced-v2",
         status="processing",
         attempt_count=attempt_count,
         error_code=None,
@@ -70,7 +71,7 @@ def make_claim_row(
     return {
         "id": str(claim.job.job_id),
         "requester_user_id": str(claim.job.requester_user_id),
-        "world_id": "77777777-7777-4777-8777-777777777777",
+        "world_id": str(claim.job.world_id),
         "player_id": str(claim.job.player_id),
         "guild_id": str(claim.job.guild_id),
         "target_pal_id": claim.job.target_pal_id,

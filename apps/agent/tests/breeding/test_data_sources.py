@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 from pathlib import Path
+from uuid import UUID
 
 import httpx
 import pytest
@@ -22,6 +23,7 @@ from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.settings import Settings
 
 FIXTURE_CONTENT = b'{"recipes":[],"source_version":"fixture-v1"}\n'
+SOURCE_ID = UUID("74000000-0000-4000-8000-000000000001")
 
 
 def test_runtime_settings_build_the_remote_source_policy() -> None:
@@ -55,6 +57,7 @@ def test_upload_content_is_atomically_staged_with_raw_hash_and_source_version(
                 FIXTURE_CONTENT,
             ),
             paths=paths,
+            source_id=SOURCE_ID,
         )
 
         expected_hash = hashlib.sha256(FIXTURE_CONTENT).hexdigest()
@@ -93,7 +96,11 @@ def test_remote_sources_are_disabled_by_default_without_making_a_request(
                 http_client=client,
             )
             with pytest.raises(StructuredError) as caught:
-                await stage_breeding_source(adapter, paths=CatalogPaths(tmp_path))
+                await stage_breeding_source(
+                    adapter,
+                    paths=CatalogPaths(tmp_path),
+                    source_id=SOURCE_ID,
+                )
 
         assert caught.value.code is ErrorCode.BREEDING_SOURCE_DISABLED
         assert requests == []
@@ -136,10 +143,12 @@ def test_github_and_url_adapters_use_configured_https_sources_without_external_n
             github_artifact = await stage_breeding_source(
                 github,
                 paths=CatalogPaths(tmp_path / "github"),
+                source_id=SOURCE_ID,
             )
             url_artifact = await stage_breeding_source(
                 url,
                 paths=CatalogPaths(tmp_path / "url"),
+                source_id=SOURCE_ID,
             )
 
         assert github_artifact.source_version == "fixture-commit"

@@ -19,6 +19,9 @@ describe("breeding data contracts", () => {
     const validate = ajv.compile(schema);
     const document = {
       source_version: "fixture-v1",
+      base_content_hash: "a".repeat(64),
+      game_build_id: "fixture-build",
+      game_version: "fixture-game-version",
       recipes: [
         {
           parents: ["fixture-pal-b", "fixture-pal-a"],

@@ -452,6 +452,46 @@ values
     '2026-07-13T07:31:00Z'
   );
 
+insert into public.catalog_pals (
+  version_id, pal_id, encyclopedia_no, name_key, element_types, rarity, breeding_power, metadata
+)
+select
+  '51000000-0000-4000-8000-000000000001'::uuid,
+  value.pal_id,
+  value.encyclopedia_no,
+  'fixture.' || value.pal_id || '.name',
+  array['fixture-neutral'],
+  1,
+  100,
+  '{"fixture":true}'::jsonb
+from (values
+  ('test_parent_a'::text, 1),
+  ('test_parent_b'::text, 2),
+  ('test_child_pal'::text, 3),
+  ('test_special_a'::text, 4),
+  ('test_special_b'::text, 5),
+  ('test_special_child'::text, 6),
+  ('test_private_pal'::text, 7),
+  ('test_other_guild_pal'::text, 8)
+) as value(pal_id, encyclopedia_no);
+
+insert into public.catalog_passive_skills (
+  version_id, passive_skill_id, name_key, description_key, rank, is_negative, metadata
+)
+values
+  (
+    '51000000-0000-4000-8000-000000000001', 'test_passive_a',
+    'fixture.passive.a', null, 1, false, '{"fixture":true}'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001', 'test_passive_b',
+    'fixture.passive.b', null, 1, false, '{"fixture":true}'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001', 'test_passive_private',
+    'fixture.passive.private', null, 1, false, '{"fixture":true}'
+  );
+
 update public.breeding_data_versions
 set
   status = 'published',
@@ -475,7 +515,7 @@ values
     'balanced',
     'phase1-contract-v1',
     '{"route_length":0.25,"inventory_coverage":0.25,"inheritance":0.25,"borrowing":0.25}',
-    true,
+    false,
     '2026-07-13T00:00:00Z'
   ),
   (
@@ -484,7 +524,7 @@ values
     'fastest',
     'phase1-contract-v1',
     '{"route_length":0.7,"inventory_coverage":0.1,"inheritance":0.1,"borrowing":0.1}',
-    true,
+    false,
     '2026-07-13T00:00:00Z'
   ),
   (
@@ -493,7 +533,7 @@ values
     'highest_success',
     'phase1-contract-v1',
     '{"route_length":0.1,"inventory_coverage":0.1,"inheritance":0.7,"borrowing":0.1}',
-    true,
+    false,
     '2026-07-13T00:00:00Z'
   ),
   (
@@ -502,7 +542,7 @@ values
     'least_borrowing',
     'phase1-contract-v1',
     '{"route_length":0.1,"inventory_coverage":0.1,"inheritance":0.1,"borrowing":0.7}',
-    true,
+    false,
     '2026-07-13T00:00:00Z'
   );
 
@@ -546,13 +586,13 @@ values
     '10000000-0000-4000-8000-000000000001',
     '30000000-0000-4000-8000-000000000001',
     '20000000-0000-4000-8000-000000000001',
-    'test_pending_target',
+    'test_child_pal',
     array['test_passive_a'],
     'balanced',
     '40000000-0000-4000-8000-000000000002',
     '51000000-0000-4000-8000-000000000001',
-    'phase1-contract-v1',
-    'balanced-v1',
+    'phase4b-deterministic-v1',
+    'balanced-v2',
     'pending',
     repeat('1', 64),
     'fixture-pending-job',
@@ -577,8 +617,8 @@ values
     'balanced',
     '40000000-0000-4000-8000-000000000002',
     '51000000-0000-4000-8000-000000000001',
-    'phase1-contract-v1',
-    'balanced-v1',
+    'phase4b-deterministic-v1',
+    'balanced-v2',
     'processing',
     repeat('2', 64),
     'fixture-processing-job',

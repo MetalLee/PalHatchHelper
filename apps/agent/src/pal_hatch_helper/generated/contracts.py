@@ -21,6 +21,14 @@ class GameCatalogHealth(BaseModel):
     cache_status: Literal["empty", "warm", "error"]
 
 
+type StableId = Annotated[
+    str,
+    Field(min_length=1),
+    Field(max_length=120),
+    Field(pattern="^[a-z0-9][a-z0-9._-]*$"),
+]
+
+
 class OptimizationMode(StrEnum):
     BALANCED = "balanced"
     FASTEST = "fastest"
@@ -52,14 +60,6 @@ class PalLocationType(StrEnum):
     BASE = "base"
     VIEWING_CAGE = "viewing_cage"
     UNKNOWN = "unknown"
-
-
-type StableId = Annotated[
-    str,
-    Field(min_length=1),
-    Field(max_length=120),
-    Field(pattern="^[a-z0-9][a-z0-9._-]*$"),
-]
 
 
 type NonEmptyText = Annotated[str, Field(min_length=1), Field(max_length=200)]
@@ -121,6 +121,30 @@ class CatalogFileChecksum(BaseModel):
     ]
     sha256: Sha256
     record_count: Annotated[int, Field(ge=0)]
+
+
+class BreedingSourceProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: UUID
+    source_type: Literal["github", "url", "upload"]
+    source_name: NonEmptyText
+    source_version: NonEmptyText
+    filename: Annotated[str, Field(min_length=1), Field(max_length=255)]
+    raw_content_hash: Sha256
+    fetched_at: AwareDatetime
+    base_content_hash: Sha256
+
+
+class GameDataSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    name: NonEmptyText
+    source_type: Literal["game_package", "github", "url", "upload"]
+    source_path: Annotated[str, Field(max_length=1000)] | None
+    source_url: Annotated[str, Field(max_length=1000)] | None
+    enabled: bool
 
 
 class GameDataVersion(BaseModel):
@@ -265,6 +289,7 @@ class BreedingRecipeSourceRecord(BaseModel):
 class StagedBreedingSourceMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    source_id: UUID
     source_type: Literal["github", "url", "upload"]
     source_name: Annotated[str, Field(min_length=1), Field(max_length=120)]
     source_version: BreedingSourceVersion
@@ -342,6 +367,287 @@ class BreedingDataDiffReport(BaseModel):
     removed: list[BreedingRecipeSnapshot]
     changed: list[BreedingRecipeChange]
     counts: BreedingDataDiffCounts
+
+
+type BreedingEngineStableId = Annotated[
+    str,
+    Field(min_length=1),
+    Field(max_length=120),
+    Field(pattern="^[a-z0-9][a-z0-9._-]*$"),
+]
+
+
+type BreedingEngineVersion = Annotated[str, Field(min_length=1), Field(max_length=100)]
+
+
+type BreedingEngineInstanceUid = Annotated[str, Field(min_length=1), Field(max_length=160)]
+
+
+class BreedingEngineGender(StrEnum):
+    MALE = "male"
+    FEMALE = "female"
+    GENDERLESS = "genderless"
+    UNKNOWN = "unknown"
+
+
+class BreedingRequiredGender(StrEnum):
+    MALE = "male"
+    FEMALE = "female"
+
+
+class BreedingEngineLocationType(StrEnum):
+    PLAYER_PARTY = "player_party"
+    PLAYER_STORAGE = "player_storage"
+    BASE = "base"
+    VIEWING_CAGE = "viewing_cage"
+    UNKNOWN = "unknown"
+
+
+class BreedingDifficulty(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class BreedingSourceType(StrEnum):
+    INVENTORY = "inventory"
+    INTERMEDIATE = "intermediate"
+
+
+class BreedingSearchLimit(StrEnum):
+    MAX_EXPANDED_NODES = "max_expanded_nodes"
+    TIMEOUT = "timeout"
+    SPECIES_ROUTE_CAP = "species_route_cap"
+    ASSIGNMENT_STATE_CAP = "assignment_state_cap"
+    CANDIDATE_CAP = "candidate_cap"
+
+
+class BreedingInventoryExclusionReason(StrEnum):
+    DISAPPEARED = "disappeared"
+    DISABLED = "disabled"
+    UNRESOLVED = "unresolved"
+    LOCKED = "locked"
+    SHARED_INVENTORY_DISABLED = "shared_inventory_disabled"
+    DIFFERENT_GUILD = "different_guild"
+    SHARE_DISABLED = "share_disabled"
+
+
+class BreedingScoreComponentName(StrEnum):
+    ROUTE_LENGTH = "route_length"
+    INVENTORY_COVERAGE = "inventory_coverage"
+    PASSIVE_CONCENTRATION = "passive_concentration"
+    BORROWING = "borrowing"
+    INTERMEDIATE_COST = "intermediate_cost"
+    ATTEMPT_COST = "attempt_cost"
+    STABILITY = "stability"
+
+
+class BreedingSearchLimits(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    max_generations: Annotated[int, Field(ge=0), Field(le=8)]
+    max_expanded_nodes: Annotated[int, Field(ge=1), Field(le=10000000)]
+    timeout_ms: Annotated[int, Field(ge=1), Field(le=300000)]
+    max_species_routes_per_pal: Annotated[int, Field(ge=3), Field(le=100000)]
+    max_assignment_states_per_mask: Annotated[int, Field(ge=3), Field(le=10000)]
+    max_candidate_routes: Annotated[int, Field(ge=3), Field(le=100000)]
+    max_results: Annotated[int, Field(ge=4), Field(le=1000)]
+
+
+class BreedingEngineInventoryPal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    instance_uid: BreedingEngineInstanceUid
+    pal_id: BreedingEngineStableId
+    owner_player_id: UUID | None
+    guild_id: UUID | None
+    gender: BreedingEngineGender
+    passive_skill_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=64),
+        AfterValidator(_ensure_unique),
+    ]
+    location_type: BreedingEngineLocationType
+    location_name: Annotated[str, Field(max_length=160)] | None
+    share_enabled: bool
+    owner_resolved: bool
+    guild_resolved: bool
+    present_in_snapshot: bool
+    breeding_enabled: bool
+    plan_locked: bool
+
+
+class BreedingInventoryExclusion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: BreedingInventoryExclusionReason
+    count: Annotated[int, Field(ge=1)]
+
+
+class BreedingParentSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_type: BreedingSourceType
+    pal_id: BreedingEngineStableId
+    instance_uid: BreedingEngineInstanceUid | None
+    owner_player_id: UUID | None
+    guild_id: UUID | None
+    gender: BreedingEngineGender | None
+    passive_skill_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=64),
+        AfterValidator(_ensure_unique),
+    ]
+    required_passive_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    borrowed: bool
+    produced_by_step_index: Annotated[int, Field(ge=0)] | None
+    location_type: BreedingEngineLocationType | None
+    location_name: Annotated[str, Field(max_length=160)] | None
+
+
+class BreedingRouteStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    step_index: Annotated[int, Field(ge=0)]
+    generation: Annotated[int, Field(ge=1), Field(le=8)]
+    recipe_type: Literal["normal", "special"]
+    parent_a: BreedingParentSource
+    parent_b: BreedingParentSource
+    child_pal_id: BreedingEngineStableId
+    child_required_gender: BreedingRequiredGender | None
+    required_passive_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+
+
+class BreedingRawScoreMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generation_count: Annotated[int, Field(ge=0)]
+    step_count: Annotated[int, Field(ge=0)]
+    unique_starting_instance_count: Annotated[int, Field(ge=1)]
+    borrowed_pal_count: Annotated[int, Field(ge=0)]
+    inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    passive_carrier_count: Annotated[int, Field(ge=0)]
+    passive_concentration: Annotated[float, Field(ge=0), Field(le=1)]
+    extra_passive_count: Annotated[int, Field(ge=0)]
+    intermediate_pal_count: Annotated[int, Field(ge=0)]
+    intermediate_passive_checkpoint_count: Annotated[int, Field(ge=0)]
+    required_gender_checkpoint_count: Annotated[int, Field(ge=0)]
+    estimated_attempts_min: Annotated[int, Field(ge=0)]
+    estimated_attempts_max: Annotated[int, Field(ge=0)]
+    difficulty: BreedingDifficulty
+
+
+class BreedingScoreComponent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    component: BreedingScoreComponentName
+    raw_value: Annotated[float, Field(ge=0)]
+    normalized_score: Annotated[float, Field(ge=0), Field(le=100)]
+    weight: Annotated[float, Field(ge=0), Field(le=1)]
+    weighted_score: Annotated[float, Field(ge=0), Field(le=100)]
+
+
+class BreedingModeScore(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    optimization_mode: OptimizationMode
+    scoring_profile_version: BreedingEngineVersion
+    total_score: Annotated[float, Field(ge=0), Field(le=100)]
+    components: Annotated[list[BreedingScoreComponent], Field(min_length=7), Field(max_length=7)]
+
+
+class BreedingScoreBreakdown(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scoring_profile_version: BreedingEngineVersion
+    estimate_basis: Literal["strategy_heuristic_no_verified_probability"]
+    raw_metrics: BreedingRawScoreMetrics
+    mode_scores: Annotated[list[BreedingModeScore], Field(min_length=4), Field(max_length=4)]
+
+
+class BreedingRouteCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_key: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
+    rank: Annotated[int, Field(ge=1)]
+    optimization_mode: OptimizationMode
+    total_score: Annotated[float, Field(ge=0), Field(le=100)]
+    generation_count: Annotated[int, Field(ge=0), Field(le=8)]
+    step_count: Annotated[int, Field(ge=0)]
+    estimated_attempts_min: Annotated[int, Field(ge=0)]
+    estimated_attempts_max: Annotated[int, Field(ge=0)]
+    difficulty: BreedingDifficulty
+    borrowed_pal_count: Annotated[int, Field(ge=0)]
+    inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    inheritance_score: Annotated[float, Field(ge=0), Field(le=1)]
+    existing_target_instance_uid: BreedingEngineInstanceUid | None
+    score_breakdown: BreedingScoreBreakdown
+    steps: list[BreedingRouteStep]
+
+
+class BreedingModeRanking(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    optimization_mode: OptimizationMode
+    scoring_profile_version: BreedingEngineVersion
+    route_keys: Annotated[
+        list[Annotated[str, Field(pattern="^[0-9a-f]{64}$")]],
+        AfterValidator(_ensure_unique),
+    ]
+
+
+class BreedingSearchDiagnostics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    graph_pal_count: Annotated[int, Field(ge=0)]
+    effective_recipe_count: Annotated[int, Field(ge=0)]
+    inventory_input_count: Annotated[int, Field(ge=0)]
+    eligible_inventory_count: Annotated[int, Field(ge=0)]
+    excluded_inventory_count: Annotated[int, Field(ge=0)]
+    exclusions: list[BreedingInventoryExclusion]
+    expanded_species_nodes: Annotated[int, Field(ge=0)]
+    expanded_assignment_nodes: Annotated[int, Field(ge=0)]
+    expanded_nodes: Annotated[int, Field(ge=0)]
+    pruned_species_routes: Annotated[int, Field(ge=0)]
+    pruned_assignment_states: Annotated[int, Field(ge=0)]
+    pruned_duplicate_routes: Annotated[int, Field(ge=0)]
+    candidate_routes_evaluated: Annotated[int, Field(ge=0)]
+    search_complete: bool
+    returned_all_legal_routes: bool
+    hit_limits: Annotated[list[BreedingSearchLimit], AfterValidator(_ensure_unique)]
+
+
+class BreedingEngineResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_pal_id: BreedingEngineStableId
+    desired_passive_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    inventory_snapshot_id: UUID
+    game_data_version_id: UUID
+    game_data_content_hash: BreedingSha256
+    algorithm_version: BreedingEngineVersion
+    scoring_profile_version: BreedingEngineVersion
+    optimization_mode: OptimizationMode
+    routes: list[BreedingRouteCandidate]
+    mode_rankings: Annotated[list[BreedingModeRanking], Field(min_length=4), Field(max_length=4)]
+    explanation_codes: Annotated[
+        list[Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]],
+        AfterValidator(_ensure_unique),
+    ]
+    diagnostics: BreedingSearchDiagnostics
+    result_digest: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
 
 
 class CanonicalServer(BaseModel):
@@ -474,11 +780,12 @@ class BreedingJob(BaseModel):
 
     job_id: UUID
     requester_user_id: UUID
+    world_id: UUID
     player_id: UUID
     guild_id: UUID | None
-    target_pal_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    target_pal_id: StableId
     desired_passive_ids: Annotated[
-        list[Annotated[str, Field(min_length=1), Field(max_length=120)]],
+        list[StableId],
         Field(min_length=0),
         Field(max_length=4),
         AfterValidator(_ensure_unique),
@@ -533,13 +840,42 @@ class GameCatalogManifest(BaseModel):
     counts: CatalogCounts
     files: Annotated[list[CatalogFileChecksum], Field(min_length=1), AfterValidator(_ensure_unique)]
     compression: Literal["tar.gz", "tar.zst"]
+    breeding_source_provenance: BreedingSourceProvenance | None = None
 
 
 class BreedingRecipeSourceDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source_version: BreedingSourceVersion
+    base_content_hash: BreedingSha256
+    game_build_id: BreedingSourceVersion
+    game_version: BreedingSourceVersion
     recipes: list[BreedingRecipeSourceRecord]
+
+
+class BreedingEngineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_pal_id: BreedingEngineStableId
+    desired_passive_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(min_length=0),
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    world_id: UUID
+    inventory_snapshot_id: UUID
+    game_data_version_id: UUID
+    game_data_content_hash: BreedingSha256
+    algorithm_version: BreedingEngineVersion
+    scoring_profile_version: BreedingEngineVersion
+    optimization_mode: OptimizationMode
+    requester_player_id: UUID
+    requester_guild_id: UUID | None
+    allow_shared_inventory: bool
+    allow_locked_reuse: bool
+    inventory: list[BreedingEngineInventoryPal]
+    limits: BreedingSearchLimits
 
 
 class CanonicalSnapshot(BaseModel):
