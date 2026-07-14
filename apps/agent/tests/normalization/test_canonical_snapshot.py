@@ -108,6 +108,21 @@ def test_conflicting_player_uid_mapping_is_rejected() -> None:
     assert caught.value.code is ErrorCode.CANONICAL_PLAYER_UID_CONFLICT
 
 
+def test_conflicting_guild_uid_mapping_has_its_own_error_code() -> None:
+    payload = canonical_payload()
+    guilds = payload["guilds"]
+    assert isinstance(guilds, list)
+    conflicting = deepcopy(guilds[0])
+    assert isinstance(conflicting, dict)
+    conflicting["name"] = "Different Guild Mapping"
+    guilds.append(conflicting)
+
+    with pytest.raises(StructuredError) as caught:
+        _validator().validate(CanonicalSnapshot.model_validate(payload))
+
+    assert caught.value.code is ErrorCode.CANONICAL_GUILD_UID_CONFLICT
+
+
 def test_unknown_pal_and_passive_are_retained_with_warnings() -> None:
     payload = canonical_payload()
     pals = payload["pals"]

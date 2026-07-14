@@ -44,8 +44,8 @@ uv run pytest
 Docker 可用时执行：
 
 ```bash
-docker compose --env-file infra/agent/.env.example -f infra/agent/docker-compose.yml config
-docker build -f apps/agent/Dockerfile -t palhatch-agent:phase0 apps/agent
+docker compose --env-file infra/agent/.env.example -f infra/agent/docker-compose.yml --profile save-worker config
+docker build -f apps/agent/Dockerfile -t palhatch-agent:phase3 apps/agent
 ```
 
 该命令只构建本地镜像，不启动 Compose、不连接现有 Docker 网络、不读取 `/opt/palworld`。

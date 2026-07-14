@@ -273,6 +273,75 @@ class CanonicalPal(BaseModel):
     location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
 
 
+class InventoryValidationWarning(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: Annotated[str, Field(max_length=100), Field(pattern="^[A-Z][A-Z0-9_]*$")]
+    path: Annotated[str, Field(min_length=1), Field(max_length=240)]
+    value: Annotated[str, Field(max_length=240)]
+
+
+class InventoryPublishPal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    instance_uid: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    owner_player_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
+    guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
+    pal_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    gender: Literal["male", "female", "genderless", "unknown"]
+    level: Annotated[int, Field(ge=1), Field(le=100)] | None
+    passive_skill_ids: Annotated[
+        list[Annotated[str, Field(min_length=1), Field(max_length=120)]],
+        Field(max_length=64),
+        AfterValidator(_ensure_unique),
+    ]
+    location_type: Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
+    location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    owner_resolved: bool
+    guild_resolved: bool
+    shared_eligible: bool
+    warning_codes: Annotated[
+        list[Annotated[str, Field(max_length=100), Field(pattern="^[A-Z][A-Z0-9_]*$")]],
+        AfterValidator(_ensure_unique),
+    ]
+
+
+class InventoryPublishPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_save_hash: Annotated[str, Field(min_length=32), Field(max_length=128)]
+    source_modified_at: AwareDatetime
+    save_version: Annotated[str, Field(min_length=1), Field(max_length=120)] | None
+    captured_at: AwareDatetime
+    parser_name: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    parser_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    server: CanonicalServer
+    guilds: list[CanonicalGuild]
+    players: list[CanonicalPlayer]
+    pals: list[InventoryPublishPal]
+    warnings: list[InventoryValidationWarning]
+
+
+class InventoryFailurePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_save_hash: Annotated[str, Field(min_length=32), Field(max_length=128)]
+    source_modified_at: AwareDatetime
+    captured_at: AwareDatetime
+    parser_name: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    parser_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    status: Literal["failed", "rejected"]
+    error_code: Annotated[str, Field(max_length=100), Field(pattern="^[A-Z][A-Z0-9_]*$")]
+    error_summary: Annotated[str, Field(max_length=500)]
+
+
+class InventoryFailureRpcRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    world_id: UUID
+    failure: InventoryFailurePayload
+
+
 class ReadinessStatus(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -360,3 +429,10 @@ class CanonicalSnapshot(BaseModel):
     guilds: list[CanonicalGuild]
     players: list[CanonicalPlayer]
     pals: list[CanonicalPal]
+
+
+class InventoryPublishRpcRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    world_id: UUID
+    snapshot: InventoryPublishPayload

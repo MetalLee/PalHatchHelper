@@ -184,3 +184,46 @@ def test_parser_has_no_network_secret_environment_or_write_access_outside_output
         "secret_absent": True,
     }
     assert not forbidden.exists()
+
+
+def test_parser_cannot_create_descendant_processes(tmp_path: Path) -> None:
+    script = (
+        "import json,os,sys; denied=False; "
+        "\ntry:\n os.fork()"
+        "\nexcept OSError:\n denied=True"
+        "\njson.dump({'process_creation_denied':denied},open(sys.argv[1],'w'))"
+    )
+    adapter = _adapter(
+        (
+            sys.executable,
+            "-c",
+            script,
+            "{output_path}",
+        )
+    )
+
+    result = adapter.parse(_snapshot(tmp_path), tmp_path / "result.json")
+
+    assert result.payload == {"process_creation_denied": True}
+
+
+def test_parser_aggregate_output_limit_rejects_many_files(tmp_path: Path) -> None:
+    script = (
+        "import json,pathlib,sys; root=pathlib.Path(sys.argv[1]).parent; "
+        "[(root/f'extra-{index}.bin').write_bytes(b'x'*32768) for index in range(3)]; "
+        "json.dump({'ok':True},open(sys.argv[1],'w'))"
+    )
+    adapter = _adapter(
+        (
+            sys.executable,
+            "-c",
+            script,
+            "{output_path}",
+        ),
+        max_output_bytes=64 * 1024,
+    )
+
+    with pytest.raises(StructuredError) as caught:
+        adapter.parse(_snapshot(tmp_path), tmp_path / "result.json")
+
+    assert caught.value.code is ErrorCode.PARSER_OUTPUT_INVALID

@@ -2,9 +2,9 @@
 
 - 审查日期：2026-07-14
 - 审查范围：`feat/phase-3-save-parser` 当前工作区未提交改动
-- 当前结论：未发现 BLOCKER；4 个 HIGH 已全部修复，尚有 5 个 MEDIUM 和 3 个 LOW 待跟踪，可以进入下一 Phase
-- 记录说明：HIGH 条目保留修复前的触发条件、影响和证据，并在每项开头标明当前修复状态
-- 判定依据：使用同日已经实际运行并记录的修复后验证结果；本次状态更新按要求没有重复运行测试
+- 当前结论：未发现 BLOCKER；4 个 HIGH、5 个 MEDIUM 和 3 个 LOW 已全部完成最小修复闭环，Phase 3 审查项已关闭，可以进入下一 Phase
+- 记录说明：所有条目保留修复前的触发条件、影响和证据，并在每项开头标明当前修复状态
+- 判定依据：本轮先集中加入真实失败检查并确认失败，再实施最小修复，合并执行局部回归、数据库验证与全量检查
 
 ## BLOCKER
 
@@ -63,9 +63,12 @@
 - 最小修复：加入明确支持的具体 Parser Adapter 或转换器及合法来源说明；使用真正经过脱敏的兼容 fixture 做端到端解析。若需重量级依赖，先获批准。
 - 回归测试：真实 fixture → 子进程 Parser → CanonicalSnapshot → Repository payload，断言玩家、公会、帕鲁、性别、被动和位置，并验证源字节与权限不变。
 
-## MEDIUM（5 项未修复，非 Phase 4 阻断项）
+## MEDIUM（5 项已修复）
 
 ### 1. Parser 资源限制可通过派生进程绕过
+
+- 修复状态：已修复。seccomp 无论网络策略如何都禁止 `fork`、`vfork`、`clone`、`clone3`；Adapter 校验输出目录内所有普通文件的总大小并拒绝 symlink/特殊文件；独立 Save Worker 另由 cgroup 和 64 MB tmpfs 限制总 CPU、内存、PID 与 Parser 输出。
+- 修复位置：`apps/agent/src/pal_hatch_helper/parsers/subprocess.py`、`apps/agent/tests/parsers/test_adapter_contract.py`、`infra/agent/docker-compose.yml`
 
 - 文件与位置：`apps/agent/src/pal_hatch_helper/parsers/subprocess.py:59`、`apps/agent/src/pal_hatch_helper/parsers/subprocess.py:203`
 - 触发条件：Parser 调用 `fork/clone/clone3`，或在输出目录创建大量文件。
@@ -76,6 +79,9 @@
 
 ### 2. 解析失败没有写入 Supabase 失败记录
 
+- 修复状态：已修复。新增只接受脱敏失败元数据的 service-role RPC；Parser/Schema/业务保护失败分别记录 `failed`/`rejected` 与稳定错误码，不更新 `latest_snapshot_id`，不上传路径、原始存档或堆栈。
+- 修复位置：`supabase/migrations/20260714032000_phase3_inventory_hardening.sql`、`apps/agent/src/pal_hatch_helper/save_sync/service.py`、`apps/agent/src/pal_hatch_helper/repositories/inventory.py`、`supabase/tests/inventory_sync.sql`
+
 - 文件与位置：`apps/agent/src/pal_hatch_helper/save_sync/service.py:77`、`apps/agent/src/pal_hatch_helper/save_sync/registry.py:55`、`docs/architecture/database-and-rls.md:34`
 - 触发条件：Parser 崩溃、非法 JSON、Schema 错误或库存骤降。
 - 实际影响：失败仅保存在本机 `.state`；`inventory_snapshots.failed/rejected`、`error_code` 始终不会由此流程产生，Supabase 控制面无法展示解析异常。
@@ -84,6 +90,9 @@
 - 回归测试：Parser 失败后断言数据库存在稳定错误码的 failed/rejected 行，latest 仍保持上一成功快照。
 
 ### 3. Phase 2 API readiness 与 Compose 运行边界发生回退
+
+- 修复状态：已修复。API production readiness 恢复为只要求数据库配置，`save_worker_configured` 单独报告命令状态；Compose 新增显式 profile、无端口的 Save Worker service，源目录只读、Agent 数据可写、缺省路径禁止自动创建，并设置总资源限制。
+- 修复位置：`apps/agent/src/pal_hatch_helper/settings.py`、`apps/agent/tests/test_health.py`、`infra/agent/docker-compose.yml`、`infra/agent/.env.example`
 
 - 文件与位置：`apps/agent/src/pal_hatch_helper/settings.py:75`、`infra/agent/docker-compose.yml:12`、`infra/agent/.env.example:17`
 - 触发条件：现有生产 API 进程只配置数据库；或通过当前 Compose 启动 Save Worker。
@@ -94,6 +103,9 @@
 
 ### 4. 库存发布 RPC 不在生成数据库类型中，完整 payload 也没有共享契约
 
+- 修复状态：已修复。新增完整库存发布/失败请求 JSON Schema 和生成的 TypeScript/Pydantic 模型，Repository 在调用 RPC 前通过生成模型校验；数据库类型生成器已纳入 inventory latest/catalog/publish/failure RPC。
+- 修复位置：`packages/contracts/schema/inventory-sync.schema.json`、`packages/contracts/scripts/generate.mjs`、`packages/contracts/scripts/generate-database-types.mjs`、`packages/contracts/src/database.types.ts`、`apps/agent/src/pal_hatch_helper/repositories/inventory.py`
+
 - 文件与位置：`packages/contracts/scripts/generate-database-types.mjs:85`、`apps/agent/src/pal_hatch_helper/repositories/inventory.py:103`
 - 触发条件：TS 消费者使用新 RPC，或 Python `_publish_payload` 与 SQL JSON key 漂移。
 - 实际影响：类型生成仍会“通过”，但 `publish_inventory_snapshot`、latest/catalog RPC 不会进入 `database.types.ts`；派生字段由 Python 和 SQL 手工同步。
@@ -103,6 +115,9 @@
 
 ### 5. “源文件只读打开”测试没有观察到叶子文件的 open flags
 
+- 修复状态：已修复。测试通过 `/proc/self/fd/<dir_fd>` 解析逐级目录描述符，明确断言 `World.sav` 与玩家叶子文件均实际使用 `O_NOFOLLOW` 且不含 `O_WRONLY/O_RDWR`。
+- 修复位置：`apps/agent/tests/save_sync/test_snapshot_copy.py`
+
 - 文件与位置：`apps/agent/tests/save_sync/test_snapshot_copy.py:201`
 - 触发条件：最终 `World.sav` 或玩家文件的 `os.open(..., dir_fd=...)` 被误改为 `O_RDWR`。
 - 实际影响：第 212 行只记录绝对根路径；叶子文件以相对名称加 `dir_fd` 打开，不会进入 `observed_flags`，测试仍可能通过。
@@ -110,9 +125,12 @@
 - 最小修复：跟踪 `dir_fd` 对应目录，或直接封装并断言叶子文件的实际 flags。
 - 回归测试：注入一个会把最终文件改为 `O_RDWR` 的错误实现，确认测试必然失败。
 
-## LOW（3 项未修复，继续跟踪）
+## LOW（3 项已修复）
 
 ### 1. 新增 SECURITY DEFINER 函数缺少内部 service-role JWT 校验
+
+- 修复状态：已修复。追加迁移将原实现移入不可执行的 `private` 函数，并用同签名 public wrapper 在任何输入校验前检查 `private.is_service_role()`；新增失败 RPC 使用相同双重校验。
+- 修复位置：`supabase/migrations/20260714032000_phase3_inventory_hardening.sql`、`supabase/tests/inventory_sync.sql`
 
 - 文件与位置：`supabase/migrations/20260714030000_phase3_inventory_sync.sql:1`、`supabase/migrations/20260714031000_phase3_inventory_catalog_lookup.sql:1`
 - 触发条件：未来误授 EXECUTE、角色继承配置变化或内部函数被间接调用。
@@ -123,6 +141,9 @@
 
 ### 2. 公会 UID 冲突错误地使用玩家冲突错误码
 
+- 修复状态：已修复。新增并使用 `CANONICAL_GUILD_UID_CONFLICT`，与玩家冲突分别回归。
+- 修复位置：`apps/agent/src/pal_hatch_helper/models/errors.py`、`apps/agent/src/pal_hatch_helper/normalization/validator.py`、`apps/agent/tests/normalization/test_canonical_snapshot.py`
+
 - 文件与位置：`apps/agent/src/pal_hatch_helper/normalization/validator.py:51`
 - 触发条件：同一 guild UID 对应不同名称记录。
 - 实际影响：返回 `CANONICAL_PLAYER_UID_CONFLICT`，监控和处置无法准确分类。
@@ -131,6 +152,9 @@
 - 回归测试：冲突 guild 与冲突 player 分别断言不同错误码。
 
 ### 3. README 与真实代码状态不一致
+
+- 修复状态：已修复。根 README、Agent/Compose/Save Sync/数据库文档已更新为 Phase 3 实际能力和安全边界；结构检查会拒绝已知 Phase 2.5/Save Worker 未实现旧表述回归。
+- 修复位置：`README.md`、`apps/agent/README.md`、`infra/agent/README.md`、`docs/operations/save-sync.md`、`scripts/check-structure.mjs`
 
 - 文件与位置：`README.md:3`、`apps/agent/README.md:15`
 - 触发条件：开发者按 README 判断当前能力或启动 Save Worker。
@@ -141,12 +165,12 @@
 
 ## 已实际验证
 
-- Node 22.23.1 下 `pnpm check` 通过：格式、lint、类型检查、测试、Web build、结构检查、秘密扫描全部执行；Agent `95 passed, 1 skipped`。
-- 单独运行本地 Supabase 集成测试：`1 passed`。
-- `supabase db reset`、`supabase db lint`、`supabase test db` 通过：142 项数据库测试。
-- 本地数据库类型已重新生成，并包含新增的库存时间水位字段。
-- Agent 镜像构建成功；非 root 用户；容器内 libseccomp、Landlock ABI 7 和 Parser 沙箱 smoke test 通过。
-- Compose 配置仍只将 `18765` 绑定到 `127.0.0.1`。
+- 修复前合并失败集真实观察到 Parser 派生进程/多文件输出未拒绝、失败记录缺失、API readiness 503、错误码混用、契约/类型缺失、文档过期和 service-role JWT 检查缺失；不是用无意义断言制造失败。
+- Node 22.23.1 下 `pnpm check` 通过：生成漂移、format、lint、TypeScript/mypy、Vitest/pytest、Web build、结构检查和秘密扫描全部执行；Agent `99 passed, 1 skipped`。
+- `supabase db reset`、`supabase db lint`、定向 inventory pgTAP `31/31` 和全量 `supabase test db` 通过；全量数据库测试 `152` 项。
+- 本地数据库类型已重新生成，包含 inventory latest/catalog/publish/failure 四条 RPC；共享库存 Schema 同时通过 Ajv 与生成 Pydantic 模型。
+- Agent Phase 3 镜像构建成功；镜像用户为 `palhatch`（UID 10001），`--network none --read-only --cap-drop ALL` smoke test 可加载 libseccomp。
+- 带 `save-worker` profile 的 Compose 配置展开通过：只有 API 将 `18765` 绑定到 `127.0.0.1`，Save Worker 无端口，并具有只读源挂载、可写数据挂载、64 MB Parser tmpfs、1 CPU、2 GB 内存和 32 PID 限制。
 - `git diff --check`、秘密扫描通过；未发现真实密钥、生产数据或重量级依赖变更。
 - 未访问或修改 `/opt/palworld`、真实存档、生产数据库或生产容器。
 
@@ -159,14 +183,8 @@
 
 ## Phase 结论
 
-四个 HIGH 已有最小修复及修复后验证证据，Phase 3 的只读 fixture、合法快照原子发布以及未确认路径时拒绝运行三项验收标准均无剩余阻断问题。Phase 4 以本地、确定性的配种数据和算法工作为主，不要求生产部署或真实宿主机存档，因此现存 MEDIUM/LOW 可以作为已知技术债继续跟踪：
+四个 HIGH、五个 MEDIUM 和三个 LOW 均已有最小修复、失败前证据与修复后回归。Phase 3 的只读 fixture、受控 Parser、失败可观测性、合法快照原子发布、命令级 readiness、共享契约和 service-role 双重鉴权已无已知审查遗留项。
 
-- MEDIUM 1 和 MEDIUM 3 最迟在 Phase 8 生产部署前解决，确保 Parser 总资源和独立 Save Worker Compose 边界成立。
-- MEDIUM 2 最迟在 Phase 5 数据状态功能前解决，否则前端无法展示数据库中的解析失败记录。
-- MEDIUM 4 在任何 TypeScript 消费库存发布 RPC 之前解决；Phase 4 新增业务字段仍必须从共享 Schema 生成。
-- MEDIUM 5 应优先补强，避免后续改动削弱只读打开测试而不被发现。
-- LOW 项继续纳入后续安全、错误码和文档收口，不得在 Phase 8 部署验收时遗留。
-
-进入下一 Phase 不代表批准部署、接触真实存档、配置生产 Parser 或推送远程仓库。
+Phase 4 可以在本地、固定游戏数据和确定性算法边界内开始；这不代表批准部署、接触真实存档、配置生产 Parser 或推送远程仓库。
 
 可以进入下一 Phase。

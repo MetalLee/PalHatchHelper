@@ -53,7 +53,7 @@ class CanonicalSnapshotValidator:
             previous_name = guilds.setdefault(guild.guild_uid, guild.name)
             if previous_name != guild.name:
                 raise StructuredError(
-                    code=ErrorCode.CANONICAL_PLAYER_UID_CONFLICT,
+                    code=ErrorCode.CANONICAL_GUILD_UID_CONFLICT,
                     summary="A guild UID maps to conflicting canonical records.",
                     retryable=False,
                 )

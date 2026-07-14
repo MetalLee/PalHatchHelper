@@ -31,7 +31,7 @@ scoring_profiles ── breeding_jobs ── breeding_plans ── breeding_rout
 
 ## 不可变与版本固定
 
-- `inventory_snapshots` 和 `pal_snapshot_items` 插入后由触发器拒绝 update/delete。解析流程必须在完整结果可用后一次写入最终状态；失败记录单独插入，不能部分修改成功快照。
+- `inventory_snapshots` 和 `pal_snapshot_items` 插入后由触发器拒绝 update/delete。解析流程必须在完整结果可用后一次写入最终状态；失败通过 `record_inventory_snapshot_failure` 单独插入 `failed`/`rejected` 元数据，不能部分修改成功快照或切换 latest。
 - `worlds.latest_snapshot_id` 只能指向同世界 `published` 快照。
 - 同一世界的成功存档哈希唯一；已发布配种版本和其中配方不可修改或删除；发布新版本只切换世界 active 指针。
 - `breeding_jobs` 固定 inventory snapshot、breeding data version、algorithm version 和 scoring profile version。历史任务通过 restrict 外键保留原引用。
@@ -80,7 +80,7 @@ Service Role 专用函数还检查 JWT role，不能只依赖函数授权。浏�
 - `list_available_pals`：严格接受三种 scope，输出字段裁剪后的可用池。
 - `update_breeding_step_status` / `confirm_step_offspring`：校验计划所有权和有限状态转换，候选确认保存真实实例 UID。
 - 管理员 RPC：绑定、解绑以及发布/切换 validated 配种版本，管理员身份只从数据库读取。客户端不能直接插入 published 版本或修改 validated 配方。
-- Agent RPC：claim、heartbeat、complete、fail、release stale。claim 使用 `FOR UPDATE SKIP LOCKED` 并原子增加 attempt，complete 可安全重试。
+- Agent RPC：claim、heartbeat、complete、fail、release stale，以及库存 latest/catalog lookup、发布和失败记录。所有 Agent RPC 同时依赖最小 ACL 与 service-role JWT；claim 使用 `FOR UPDATE SKIP LOCKED` 并原子增加 attempt，complete 可安全重试。
 
 ## 索引依据
 

@@ -1,8 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol, TypeGuard
+from typing import Literal, Protocol, TypeGuard
 from uuid import UUID
 
+from pal_hatch_helper.generated import (
+    InventoryFailureRpcRequest,
+    InventoryPublishRpcRequest,
+)
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import ValidatedSnapshot
 from pal_hatch_helper.repositories.database import DatabaseClient, JSONValue
@@ -26,6 +30,18 @@ class InventoryPublishRequest:
 
 
 @dataclass(frozen=True, slots=True)
+class InventoryFailureRequest:
+    world_id: UUID
+    source_save_hash: str
+    source_modified_at: datetime
+    parser_name: str
+    parser_version: str
+    status: Literal["failed", "rejected"]
+    error_code: ErrorCode
+    error_summary: str
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryCatalogIds:
     pal_ids: frozenset[str]
     passive_skill_ids: frozenset[str]
@@ -35,6 +51,8 @@ class InventoryRepository(Protocol):
     async def latest(self, world_id: UUID) -> LatestInventorySnapshot | None: ...
 
     async def publish(self, request: InventoryPublishRequest) -> UUID: ...
+
+    async def record_failure(self, request: InventoryFailureRequest) -> UUID: ...
 
 
 class SupabaseInventoryRepository:
@@ -69,11 +87,47 @@ class SupabaseInventoryRepository:
             raise _invalid_response() from error
 
     async def publish(self, request: InventoryPublishRequest) -> UUID:
+        rpc_request = InventoryPublishRpcRequest.model_validate(
+            {
+                "world_id": request.world_id,
+                "snapshot": _publish_payload(request),
+            }
+        )
         payload = await self._database.rpc(
             "publish_inventory_snapshot",
             {
-                "p_world_id": str(request.world_id),
-                "p_snapshot": _publish_payload(request),
+                "p_world_id": str(rpc_request.world_id),
+                "p_snapshot": _json_object(rpc_request.snapshot.model_dump(mode="json")),
+            },
+        )
+        if not isinstance(payload, str):
+            raise _invalid_response()
+        try:
+            return UUID(payload)
+        except ValueError as error:
+            raise _invalid_response() from error
+
+    async def record_failure(self, request: InventoryFailureRequest) -> UUID:
+        rpc_request = InventoryFailureRpcRequest.model_validate(
+            {
+                "world_id": request.world_id,
+                "failure": {
+                    "source_save_hash": request.source_save_hash,
+                    "source_modified_at": request.source_modified_at,
+                    "captured_at": request.source_modified_at,
+                    "parser_name": request.parser_name,
+                    "parser_version": request.parser_version,
+                    "status": request.status,
+                    "error_code": request.error_code.value,
+                    "error_summary": request.error_summary,
+                },
+            }
+        )
+        payload = await self._database.rpc(
+            "record_inventory_snapshot_failure",
+            {
+                "p_world_id": str(rpc_request.world_id),
+                "p_failure": _json_object(rpc_request.failure.model_dump(mode="json")),
             },
         )
         if not isinstance(payload, str):

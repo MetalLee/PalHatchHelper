@@ -3,7 +3,7 @@ services:
     build:
       context: ../../apps/agent
       dockerfile: Dockerfile
-    image: palhatch-agent:phase2
+    image: palhatch-agent:phase3
     command: ["pal-hatch-helper", "api", "--host", "0.0.0.0", "--port", "18765"]
     restart: unless-stopped
     init: true
@@ -43,3 +43,63 @@ services:
     cpus: "0.50"
     mem_limit: 512m
     pids_limit: 128
+  save-worker:
+    profiles: ["save-worker"]
+    build:
+      context: ../../apps/agent
+      dockerfile: Dockerfile
+    image: palhatch-agent:phase3
+    command: ["pal-hatch-helper", "save-worker"]
+    restart: unless-stopped
+    init: true
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      WORKER_ID: ${WORKER_ID:-palhatch-save-worker-local}
+      DATABASE_REQUEST_TIMEOUT_SECONDS: ${DATABASE_REQUEST_TIMEOUT_SECONDS:-10}
+      PALHATCH_DATA_DIR: /app/data
+      PALWORLD_COMPOSE_DIR: /palworld-compose
+      PALWORLD_SAVE_ROOT: /palworld-save
+      PALWORLD_WORLD_ID: ${PALWORLD_WORLD_ID:-}
+      PALWORLD_WORLD_UID: ${PALWORLD_WORLD_UID:-}
+      PARSER_NAME: ${PARSER_NAME:-}
+      PARSER_VERSION: ${PARSER_VERSION:-}
+      PARSER_COMMAND_JSON: ${PARSER_COMMAND_JSON:-[]}
+      PARSER_REQUIRED_FILES_JSON: ${PARSER_REQUIRED_FILES_JSON:-[]}
+      SAVE_POLL_INTERVAL_SECONDS: ${SAVE_POLL_INTERVAL_SECONDS:-300}
+      SAVE_STABILITY_DELAY_SECONDS: ${SAVE_STABILITY_DELAY_SECONDS:-10}
+      PARSER_TIMEOUT_SECONDS: ${PARSER_TIMEOUT_SECONDS:-180}
+      PARSER_MEMORY_LIMIT_BYTES: ${PARSER_MEMORY_LIMIT_BYTES:-1610612736}
+      PARSER_CPU_LIMIT_SECONDS: ${PARSER_CPU_LIMIT_SECONDS:-180}
+    volumes:
+      - type: bind
+        source: ${PALWORLD_COMPOSE_DIR:-/palhatch-unconfigured-compose}
+        target: /palworld-compose
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PALWORLD_SAVE_ROOT:-/palhatch-unconfigured-save}
+        target: /palworld-save
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PALHATCH_DATA_DIR:-../../data}
+        target: /app/data
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/data/runtime/parser:size=64m,uid=10001,gid=10001,mode=0700
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      disable: true
+    cpus: "1.00"
+    mem_limit: 2g
+    pids_limit: 32

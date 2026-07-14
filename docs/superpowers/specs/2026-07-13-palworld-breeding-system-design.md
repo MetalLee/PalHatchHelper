@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审，Phase 2.5 静态游戏目录扩展已合入
+- 文档状态：已完成设计评审，Phase 3 安全快照、ParserAdapter 与库存标准化已完成
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/opt/services/palworld-manager`

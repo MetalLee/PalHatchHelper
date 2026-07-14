@@ -11,6 +11,7 @@ from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import ParserAdapter
 from pal_hatch_helper.repositories.inventory import (
+    InventoryFailureRequest,
     InventoryPublishRequest,
     InventoryRepository,
 )
@@ -101,6 +102,18 @@ class InventorySyncService:
             )
         except StructuredError as error:
             self._registry.record(outcome.path, "failed", error_code=error.code.value)
+            await self._repository.record_failure(
+                InventoryFailureRequest(
+                    world_id=self._world_id,
+                    source_save_hash=outcome.content_hash,
+                    source_modified_at=outcome.source_modified_at,
+                    parser_name=self._parser.name,
+                    parser_version=self._parser.version,
+                    status=_failure_status(error.code),
+                    error_code=error.code,
+                    error_summary=error.summary,
+                )
+            )
             self._registry.enforce_retention()
             raise
 
@@ -126,3 +139,12 @@ class InventorySyncService:
                     summary="Parser JSON does not satisfy the CanonicalSnapshot schema.",
                     retryable=False,
                 ) from error
+
+
+def _failure_status(code: ErrorCode) -> Literal["failed", "rejected"]:
+    if code.value.startswith("CANONICAL_") or code in {
+        ErrorCode.INVENTORY_DROP_REVIEW_REQUIRED,
+        ErrorCode.INVENTORY_SNAPSHOT_STALE,
+    }:
+        return "rejected"
+    return "failed"

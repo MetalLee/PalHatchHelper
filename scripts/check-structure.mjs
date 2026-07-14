@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 
 const requiredPaths = [
   "AGENTS.md",
@@ -36,4 +36,20 @@ if (missing.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(`Structure check passed (${requiredPaths.length} paths).`);
+}
+
+const staleDocumentation = [
+  ["README.md", "当前仓库已完成 Phase 2.5"],
+  ["README.md", "Save Worker 只保留 Phase 3 入口"],
+  ["apps/agent/README.md", "save-worker` 只保留 Phase 3 命令边界"],
+];
+const staleMatches = [];
+for (const [path, phrase] of staleDocumentation) {
+  if ((await readFile(path, "utf8")).includes(phrase)) {
+    staleMatches.push(`${path}: ${phrase}`);
+  }
+}
+if (staleMatches.length > 0) {
+  console.error(`Stale documentation detected:\n${staleMatches.join("\n")}`);
+  process.exitCode = 1;
 }

@@ -12,7 +12,8 @@ def test_production_configuration_requires_both_supabase_values() -> None:
     )
 
     assert settings.readiness_errors()[0] == "supabase_service_role_key_missing"
-    assert "palworld_save_root_missing" in settings.readiness_errors()
+    assert "palworld_save_root_missing" not in settings.readiness_errors()
+    assert "palworld_save_root_missing" in settings.save_worker_configuration_errors()
 
 
 def test_service_role_is_stored_as_a_redacted_secret() -> None:

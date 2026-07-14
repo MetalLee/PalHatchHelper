@@ -64,7 +64,7 @@ def test_production_is_not_ready_without_supabase() -> None:
     assert_readiness_contract(response.json())
 
 
-def test_production_database_only_configuration_is_not_save_worker_ready() -> None:
+def test_production_database_only_configuration_keeps_api_ready() -> None:
     service_role = "fixture-service-role-secret-that-must-not-leak"
     client = TestClient(
         create_app(
@@ -78,7 +78,8 @@ def test_production_database_only_configuration_is_not_save_worker_ready() -> No
 
     response = client.get("/readyz")
 
-    assert response.status_code == 503
+    assert response.status_code == 200
+    assert response.json()["status"] == "ready"
     assert response.json()["database_configured"] is True
     assert response.json()["job_worker_configured"] is True
     assert response.json()["save_worker_configured"] is False

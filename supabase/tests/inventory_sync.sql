@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(21);
+select plan(31);
 
 select has_function(
   'public',
@@ -21,8 +21,56 @@ select has_function(
   array['uuid'],
   'Agent latest inventory summary RPC exists'
 );
+select has_function(
+  'public',
+  'record_inventory_snapshot_failure',
+  array['uuid', 'jsonb'],
+  'Agent inventory failure metadata RPC exists'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.publish_inventory_snapshot(uuid, jsonb)', 'execute')
+  and not has_function_privilege('anon', 'public.get_latest_inventory_snapshot_for_agent(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.get_inventory_catalog_ids_for_agent(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.record_inventory_snapshot_failure(uuid, jsonb)', 'execute'),
+  'anon cannot execute Agent inventory RPCs'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.publish_inventory_snapshot(uuid, jsonb)', 'execute')
+  and not has_function_privilege('authenticated', 'public.get_latest_inventory_snapshot_for_agent(uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.get_inventory_catalog_ids_for_agent(uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.record_inventory_snapshot_failure(uuid, jsonb)', 'execute'),
+  'authenticated users cannot execute Agent inventory RPCs'
+);
 
 set local role service_role;
+
+select throws_ok(
+  $$ select public.get_latest_inventory_snapshot_for_agent('10000000-0000-4000-8000-000000000001') $$,
+  'P0001',
+  'SERVICE_ROLE_REQUIRED',
+  'latest inventory RPC requires a service-role JWT in addition to ACL'
+);
+select throws_ok(
+  $$ select public.get_inventory_catalog_ids_for_agent('10000000-0000-4000-8000-000000000001') $$,
+  'P0001',
+  'SERVICE_ROLE_REQUIRED',
+  'catalog inventory RPC requires a service-role JWT in addition to ACL'
+);
+select throws_ok(
+  $$ select public.publish_inventory_snapshot(null, null) $$,
+  'P0001',
+  'SERVICE_ROLE_REQUIRED',
+  'inventory publication RPC requires a service-role JWT in addition to ACL'
+);
+select throws_ok(
+  $$ select public.record_inventory_snapshot_failure(null, null) $$,
+  'P0001',
+  'SERVICE_ROLE_REQUIRED',
+  'inventory failure RPC requires a service-role JWT in addition to ACL'
+);
+
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
 select ok(
   jsonb_typeof(public.get_inventory_catalog_ids_for_agent(
@@ -99,6 +147,39 @@ select is(
   (select latest_snapshot_id from public.worlds where id = '10000000-0000-4000-8000-000000000001'),
   (select snapshot_id from published_snapshot_ids where name = 'first'),
   'RPC switches latest only after all normalized rows are inserted'
+);
+select lives_ok(
+  $$
+    select public.record_inventory_snapshot_failure(
+      '10000000-0000-4000-8000-000000000001',
+      jsonb_build_object(
+        'source_save_hash', repeat('e', 64),
+        'source_modified_at', '2026-07-14T03:01:00Z',
+        'captured_at', '2026-07-14T03:01:00Z',
+        'parser_name', 'fixture-parser',
+        'parser_version', '2.0.0',
+        'status', 'failed',
+        'error_code', 'PARSER_OUTPUT_INVALID',
+        'error_summary', 'Fixture parser output was invalid.'
+      )
+    )
+  $$,
+  'failure metadata can be recorded without publishing inventory'
+);
+select is(
+  (
+    select concat_ws('|', status::text, error_code)
+    from public.inventory_snapshots
+    where world_id = '10000000-0000-4000-8000-000000000001'
+      and source_save_hash = repeat('e', 64)
+  ),
+  'failed|PARSER_OUTPUT_INVALID',
+  'failure metadata uses a stable status and error code'
+);
+select is(
+  (select latest_snapshot_id from public.worlds where id = '10000000-0000-4000-8000-000000000001'),
+  (select snapshot_id from published_snapshot_ids where name = 'first'),
+  'recording failure metadata never changes latest inventory'
 );
 select is(
   (select raw_metadata ->> 'resolution_status' from public.pal_snapshot_items where pal_instance_uid = 'phase3-pal-001'),

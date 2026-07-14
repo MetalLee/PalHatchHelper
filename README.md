@@ -1,6 +1,6 @@
 # PalHatchHelper
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库已完成 Phase 2.5：除私有 Agent、任务租约和 Supabase 权限基础外，已经具备统一静态游戏目录的共享契约、不可变版本包、关系投影、发布/回滚和精确版本缓存。它不连接生产 Supabase，不读取真实存档或真实游戏包，也尚未实现真实配种 Handler、路线算法或 AI。
+PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库已完成 Phase 3：除私有 Agent、任务租约和统一静态游戏目录外，已经具备只读稳定快照、受限 Parser 子进程、CanonicalSnapshot 校验、异常库存保护、失败元数据记录和原子库存发布。仓库只使用全合成脱敏 fixture，不连接生产 Supabase、不读取真实 Palworld 存档或游戏包，也尚未实现配种路线算法或 AI。
 
 ## 前置工具
 
@@ -44,7 +44,7 @@ cd apps/agent
 uv run pal-hatch-helper api
 ```
 
-同一镜像还提供 `job-worker`、`save-worker` 和 `catalog` 命令边界。没有真实配种 Handler 时 Job Worker 默认安全拒绝领取；Save Worker 只保留 Phase 3 入口；catalog 只接收结构化目录，不实现游戏包提取。
+同一镜像还提供 `job-worker`、`save-worker` 和 `catalog` 命令边界。没有真实配种 Handler 时 Job Worker 默认安全拒绝领取；Save Worker 仅在数据库、世界、明确确认的只读路径和 Parser 配置齐全时运行；catalog 只接收结构化目录，不实现游戏包提取。
 
 访问 `http://localhost:3000`、`http://127.0.0.1:18765/healthz` 和 `http://127.0.0.1:18765/readyz`。
 
@@ -73,7 +73,7 @@ uv run pytest
 
 ## 安全边界
 
-- `/opt/palworld` 与真实存档只允许在后续获批阶段只读检查和复制；Phase 2 完全不访问。
+- `/opt/palworld` 与真实存档只允许在部署阶段获批后由人员确认路径，并只读挂载给独立 Save Worker；当前仓库验证不访问它们。
 - Agent 不提供公网任务 API，健康接口只绑定回环地址。
 - `.env`、Service Role、AI Key 和真实服务器凭证不得进入 Git。
 - 当前阶段不部署到 `/opt/services/palworld-manager`，不操作 Palworld 或 mihomo 容器。
