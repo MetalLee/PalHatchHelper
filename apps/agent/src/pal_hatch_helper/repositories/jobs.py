@@ -138,6 +138,7 @@ def _parse_claim(row: Mapping[str, JSONValue]) -> JobClaim:
                 "desired_passive_ids": row.get("desired_passive_ids"),
                 "optimization_mode": row.get("optimization_mode"),
                 "inventory_snapshot_id": row.get("inventory_snapshot_id"),
+                "game_data_version_id": row.get("game_data_version_id"),
                 "breeding_data_version_id": row.get("breeding_data_version_id"),
                 "algorithm_version": row.get("algorithm_version"),
                 "scoring_profile_version": row.get("scoring_profile_version"),

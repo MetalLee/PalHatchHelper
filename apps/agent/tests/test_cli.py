@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -22,6 +23,39 @@ def test_cli_help_is_available_without_runtime_credentials(
 
     assert caught.value.code == 0
     assert "job-worker" in capsys.readouterr().out
+
+
+def test_catalog_validate_succeeds_without_supabase_configuration(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fixture = Path(__file__).parents[3] / "data" / "catalog-fixtures" / "minimal-valid"
+
+    exit_code = main(["catalog", "validate", "--input", str(fixture)])
+
+    assert exit_code == 0
+    assert '"valid":true' in capsys.readouterr().out
+
+
+def test_catalog_publish_requires_explicit_service_role_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+
+    exit_code = main(
+        [
+            "catalog",
+            "publish",
+            "--world-id",
+            "10000000-0000-4000-8000-000000000001",
+            "--version-id",
+            "71000000-0000-4000-8000-000000000001",
+        ]
+    )
+
+    assert exit_code == 2
+    assert ErrorCode.GAME_DATA_CONFIGURATION_REQUIRED.value in capsys.readouterr().out
 
 
 def test_save_worker_uses_a_stable_not_implemented_error_code(

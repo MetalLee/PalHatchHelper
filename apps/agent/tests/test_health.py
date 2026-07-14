@@ -42,6 +42,11 @@ def test_development_is_ready_without_supabase() -> None:
     assert response.json()["status"] == "ready"
     assert response.json()["database_configured"] is False
     assert response.json()["job_worker_configured"] is False
+    assert response.json()["game_catalog"] == {
+        "status": "not_configured",
+        "active_version_id": None,
+        "cache_status": "empty",
+    }
     assert_readiness_contract(response.json())
 
 

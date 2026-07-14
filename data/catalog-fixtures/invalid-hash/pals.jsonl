@@ -1,0 +1,3 @@
+{"breeding_power":100,"element_types":["fixture-fire"],"encyclopedia_no":1,"metadata":{"fictional":true},"name_key":"fixture.pal.a.name","pal_id":"fixture-pal-a","rarity":1}
+{"breeding_power":110,"element_types":["fixture-water"],"encyclopedia_no":2,"metadata":{"fictional":true},"name_key":"fixture.pal.b.name","pal_id":"fixture-pal-b","rarity":1}
+{"breeding_power":120,"element_types":["fixture-neutral"],"encyclopedia_no":3,"metadata":{"fictional":true},"name_key":"fixture.pal-c.name","pal_id":"fixture-pal-c","rarity":2}

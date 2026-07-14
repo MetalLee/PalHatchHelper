@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：Phase 2 已完成
+- 状态：Phase 2.5 已完成
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -224,6 +224,82 @@
    - 验证：`supabase start && supabase db reset && eval "$(supabase status -o env)" && (cd apps/agent && TEST_SUPABASE_URL="${API_URL}" TEST_SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY} uv run pytest -m integration)`
 5. 阶段回归。
    - 验证：`pnpm check && cd apps/agent && uv run ruff check . && uv run mypy src && uv run pytest`
+
+## Phase 2.5：游戏静态目录数据基础设施
+
+### 阶段目标
+
+在 Phase 2 私有 Agent 与 Supabase 基础上，建立“原始提取结果 → 标准化不可变目录包 → PostgreSQL 查询投影”的统一游戏数据版本能力，为目录搜索和后续确定性配种算法提供可发布、可回滚、可精确复现的数据事实源。
+
+### 前置依赖
+
+- Phase 2 Agent、Repository、租约恢复和数据库权限回归通过。
+- 仅使用明确标注为虚构数据的目录 fixture；不连接生产 Supabase 或真实游戏安装目录。
+
+### 明确范围
+
+- 帕鲁、被动、主动技能、帕鲁技能、伙伴技能、本地化与普通/特殊配种关系的共享 JSON Schema，以及生成的 TypeScript/Pydantic 模型。
+- 规范 JSONL、逐文件 SHA-256、稳定 `content_hash`、manifest、validation report、确定性 `tar.gz` 和原子本地目录。
+- `game_data_sources`/`game_data_versions`、七类关系投影、批次 staging/finalize、私有 Storage bucket、发布/回滚和只读目录 RPC。
+- 旧 `breeding_data_*` 与旧 world/job 字段的 UUID 复用、回填和兼容双写；新任务以 `game_data_version_id` 为权威。
+- Agent Local/Supabase ArtifactStore、进程内/SQLite 缓存、精确版本 Repository、CLI 与不泄密健康摘要。
+
+### 明确不实现的内容
+
+- `.pak`、`.utoc`、`.ucas` 真实解析和任何第三方游戏包工具集成。
+- 真实目录导入、游戏二进制资产、完整存档、Phase 3 安全快照、Phase 4 路线搜索、前端正式目录页面和生产部署。
+
+### 主要文件
+
+- `packages/contracts/schema/game-catalog.schema.json` 与两端生成模型。
+- `packages/pal-catalog/src/**`、`apps/agent/src/pal_hatch_helper/game_catalog/**`。
+- `supabase/migrations/20260714020000_versioned_game_catalog.sql` 与 `supabase/tests/game_catalog.sql`。
+- `data/catalog-fixtures/**`、ADR 0004 和游戏目录操作文档。
+
+### 数据库迁移
+
+只追加 Phase 2.5 前向迁移。导入使用可重试批次；finalize 事务性写关系投影并只将完整版本标记为 validated。发布和回滚只切换指定世界指针，不删除旧版本。authenticated 用户不能访问 staging、修改目录事实或直接下载私有制品。
+
+### API 和契约
+
+- `GameCatalogManifest`、`GameDataVersion` 和七类目录记录/校验/文件校验和 Schema。
+- Service Role RPC：`begin_game_data_import`、`stage_catalog_batch`、`finalize_catalog_import`、精确版本元数据/投影读取。
+- 管理 RPC：`publish_game_data_version`、`rollback_game_data_version`。
+- 浏览器只读 RPC：`search_catalog_pals`、`search_catalog_passive_skills`、`get_game_data_status`。
+
+### 测试要求
+
+- TS：Schema、生成漂移、规范 JSONL、排序和 hash 输入稳定性。
+- Python：非法 JSON/重复/外键、manifest/hash、bundle、原子目录、SQLite、制品 Adapter、CLI 和精确版本不回退。
+- pgTAP：升级回填、批次幂等、finalize 原子性、父母归一化、发布/回滚权限、任务固定、私有 Bucket 和 RLS。
+
+### 验收标准
+
+- 相同规范内容不受文件顺序、修改时间或绝对路径影响，稳定产生相同 `content_hash`。
+- 虚构最小 fixture 可完成 validate → stage → finalize → publish → exact load → SQLite cache → rollback。
+- 历史任务请求版本缺失或损坏时返回稳定错误，不自动回退当前/最新/最近版本。
+- Phase 2 三个命令边界与已有测试保持兼容；目录未配置不使健康接口整体失败。
+
+### 风险
+
+- 大目录一次性 JSON/RPC 导致内存和事务压力；使用 JSONL 流读取和幂等分批 staging。
+- 新旧版本指针短期并存产生漂移；发布与任务创建在数据库事务中双写并验证 UUID 对应关系。
+- 缓存损坏掩盖事实错误；SQLite 只作为可重建缓存，manifest/hash/外键损坏立即停止精确版本加载。
+
+### 回滚方式
+
+应用回退到 Phase 2 代码仍可读取保留的旧字段；数据库不删除新表或历史版本。活动游戏数据通过 `rollback_game_data_version` 切回旧 published UUID。共享环境若需撤销能力，追加补偿迁移按“revoke RPC → policy → staging/投影 → 新指针”的顺序处理，不修改已应用迁移。
+
+### 可独立执行的任务列表
+
+1. 共享契约、生成器和 `pal-catalog` 规范化工具。
+   - 验证：`pnpm contracts:generate && pnpm contracts:check && pnpm --filter @palhatch/pal-catalog test`
+2. Agent 本地版本包、制品、缓存、精确版本仓库和 CLI。
+   - 验证：`cd apps/agent && uv run pytest tests/game_catalog tests/test_cli.py`
+3. 数据库兼容迁移、staging、发布/回滚、查询 RPC、RLS 和 Bucket。
+   - 验证：`supabase db reset && supabase test db supabase/tests/game_catalog.sql`
+4. 全量回归与文档收口。
+   - 验证：`pnpm check && supabase db lint && supabase test db && git diff --check`
 
 ## Phase 3：安全快照、ParserAdapter 与库存标准化
 

@@ -2,6 +2,7 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
 from pal_hatch_helper import __version__
+from pal_hatch_helper.generated import GameCatalogHealth
 from pal_hatch_helper.models.system_status import ReadinessStatus, ServiceStatus, SystemStatus
 from pal_hatch_helper.settings import Settings
 
@@ -20,6 +21,11 @@ def build_health_router(settings: Settings) -> APIRouter:
     @router.get("/readyz", response_model=ReadinessStatus)
     def readyz() -> ReadinessStatus | JSONResponse:
         errors = settings.readiness_errors()
+        game_catalog = GameCatalogHealth(
+            status="not_configured",
+            active_version_id=None,
+            cache_status=settings.game_catalog_cache_status,
+        )
         if errors:
             payload = ReadinessStatus(
                 **SystemStatus.now(
@@ -30,6 +36,7 @@ def build_health_router(settings: Settings) -> APIRouter:
                 error_code="configuration_invalid",
                 database_configured=settings.database_configured,
                 job_worker_configured=settings.job_worker_configured,
+                game_catalog=game_catalog,
             )
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -44,6 +51,7 @@ def build_health_router(settings: Settings) -> APIRouter:
             error_code=None,
             database_configured=settings.database_configured,
             job_worker_configured=settings.job_worker_configured,
+            game_catalog=game_catalog,
         )
 
     return router

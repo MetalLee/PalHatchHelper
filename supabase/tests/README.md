@@ -1,6 +1,6 @@
 # 数据库测试
 
-`000_setup.sql` 只安装本地 pgTAP 扩展；`schema.sql`、`rls.sql`、`rpc.sql` 分别验证结构约束、身份矩阵和原子操作。所有身份和数据均来自 `supabase/seed.sql` 的虚构 fixture。
+`000_setup.sql` 只安装本地 pgTAP 扩展；`schema.sql`、`rls.sql`、`rpc.sql` 分别验证结构约束、身份矩阵和原子操作；`game_catalog.sql` 覆盖 Phase 2.5 兼容回填、批次 finalize、私有 Bucket、发布/回滚、任务版本固定与目录 RLS。所有身份和数据均来自虚构 fixture。
 
 ```bash
 supabase db reset

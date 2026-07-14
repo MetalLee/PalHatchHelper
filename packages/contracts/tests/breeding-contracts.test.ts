@@ -21,6 +21,7 @@ describe("breeding job contract", () => {
     desired_passive_ids: ["test_passive_a", "test_passive_b"],
     optimization_mode: "balanced",
     inventory_snapshot_id: "55555555-5555-4555-8555-555555555555",
+    game_data_version_id: "66666666-6666-4666-8666-666666666666",
     breeding_data_version_id: "66666666-6666-4666-8666-666666666666",
     algorithm_version: "phase1-contract-v1",
     scoring_profile_version: "balanced-v1",

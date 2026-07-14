@@ -1,5 +1,6 @@
 import os
 import socket
+from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
         env_file=None,
         extra="ignore",
         case_sensitive=False,
+        populate_by_name=True,
     )
 
     app_env: AppEnvironment = "development"
@@ -33,6 +35,9 @@ class Settings(BaseSettings):
     job_stale_reap_interval_seconds: float = Field(default=15, gt=0, le=3600)
     job_shutdown_grace_seconds: float = Field(default=30, ge=0, le=3600)
     database_request_timeout_seconds: float = Field(default=10, gt=0, le=300)
+    palhatch_data_dir: Path = Field(default=Path("./data"))
+    game_catalog_bucket: str = Field(default="game-catalog-artifacts", min_length=1, max_length=120)
+    game_catalog_cache_max_versions: int = Field(default=2, ge=1, le=32)
 
     @model_validator(mode="after")
     def validate_worker_timing(self) -> "Settings":
@@ -72,6 +77,14 @@ class Settings(BaseSettings):
     @property
     def job_worker_configured(self) -> bool:
         return self.database_configured
+
+    @property
+    def game_catalog_cache_status(self) -> Literal["empty", "warm", "error"]:
+        cache_directory = self.palhatch_data_dir / "game-catalog" / "cache"
+        try:
+            return "warm" if any(cache_directory.glob("*.sqlite")) else "empty"
+        except OSError:
+            return "error"
 
 
 def _is_https_url(value: str) -> bool:

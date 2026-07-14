@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@palhatch/contracts": "workspace:*"
+  },
   "scripts": {
     "lint": "eslint src tests --max-warnings=0",
     "typecheck": "tsc --noEmit",

@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审，待用户审阅正式规格
+- 文档状态：已完成设计评审，Phase 2.5 静态游戏目录扩展已合入
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/opt/services/palworld-manager`
@@ -38,13 +38,13 @@
 5. 解析玩家、公会、帕鲁实例、所有者、性别、被动和位置。
 6. 公会帕鲁默认可共享，玩家可以主动关闭自己帕鲁的共享状态。
 7. 玩家选择目标帕鲁和最多四个期望被动。
-8. 确定性算法使用版本化配种表计算合法路线。
+8. 确定性算法使用固定游戏数据版本中的配种关系计算合法路线。
 9. 支持综合推荐、最快路线、最高成功率、最少借用四种评分模式。
 10. 至少返回三条可比较的候选路线。
 11. 路线可以转为可执行步骤清单。
 12. 玩家可以手动管理步骤状态。
 13. 新存档出现疑似子代时，系统仅提示候选，由玩家确认真实实例。
-14. 配种数据支持远程拉取暂存、校验、管理员发布、手动上传和回滚。
+14. 统一游戏数据支持本地标准化、制品暂存、关系校验、管理员发布和回滚。
 15. AI 只负责候选路线排序辅助和自然语言解释，不能创造配种关系。
 16. 外部 AI API、Codex CLI 和本地模板组成三级降级链路。
 17. 前端使用自定义域名访问 Vercel；大陆帕鲁服务器不开放新的公网 Web 端口。
@@ -71,7 +71,7 @@
 | 库存范围 | 同公会共享库存 |
 | 默认共享 | 新帕鲁默认可共享，玩家主动关闭 |
 | 配种计算 | 确定性算法生成候选 + AI 辅助排序解释 |
-| 配种表更新 | 定时拉取暂存 + 管理员发布 + 手动上传 + 回滚 |
+| 游戏数据更新 | 原始提取层 + 不可变标准化包 + PostgreSQL 投影 + 管理员发布/回滚 |
 | 前后端部署 | Vercel 前端 + Supabase 控制面 + 服务器私有 Agent |
 | 服务器通信 | Agent 主动轮询 Supabase，不接受公网入站任务 |
 | 存档同步 | 每 5 分钟检查，稳定后复制副本并解析 |
@@ -125,7 +125,7 @@ Vercel · Next.js 前端与 BFF
 用户提交目标与被动
 → Supabase 创建 pending 任务
 → Agent 原子领取任务
-→ 固定库存快照、配种表和算法版本
+→ 固定库存快照、统一游戏数据和算法版本
 → 确定性算法搜索合法候选
 → 综合评分与路线排序
 → AIProvider 生成辅助解释
@@ -221,6 +221,7 @@ PalHatchHelper/
 - `world_uid text unique`
 - `name text`
 - `latest_snapshot_id uuid nullable`
+- `active_game_data_version_id uuid nullable`
 - `active_breeding_version_id uuid nullable`
 - `created_at timestamptz`
 
@@ -300,39 +301,42 @@ PalHatchHelper/
 4. 实例暂时消失时不立即删除偏好记录。
 5. 普通玩家只能修改自己当前拥有的帕鲁。
 
-### 6.5 配种数据版本
+### 6.5 统一游戏数据版本
 
-#### `breeding_data_sources`
+`game_data_version` 是静态游戏事实的权威版本边界，同一版本同时固定帕鲁目录、被动特性、主动技能、帕鲁可学习技能、伙伴技能、本地化、普通配种关系和特殊配种关系。图鉴编号仅用于显示，所有关系使用稳定英文内部 ID。
+
+#### `game_data_sources`
 
 - `id uuid primary key`
 - `name text`
-- `source_type text check in ('github','url','upload')`
+- `source_type text check in ('game_package','github','url','upload')`
+- `source_path text nullable`
 - `source_url text nullable`
 - `enabled boolean`
-- `fetch_schedule text nullable`
+- `created_at timestamptz`
 
-#### `breeding_data_versions`
+#### `game_data_versions`
 
 - `id uuid primary key`
 - `source_id uuid nullable`
-- `external_version text nullable`
+- `game_build_id text nullable`
+- `game_version text nullable`
+- `package_hash text`
 - `content_hash text unique`
-- `status text check in ('staging','validated','published','rejected')`
+- `schema_version text`
+- `extractor_name text`
+- `extractor_version text`
+- `artifact_bucket text nullable`
+- `artifact_path text nullable`
+- `status text check in ('extracting','staging','validated','published','rejected')`
+- `manifest jsonb`
 - `validation_report jsonb`
-- `imported_at timestamptz`
-- `published_at timestamptz nullable`
+- `imported_at/validated_at/published_at timestamptz`
 - `published_by uuid nullable`
 
-#### `breeding_recipes`
+关系查询使用 `catalog_pals`、`catalog_passive_skills`、`catalog_active_skills`、`catalog_pal_active_skills`、`catalog_partner_skills`、`catalog_localizations` 和 `catalog_breeding_recipes` 普通关系表；每张表以 `version_id` 参与主键。父母顺序归一化为 `least(parent1,parent2)` 与 `greatest(parent1,parent2)`。
 
-- `version_id uuid`
-- `parent_a_pal_id text`
-- `parent_b_pal_id text`
-- `child_pal_id text`
-- `recipe_type text check in ('normal','special')`
-- `metadata jsonb`
-
-父母顺序必须归一化，`A × B` 与 `B × A` 为同一组合。
+旧 `breeding_data_sources`、`breeding_data_versions`、`breeding_recipes` 和 `worlds.active_breeding_version_id` 暂时保留。迁移复用旧 UUID、回填统一版本并在兼容期双写；新代码以 `game_data_version_id` 为权威，不在本阶段破坏性删除旧对象。
 
 ### 6.6 配种任务与结果
 
@@ -346,7 +350,8 @@ PalHatchHelper/
 - `desired_passive_ids text[]`，长度 0 到 4
 - `optimization_mode text`
 - `inventory_snapshot_id uuid`
-- `breeding_data_version_id uuid`
+- `game_data_version_id uuid`，权威精确版本
+- `breeding_data_version_id uuid`，兼容旧代码，暂不删除
 - `algorithm_version text`
 - `scoring_profile_version text`
 - `status text`
@@ -426,7 +431,7 @@ PalHatchHelper/
 2. 修改其他玩家的共享设置。
 3. 查看 Supabase Service Role Key。
 4. 查看原始存档、服务器文件路径或完整解析堆栈。
-5. 发布或回滚配种数据。
+5. 发布或回滚统一游戏数据。
 6. 创建或修改其他玩家的计划。
 
 ### 7.2 管理员
@@ -436,7 +441,7 @@ PalHatchHelper/
 1. 查看全服玩家、公会、库存和任务。
 2. 管理用户与玩家绑定。
 3. 批量修改共享设置。
-4. 审核、发布和回滚配种数据。
+4. 审核、发布和回滚统一游戏数据。
 5. 查看同步、解析、任务和 AI 运行状态。
 6. 代任意玩家创建方案。
 
@@ -558,39 +563,65 @@ pals[]
 
 默认异常下降阈值：新快照帕鲁总数低于上一有效快照的 50%，且绝对减少超过 50 只时，不自动发布。
 
-## 10. 配种数据更新
+## 10. 游戏静态目录数据基础设施
 
-数据源适配器包括：
-
-- `GitHubDataSource`
-- `UrlDataSource`
-- `UploadDataSource`
-
-定时任务只拉取到 staging，不自动覆盖线上版本：
+### 10.1 三层数据结构
 
 ```text
-下载原始数据
-→ 计算哈希
-→ 转换为统一配方格式
-→ 结构校验
-→ 关系校验
-→ 回归测试
-→ staging/validated
-→ 管理员审核发布
+Agent 本地原始提取结果
+→ 标准化不可变目录版本包
+→ Supabase PostgreSQL 查询投影
 ```
 
-校验内容：
+原始层只用于诊断提取错误、比较游戏版本和重新标准化，不供浏览器或算法读取。本阶段不解析 `.pak`、`.utoc` 或 `.ucas`，也不伪装已经完成真实游戏包提取。
 
-1. 帕鲁 ID 合法性。
-2. 父母和子代字段完整性。
-3. 普通配方与特殊配方格式。
-4. 父母无序组合归一化。
-5. 重复、冲突和自相矛盾配方。
-6. 特殊配方优先级。
-7. 仓库内已知配方回归用例。
-8. 目标帕鲁路径可达性用例。
+### 10.2 本地目录和标准化格式
 
-发布和回滚只切换 `worlds.active_breeding_version_id`。历史版本不删除，运行中的任务继续使用领取时固定的版本。
+根目录来自 `PALHATCH_DATA_DIR`；生产部署可配置为 `/opt/services/palworld-manager/data`，代码不得写死该路径：
+
+```text
+game-catalog/
+├── extraction/{staging,raw,failed}/
+├── normalized/<content-hash>/
+├── bundles/
+├── cache/
+└── runtime/
+```
+
+标准化目录包含 `manifest.json`、`validation-report.json`、`checksums.sha256`，以及 `pals.jsonl`、`passive-skills.jsonl`、`active-skills.jsonl`、`pal-active-skills.jsonl`、`partner-skills.jsonl`、`breeding-recipes.jsonl`、`localizations.jsonl`。JSONL 固定 UTF-8、LF、每行一个对象、key 稳定排序、无多余空格、文件末尾换行；记录按稳定主键排序，集合语义数组排序去重，禁止 NaN、Infinity 和未声明字段。所有文件先写临时路径、flush/fsync、完整校验，再原子 rename。
+
+### 10.3 manifest 与 content hash
+
+manifest 记录 schema/game build/game version/package hash/content hash、提取器版本、UTC 创建时间、locale、计数、压缩方式和逐文件 SHA-256。先对七个 JSONL 文件分别计算 SHA-256，再按文件名排序，将 `schema_version + filename + sha256 + record_count` 生成为规范 JSON 后计算 `content_hash`。修改时间、绝对路径、随机 UUID、manifest 自身和 validation report 不进入 hash，因此相同内容稳定得到相同版本。
+
+### 10.4 制品、staging 与查询投影
+
+完整版本以标准库可生成的确定性 `tar.gz` 保存到私有 Bucket `game-catalog-artifacts`：
+
+```text
+versions/<content-hash>/catalog.tar.gz
+versions/<content-hash>/manifest.json
+versions/<content-hash>/validation-report.json
+```
+
+匿名和 authenticated 用户默认不能直接下载。Agent 使用已有 Service Role 配置上传，不上传游戏包、安装目录、存档、图标、音频或模型。数据库以幂等批次写入 `game_data_import_runs`/`game_data_import_batches`；`finalize_catalog_import` 在单一事务中校验计数、主外键、本地化和配种关系后写入关系投影。未完成 staging、rejected 和导入异常对普通查询不可见，失败不会改变当前活动版本。
+
+### 10.5 发布、回滚和任务固定
+
+`publish_game_data_version` 只接受完整 `validated` 版本，原子切换指定世界的 `active_game_data_version_id`，并在兼容期同步旧指针；`rollback_game_data_version` 只切换到已有 published 版本，不重新导入、不删除或降级任何版本。任务创建 RPC 在同一数据库事务中固定：
+
+```text
+inventory_snapshot_id
++ game_data_version_id
++ algorithm_version
++ scoring_profile_version
+```
+
+### 10.6 Agent 精确版本读取
+
+运行时按“进程内有限缓存 → `cache/<version-id>.sqlite` → 本地 normalized → 私有 Storage 制品 → PostgreSQL 投影”加载。SQLite 以临时文件构建后原子替换，保存 version/content/schema 元数据并以只读模式打开；不匹配或损坏时删除并从事实源重建。
+
+`load_version(requested_version_id)` 只加载请求的精确版本。任何层发现 manifest、hash、checksum、schema、重复记录或外键损坏都立即返回稳定错误；不得继续尝试另一事实层掩盖同一版本的损坏，更不得回退到世界当前版本、最新 published 版本或本地最近版本。历史任务因此保持可复现。
 
 ## 11. 确定性配种算法
 
@@ -600,7 +631,7 @@ pals[]
 - 0 到 4 个期望被动。
 - 固定库存快照。
 - 公会共享偏好。
-- 固定配种表版本。
+- 固定统一游戏数据版本中的配种关系。
 - 优化模式。
 - 最大代数，默认 5。
 
@@ -760,7 +791,7 @@ requester
 + target
 + desired_passives
 + inventory_snapshot
-+ breeding_data_version
++ game_data_version
 + optimization_mode
 ```
 
@@ -793,7 +824,7 @@ requester
 
 ```text
 库存快照版本
-+ 配种数据版本
++ 游戏数据版本
 + 算法版本
 + 评分版本
 + AI Provider 记录
@@ -804,7 +835,7 @@ requester
 1. 依赖帕鲁关闭共享。
 2. 帕鲁转移所有者。
 3. 帕鲁从最新快照消失。
-4. 配种表发布新版本。
+4. 游戏数据发布新版本。
 5. 玩家确认了与原路线不同的中间子代。
 6. 所需性别不再满足。
 
@@ -843,7 +874,7 @@ requester
 管理后台
 ├── 玩家绑定
 ├── 存档与解析
-├── 配种数据
+├── 游戏数据
 ├── 任务与 AI
 └── 系统设置
 ```
@@ -911,7 +942,7 @@ requester
 - 优化模式。
 - 是否允许使用公会共享。
 - 最大代数。
-- 当前库存快照与配种表版本。
+- 当前库存快照与游戏数据版本。
 
 选择器支持名称、编号、属性、最近选择、已拥有标记和公会拥有数量。
 
@@ -919,7 +950,7 @@ requester
 
 ```text
 已锁定库存快照
-已加载配种数据
+已加载固定游戏数据
 正在搜索合法路线
 正在综合评分
 正在生成说明
@@ -949,7 +980,7 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 - 库存覆盖率。
 - 难度与估算尝试次数。
 - 推荐理由。
-- 库存、配种表、算法和 AI 版本。
+- 库存、游戏数据、算法和 AI 版本。
 
 允许最多三条路线横向比较。移动端使用纵向卡片。
 
@@ -996,9 +1027,9 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 - 数据已过期。
 - 存档解析异常。
 - 当前使用上一份有效库存。
-- 配种数据有待审核版本。
+- 游戏数据有待审核版本。
 
-普通玩家可查看同步时间、快照版本、配种表和算法版本。管理员额外查看 Agent 心跳、Parser 版本、失败记录、待处理任务和手动同步入口。
+普通玩家可查看同步时间、快照版本、游戏数据和算法版本。管理员额外查看 Agent 心跳、Parser 版本、失败记录、待处理任务和手动同步入口。
 
 ### 17.11 关键状态
 
@@ -1062,7 +1093,7 @@ save-worker
 ├── data/
 │   ├── snapshots/
 │   ├── parser-cache/
-│   ├── breeding-data/
+│   ├── game-catalog/
 │   └── runtime/
 └── logs/
 ```
@@ -1077,6 +1108,8 @@ save-worker
 
 资源紧张时延迟存档解析和 AI 任务，优先保证游戏服务器。
 
+健康/readiness 响应增加不泄密的 `game_catalog` 摘要，只报告 `not_configured/configured/error`、活动版本 ID 和 `empty/warm/error` 缓存状态。目录未配置不会让 Phase 2 的 API、Job Worker 或 Save Worker 边界整体不可用；只有明确依赖目录版本的命令失败。响应禁止包含 Service Role、签名 URL、本地绝对路径和异常堆栈。
+
 ## 19. 错误处理
 
 | 异常 | 行为 |
@@ -1088,7 +1121,7 @@ save-worker
 | Parser 崩溃或超时 | 保留上一份有效库存 |
 | 存档持续变化 | 跳过本轮，下一周期重试 |
 | 磁盘空间不足 | 停止创建快照并告警 |
-| 配种表校验失败 | 保持 staging，不影响线上版本 |
+| 游戏目录校验失败 | 保持 staging，不影响线上版本 |
 | Agent 重启 | 回收超时任务继续执行 |
 | 帕鲁容器停止 | 仅告警，不自动启动或修改 |
 
@@ -1101,7 +1134,7 @@ save-worker
 3. 复制期间源文件变化测试。
 4. 相同哈希跳过解析测试。
 5. 异常库存下降保护测试。
-6. 配种表导入、校验、发布和回滚测试。
+6. 游戏目录导入、校验、发布和回滚测试。
 7. 特殊配方优先级测试。
 8. 多代路线搜索测试。
 9. 性别不满足时替代路线测试。
@@ -1115,9 +1148,9 @@ save-worker
 
 1. 普通玩家无法查看他人完整库存。
 2. 普通玩家只能修改自己的共享设置。
-3. 普通玩家不能发布配种数据。
+3. 普通玩家不能发布游戏数据。
 4. 管理员具备全服管理权限。
-5. 任务创建 RPC 固定当前可用快照和配种表版本。
+5. 任务创建 RPC 固定当前可用快照和游戏数据版本。
 6. 原子领取函数不会重复领取任务。
 
 ### 20.3 前端
@@ -1143,15 +1176,15 @@ save-worker
 4. 新帕鲁默认可共享，玩家可以关闭自己的共享状态。
 5. 普通玩家无法读取其他玩家完整库存。
 6. 玩家可以创建目标帕鲁和最多四个被动的任务。
-7. 任务使用固定库存、配种表、算法和评分版本。
-8. 算法只输出配种表中可验证的合法路线。
+7. 任务使用固定库存、游戏数据、算法和评分版本。
+8. 算法只输出固定游戏数据版本中可验证的合法路线。
 9. 至少返回三条具有评分明细的候选路线；不足三条时返回全部合法路线并解释原因。
 10. AI 不可用时仍能显示完整算法结果。
 11. 玩家可以采用路线并生成执行步骤。
 12. 玩家可以手动推进步骤。
 13. 新快照可以提示候选子代，但不会自动确认。
 14. 确认子代后后续步骤使用真实实例重新校验。
-15. 配种表可暂存、校验、发布和回滚。
+15. 游戏数据可暂存、校验、发布和回滚。
 16. 旧方案仍可按原版本查看和解释。
 17. 依赖帕鲁不可用时方案显示失效原因并可重新计算。
 18. 手机端可以完成登录、创建任务、查看结果、推进步骤和确认子代。
@@ -1166,7 +1199,7 @@ save-worker
 - 更完整的管理员监控。
 - RCON 手动安全保存后立即同步。
 - 可配置共享和计划占用策略。
-- 配种数据可信来源自动发布策略。
+- 游戏数据可信来源自动发布策略。
 
 ### 第三阶段
 
@@ -1183,6 +1216,6 @@ save-worker
 2. Supabase 是身份、数据库和任务控制面，不保存完整原始存档。
 3. 配种算法由版本化规则和确定性搜索保证正确性。
 4. AI 是可降级的解释层，不是事实来源。
-5. 存档、配种数据、算法和评分均版本化，结果可复现。
+5. 存档、统一游戏数据、算法和评分均版本化，结果可复现。
 6. 公会协作以默认共享为基础，但玩家保留主动关闭权限。
 7. 第一版围绕“配种器”闭环，不提前建设通用监控平台。

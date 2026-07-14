@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/game-catalog.schema.json",
+  "title": "GameCatalogManifest",
+  "description": "Manifest for one immutable, normalized game catalog version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "game_build_id",
+    "game_version",
+    "package_hash",
+    "content_hash",
+    "extractor_name",
+    "extractor_version",
+    "created_at",
+    "locales",
+    "counts",
+    "files",
+    "compression"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+    "game_build_id": { "$ref": "#/$defs/NonEmptyText" },
+    "game_version": { "$ref": "#/$defs/NonEmptyText" },
+    "package_hash": { "$ref": "#/$defs/Sha256" },
+    "content_hash": { "$ref": "#/$defs/Sha256" },
+    "extractor_name": { "$ref": "#/$defs/NonEmptyText" },
+    "extractor_version": { "$ref": "#/$defs/NonEmptyText" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "locales": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/Locale" }
+    },
+    "counts": { "$ref": "#/$defs/CatalogCounts" },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/CatalogFileChecksum" }
+    },
+    "compression": { "type": "string", "enum": ["tar.gz", "tar.zst"] }
+  },
+  "$defs": {
+    "StableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "NonEmptyText": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "SchemaVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "Sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "Locale": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 35,
+      "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+    },
+    "TextKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "Metadata": { "type": "object", "additionalProperties": true },
+    "CatalogCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pals",
+        "passive_skills",
+        "active_skills",
+        "pal_active_skills",
+        "partner_skills",
+        "breeding_recipes",
+        "localizations"
+      ],
+      "properties": {
+        "pals": { "type": "integer", "minimum": 0 },
+        "passive_skills": { "type": "integer", "minimum": 0 },
+        "active_skills": { "type": "integer", "minimum": 0 },
+        "pal_active_skills": { "type": "integer", "minimum": 0 },
+        "partner_skills": { "type": "integer", "minimum": 0 },
+        "breeding_recipes": { "type": "integer", "minimum": 0 },
+        "localizations": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "CatalogFileChecksum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filename", "sha256", "record_count"],
+      "properties": {
+        "filename": {
+          "type": "string",
+          "enum": [
+            "pals.jsonl",
+            "passive-skills.jsonl",
+            "active-skills.jsonl",
+            "pal-active-skills.jsonl",
+            "partner-skills.jsonl",
+            "breeding-recipes.jsonl",
+            "localizations.jsonl"
+          ]
+        },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "record_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "GameDataVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "game_build_id",
+        "game_version",
+        "package_hash",
+        "content_hash",
+        "schema_version",
+        "extractor_name",
+        "extractor_version",
+        "artifact_bucket",
+        "artifact_path",
+        "status",
+        "imported_at",
+        "validated_at",
+        "published_at"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "game_build_id": { "type": ["string", "null"], "maxLength": 200 },
+        "game_version": { "type": ["string", "null"], "maxLength": 120 },
+        "package_hash": { "$ref": "#/$defs/Sha256" },
+        "content_hash": { "$ref": "#/$defs/Sha256" },
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "extractor_name": { "$ref": "#/$defs/NonEmptyText" },
+        "extractor_version": { "$ref": "#/$defs/NonEmptyText" },
+        "artifact_bucket": { "type": ["string", "null"], "maxLength": 120 },
+        "artifact_path": { "type": ["string", "null"], "maxLength": 500 },
+        "status": {
+          "type": "string",
+          "enum": [
+            "extracting",
+            "staging",
+            "validated",
+            "published",
+            "rejected"
+          ]
+        },
+        "imported_at": { "type": "string", "format": "date-time" },
+        "validated_at": { "type": ["string", "null"], "format": "date-time" },
+        "published_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "CatalogPal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pal_id",
+        "encyclopedia_no",
+        "name_key",
+        "element_types",
+        "rarity",
+        "breeding_power",
+        "metadata"
+      ],
+      "properties": {
+        "pal_id": { "$ref": "#/$defs/StableId" },
+        "encyclopedia_no": { "type": ["integer", "null"], "minimum": 1 },
+        "name_key": { "$ref": "#/$defs/TextKey" },
+        "element_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/StableId" }
+        },
+        "rarity": { "type": "integer", "minimum": 0 },
+        "breeding_power": { "type": "integer", "minimum": 0 },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogPassiveSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "passive_skill_id",
+        "name_key",
+        "description_key",
+        "rank",
+        "is_negative",
+        "metadata"
+      ],
+      "properties": {
+        "passive_skill_id": { "$ref": "#/$defs/StableId" },
+        "name_key": { "$ref": "#/$defs/TextKey" },
+        "description_key": {
+          "anyOf": [{ "$ref": "#/$defs/TextKey" }, { "type": "null" }]
+        },
+        "rank": { "type": "integer", "minimum": 0 },
+        "is_negative": { "type": "boolean" },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogActiveSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active_skill_id",
+        "name_key",
+        "element_type",
+        "power",
+        "cooldown_seconds",
+        "metadata"
+      ],
+      "properties": {
+        "active_skill_id": { "$ref": "#/$defs/StableId" },
+        "name_key": { "$ref": "#/$defs/TextKey" },
+        "element_type": { "$ref": "#/$defs/StableId" },
+        "power": { "type": ["integer", "null"], "minimum": 0 },
+        "cooldown_seconds": { "type": ["number", "null"], "minimum": 0 },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogPalActiveSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pal_id",
+        "active_skill_id",
+        "learn_level",
+        "is_exclusive",
+        "metadata"
+      ],
+      "properties": {
+        "pal_id": { "$ref": "#/$defs/StableId" },
+        "active_skill_id": { "$ref": "#/$defs/StableId" },
+        "learn_level": { "type": "integer", "minimum": 0 },
+        "is_exclusive": { "type": "boolean" },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogPartnerSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partner_skill_id",
+        "pal_id",
+        "name_key",
+        "description_key",
+        "metadata"
+      ],
+      "properties": {
+        "partner_skill_id": { "$ref": "#/$defs/StableId" },
+        "pal_id": { "$ref": "#/$defs/StableId" },
+        "name_key": { "$ref": "#/$defs/TextKey" },
+        "description_key": {
+          "anyOf": [{ "$ref": "#/$defs/TextKey" }, { "type": "null" }]
+        },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogLocalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locale", "text_key", "text"],
+      "properties": {
+        "locale": { "$ref": "#/$defs/Locale" },
+        "text_key": { "$ref": "#/$defs/TextKey" },
+        "text": { "type": "string", "maxLength": 10000 }
+      }
+    },
+    "CatalogBreedingRecipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_a_pal_id",
+        "parent_b_pal_id",
+        "child_pal_id",
+        "recipe_type",
+        "metadata"
+      ],
+      "properties": {
+        "parent_a_pal_id": { "$ref": "#/$defs/StableId" },
+        "parent_b_pal_id": { "$ref": "#/$defs/StableId" },
+        "child_pal_id": { "$ref": "#/$defs/StableId" },
+        "recipe_type": { "type": "string", "enum": ["normal", "special"] },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogValidationReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "content_hash",
+        "valid",
+        "errors",
+        "warnings",
+        "counts"
+      ],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/SchemaVersion" },
+        "content_hash": {
+          "anyOf": [{ "$ref": "#/$defs/Sha256" }, { "type": "null" }]
+        },
+        "valid": { "type": "boolean" },
+        "errors": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+        },
+        "warnings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+        },
+        "counts": { "$ref": "#/$defs/CatalogCounts" }
+      }
+    }
+  }
+}

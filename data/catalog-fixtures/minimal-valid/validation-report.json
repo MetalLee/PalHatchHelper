@@ -1,0 +1,16 @@
+{
+  "content_hash": "80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4",
+  "counts": {
+    "active_skills": 1,
+    "breeding_recipes": 1,
+    "localizations": 8,
+    "pal_active_skills": 1,
+    "pals": 3,
+    "partner_skills": 1,
+    "passive_skills": 1
+  },
+  "errors": [],
+  "schema_version": "1.0.0",
+  "valid": true,
+  "warnings": []
+}

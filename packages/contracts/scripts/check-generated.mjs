@@ -9,6 +9,7 @@ const generatedPaths = [
   "readiness-status",
   "breeding-job",
   "pal-list-item",
+  "game-catalog",
 ].map((contract) => resolve(packageRoot, `src/generated/${contract}.ts`));
 generatedPaths.push(
   resolve(

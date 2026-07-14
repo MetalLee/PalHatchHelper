@@ -11,4 +11,10 @@ export interface ReadinessStatus {
   error_code: string | null;
   database_configured: boolean;
   job_worker_configured: boolean;
+  game_catalog: GameCatalogHealth;
+}
+export interface GameCatalogHealth {
+  status: "not_configured" | "configured" | "error";
+  active_version_id: string | null;
+  cache_status: "empty" | "warm" | "error";
 }

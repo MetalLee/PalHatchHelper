@@ -1,21 +1,27 @@
-export interface CatalogPal {
-  readonly id: string;
-  readonly displayName: string;
-  readonly iconRef: string | null;
-}
+export type {
+  CatalogActiveSkill,
+  CatalogBreedingRecipe,
+  CatalogFileChecksum,
+  CatalogLocalization,
+  CatalogPal,
+  CatalogPalActiveSkill,
+  CatalogPartnerSkill,
+  CatalogPassiveSkill,
+  CatalogValidationReport,
+  GameCatalogManifest,
+  GameDataVersion,
+} from "@palhatch/contracts";
 
-export interface PalCatalog {
-  readonly version: string;
-  readonly pals: readonly CatalogPal[];
-}
-
-export const fixtureCatalog: PalCatalog = {
-  version: "phase0-fixture-v1",
-  pals: [
-    {
-      id: "fixture-pal",
-      displayName: "测试帕鲁（非真实数据）",
-      iconRef: null,
-    },
-  ],
-};
+export {
+  buildContentHashInput,
+  canonicalJsonLine,
+  canonicalStringify,
+  parseJsonLines,
+} from "./jsonl";
+export { fixtureCatalog } from "./fixture";
+export type {
+  CatalogBrowserPal,
+  CatalogQueryResult,
+  FictionalCatalogFixture,
+} from "./types";
+export { validateCatalogRelationships } from "./validation";

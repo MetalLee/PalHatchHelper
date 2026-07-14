@@ -4,6 +4,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 
+from pal_hatch_helper.generated import GameCatalogHealth
 from pal_hatch_helper.models.system_status import (
     ReadinessStatus,
     ServiceStatus,
@@ -40,6 +41,9 @@ def test_readiness_status_matches_shared_json_schema() -> None:
         error_code="configuration_invalid",
         database_configured=False,
         job_worker_configured=False,
+        game_catalog=GameCatalogHealth(
+            status="not_configured", active_version_id=None, cache_status="empty"
+        ),
     )
     schema_path = (
         Path(__file__).parents[3]

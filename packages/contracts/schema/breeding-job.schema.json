@@ -33,6 +33,7 @@
     "desired_passive_ids",
     "optimization_mode",
     "inventory_snapshot_id",
+    "game_data_version_id",
     "breeding_data_version_id",
     "algorithm_version",
     "scoring_profile_version",
@@ -57,6 +58,7 @@
     },
     "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
     "inventory_snapshot_id": { "type": "string", "format": "uuid" },
+    "game_data_version_id": { "type": "string", "format": "uuid" },
     "breeding_data_version_id": { "type": "string", "format": "uuid" },
     "algorithm_version": { "type": "string", "minLength": 1, "maxLength": 100 },
     "scoring_profile_version": {

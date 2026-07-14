@@ -27,6 +27,7 @@ export interface BreedingJob {
   desired_passive_ids: [] | [string] | [string, string] | [string, string, string] | [string, string, string, string];
   optimization_mode: OptimizationMode;
   inventory_snapshot_id: string;
+  game_data_version_id: string;
   breeding_data_version_id: string;
   algorithm_version: string;
   scoring_profile_version: string;

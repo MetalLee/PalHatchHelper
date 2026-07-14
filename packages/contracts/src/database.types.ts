@@ -122,6 +122,7 @@ export type Database = {
           updated_at: string;
           completed_at: string | null;
           lease_token: string | null;
+          game_data_version_id: string;
         };
         Insert: {
           id?: string;
@@ -150,6 +151,7 @@ export type Database = {
           updated_at?: string;
           completed_at?: string | null;
           lease_token?: string | null;
+          game_data_version_id: string;
         };
         Update: {
           id?: string;
@@ -178,6 +180,7 @@ export type Database = {
           updated_at?: string;
           completed_at?: string | null;
           lease_token?: string | null;
+          game_data_version_id?: string;
         };
         Relationships: [
           {
@@ -185,6 +188,13 @@ export type Database = {
             columns: ["breeding_data_version_id"];
             isOneToOne: false;
             referencedRelation: "breeding_data_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "breeding_jobs_game_data_version_id_fkey";
+            columns: ["game_data_version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
             referencedColumns: ["id"];
           },
           {
@@ -421,6 +431,460 @@ export type Database = {
             columns: ["route_id"];
             isOneToOne: false;
             referencedRelation: "breeding_routes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      catalog_active_skills: {
+        Row: {
+          version_id: string;
+          active_skill_id: string;
+          name_key: string;
+          element_type: string;
+          power: number | null;
+          cooldown_seconds: number | null;
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          active_skill_id: string;
+          name_key: string;
+          element_type: string;
+          power?: number | null;
+          cooldown_seconds?: number | null;
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          active_skill_id?: string;
+          name_key?: string;
+          element_type?: string;
+          power?: number | null;
+          cooldown_seconds?: number | null;
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_active_skills_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      catalog_breeding_recipes: {
+        Row: {
+          version_id: string;
+          parent_a_pal_id: string;
+          parent_b_pal_id: string;
+          child_pal_id: string;
+          recipe_type: Database["public"]["Enums"]["breeding_recipe_type"];
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          parent_a_pal_id: string;
+          parent_b_pal_id: string;
+          child_pal_id: string;
+          recipe_type: Database["public"]["Enums"]["breeding_recipe_type"];
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          parent_a_pal_id?: string;
+          parent_b_pal_id?: string;
+          child_pal_id?: string;
+          recipe_type?: Database["public"]["Enums"]["breeding_recipe_type"];
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_breeding_child_fkey";
+            columns: ["version_id", "child_pal_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_pals";
+            referencedColumns: ["version_id", "pal_id"];
+          },
+          {
+            foreignKeyName: "catalog_breeding_parent_a_fkey";
+            columns: ["version_id", "parent_a_pal_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_pals";
+            referencedColumns: ["version_id", "pal_id"];
+          },
+          {
+            foreignKeyName: "catalog_breeding_parent_b_fkey";
+            columns: ["version_id", "parent_b_pal_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_pals";
+            referencedColumns: ["version_id", "pal_id"];
+          },
+        ];
+      };
+      catalog_localizations: {
+        Row: {
+          version_id: string;
+          locale: string;
+          text_key: string;
+          text: string;
+        };
+        Insert: {
+          version_id: string;
+          locale: string;
+          text_key: string;
+          text: string;
+        };
+        Update: {
+          version_id?: string;
+          locale?: string;
+          text_key?: string;
+          text?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_localizations_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      catalog_pal_active_skills: {
+        Row: {
+          version_id: string;
+          pal_id: string;
+          active_skill_id: string;
+          learn_level: number;
+          is_exclusive: boolean;
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          pal_id: string;
+          active_skill_id: string;
+          learn_level: number;
+          is_exclusive: boolean;
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          pal_id?: string;
+          active_skill_id?: string;
+          learn_level?: number;
+          is_exclusive?: boolean;
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_pal_active_pal_fkey";
+            columns: ["version_id", "pal_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_pals";
+            referencedColumns: ["version_id", "pal_id"];
+          },
+          {
+            foreignKeyName: "catalog_pal_active_skill_fkey";
+            columns: ["version_id", "active_skill_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_active_skills";
+            referencedColumns: ["version_id", "active_skill_id"];
+          },
+        ];
+      };
+      catalog_pals: {
+        Row: {
+          version_id: string;
+          pal_id: string;
+          encyclopedia_no: number | null;
+          name_key: string;
+          element_types: string[];
+          rarity: number;
+          breeding_power: number;
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          pal_id: string;
+          encyclopedia_no?: number | null;
+          name_key: string;
+          element_types: string[];
+          rarity: number;
+          breeding_power: number;
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          pal_id?: string;
+          encyclopedia_no?: number | null;
+          name_key?: string;
+          element_types?: string[];
+          rarity?: number;
+          breeding_power?: number;
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_pals_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      catalog_partner_skills: {
+        Row: {
+          version_id: string;
+          partner_skill_id: string;
+          pal_id: string;
+          name_key: string;
+          description_key: string | null;
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          partner_skill_id: string;
+          pal_id: string;
+          name_key: string;
+          description_key?: string | null;
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          partner_skill_id?: string;
+          pal_id?: string;
+          name_key?: string;
+          description_key?: string | null;
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_partner_pal_fkey";
+            columns: ["version_id", "pal_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_pals";
+            referencedColumns: ["version_id", "pal_id"];
+          },
+        ];
+      };
+      catalog_passive_skills: {
+        Row: {
+          version_id: string;
+          passive_skill_id: string;
+          name_key: string;
+          description_key: string | null;
+          rank: number;
+          is_negative: boolean;
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          passive_skill_id: string;
+          name_key: string;
+          description_key?: string | null;
+          rank: number;
+          is_negative: boolean;
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          passive_skill_id?: string;
+          name_key?: string;
+          description_key?: string | null;
+          rank?: number;
+          is_negative?: boolean;
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_passive_skills_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      game_data_import_batches: {
+        Row: {
+          id: string;
+          import_run_id: string;
+          entity_type: Database["public"]["Enums"]["game_data_entity_type"];
+          idempotency_key: string;
+          records: Json;
+          record_count: number | null;
+          batch_digest: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          import_run_id: string;
+          entity_type: Database["public"]["Enums"]["game_data_entity_type"];
+          idempotency_key: string;
+          records: Json;
+          batch_digest: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          import_run_id?: string;
+          entity_type?: Database["public"]["Enums"]["game_data_entity_type"];
+          idempotency_key?: string;
+          records?: Json;
+          batch_digest?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "game_data_import_batches_import_run_id_fkey";
+            columns: ["import_run_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_import_runs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      game_data_import_runs: {
+        Row: {
+          id: string;
+          version_id: string;
+          status: Database["public"]["Enums"]["game_data_import_status"];
+          manifest: Json;
+          started_at: string;
+          finalized_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          version_id: string;
+          status?: Database["public"]["Enums"]["game_data_import_status"];
+          manifest: Json;
+          started_at?: string;
+          finalized_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          version_id?: string;
+          status?: Database["public"]["Enums"]["game_data_import_status"];
+          manifest?: Json;
+          started_at?: string;
+          finalized_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "game_data_import_runs_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      game_data_sources: {
+        Row: {
+          id: string;
+          name: string;
+          source_type: Database["public"]["Enums"]["game_data_source_type"];
+          source_path: string | null;
+          source_url: string | null;
+          enabled: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          source_type: Database["public"]["Enums"]["game_data_source_type"];
+          source_path?: string | null;
+          source_url?: string | null;
+          enabled?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          source_type?: Database["public"]["Enums"]["game_data_source_type"];
+          source_path?: string | null;
+          source_url?: string | null;
+          enabled?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      game_data_versions: {
+        Row: {
+          id: string;
+          source_id: string | null;
+          game_build_id: string | null;
+          game_version: string | null;
+          package_hash: string;
+          content_hash: string;
+          schema_version: string;
+          extractor_name: string;
+          extractor_version: string;
+          artifact_bucket: string | null;
+          artifact_path: string | null;
+          status: Database["public"]["Enums"]["game_data_status"];
+          manifest: Json;
+          validation_report: Json;
+          imported_at: string;
+          validated_at: string | null;
+          published_at: string | null;
+          published_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          source_id?: string | null;
+          game_build_id?: string | null;
+          game_version?: string | null;
+          package_hash: string;
+          content_hash: string;
+          schema_version: string;
+          extractor_name: string;
+          extractor_version: string;
+          artifact_bucket?: string | null;
+          artifact_path?: string | null;
+          status?: Database["public"]["Enums"]["game_data_status"];
+          manifest?: Json;
+          validation_report?: Json;
+          imported_at?: string;
+          validated_at?: string | null;
+          published_at?: string | null;
+          published_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          source_id?: string | null;
+          game_build_id?: string | null;
+          game_version?: string | null;
+          package_hash?: string;
+          content_hash?: string;
+          schema_version?: string;
+          extractor_name?: string;
+          extractor_version?: string;
+          artifact_bucket?: string | null;
+          artifact_path?: string | null;
+          status?: Database["public"]["Enums"]["game_data_status"];
+          manifest?: Json;
+          validation_report?: Json;
+          imported_at?: string;
+          validated_at?: string | null;
+          published_at?: string | null;
+          published_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "game_data_versions_published_by_fkey";
+            columns: ["published_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "game_data_versions_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_sources";
             referencedColumns: ["id"];
           },
         ];
@@ -861,6 +1325,7 @@ export type Database = {
           active_breeding_version_id: string | null;
           created_at: string;
           updated_at: string;
+          active_game_data_version_id: string | null;
         };
         Insert: {
           id?: string;
@@ -870,6 +1335,7 @@ export type Database = {
           active_breeding_version_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          active_game_data_version_id?: string | null;
         };
         Update: {
           id?: string;
@@ -879,6 +1345,7 @@ export type Database = {
           active_breeding_version_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          active_game_data_version_id?: string | null;
         };
         Relationships: [
           {
@@ -886,6 +1353,13 @@ export type Database = {
             columns: ["active_breeding_version_id"];
             isOneToOne: false;
             referencedRelation: "breeding_data_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "worlds_active_game_data_version_id_fkey";
+            columns: ["active_game_data_version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
             referencedColumns: ["id"];
           },
           {
@@ -1062,6 +1536,22 @@ export type Database = {
         | "retrying"
         | "skipped"
         | "invalidated";
+      game_data_entity_type:
+        | "pals"
+        | "passive_skills"
+        | "active_skills"
+        | "pal_active_skills"
+        | "partner_skills"
+        | "breeding_recipes"
+        | "localizations";
+      game_data_import_status: "staging" | "finalized";
+      game_data_source_type: "game_package" | "github" | "url" | "upload";
+      game_data_status:
+        | "extracting"
+        | "staging"
+        | "validated"
+        | "published"
+        | "rejected";
       inventory_snapshot_status:
         | "pending"
         | "parsed"

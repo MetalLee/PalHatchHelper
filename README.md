@@ -1,6 +1,6 @@
 # PalHatchHelper
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库已完成 Phase 2 基础：在 Supabase 数据模型、RLS、RPC 和共享契约之上，提供私有 Python Agent 的命令入口、数据库 Adapter、任务租约、心跳、恢复和结构化日志。它不连接生产 Supabase，不读取真实存档，也尚未实现真实配种 Handler、配种算法或 AI。
+PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库已完成 Phase 2.5：除私有 Agent、任务租约和 Supabase 权限基础外，已经具备统一静态游戏目录的共享契约、不可变版本包、关系投影、发布/回滚和精确版本缓存。它不连接生产 Supabase，不读取真实存档或真实游戏包，也尚未实现真实配种 Handler、路线算法或 AI。
 
 ## 前置工具
 
@@ -44,7 +44,7 @@ cd apps/agent
 uv run pal-hatch-helper api
 ```
 
-同一镜像还提供 `job-worker` 和 `save-worker` 命令边界。Phase 2 没有真实配种 Handler，前者默认安全拒绝领取；后者只保留 Phase 3 入口，不读取存档。
+同一镜像还提供 `job-worker`、`save-worker` 和 `catalog` 命令边界。没有真实配种 Handler 时 Job Worker 默认安全拒绝领取；Save Worker 只保留 Phase 3 入口；catalog 只接收结构化目录，不实现游戏包提取。
 
 访问 `http://localhost:3000`、`http://127.0.0.1:18765/healthz` 和 `http://127.0.0.1:18765/readyz`。
 

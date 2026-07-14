@@ -31,6 +31,10 @@ git diff --stat
 3. `20260713012000_breeding_jobs_and_plans.sql`：任务租约、方案、路线、步骤和候选。
 4. `20260713013000_security_and_rls.sql`：辅助函数、grant、private schema 和全部 RLS。
 5. `20260713014000_rpc.sql`：玩家、管理员和 Service Role RPC 以及逐函数授权。
+6. `20260714010000_phase2_worker_lifecycle.sql`：Phase 2 Worker fencing token 与恢复生命周期。
+7. `20260714020000_versioned_game_catalog.sql`：Phase 2.5 统一游戏数据、目录投影、批次导入、发布/回滚、RLS 与私有制品 Bucket。
+
+Phase 2.5 迁移保留并镜像旧 `breeding_data_*`，优先复用 UUID，回填 world/job 新指针。空库 reset 时 seed 发生在迁移之后，因此兼容触发器也必须覆盖 seed 和旧代码的后续写入。验证升级时同时断言回填行数和历史任务版本不变。
 
 `supabase/seed.sql` 不是迁移，只在 reset 后写入本地 fixture。
 

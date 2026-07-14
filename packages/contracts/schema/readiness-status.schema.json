@@ -12,7 +12,8 @@
     "timestamp",
     "error_code",
     "database_configured",
-    "job_worker_configured"
+    "job_worker_configured",
+    "game_catalog"
   ],
   "properties": {
     "status": {
@@ -36,6 +37,22 @@
       "pattern": "^[a-z][a-z0-9_]*$"
     },
     "database_configured": { "type": "boolean" },
-    "job_worker_configured": { "type": "boolean" }
+    "job_worker_configured": { "type": "boolean" },
+    "game_catalog": { "$ref": "#/$defs/GameCatalogHealth" }
+  },
+  "$defs": {
+    "GameCatalogHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "active_version_id", "cache_status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["not_configured", "configured", "error"]
+        },
+        "active_version_id": { "type": ["string", "null"], "format": "uuid" },
+        "cache_status": { "type": "string", "enum": ["empty", "warm", "error"] }
+      }
+    }
   }
 }

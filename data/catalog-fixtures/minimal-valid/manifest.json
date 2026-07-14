@@ -1,0 +1,58 @@
+{
+  "compression": "tar.gz",
+  "content_hash": "80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4",
+  "counts": {
+    "active_skills": 1,
+    "breeding_recipes": 1,
+    "localizations": 8,
+    "pal_active_skills": 1,
+    "pals": 3,
+    "partner_skills": 1,
+    "passive_skills": 1
+  },
+  "created_at": "2026-07-14T00:00:00Z",
+  "extractor_name": "fixture-extractor",
+  "extractor_version": "1.0.0",
+  "files": [
+    {
+      "filename": "active-skills.jsonl",
+      "record_count": 1,
+      "sha256": "3fbb2d2b2f32f343ced476b501e90aa53e1dbd6962b18f1e19ff2a032f1f02fc"
+    },
+    {
+      "filename": "breeding-recipes.jsonl",
+      "record_count": 1,
+      "sha256": "585ab4b15cf2c07c397a4c840b2a9ae49db9807d57826193874fdbb65a6467c4"
+    },
+    {
+      "filename": "localizations.jsonl",
+      "record_count": 8,
+      "sha256": "52c59bb745c6e2ded645a921b85377a8394029a972d24b47114b90331c060a7d"
+    },
+    {
+      "filename": "pal-active-skills.jsonl",
+      "record_count": 1,
+      "sha256": "04fc290c2822079545e663d46c85a25369bd76e5a3fc28c23fbd6023c7f844c3"
+    },
+    {
+      "filename": "pals.jsonl",
+      "record_count": 3,
+      "sha256": "3b4f372e40f9b325f12568c2b7ef20df4bac77c63ca238ece699a3f4e2c60a93"
+    },
+    {
+      "filename": "partner-skills.jsonl",
+      "record_count": 1,
+      "sha256": "217d7980f13e2f9fe6ce290a4927cf1cb9f6f11d16688e35b83efd17ad21376e"
+    },
+    {
+      "filename": "passive-skills.jsonl",
+      "record_count": 1,
+      "sha256": "60cfc31c343f6860724321f59054ac84b88a4568f0f4c721885b095560e023d9"
+    }
+  ],
+  "game_build_id": "fixture-build",
+  "game_version": "fixture-version",
+  "locales": ["en-US"],
+  "package_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "schema_version": "1.0.0"
+}

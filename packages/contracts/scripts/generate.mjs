@@ -1,8 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
-import { compileFromFile } from "json-schema-to-typescript";
+import { compile, compileFromFile } from "json-schema-to-typescript";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputDirectory = resolve(packageRoot, "src/generated");
@@ -16,17 +17,63 @@ const contracts = [
   "readiness-status",
   "breeding-job",
   "pal-list-item",
+  "game-catalog",
 ];
-const pythonContracts = ["readiness-status", "breeding-job", "pal-list-item"];
+const pythonContracts = [
+  "readiness-status",
+  "breeding-job",
+  "pal-list-item",
+  "game-catalog",
+];
 
 await mkdir(outputDirectory, { recursive: true });
 for (const contract of contracts) {
   const schemaPath = resolve(packageRoot, `schema/${contract}.schema.json`);
   const outputPath = resolve(outputDirectory, `${contract}.ts`);
-  const source = await compileFromFile(schemaPath, {
-    bannerComment: `/* Generated from ${contract}.schema.json. Do not edit directly. */`,
-    style: { singleQuote: false },
-  });
+  let source;
+  if (contract === "game-catalog") {
+    const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+    const manifestDefinition = { ...schema };
+    delete manifestDefinition.$schema;
+    delete manifestDefinition.$id;
+    delete manifestDefinition.$defs;
+    delete manifestDefinition.title;
+    const modelNames = [
+      "GameCatalogManifest",
+      "GameDataVersion",
+      "CatalogPal",
+      "CatalogPassiveSkill",
+      "CatalogActiveSkill",
+      "CatalogPalActiveSkill",
+      "CatalogPartnerSkill",
+      "CatalogLocalization",
+      "CatalogBreedingRecipe",
+      "CatalogValidationReport",
+      "CatalogFileChecksum",
+    ];
+    const syntheticSchema = {
+      title: "GameCatalogContracts",
+      type: "object",
+      additionalProperties: false,
+      required: modelNames,
+      properties: Object.fromEntries(
+        modelNames.map((name) => [name, { $ref: `#/$defs/${name}` }]),
+      ),
+      $defs: {
+        ...schema.$defs,
+        GameCatalogManifest: manifestDefinition,
+      },
+    };
+    source = await compile(syntheticSchema, "GameCatalogContracts", {
+      bannerComment: `/* Generated from ${contract}.schema.json. Do not edit directly. */`,
+      style: { singleQuote: false },
+    });
+  } else {
+    source = await compileFromFile(schemaPath, {
+      bannerComment: `/* Generated from ${contract}.schema.json. Do not edit directly. */`,
+      style: { singleQuote: false },
+    });
+  }
 
   await writeFile(outputPath, source, "utf8");
   console.log(`Generated ${outputPath}`);
@@ -74,14 +121,23 @@ function pythonType(schema) {
     return schema.$ref.split("/").at(-1);
   }
 
+  if (schema.anyOf) {
+    return schema.anyOf.map((option) => pythonType(option)).join(" | ");
+  }
+
   const declaredTypes = Array.isArray(schema.type)
     ? schema.type
     : [schema.type];
   const nullable = declaredTypes.includes("null");
   const kind = declaredTypes.find((value) => value !== "null");
+  if (kind === undefined && nullable) {
+    return "None";
+  }
   let result;
 
-  if (schema.enum) {
+  if (schema.const !== undefined) {
+    result = `Literal[${JSON.stringify(schema.const)}]`;
+  } else if (schema.enum) {
     result = `Literal[${schema.enum.map((value) => JSON.stringify(value)).join(", ")}]`;
   } else if (kind === "string" && schema.format === "uuid") {
     result = "UUID";
@@ -98,7 +154,13 @@ function pythonType(schema) {
   } else if (kind === "array") {
     result = `list[${pythonType(schema.items)}]`;
   } else if (kind === "object") {
-    result = "dict[str, object]";
+    result =
+      schema.additionalProperties &&
+      typeof schema.additionalProperties === "object"
+        ? `dict[str, ${pythonType(schema.additionalProperties)}]`
+        : "dict[str, object]";
+  } else if (kind === "null") {
+    result = "None";
   } else {
     throw new Error(`Unsupported JSON Schema type: ${JSON.stringify(schema)}`);
   }
@@ -143,6 +205,14 @@ function pythonFieldLines(name, type, optionalDefault) {
   const nullableSuffix = " | None";
   const nullable = type.endsWith(nullableSuffix);
   const baseType = nullable ? type.slice(0, -nullableSuffix.length) : type;
+  if (baseType.startsWith("Literal[") && baseType.endsWith("]")) {
+    const values = splitTopLevel(baseType.slice("Literal[".length, -1));
+    const lines = [`    ${name}: ${nullable ? "(" : ""}Literal[`];
+    lines.push(...values.map((value) => `        ${value},`));
+    lines.push(`    ]${nullable ? " | None" : ""}`);
+    if (nullable) lines.push(`    )${optionalDefault}`);
+    return lines;
+  }
   if (baseType.startsWith("Annotated[") && baseType.endsWith("]")) {
     const argumentsList = splitTopLevel(
       baseType.slice("Annotated[".length, -1),
@@ -167,6 +237,24 @@ function pythonFieldLines(name, type, optionalDefault) {
   return ["    " + name + ": (", `        ${type}`, `    )${optionalDefault}`];
 }
 
+function pythonAliasLines(name, type) {
+  const prefix = `type ${name} = `;
+  if (prefix.length + type.length <= 100) {
+    return [`${prefix}${type}`, "", ""];
+  }
+  if (type.startsWith("Annotated[") && type.endsWith("]")) {
+    const values = splitTopLevel(type.slice("Annotated[".length, -1));
+    return [
+      `type ${name} = Annotated[`,
+      ...values.map((value) => `    ${value},`),
+      "]",
+      "",
+      "",
+    ];
+  }
+  return [`${prefix}(`, `    ${type}`, ")", "", ""];
+}
+
 async function generatePythonContracts() {
   const schemas = await Promise.all(
     pythonContracts.map(async (contract) => {
@@ -183,15 +271,11 @@ async function generatePythonContracts() {
       definitions.set(name, definition);
     }
   }
-  const usesLiteral = schemas.some((schema) =>
-    Object.values(schema.properties ?? {}).some((property) => property.enum),
-  );
-
   const lines = [
     '"""Generated from packages/contracts/schema. Do not edit directly."""',
     "",
     "from enum import StrEnum",
-    `from typing import Annotated${usesLiteral ? ", Literal" : ""}`,
+    "from typing import Annotated, Literal",
     "from uuid import UUID",
     "",
     "from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field",
@@ -205,20 +289,9 @@ async function generatePythonContracts() {
     "",
   ];
 
-  for (const [name, definition] of definitions) {
-    if (definition.type !== "string" || !definition.enum) {
-      throw new Error(`Python enum ${name} must be a string enum`);
-    }
-    lines.push(`class ${name}(StrEnum):`);
-    for (const value of definition.enum) {
-      lines.push(`    ${enumMember(value)} = ${JSON.stringify(value)}`);
-    }
-    lines.push("", "");
-  }
-
-  for (const schema of schemas) {
+  function emitModel(name, schema) {
     const required = new Set(schema.required ?? []);
-    lines.push(`class ${schema.title}(BaseModel):`);
+    lines.push(`class ${name}(BaseModel):`);
     lines.push('    model_config = ConfigDict(extra="forbid")', "");
     for (const [name, property] of Object.entries(schema.properties ?? {})) {
       const optionalDefault = required.has(name) ? "" : " = None";
@@ -227,6 +300,24 @@ async function generatePythonContracts() {
       );
     }
     lines.push("", "");
+  }
+
+  for (const [name, definition] of definitions) {
+    if (definition.type === "string" && definition.enum) {
+      lines.push(`class ${name}(StrEnum):`);
+      for (const value of definition.enum) {
+        lines.push(`    ${enumMember(value)} = ${JSON.stringify(value)}`);
+      }
+      lines.push("", "");
+    } else if (!(definition.type === "object" && definition.properties)) {
+      lines.push(...pythonAliasLines(name, pythonType(definition)));
+    } else if (definition.type === "object" && definition.properties) {
+      emitModel(name, definition);
+    }
+  }
+
+  for (const schema of schemas) {
+    emitModel(schema.title, schema);
   }
 
   const exportedNames = [
@@ -254,6 +345,24 @@ async function generatePythonContracts() {
   }
   await writeFile(contractsPath, `${lines.join("\n")}\n`, "utf8");
   await writeFile(initPath, initLines.join("\n"), "utf8");
+  const formatter = spawnSync(
+    "uv",
+    [
+      "run",
+      "--project",
+      resolve(repositoryRoot, "apps/agent"),
+      "ruff",
+      "format",
+      contractsPath,
+      initPath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (formatter.status !== 0) {
+    throw new Error(
+      `Unable to format generated Python contracts: ${formatter.stderr}`,
+    );
+  }
   console.log(`Generated ${contractsPath}`);
   console.log(`Generated ${initPath}`);
 }
