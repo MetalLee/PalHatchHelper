@@ -1,0 +1,17 @@
+{
+  "recipes": [
+    {
+      "child_pal_id": "fixture-pal-c",
+      "metadata": { "fixture": true },
+      "parents": ["fixture-pal-b", "fixture-pal-a"],
+      "recipe_type": "normal"
+    },
+    {
+      "child_pal_id": "fixture-pal-b",
+      "metadata": { "fixture": true },
+      "parents": ["fixture-pal-c", "fixture-pal-a"],
+      "recipe_type": "special"
+    }
+  ],
+  "source_version": "fixture-merge-v1"
+}

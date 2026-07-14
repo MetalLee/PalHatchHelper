@@ -1456,6 +1456,13 @@ export type Database = {
         };
         Returns: Database["public"]["Enums"]["breeding_job_status"];
       };
+      get_breeding_data_diff: {
+        Args: {
+          p_from_version_id: string;
+          p_to_version_id: string;
+        };
+        Returns: Json;
+      };
       get_inventory_catalog_ids_for_agent: {
         Args: {
           p_world_id: string;

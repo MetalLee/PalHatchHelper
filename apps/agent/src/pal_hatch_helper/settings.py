@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     palhatch_data_dir: Path = Field(default=Path("./data"))
     game_catalog_bucket: str = Field(default="game-catalog-artifacts", min_length=1, max_length=120)
     game_catalog_cache_max_versions: int = Field(default=2, ge=1, le=32)
+    breeding_remote_sources_enabled: bool = False
+    breeding_source_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    breeding_source_maximum_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        ge=1024,
+        le=100 * 1024 * 1024,
+    )
     palworld_compose_dir: Path | None = None
     palworld_save_root: Path | None = None
     palworld_world_id: UUID | None = None

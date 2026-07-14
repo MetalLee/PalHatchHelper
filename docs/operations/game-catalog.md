@@ -30,9 +30,12 @@ uv run pal-hatch-helper catalog publish --world-id <uuid> --version-id <uuid>
 uv run pal-hatch-helper catalog rollback --world-id <uuid> --version-id <uuid>
 uv run pal-hatch-helper catalog warm-cache --version-id <uuid>
 uv run pal-hatch-helper catalog inspect --version-id <uuid>
+uv run pal-hatch-helper catalog diff --from-version-id <uuid> --to-version-id <uuid>
 ```
 
 `stage` 按 JSONL 类别分批写入并在数据库事务中 finalize。相同 `content_hash` 重试复用已有版本；批次幂等键相同但内容不同会失败。`publish` 要求七类投影均非空且版本为 validated。`rollback` 只切换指定世界指针。
+
+Phase 4A 配种来源的 staging、特殊配方优先级和人工审核流程见 [`breeding-data.md`](./breeding-data.md)。
 
 ## 精确版本故障处理
 

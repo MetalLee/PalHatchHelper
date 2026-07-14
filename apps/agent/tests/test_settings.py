@@ -66,6 +66,14 @@ def test_invalid_environment_is_rejected() -> None:
         Settings(app_env="staging-like")
 
 
+def test_remote_breeding_sources_are_disabled_by_default_and_bounded_when_enabled() -> None:
+    settings = Settings()
+
+    assert settings.breeding_remote_sources_enabled is False
+    assert settings.breeding_source_timeout_seconds == 30
+    assert settings.breeding_source_maximum_bytes == 10 * 1024 * 1024
+
+
 def test_save_worker_never_guesses_missing_path_or_parser_configuration() -> None:
     settings = Settings(
         app_env="test",

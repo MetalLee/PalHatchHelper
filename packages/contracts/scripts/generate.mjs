@@ -18,6 +18,7 @@ const contracts = [
   "breeding-job",
   "pal-list-item",
   "game-catalog",
+  "breeding-data",
   "canonical-snapshot",
   "inventory-sync",
 ];
@@ -26,37 +27,57 @@ const pythonContracts = [
   "breeding-job",
   "pal-list-item",
   "game-catalog",
+  "breeding-data",
   "canonical-snapshot",
   "inventory-sync",
 ];
+const bundledContractModels = {
+  "game-catalog": [
+    "GameCatalogManifest",
+    "GameDataVersion",
+    "CatalogPal",
+    "CatalogPassiveSkill",
+    "CatalogActiveSkill",
+    "CatalogPalActiveSkill",
+    "CatalogPartnerSkill",
+    "CatalogLocalization",
+    "CatalogBreedingRecipe",
+    "CatalogValidationReport",
+    "CatalogFileChecksum",
+  ],
+  "breeding-data": [
+    "BreedingRecipeSourceDocument",
+    "BreedingRecipeSourceRecord",
+    "StagedBreedingSourceMetadata",
+    "BreedingDataValidationIssue",
+    "BreedingDataValidationCounts",
+    "BreedingDataValidationReport",
+    "BreedingRecipeSnapshot",
+    "BreedingRecipeChange",
+    "BreedingDataDiffCounts",
+    "BreedingDataDiffReport",
+  ],
+};
 
 await mkdir(outputDirectory, { recursive: true });
 for (const contract of contracts) {
   const schemaPath = resolve(packageRoot, `schema/${contract}.schema.json`);
   const outputPath = resolve(outputDirectory, `${contract}.ts`);
   let source;
-  if (contract === "game-catalog") {
+  if (contract in bundledContractModels) {
     const schema = JSON.parse(await readFile(schemaPath, "utf8"));
-    const manifestDefinition = { ...schema };
-    delete manifestDefinition.$schema;
-    delete manifestDefinition.$id;
-    delete manifestDefinition.$defs;
-    delete manifestDefinition.title;
-    const modelNames = [
-      "GameCatalogManifest",
-      "GameDataVersion",
-      "CatalogPal",
-      "CatalogPassiveSkill",
-      "CatalogActiveSkill",
-      "CatalogPalActiveSkill",
-      "CatalogPartnerSkill",
-      "CatalogLocalization",
-      "CatalogBreedingRecipe",
-      "CatalogValidationReport",
-      "CatalogFileChecksum",
-    ];
+    const rootDefinition = { ...schema };
+    delete rootDefinition.$schema;
+    delete rootDefinition.$id;
+    delete rootDefinition.$defs;
+    delete rootDefinition.title;
+    const modelNames = bundledContractModels[contract];
+    const syntheticTitle =
+      contract === "game-catalog"
+        ? "GameCatalogContracts"
+        : `${schema.title}Contracts`;
     const syntheticSchema = {
-      title: "GameCatalogContracts",
+      title: syntheticTitle,
       type: "object",
       additionalProperties: false,
       required: modelNames,
@@ -65,10 +86,10 @@ for (const contract of contracts) {
       ),
       $defs: {
         ...schema.$defs,
-        GameCatalogManifest: manifestDefinition,
+        [schema.title]: rootDefinition,
       },
     };
-    source = await compile(syntheticSchema, "GameCatalogContracts", {
+    source = await compile(syntheticSchema, syntheticTitle, {
       bannerComment: `/* Generated from ${contract}.schema.json. Do not edit directly. */`,
       style: { singleQuote: false },
     });

@@ -66,6 +66,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     inspect_parser = catalog_commands.add_parser("inspect", help="inspect exact-version metadata")
     inspect_parser.add_argument("--version-id", required=True, type=UUID)
+    diff_parser = catalog_commands.add_parser(
+        "diff",
+        help="compare two validated breeding versions",
+    )
+    diff_parser.add_argument("--from-version-id", required=True, type=UUID)
+    diff_parser.add_argument("--to-version-id", required=True, type=UUID)
     return parser
 
 
@@ -176,6 +182,13 @@ async def _run_remote_catalog_command(parsed: argparse.Namespace, settings: Sett
                 )
             safe = metadata.model_dump(mode="json", exclude={"artifact_path", "artifact_bucket"})
             print(canonical_json(safe))
+            return 0
+        if parsed.catalog_command == "diff":
+            report = await gateway.breeding_diff(
+                parsed.from_version_id,
+                parsed.to_version_id,
+            )
+            print(canonical_json(report.model_dump(mode="json")))
             return 0
         paths = CatalogPaths(settings.palhatch_data_dir)
         paths.ensure()

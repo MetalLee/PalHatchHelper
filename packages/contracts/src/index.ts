@@ -17,6 +17,20 @@ export type {
   InventoryValidationWarning,
 } from "./generated/inventory-sync";
 export type {
+  BreedingDataDiffCounts,
+  BreedingDataDiffReport,
+  BreedingDataValidationCounts,
+  BreedingDataValidationIssue,
+  BreedingDataValidationReport,
+  BreedingRecipeChange,
+  BreedingRecipeSnapshot,
+  BreedingRecipeSourceDocument,
+  BreedingRecipeSourceRecord,
+  BreedingRecipeType,
+  BreedingSourceVersion,
+  StagedBreedingSourceMetadata,
+} from "./generated/breeding-data";
+export type {
   CatalogActiveSkill,
   CatalogBreedingRecipe,
   CatalogFileChecksum,

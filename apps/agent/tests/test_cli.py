@@ -25,6 +25,21 @@ def test_cli_help_is_available_without_runtime_credentials(
     assert "job-worker" in capsys.readouterr().out
 
 
+def test_catalog_diff_requires_two_explicit_versions() -> None:
+    arguments = build_parser().parse_args(
+        [
+            "catalog",
+            "diff",
+            "--from-version-id",
+            "73000000-0000-4000-8000-000000000001",
+            "--to-version-id",
+            "73000000-0000-4000-8000-000000000002",
+        ]
+    )
+
+    assert arguments.catalog_command == "diff"
+
+
 def test_catalog_validate_succeeds_without_supabase_configuration(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

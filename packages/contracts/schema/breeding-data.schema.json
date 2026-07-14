@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/breeding-data.schema.json",
+  "title": "BreedingRecipeSourceDocument",
+  "description": "Source and report contracts for the versioned breeding data supply chain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_version", "recipes"],
+  "properties": {
+    "source_version": { "$ref": "#/$defs/BreedingSourceVersion" },
+    "recipes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/BreedingRecipeSourceRecord" }
+    }
+  },
+  "$defs": {
+    "BreedingStableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "BreedingSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "BreedingSourceVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "BreedingMetadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "BreedingRecipeType": {
+      "type": "string",
+      "enum": ["normal", "special"]
+    },
+    "BreedingRecipeSourceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parents", "child_pal_id", "recipe_type", "metadata"],
+      "properties": {
+        "parents": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/BreedingStableId" }
+        },
+        "child_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "recipe_type": { "$ref": "#/$defs/BreedingRecipeType" },
+        "metadata": { "$ref": "#/$defs/BreedingMetadata" }
+      }
+    },
+    "StagedBreedingSourceMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "source_name",
+        "source_version",
+        "filename",
+        "raw_content_hash",
+        "fetched_at"
+      ],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "enum": ["github", "url", "upload"]
+        },
+        "source_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "source_version": { "$ref": "#/$defs/BreedingSourceVersion" },
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "raw_content_hash": { "$ref": "#/$defs/BreedingSha256" },
+        "fetched_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "BreedingDataValidationIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "record_indexes"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "record_indexes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "BreedingDataValidationCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_records",
+        "normalized_records",
+        "normal_recipes",
+        "special_recipes",
+        "special_overrides"
+      ],
+      "properties": {
+        "input_records": { "type": "integer", "minimum": 0 },
+        "normalized_records": { "type": "integer", "minimum": 0 },
+        "normal_recipes": { "type": "integer", "minimum": 0 },
+        "special_recipes": { "type": "integer", "minimum": 0 },
+        "special_overrides": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "BreedingDataValidationReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "raw_content_hash",
+        "source_version",
+        "valid",
+        "errors",
+        "warnings",
+        "counts"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "1.0.0" },
+        "raw_content_hash": { "$ref": "#/$defs/BreedingSha256" },
+        "source_version": { "$ref": "#/$defs/BreedingSourceVersion" },
+        "valid": { "type": "boolean" },
+        "errors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingDataValidationIssue" }
+        },
+        "warnings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingDataValidationIssue" }
+        },
+        "counts": { "$ref": "#/$defs/BreedingDataValidationCounts" }
+      }
+    },
+    "BreedingRecipeSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_a_pal_id",
+        "parent_b_pal_id",
+        "child_pal_id",
+        "recipe_type",
+        "metadata"
+      ],
+      "properties": {
+        "parent_a_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "parent_b_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "child_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "recipe_type": { "$ref": "#/$defs/BreedingRecipeType" },
+        "metadata": { "$ref": "#/$defs/BreedingMetadata" }
+      }
+    },
+    "BreedingRecipeChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_a_pal_id",
+        "parent_b_pal_id",
+        "recipe_type",
+        "before_child_pal_id",
+        "after_child_pal_id",
+        "metadata_changed"
+      ],
+      "properties": {
+        "parent_a_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "parent_b_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "recipe_type": { "$ref": "#/$defs/BreedingRecipeType" },
+        "before_child_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "after_child_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "metadata_changed": { "type": "boolean" }
+      }
+    },
+    "BreedingDataDiffCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["added", "removed", "changed", "unchanged"],
+      "properties": {
+        "added": { "type": "integer", "minimum": 0 },
+        "removed": { "type": "integer", "minimum": 0 },
+        "changed": { "type": "integer", "minimum": 0 },
+        "unchanged": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "BreedingDataDiffReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "from_content_hash",
+        "to_content_hash",
+        "added",
+        "removed",
+        "changed",
+        "counts"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "1.0.0" },
+        "from_content_hash": { "$ref": "#/$defs/BreedingSha256" },
+        "to_content_hash": { "$ref": "#/$defs/BreedingSha256" },
+        "added": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingRecipeSnapshot" }
+        },
+        "removed": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingRecipeSnapshot" }
+        },
+        "changed": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingRecipeChange" }
+        },
+        "counts": { "$ref": "#/$defs/BreedingDataDiffCounts" }
+      }
+    }
+  }
+}

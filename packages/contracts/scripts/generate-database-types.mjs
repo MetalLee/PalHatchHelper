@@ -104,6 +104,7 @@ const functions = await sql`
       'current_player_id',
       'fail_breeding_job',
       'heartbeat_breeding_job',
+      'get_breeding_data_diff',
       'get_inventory_catalog_ids_for_agent',
       'get_latest_inventory_snapshot_for_agent',
       'is_admin',

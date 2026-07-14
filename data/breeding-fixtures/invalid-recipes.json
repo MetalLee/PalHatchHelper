@@ -1,0 +1,41 @@
+{
+  "recipes": [
+    {
+      "child_pal_id": "fixture-pal-c",
+      "metadata": {},
+      "parents": ["fixture-pal-a", "fixture-pal-b"],
+      "recipe_type": "normal"
+    },
+    {
+      "child_pal_id": "fixture-pal-c",
+      "metadata": {},
+      "parents": ["fixture-pal-b", "fixture-pal-a"],
+      "recipe_type": "normal"
+    },
+    {
+      "child_pal_id": "fixture-pal-d",
+      "metadata": {},
+      "parents": ["fixture-pal-a", "fixture-pal-b"],
+      "recipe_type": "normal"
+    },
+    {
+      "child_pal_id": "fixture-pal-c",
+      "metadata": {},
+      "parents": ["fixture-pal-a", "fixture-pal-b"],
+      "recipe_type": "special"
+    },
+    {
+      "child_pal_id": "fixture-pal-unknown",
+      "metadata": {},
+      "parents": ["fixture-pal-a", "fixture-pal-c"],
+      "recipe_type": "normal"
+    },
+    {
+      "child_pal_id": "fixture-pal-e",
+      "metadata": {},
+      "parents": ["fixture-pal-a"],
+      "recipe_type": "normal"
+    }
+  ],
+  "source_version": "invalid-recipes"
+}

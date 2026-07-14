@@ -231,6 +231,119 @@ class CatalogValidationReport(BaseModel):
     counts: CatalogCounts
 
 
+type BreedingStableId = Annotated[
+    str,
+    Field(min_length=1),
+    Field(max_length=120),
+    Field(pattern="^[a-z0-9][a-z0-9._-]*$"),
+]
+
+
+type BreedingSha256 = Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
+
+
+type BreedingSourceVersion = Annotated[str, Field(min_length=1), Field(max_length=120)]
+
+
+type BreedingMetadata = dict[str, object]
+
+
+class BreedingRecipeType(StrEnum):
+    NORMAL = "normal"
+    SPECIAL = "special"
+
+
+class BreedingRecipeSourceRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parents: Annotated[list[BreedingStableId], Field(min_length=2), Field(max_length=2)]
+    child_pal_id: BreedingStableId
+    recipe_type: BreedingRecipeType
+    metadata: BreedingMetadata
+
+
+class StagedBreedingSourceMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_type: Literal["github", "url", "upload"]
+    source_name: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    source_version: BreedingSourceVersion
+    filename: Annotated[str, Field(min_length=1), Field(max_length=255)]
+    raw_content_hash: BreedingSha256
+    fetched_at: AwareDatetime
+
+
+class BreedingDataValidationIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]
+    record_indexes: Annotated[list[Annotated[int, Field(ge=0)]], AfterValidator(_ensure_unique)]
+
+
+class BreedingDataValidationCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    input_records: Annotated[int, Field(ge=0)]
+    normalized_records: Annotated[int, Field(ge=0)]
+    normal_recipes: Annotated[int, Field(ge=0)]
+    special_recipes: Annotated[int, Field(ge=0)]
+    special_overrides: Annotated[int, Field(ge=0)]
+
+
+class BreedingDataValidationReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0.0"]
+    raw_content_hash: BreedingSha256
+    source_version: BreedingSourceVersion
+    valid: bool
+    errors: list[BreedingDataValidationIssue]
+    warnings: list[BreedingDataValidationIssue]
+    counts: BreedingDataValidationCounts
+
+
+class BreedingRecipeSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parent_a_pal_id: BreedingStableId
+    parent_b_pal_id: BreedingStableId
+    child_pal_id: BreedingStableId
+    recipe_type: BreedingRecipeType
+    metadata: BreedingMetadata
+
+
+class BreedingRecipeChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parent_a_pal_id: BreedingStableId
+    parent_b_pal_id: BreedingStableId
+    recipe_type: BreedingRecipeType
+    before_child_pal_id: BreedingStableId
+    after_child_pal_id: BreedingStableId
+    metadata_changed: bool
+
+
+class BreedingDataDiffCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    added: Annotated[int, Field(ge=0)]
+    removed: Annotated[int, Field(ge=0)]
+    changed: Annotated[int, Field(ge=0)]
+    unchanged: Annotated[int, Field(ge=0)]
+
+
+class BreedingDataDiffReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0.0"]
+    from_content_hash: BreedingSha256
+    to_content_hash: BreedingSha256
+    added: list[BreedingRecipeSnapshot]
+    removed: list[BreedingRecipeSnapshot]
+    changed: list[BreedingRecipeChange]
+    counts: BreedingDataDiffCounts
+
+
 class CanonicalServer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -420,6 +533,13 @@ class GameCatalogManifest(BaseModel):
     counts: CatalogCounts
     files: Annotated[list[CatalogFileChecksum], Field(min_length=1), AfterValidator(_ensure_unique)]
     compression: Literal["tar.gz", "tar.zst"]
+
+
+class BreedingRecipeSourceDocument(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_version: BreedingSourceVersion
+    recipes: list[BreedingRecipeSourceRecord]
 
 
 class CanonicalSnapshot(BaseModel):

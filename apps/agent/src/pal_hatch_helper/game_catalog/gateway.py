@@ -6,6 +6,7 @@ from pydantic import BaseModel, ValidationError
 
 from pal_hatch_helper.game_catalog.models import LoadedGameCatalog
 from pal_hatch_helper.generated import (
+    BreedingDataDiffReport,
     CatalogActiveSkill,
     CatalogBreedingRecipe,
     CatalogLocalization,
@@ -104,6 +105,23 @@ class SupabaseCatalogGateway:
 
     async def rollback(self, world_id: UUID, version_id: UUID) -> UUID:
         return await self._version_rpc("rollback_game_data_version", world_id, version_id)
+
+    async def breeding_diff(
+        self,
+        from_version_id: UUID,
+        to_version_id: UUID,
+    ) -> BreedingDataDiffReport:
+        payload = await self._database.rpc(
+            "get_breeding_data_diff",
+            {
+                "p_from_version_id": str(from_version_id),
+                "p_to_version_id": str(to_version_id),
+            },
+        )
+        try:
+            return BreedingDataDiffReport.model_validate(payload)
+        except ValidationError as error:
+            raise _invalid_response() from error
 
     async def get_version(self, version_id: UUID) -> GameDataVersion | None:
         payload = await self._database.rpc(
