@@ -3,6 +3,11 @@
 from pal_hatch_helper.generated.contracts import (
     BreedingJob,
     BreedingJobStatus,
+    CanonicalGuild,
+    CanonicalPal,
+    CanonicalPlayer,
+    CanonicalServer,
+    CanonicalSnapshot,
     CatalogActiveSkill,
     CatalogBreedingRecipe,
     CatalogCounts,
@@ -33,6 +38,11 @@ from pal_hatch_helper.generated.contracts import (
 __all__ = [
     "BreedingJob",
     "BreedingJobStatus",
+    "CanonicalGuild",
+    "CanonicalPal",
+    "CanonicalPlayer",
+    "CanonicalServer",
+    "CanonicalSnapshot",
     "CatalogActiveSkill",
     "CatalogBreedingRecipe",
     "CatalogCounts",

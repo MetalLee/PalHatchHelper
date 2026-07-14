@@ -58,13 +58,13 @@ def test_catalog_publish_requires_explicit_service_role_configuration(
     assert ErrorCode.GAME_DATA_CONFIGURATION_REQUIRED.value in capsys.readouterr().out
 
 
-def test_save_worker_uses_a_stable_not_implemented_error_code(
+def test_save_worker_requires_explicit_configuration(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     exit_code = main(["save-worker"])
 
     assert exit_code == 2
-    assert ErrorCode.SAVE_WORKER_NOT_IMPLEMENTED.value in capsys.readouterr().out
+    assert ErrorCode.SAVE_WORKER_CONFIGURATION_REQUIRED.value in capsys.readouterr().out
 
 
 def test_job_worker_refuses_to_claim_without_a_real_handler() -> None:

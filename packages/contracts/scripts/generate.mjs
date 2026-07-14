@@ -18,12 +18,14 @@ const contracts = [
   "breeding-job",
   "pal-list-item",
   "game-catalog",
+  "canonical-snapshot",
 ];
 const pythonContracts = [
   "readiness-status",
   "breeding-job",
   "pal-list-item",
   "game-catalog",
+  "canonical-snapshot",
 ];
 
 await mkdir(outputDirectory, { recursive: true });

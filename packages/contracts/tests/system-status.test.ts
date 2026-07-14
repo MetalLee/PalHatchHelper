@@ -34,6 +34,7 @@ describe("readiness-status contract", () => {
       timestamp: "2026-07-13T00:00:00.000Z",
       database_configured: true,
       job_worker_configured: true,
+      save_worker_configured: true,
       game_catalog: {
         status: "not_configured",
         active_version_id: null,

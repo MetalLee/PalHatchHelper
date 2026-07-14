@@ -36,6 +36,7 @@ def build_health_router(settings: Settings) -> APIRouter:
                 error_code="configuration_invalid",
                 database_configured=settings.database_configured,
                 job_worker_configured=settings.job_worker_configured,
+                save_worker_configured=settings.save_worker_configured,
                 game_catalog=game_catalog,
             )
             return JSONResponse(
@@ -51,6 +52,7 @@ def build_health_router(settings: Settings) -> APIRouter:
             error_code=None,
             database_configured=settings.database_configured,
             job_worker_configured=settings.job_worker_configured,
+            save_worker_configured=settings.save_worker_configured,
             game_catalog=game_catalog,
         )
 

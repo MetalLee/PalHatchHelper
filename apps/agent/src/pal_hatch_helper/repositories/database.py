@@ -107,6 +107,12 @@ def _rpc_rejected(response: httpx.Response) -> StructuredError:
             summary="The job lease is no longer owned by this Worker.",
             retryable=False,
         )
+    if message == ErrorCode.INVENTORY_SNAPSHOT_STALE.value:
+        return StructuredError(
+            code=ErrorCode.INVENTORY_SNAPSHOT_STALE,
+            summary="A newer save observation has already been published.",
+            retryable=False,
+        )
     return StructuredError(
         code=ErrorCode.DATABASE_RPC_REJECTED,
         summary="Supabase rejected the Agent RPC.",

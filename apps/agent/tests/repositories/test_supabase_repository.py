@@ -147,3 +147,26 @@ def test_database_client_does_not_inherit_system_proxy_settings(
         await client.close()
 
     asyncio.run(scenario())
+
+
+def test_database_client_preserves_the_stale_inventory_error_code() -> None:
+    async def scenario() -> None:
+        transport = httpx.MockTransport(
+            lambda _request: httpx.Response(
+                400,
+                json={"code": "P0001", "message": "INVENTORY_SNAPSHOT_STALE"},
+            )
+        )
+        async with httpx.AsyncClient(transport=transport) as http_client:
+            client = SupabaseDatabaseClient(
+                base_url="https://example.supabase.co",
+                service_role_key=SecretStr("fixture-local-service-role"),
+                http_client=http_client,
+            )
+            with pytest.raises(StructuredError) as caught:
+                await client.rpc("publish_inventory_snapshot", {})
+
+        assert caught.value.code.value == "INVENTORY_SNAPSHOT_STALE"
+        assert not caught.value.retryable
+
+    asyncio.run(scenario())
