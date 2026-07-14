@@ -11,6 +11,12 @@ export type { PalListItem } from "./generated/pal-list-item";
 export type { ReadinessStatus } from "./generated/readiness-status";
 export type { SystemStatus } from "./generated/system-status";
 export type {
+  InventoryPublishPal,
+  InventoryPublishPayload,
+  InventoryPublishRpcRequest,
+  InventoryValidationWarning,
+} from "./generated/inventory-sync";
+export type {
   CatalogActiveSkill,
   CatalogBreedingRecipe,
   CatalogFileChecksum,

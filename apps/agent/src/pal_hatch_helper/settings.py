@@ -83,7 +83,6 @@ class Settings(BaseSettings):
             errors.append("supabase_url_invalid")
         if not _has_secret_value(self.supabase_service_role_key):
             errors.append("supabase_service_role_key_missing")
-        errors.extend(self.save_worker_configuration_errors())
         return tuple(errors)
 
     @property

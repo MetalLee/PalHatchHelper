@@ -199,7 +199,7 @@ def test_insufficient_disk_space_stops_before_copy(tmp_path: Path) -> None:
 
 
 def test_source_files_are_opened_read_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    observed_flags: list[int] = []
+    observed_leaf_flags: dict[str, int] = {}
     real_open = os.open
 
     def recording_open(
@@ -209,8 +209,14 @@ def test_source_files_are_opened_read_only(monkeypatch: pytest.MonkeyPatch, tmp_
         *,
         dir_fd: int | None = None,
     ) -> int:
-        if Path(os.fsdecode(path)).is_relative_to(FIXTURE_ROOT):
-            observed_flags.append(flags)
+        decoded_path = Path(os.fsdecode(path))
+        if dir_fd is None:
+            absolute_path = decoded_path
+        else:
+            descriptor_path = Path(os.readlink(f"/proc/self/fd/{dir_fd}"))
+            absolute_path = descriptor_path / decoded_path
+        if absolute_path.is_relative_to(FIXTURE_ROOT) and not flags & os.O_DIRECTORY:
+            observed_leaf_flags[absolute_path.relative_to(FIXTURE_ROOT).as_posix()] = flags
         return real_open(path, flags, mode, dir_fd=dir_fd)
 
     monkeypatch.setattr(os, "open", recording_open)
@@ -221,6 +227,6 @@ def test_source_files_are_opened_read_only(monkeypatch: pytest.MonkeyPatch, tmp_
 
     copier.create(FIXTURE_ROOT, REQUIRED_FILES)
 
-    assert observed_flags
-    assert all(flags & (os.O_WRONLY | os.O_RDWR) == 0 for flags in observed_flags)
-    assert all(flags & os.O_NOFOLLOW for flags in observed_flags)
+    assert set(observed_leaf_flags) == {"World.sav", "Players/0001.sav"}
+    assert all(flags & (os.O_WRONLY | os.O_RDWR) == 0 for flags in observed_leaf_flags.values())
+    assert all(flags & os.O_NOFOLLOW for flags in observed_leaf_flags.values())

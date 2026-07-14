@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/inventory-sync.schema.json",
+  "title": "InventoryPublishRpcRequest",
+  "description": "Complete service-role RPC request for publishing normalized inventory metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["world_id", "snapshot"],
+  "properties": {
+    "world_id": { "type": "string", "format": "uuid" },
+    "snapshot": { "$ref": "#/$defs/InventoryPublishPayload" }
+  },
+  "$defs": {
+    "InventoryValidationWarning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "path", "value"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "maxLength": 100
+        },
+        "path": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "value": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "InventoryPublishPal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instance_uid",
+        "owner_player_uid",
+        "guild_uid",
+        "pal_id",
+        "gender",
+        "level",
+        "passive_skill_ids",
+        "location_type",
+        "location_name",
+        "owner_resolved",
+        "guild_resolved",
+        "shared_eligible",
+        "warning_codes"
+      ],
+      "properties": {
+        "instance_uid": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "owner_player_uid": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "guild_uid": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "gender": {
+          "type": "string",
+          "enum": ["male", "female", "genderless", "unknown"]
+        },
+        "level": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+        "passive_skill_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "location_type": {
+          "type": "string",
+          "enum": [
+            "player_party",
+            "player_storage",
+            "base",
+            "viewing_cage",
+            "unknown"
+          ]
+        },
+        "location_name": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "owner_resolved": { "type": "boolean" },
+        "guild_resolved": { "type": "boolean" },
+        "shared_eligible": { "type": "boolean" },
+        "warning_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$",
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    "InventoryPublishPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_save_hash",
+        "source_modified_at",
+        "save_version",
+        "captured_at",
+        "parser_name",
+        "parser_version",
+        "server",
+        "guilds",
+        "players",
+        "pals",
+        "warnings"
+      ],
+      "properties": {
+        "source_save_hash": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 128
+        },
+        "source_modified_at": { "type": "string", "format": "date-time" },
+        "save_version": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "parser_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "parser_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "server": {
+          "$ref": "canonical-snapshot.schema.json#/$defs/CanonicalServer"
+        },
+        "guilds": {
+          "type": "array",
+          "items": {
+            "$ref": "canonical-snapshot.schema.json#/$defs/CanonicalGuild"
+          }
+        },
+        "players": {
+          "type": "array",
+          "items": {
+            "$ref": "canonical-snapshot.schema.json#/$defs/CanonicalPlayer"
+          }
+        },
+        "pals": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/InventoryPublishPal" }
+        },
+        "warnings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/InventoryValidationWarning" }
+        }
+      }
+    },
+    "InventoryFailurePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_save_hash",
+        "source_modified_at",
+        "captured_at",
+        "parser_name",
+        "parser_version",
+        "status",
+        "error_code",
+        "error_summary"
+      ],
+      "properties": {
+        "source_save_hash": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 128
+        },
+        "source_modified_at": { "type": "string", "format": "date-time" },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "parser_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "parser_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "status": { "type": "string", "enum": ["failed", "rejected"] },
+        "error_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "maxLength": 100
+        },
+        "error_summary": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "InventoryFailureRpcRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["world_id", "failure"],
+      "properties": {
+        "world_id": { "type": "string", "format": "uuid" },
+        "failure": { "$ref": "#/$defs/InventoryFailurePayload" }
+      }
+    }
+  }
+}

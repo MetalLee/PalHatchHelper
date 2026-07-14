@@ -56,7 +56,13 @@ _LANDLOCK_WRITE_ACCESS = (
     | _LANDLOCK_ACCESS_FS_REFER
     | _LANDLOCK_ACCESS_FS_TRUNCATE
 )
-_DENIED_SYSCALLS = (
+_DENIED_PROCESS_SYSCALLS = (
+    "fork",
+    "vfork",
+    "clone",
+    "clone3",
+)
+_DENIED_NETWORK_SYSCALLS = (
     "socket",
     "socketpair",
     "connect",
@@ -68,6 +74,8 @@ _DENIED_SYSCALLS = (
     "recvfrom",
     "sendmsg",
     "recvmsg",
+)
+_DENIED_MUTATION_SYSCALLS = (
     "chmod",
     "fchmod",
     "fchmodat",
@@ -184,6 +192,8 @@ class SubprocessParserAdapter:
                 retryable=False,
             )
         try:
+            if not _output_directory_within_limit(output_parent, self._max_output_bytes):
+                raise OSError("parser aggregate output exceeds configured size")
             if output_path.is_symlink():
                 raise OSError("parser output cannot be a symlink")
             output_size = output_path.stat().st_size
@@ -224,11 +234,10 @@ class SubprocessParserAdapter:
             executable=executable,
             runtime_read_paths=self._runtime_read_paths,
         )
-        if self._disable_network:
-            _install_seccomp_filter()
+        _install_seccomp_filter(disable_network=self._disable_network)
 
 
-def _install_seccomp_filter() -> None:
+def _install_seccomp_filter(*, disable_network: bool) -> None:
     libc = ctypes.CDLL(None, use_errno=True)
     if libc.prctl(_PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
         raise OSError(ctypes.get_errno(), "unable to set no_new_privs")
@@ -252,7 +261,10 @@ def _install_seccomp_filter() -> None:
         raise OSError("unable to initialize seccomp")
     try:
         action = _SCMP_ACT_ERRNO | errno.EPERM
-        for name in _DENIED_SYSCALLS:
+        denied_syscalls: tuple[str, ...] = _DENIED_PROCESS_SYSCALLS + _DENIED_MUTATION_SYSCALLS
+        if disable_network:
+            denied_syscalls += _DENIED_NETWORK_SYSCALLS
+        for name in denied_syscalls:
             syscall = seccomp.seccomp_syscall_resolve_name(name.encode("ascii"))
             if syscall < 0:
                 continue
@@ -262,6 +274,26 @@ def _install_seccomp_filter() -> None:
             raise OSError(ctypes.get_errno(), "unable to load seccomp filter")
     finally:
         seccomp.seccomp_release(context)
+
+
+def _output_directory_within_limit(output_parent: Path, limit: int) -> bool:
+    total = 0
+    pending = [output_parent]
+    while pending:
+        directory = pending.pop()
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                if entry.is_symlink():
+                    return False
+                if entry.is_dir(follow_symlinks=False):
+                    pending.append(Path(entry.path))
+                    continue
+                if not entry.is_file(follow_symlinks=False):
+                    return False
+                total += entry.stat(follow_symlinks=False).st_size
+                if total > limit:
+                    return False
+    return True
 
 
 class _LandlockRulesetAttr(ctypes.Structure):

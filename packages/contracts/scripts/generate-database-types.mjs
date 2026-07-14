@@ -104,11 +104,15 @@ const functions = await sql`
       'current_player_id',
       'fail_breeding_job',
       'heartbeat_breeding_job',
+      'get_inventory_catalog_ids_for_agent',
+      'get_latest_inventory_snapshot_for_agent',
       'is_admin',
       'list_available_pals',
       'release_breeding_job',
       'release_stale_breeding_jobs',
+      'record_inventory_snapshot_failure',
       'set_pal_share_enabled',
+      'publish_inventory_snapshot',
       'update_breeding_step_status'
     )
   order by procedure.proname, procedure.oid

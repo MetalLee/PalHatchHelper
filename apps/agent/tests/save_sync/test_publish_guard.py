@@ -12,6 +12,7 @@ from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import CompatibilityResult, ParserResult
 from pal_hatch_helper.repositories.database import JSONValue
 from pal_hatch_helper.repositories.inventory import (
+    InventoryFailureRequest,
     InventoryPublishRequest,
     LatestInventorySnapshot,
     SupabaseInventoryRepository,
@@ -58,6 +59,8 @@ class StubDatabase:
             return {"pal_ids": ["Lamball"], "passive_skill_ids": ["Artisan"]}
         if function_name == "publish_inventory_snapshot":
             return str(SNAPSHOT_ID)
+        if function_name == "record_inventory_snapshot_failure":
+            return str(SNAPSHOT_ID)
         raise AssertionError(function_name)
 
     async def close(self) -> None:
@@ -94,6 +97,28 @@ def test_repository_writes_only_normalized_payload_via_atomic_rpc() -> None:
         assert "raw_save" not in payload
         assert payload["source_save_hash"] == "b" * 64
 
+        failed_id = await repository.record_failure(
+            InventoryFailureRequest(
+                world_id=WORLD_ID,
+                source_save_hash="e" * 64,
+                source_modified_at=datetime(2026, 7, 14, 4, tzinfo=UTC),
+                parser_name="fixture-parser",
+                parser_version="1.0.0",
+                status="failed",
+                error_code=ErrorCode.PARSER_OUTPUT_INVALID,
+                error_summary="Fixture parser output was invalid.",
+            )
+        )
+
+        assert failed_id == SNAPSHOT_ID
+        name, parameters = database.calls[-1]
+        assert name == "record_inventory_snapshot_failure"
+        failure = parameters["p_failure"]
+        assert isinstance(failure, dict)
+        assert failure["status"] == "failed"
+        assert failure["error_code"] == "PARSER_OUTPUT_INVALID"
+        assert "source_path" not in failure
+
     import asyncio
 
     asyncio.run(scenario())
@@ -129,12 +154,17 @@ class FakeInventoryRepository:
     def __init__(self, latest: LatestInventorySnapshot | None = None) -> None:
         self.latest_value = latest
         self.publish_requests: list[InventoryPublishRequest] = []
+        self.failure_requests: list[InventoryFailureRequest] = []
 
     async def latest(self, world_id: UUID) -> LatestInventorySnapshot | None:
         return self.latest_value
 
     async def publish(self, request: InventoryPublishRequest) -> UUID:
         self.publish_requests.append(request)
+        return SNAPSHOT_ID
+
+    async def record_failure(self, request: InventoryFailureRequest) -> UUID:
+        self.failure_requests.append(request)
         return SNAPSHOT_ID
 
 
@@ -184,6 +214,10 @@ def test_parser_failure_never_replaces_previous_valid_inventory(tmp_path: Path) 
             await _service(tmp_path, parser, repository).sync_once()
 
         assert repository.publish_requests == []
+        assert len(repository.failure_requests) == 1
+        failure = repository.failure_requests[0]
+        assert failure.error_code is ErrorCode.PARSER_OUTPUT_INVALID
+        assert failure.status == "failed"
         assert repository.latest_value == previous
 
     import asyncio
@@ -228,6 +262,8 @@ def test_inventory_guard_rejects_before_repository_publish(tmp_path: Path) -> No
 
         assert caught.value.code is ErrorCode.INVENTORY_DROP_REVIEW_REQUIRED
         assert repository.publish_requests == []
+        assert len(repository.failure_requests) == 1
+        assert repository.failure_requests[0].status == "rejected"
 
     import asyncio
 

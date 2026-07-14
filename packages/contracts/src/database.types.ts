@@ -1456,6 +1456,18 @@ export type Database = {
         };
         Returns: Database["public"]["Enums"]["breeding_job_status"];
       };
+      get_inventory_catalog_ids_for_agent: {
+        Args: {
+          p_world_id: string;
+        };
+        Returns: Json;
+      };
+      get_latest_inventory_snapshot_for_agent: {
+        Args: {
+          p_world_id: string;
+        };
+        Returns: Json;
+      };
       heartbeat_breeding_job: {
         Args: {
           p_job_id: string;
@@ -1487,6 +1499,20 @@ export type Database = {
           share_enabled: boolean;
           is_owned_by_requester: boolean;
         }[];
+      };
+      publish_inventory_snapshot: {
+        Args: {
+          p_world_id: string;
+          p_snapshot: Json;
+        };
+        Returns: string;
+      };
+      record_inventory_snapshot_failure: {
+        Args: {
+          p_world_id: string;
+          p_failure: Json;
+        };
+        Returns: string;
       };
       release_breeding_job: {
         Args: {

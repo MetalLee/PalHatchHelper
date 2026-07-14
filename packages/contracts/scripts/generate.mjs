@@ -19,6 +19,7 @@ const contracts = [
   "pal-list-item",
   "game-catalog",
   "canonical-snapshot",
+  "inventory-sync",
 ];
 const pythonContracts = [
   "readiness-status",
@@ -26,6 +27,7 @@ const pythonContracts = [
   "pal-list-item",
   "game-catalog",
   "canonical-snapshot",
+  "inventory-sync",
 ];
 
 await mkdir(outputDirectory, { recursive: true });

@@ -30,6 +30,8 @@ class CapturingDatabase:
             return None
         if function_name == "publish_inventory_snapshot":
             return str(SNAPSHOT_ID)
+        if function_name == "record_inventory_snapshot_failure":
+            return str(SNAPSHOT_ID)
         raise AssertionError(function_name)
 
     async def close(self) -> None:
