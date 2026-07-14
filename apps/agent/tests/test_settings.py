@@ -11,7 +11,8 @@ def test_production_configuration_requires_both_supabase_values() -> None:
         supabase_service_role_key=None,
     )
 
-    assert settings.readiness_errors() == ("supabase_service_role_key_missing",)
+    assert settings.readiness_errors()[0] == "supabase_service_role_key_missing"
+    assert "palworld_save_root_missing" in settings.readiness_errors()
 
 
 def test_service_role_is_stored_as_a_redacted_secret() -> None:
@@ -62,3 +63,46 @@ def test_database_url_requires_https_except_for_local_development() -> None:
 def test_invalid_environment_is_rejected() -> None:
     with pytest.raises(ValidationError):
         Settings(app_env="staging-like")
+
+
+def test_save_worker_never_guesses_missing_path_or_parser_configuration() -> None:
+    settings = Settings(
+        app_env="test",
+        supabase_url="http://127.0.0.1:54321",
+        supabase_service_role_key="fixture-local-service-role",
+    )
+
+    assert not settings.save_worker_configured
+    assert settings.save_worker_configuration_errors() == (
+        "palworld_compose_dir_missing",
+        "palworld_save_root_missing",
+        "palworld_world_id_missing",
+        "palworld_world_uid_missing",
+        "parser_identity_missing",
+        "parser_command_missing",
+        "parser_required_files_missing",
+    )
+
+
+def test_save_worker_accepts_only_explicit_confirmed_configuration() -> None:
+    settings = Settings(
+        app_env="test",
+        supabase_url="http://127.0.0.1:54321",
+        supabase_service_role_key="fixture-local-service-role",
+        palworld_compose_dir="/confirmed/compose",
+        palworld_save_root="/confirmed/save",
+        palworld_world_id="10000000-0000-4000-8000-000000000001",
+        palworld_world_uid="fixture-world-001",
+        parser_name="fixture-parser",
+        parser_version="1.0.0",
+        parser_command_json='["/usr/bin/fixture-parser", "--output", "{output_path}"]',
+        parser_required_files_json='["World.sav", "Players/0001.sav"]',
+    )
+
+    assert settings.save_worker_configuration_errors() == ()
+    assert settings.save_worker_configured
+    assert settings.parser_command == (
+        "/usr/bin/fixture-parser",
+        "--output",
+        "{output_path}",
+    )

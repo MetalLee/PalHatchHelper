@@ -42,6 +42,7 @@ def test_development_is_ready_without_supabase() -> None:
     assert response.json()["status"] == "ready"
     assert response.json()["database_configured"] is False
     assert response.json()["job_worker_configured"] is False
+    assert response.json()["save_worker_configured"] is False
     assert response.json()["game_catalog"] == {
         "status": "not_configured",
         "active_version_id": None,
@@ -63,7 +64,7 @@ def test_production_is_not_ready_without_supabase() -> None:
     assert_readiness_contract(response.json())
 
 
-def test_health_readiness_reports_worker_basic_configuration_without_secrets() -> None:
+def test_production_database_only_configuration_is_not_save_worker_ready() -> None:
     service_role = "fixture-service-role-secret-that-must-not-leak"
     client = TestClient(
         create_app(
@@ -77,8 +78,35 @@ def test_health_readiness_reports_worker_basic_configuration_without_secrets() -
 
     response = client.get("/readyz")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json()["database_configured"] is True
     assert response.json()["job_worker_configured"] is True
+    assert response.json()["save_worker_configured"] is False
     assert service_role not in response.text
     assert_readiness_contract(response.json())
+
+
+def test_production_reports_save_worker_ready_without_paths_or_secrets_in_response() -> None:
+    client = TestClient(
+        create_app(
+            Settings(
+                app_env="production",
+                supabase_url="https://example.supabase.co",
+                supabase_service_role_key="fixture-service-role",
+                palworld_compose_dir="/confirmed/compose",
+                palworld_save_root="/confirmed/save",
+                palworld_world_id="10000000-0000-4000-8000-000000000001",
+                palworld_world_uid="fixture-world-001",
+                parser_name="fixture-parser",
+                parser_version="1.0.0",
+                parser_command_json='["/usr/bin/fixture-parser", "{output_path}"]',
+                parser_required_files_json='["World.sav"]',
+            )
+        )
+    )
+
+    response = client.get("/readyz")
+
+    assert response.status_code == 200
+    assert response.json()["save_worker_configured"] is True
+    assert "/confirmed" not in response.text

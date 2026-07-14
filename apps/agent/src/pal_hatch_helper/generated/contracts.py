@@ -231,6 +231,48 @@ class CatalogValidationReport(BaseModel):
     counts: CatalogCounts
 
 
+class CanonicalServer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    world_uid: Annotated[str, Field(min_length=1), Field(max_length=128)]
+    save_version: Annotated[str, Field(min_length=1), Field(max_length=120)] | None
+    captured_at: AwareDatetime
+
+
+class CanonicalGuild(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)]
+    name: Annotated[str, Field(min_length=1), Field(max_length=120)]
+
+
+class CanonicalPlayer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    player_uid: Annotated[str, Field(min_length=1), Field(max_length=128)]
+    nickname: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    level: Annotated[int, Field(ge=1), Field(le=100)] | None
+    guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
+
+
+class CanonicalPal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    instance_uid: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    owner_player_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
+    guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
+    pal_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    gender: Literal["male", "female", "genderless", "unknown"]
+    level: Annotated[int, Field(ge=1), Field(le=100)] | None
+    passive_skill_ids: Annotated[
+        list[Annotated[str, Field(min_length=1), Field(max_length=120)]],
+        Field(max_length=64),
+        AfterValidator(_ensure_unique),
+    ]
+    location_type: Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
+    location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+
+
 class ReadinessStatus(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -241,6 +283,7 @@ class ReadinessStatus(BaseModel):
     error_code: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*$")] | None
     database_configured: bool
     job_worker_configured: bool
+    save_worker_configured: bool
     game_catalog: GameCatalogHealth
 
 
@@ -308,3 +351,12 @@ class GameCatalogManifest(BaseModel):
     counts: CatalogCounts
     files: Annotated[list[CatalogFileChecksum], Field(min_length=1), AfterValidator(_ensure_unique)]
     compression: Literal["tar.gz", "tar.zst"]
+
+
+class CanonicalSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    server: CanonicalServer
+    guilds: list[CanonicalGuild]
+    players: list[CanonicalPlayer]
+    pals: list[CanonicalPal]

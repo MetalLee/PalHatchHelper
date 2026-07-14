@@ -1326,6 +1326,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
           active_game_data_version_id: string | null;
+          inventory_source_modified_at: string | null;
         };
         Insert: {
           id?: string;
@@ -1336,6 +1337,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           active_game_data_version_id?: string | null;
+          inventory_source_modified_at?: string | null;
         };
         Update: {
           id?: string;
@@ -1346,6 +1348,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           active_game_data_version_id?: string | null;
+          inventory_source_modified_at?: string | null;
         };
         Relationships: [
           {

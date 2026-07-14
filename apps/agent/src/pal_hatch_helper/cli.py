@@ -3,7 +3,7 @@ import asyncio
 import contextlib
 import signal
 from collections.abc import Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from uuid import UUID
 
 import uvicorn
@@ -18,9 +18,14 @@ from pal_hatch_helper.game_catalog.repository import LayeredGameCatalogRepositor
 from pal_hatch_helper.game_catalog.validation import validate_catalog_directory
 from pal_hatch_helper.main import create_app
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
+from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.observability.logging import configure_logging, get_logger
+from pal_hatch_helper.parsers.subprocess import SubprocessParserAdapter
 from pal_hatch_helper.repositories.database import SupabaseDatabaseClient
+from pal_hatch_helper.repositories.inventory import SupabaseInventoryRepository
 from pal_hatch_helper.repositories.jobs import SupabaseJobRepository
+from pal_hatch_helper.save_sync.service import InventorySyncService
+from pal_hatch_helper.save_sync.snapshot import SnapshotCopier
 from pal_hatch_helper.settings import Settings
 from pal_hatch_helper.workers.job_worker import JobWorker
 from pal_hatch_helper.workers.reaper import StaleJobReaper
@@ -40,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     api_parser.add_argument("--port", default=18765, type=int)
 
     subparsers.add_parser("job-worker", help="run outbound breeding job polling")
-    subparsers.add_parser("save-worker", help="reserved Phase 3 save worker boundary")
+    subparsers.add_parser("save-worker", help="run read-only save snapshot synchronization")
     catalog_parser = subparsers.add_parser("catalog", help="manage immutable game catalog versions")
     catalog_commands = catalog_parser.add_subparsers(dest="catalog_command", required=True)
 
@@ -86,14 +91,18 @@ def main(arguments: Sequence[str] | None = None) -> int:
             )
             return 2
     if parsed.command == "save-worker":
-        get_logger(__name__).error(
-            "save_worker_not_implemented",
-            extra={
-                "event": "save_worker_not_implemented",
-                "error_code": ErrorCode.SAVE_WORKER_NOT_IMPLEMENTED.value,
-            },
-        )
-        return 2
+        try:
+            asyncio.run(run_save_worker(settings))
+        except StructuredError as error:
+            get_logger(__name__).error(
+                "save_worker_start_failed",
+                extra={
+                    "event": "save_worker_start_failed",
+                    "error_code": error.code.value,
+                },
+            )
+            return 2
+        return 0
 
     try:
         asyncio.run(run_job_worker(settings))
@@ -241,5 +250,100 @@ async def run_job_worker(
             loop.add_signal_handler(handled_signal, worker.handle_signal, handled_signal)
     try:
         await worker.run()
+    finally:
+        await database.close()
+
+
+async def run_save_worker(
+    settings: Settings,
+    *,
+    stop_event: asyncio.Event | None = None,
+) -> None:
+    if not settings.save_worker_configured:
+        raise StructuredError(
+            code=ErrorCode.SAVE_WORKER_CONFIGURATION_REQUIRED,
+            summary=(
+                "Save Worker requires an explicitly confirmed path, parser, world, and database."
+            ),
+            retryable=False,
+        )
+    assert settings.supabase_url is not None
+    assert settings.supabase_service_role_key is not None
+    assert settings.palworld_compose_dir is not None
+    assert settings.palworld_save_root is not None
+    assert settings.palworld_world_id is not None
+    assert settings.palworld_world_uid is not None
+    assert settings.parser_name is not None
+    assert settings.parser_version is not None
+    if (
+        not settings.palworld_compose_dir.is_dir()
+        or not settings.palworld_save_root.is_dir()
+        or settings.palworld_save_root.is_symlink()
+    ):
+        raise StructuredError(
+            code=ErrorCode.SAVE_PATH_NOT_CONFIRMED,
+            summary="The explicitly configured Compose and save directories are not available.",
+            retryable=False,
+        )
+
+    database = SupabaseDatabaseClient(
+        base_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        request_timeout_seconds=settings.database_request_timeout_seconds,
+    )
+    repository = SupabaseInventoryRepository(database)
+    try:
+        catalog = await repository.catalog_ids(settings.palworld_world_id)
+        parser = SubprocessParserAdapter(
+            name=settings.parser_name,
+            version=settings.parser_version,
+            command=settings.parser_command,
+            declared_files=tuple(PurePosixPath(path) for path in settings.parser_required_files),
+            timeout_seconds=settings.parser_timeout_seconds,
+            memory_limit_bytes=settings.parser_memory_limit_bytes,
+            cpu_limit_seconds=settings.parser_cpu_limit_seconds,
+        )
+        service = InventorySyncService(
+            world_id=settings.palworld_world_id,
+            source_root=settings.palworld_save_root,
+            runtime_root=settings.palhatch_data_dir / "runtime" / "parser",
+            copier=SnapshotCopier(
+                snapshot_root=settings.palhatch_data_dir / "snapshots",
+                stability_delay_seconds=settings.save_stability_delay_seconds,
+            ),
+            parser=parser,
+            validator=CanonicalSnapshotValidator(
+                expected_world_uid=settings.palworld_world_uid,
+                known_pal_ids=catalog.pal_ids,
+                known_passive_skill_ids=catalog.passive_skill_ids,
+            ),
+            repository=repository,
+        )
+        stopped = stop_event or asyncio.Event()
+        loop = asyncio.get_running_loop()
+        for handled_signal in (signal.SIGTERM, signal.SIGINT):
+            with contextlib.suppress(NotImplementedError, RuntimeError):
+                loop.add_signal_handler(handled_signal, stopped.set)
+        logger = get_logger("pal_hatch_helper.save_worker")
+        while not stopped.is_set():
+            try:
+                result = await service.sync_once()
+                logger.info(
+                    "save_sync_completed",
+                    extra={"event": "save_sync_completed", "status": result.status},
+                )
+            except StructuredError as error:
+                logger.warning(
+                    "save_sync_skipped",
+                    extra={
+                        "event": "save_sync_skipped",
+                        "error_code": error.code.value,
+                    },
+                )
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(
+                    stopped.wait(),
+                    timeout=settings.save_poll_interval_seconds,
+                )
     finally:
         await database.close()

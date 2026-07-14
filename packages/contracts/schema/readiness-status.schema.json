@@ -13,6 +13,7 @@
     "error_code",
     "database_configured",
     "job_worker_configured",
+    "save_worker_configured",
     "game_catalog"
   ],
   "properties": {
@@ -38,6 +39,7 @@
     },
     "database_configured": { "type": "boolean" },
     "job_worker_configured": { "type": "boolean" },
+    "save_worker_configured": { "type": "boolean" },
     "game_catalog": { "$ref": "#/$defs/GameCatalogHealth" }
   },
   "$defs": {

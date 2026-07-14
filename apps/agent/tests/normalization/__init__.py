@@ -1,0 +1,1 @@
+"""Canonical inventory normalization tests."""

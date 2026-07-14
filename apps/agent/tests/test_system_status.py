@@ -41,6 +41,7 @@ def test_readiness_status_matches_shared_json_schema() -> None:
         error_code="configuration_invalid",
         database_configured=False,
         job_worker_configured=False,
+        save_worker_configured=False,
         game_catalog=GameCatalogHealth(
             status="not_configured", active_version_id=None, cache_status="empty"
         ),
