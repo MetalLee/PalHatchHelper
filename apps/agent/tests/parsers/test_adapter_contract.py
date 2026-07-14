@@ -65,6 +65,25 @@ def test_parser_runs_with_only_the_declared_output_and_returns_json(tmp_path: Pa
     assert result.output_path == output
 
 
+def test_parser_can_read_only_the_runtime_entropy_device(tmp_path: Path) -> None:
+    adapter = _adapter(
+        (
+            sys.executable,
+            "-c",
+            (
+                "import json,sys; "
+                "entropy=open('/dev/urandom','rb').read(1); "
+                "json.dump({'entropy_available':len(entropy)==1},open(sys.argv[1],'w'))"
+            ),
+            "{output_path}",
+        )
+    )
+
+    result = adapter.parse(_snapshot(tmp_path), tmp_path / "result.json")
+
+    assert result.payload == {"entropy_available": True}
+
+
 def test_parser_timeout_is_a_stable_failure(tmp_path: Path) -> None:
     adapter = _adapter(
         (sys.executable, "-c", "import time; time.sleep(5)"),

@@ -295,6 +295,7 @@ def _install_landlock(
     try:
         standard_runtime_paths = (
             Path("/bin"),
+            Path("/dev/urandom"),
             Path("/etc"),
             Path("/lib"),
             Path("/lib64"),
@@ -302,6 +303,7 @@ def _install_landlock(
         )
         configured_executable = executable.absolute()
         executable_path = executable.resolve(strict=True)
+        runtime_library = executable_path.parent.parent / "lib"
         read_paths = {
             snapshot,
             executable_path,
@@ -309,6 +311,8 @@ def _install_landlock(
             *runtime_read_paths,
             *(path for path in standard_runtime_paths if path.exists()),
         }
+        if runtime_library.is_dir():
+            read_paths.add(runtime_library)
         virtual_environment = configured_executable.parent.parent
         if (virtual_environment / "pyvenv.cfg").is_file():
             read_paths.add(virtual_environment)
@@ -337,7 +341,7 @@ def _add_landlock_path_rule(
     path: Path,
     access: int,
 ) -> None:
-    if path.is_file():
+    if not path.is_dir():
         access &= ~_LANDLOCK_ACCESS_FS_READ_DIR
         access &= ~(
             _LANDLOCK_ACCESS_FS_REMOVE_DIR
