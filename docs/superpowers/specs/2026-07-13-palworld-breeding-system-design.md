@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；Phase 4 代码与高风险门禁已完成，待人工真实数据验收
+- 文档状态：已完成设计评审；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=pending、production_publish=blocked；Phase 5 implementation=completed、automated_gates=passed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/opt/services/palworld-manager`

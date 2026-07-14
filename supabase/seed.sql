@@ -492,6 +492,45 @@ values
     'fixture.passive.private', null, 1, false, '{"fixture":true}'
   );
 
+insert into public.catalog_localizations (version_id, locale, text_key, text)
+values
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
+    'fixture.test_parent_a.name',
+    '棉悠悠'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
+    'fixture.test_parent_b.name',
+    '棉绒兽'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
+    'fixture.test_child_pal.name',
+    '幻色幼崽'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
+    'fixture.passive.a',
+    '认真'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
+    'fixture.passive.b',
+    '工匠精神'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
+    'fixture.passive.private',
+    '独行'
+  );
+
 update public.breeding_data_versions
 set
   status = 'published',

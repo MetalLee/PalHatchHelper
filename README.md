@@ -1,6 +1,6 @@
 # PalHatchHelper
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库已完成 Phase 3：除私有 Agent、任务租约和统一静态游戏目录外，已经具备只读稳定快照、受限 Parser 子进程、CanonicalSnapshot 校验、异常库存保护、失败元数据记录和原子库存发布。仓库只使用全合成脱敏 fixture，不连接生产 Supabase、不读取真实 Palworld 存档或游戏包，也尚未实现配种路线算法或 AI。
+PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库的 Phase 4 代码实现已完成且自动化高风险门禁已通过；真实来源许可、固定 source commit/release、Palworld Steam build ID、游戏版本和配方真实性仍待人工验收，因此真实数据生产发布继续阻塞，Phase 4 不标记为最终完成。Phase 5 Web 基础已按批准的并行边界完成实现与自动化门禁，只使用 Phase 1 RLS/RPC、Phase 3 脱敏库存以及本地或预览 Supabase。仓库不连接生产 Supabase、不读取真实 Palworld 存档或游戏包，也未接入真实生产配种数据。
 
 ## 前置工具
 

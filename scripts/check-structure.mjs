@@ -16,6 +16,7 @@ const requiredPaths = [
   "supabase/tests/rls.sql",
   "supabase/tests/rpc.sql",
   "docs/architecture/database-and-rls.md",
+  "docs/decisions/0005-phase5-parallel-delivery-boundary.md",
   "docs/operations/supabase-local-development.md",
   "docs/operations/database-migrations.md",
   "infra/agent/docker-compose.yml",
@@ -52,4 +53,63 @@ for (const [path, phrase] of staleDocumentation) {
 if (staleMatches.length > 0) {
   console.error(`Stale documentation detected:\n${staleMatches.join("\n")}`);
   process.exitCode = 1;
+}
+
+const phase5BoundaryDecision = await readFile(
+  "docs/decisions/0005-phase5-parallel-delivery-boundary.md",
+  "utf8",
+).catch(() => "");
+const requiredPhase5BoundaryStatements = [
+  "状态：已批准",
+  "Phase 1",
+  "Phase 3",
+  "Phase 6",
+  "生产发布",
+];
+const missingBoundaryStatements = requiredPhase5BoundaryStatements.filter(
+  (statement) => !phase5BoundaryDecision.includes(statement),
+);
+if (missingBoundaryStatements.length > 0) {
+  console.error(
+    `Phase 5 parallel-delivery decision is incomplete:\n${missingBoundaryStatements.join("\n")}`,
+  );
+  process.exitCode = 1;
+}
+
+const phase5Migration = await readFile(
+  "supabase/migrations/20260715020000_phase5_web_foundation.sql",
+  "utf8",
+);
+if (
+  /create\s+index(?!\s+concurrently)[\s\S]{0,120}pal_snapshot_items_page_order_idx/i.test(
+    phase5Migration,
+  )
+) {
+  console.error(
+    "Phase 5 must not add a blocking inventory page index without a separately approved concurrent migration.",
+  );
+  process.exitCode = 1;
+}
+
+const phase5StatusDocuments = [
+  [
+    "docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md",
+    "Phase 5 implementation=completed、automated_gates=passed",
+  ],
+  [
+    "docs/superpowers/plans/2026-07-13-palworld-breeding-system-implementation.md",
+    "Phase 5 implementation=completed、automated_gates=passed",
+  ],
+  [
+    "docs/project-status.md",
+    "| Phase 5 | `implementation`       | `completed`",
+  ],
+  ["docs/project-status.md", "| Phase 5 | `automated_gates`      | `passed`"],
+];
+for (const [path, expectedStatus] of phase5StatusDocuments) {
+  const contents = await readFile(path, "utf8");
+  if (!contents.includes(expectedStatus)) {
+    console.error(`Phase 5 completion status is inconsistent: ${path}`);
+    process.exitCode = 1;
+  }
 }

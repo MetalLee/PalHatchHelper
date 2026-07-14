@@ -110,13 +110,16 @@ const functions = await sql`
       'get_breeding_inventory_for_agent',
       'get_game_data_source_for_agent',
       'get_inventory_catalog_ids_for_agent',
+      'get_inventory_data_status',
       'get_latest_inventory_snapshot_for_agent',
       'is_admin',
       'list_available_pals',
+      'list_available_pals_page',
       'release_breeding_job',
       'release_stale_breeding_jobs',
       'record_inventory_snapshot_failure',
       'set_pal_share_enabled',
+      'set_pal_share_enabled_for_web',
       'publish_inventory_snapshot',
       'update_breeding_step_status'
     )

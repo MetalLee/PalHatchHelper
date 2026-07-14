@@ -36,6 +36,11 @@ git diff --stat
 8. `20260714030000_phase3_inventory_sync.sql` 至 `20260714032000_phase3_inventory_hardening.sql`：Phase 3 库存原子发布、目录 lookup、失败元数据、service-role JWT 双重校验与乱序水位。
 9. `20260714040000_phase4a_breeding_data_diff.sql`：Phase 4 配种事实差异审查。
 10. `20260715010000_phase4_review_hardening.sql`：Phase 4 评审 BLOCKER/HIGH 修复，包括 v2 评分注册表、受审计来源、精确运行事实 RPC、稳定 ID/目录成员约束和统一目录发布门禁。
+11. `20260715020000_phase5_web_foundation.sql`：Phase 5 浏览器安全库存分页/筛选投影、固定活动目录版本的本地化显示/搜索和同步状态摘要；不放宽基础表 RLS，也不新增未经目标规模验证的索引。
+
+Phase 5 的不透明分页游标固定 `snapshot_id + game_data_version_id + pal_id + pal_instance_uid`。评审发现原先仅扫描排序键的本地 `Index Only Scan` 不能代表包含权限候选集、目录/本地化连接、筛选、总数和分页的完整 RPC，因此已撤回 `pal_snapshot_items_page_order_idx`，不把小型 seed 的局部计划当作性能证据。`scripts/check-structure.mjs` 会拒绝该阻塞式普通索引重新混入 Phase 5 事务迁移。
+
+若目标规模的完整 RPC 基准证明需要新索引，必须先保存可复现 SQL、合成数据规模、`EXPLAIN (ANALYZE, BUFFERS)` 与端到端延迟，再使用单独获批的 `CREATE INDEX CONCURRENTLY` 非事务迁移流程，并在库存发布并发执行时验证写入阻塞处于可接受范围。
 
 Phase 2.5 迁移保留并镜像旧 `breeding_data_*`，优先复用 UUID，回填 world/job 新指针。空库 reset 时 seed 发生在迁移之后，因此兼容触发器也必须覆盖 seed 和旧代码的后续写入。验证升级时同时断言回填行数和历史任务版本不变。
 

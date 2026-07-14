@@ -19,6 +19,7 @@
     "database:types": "pnpm --filter @palhatch/contracts generate:database",
     "database:test:concurrency": "pnpm --filter @palhatch/contracts test:database-concurrency",
     "check:structure": "node scripts/check-structure.mjs",
+    "check:phase5": "node scripts/run-phase5-e2e.mjs",
     "scan:secrets": "node scripts/scan-secrets.mjs",
     "check:agent": "cd apps/agent && uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest",
     "check": "pnpm contracts:generate && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:agent && pnpm check:structure && pnpm scan:secrets"

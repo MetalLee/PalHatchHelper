@@ -1507,6 +1507,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      get_inventory_data_status: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
       get_latest_inventory_snapshot_for_agent: {
         Args: {
           p_world_id: string;
@@ -1545,6 +1549,25 @@ export type Database = {
           is_owned_by_requester: boolean;
         }[];
       };
+      list_available_pals_page: {
+        Args: {
+          p_scope?: string;
+          p_query?: string | null;
+          p_owner_filter_key?: string | null;
+          p_gender?: Database["public"]["Enums"]["pal_gender"] | null;
+          p_passive_skill_id?: string | null;
+          p_location_type?:
+            | Database["public"]["Enums"]["pal_location_type"]
+            | null;
+          p_share_enabled?: boolean | null;
+          p_snapshot_id?: string | null;
+          p_game_data_version_id?: string | null;
+          p_after_pal_id?: string | null;
+          p_after_instance_uid?: string | null;
+          p_page_size?: number;
+        };
+        Returns: Json;
+      };
       publish_inventory_snapshot: {
         Args: {
           p_world_id: string;
@@ -1580,6 +1603,13 @@ export type Database = {
           p_enabled: boolean;
         };
         Returns: boolean;
+      };
+      set_pal_share_enabled_for_web: {
+        Args: {
+          p_pal_instance_uid: string;
+          p_enabled: boolean;
+        };
+        Returns: Json;
       };
       update_breeding_step_status: {
         Args: {

@@ -1,4 +1,11 @@
 export type { Database, Json } from "./database.types";
+export {
+  parseInventoryDataStatusRpcResult,
+  parsePalInventoryRpcResult,
+  parsePhase5Error,
+  parseShareMutationRpcResult,
+  Phase5ContractError,
+} from "./phase5-validation";
 export type { BreedingJob } from "./generated/breeding-job";
 export type {
   BreedingDifficulty,
@@ -29,6 +36,23 @@ export type {
   CanonicalSnapshot,
 } from "./generated/canonical-snapshot";
 export type { PalListItem } from "./generated/pal-list-item";
+export type {
+  InventoryDataStatus,
+  InventoryScope,
+  OverviewSummary,
+  PalInventoryItem,
+  PalInventoryPage,
+  PalInventoryRpcData,
+  PalInventoryRpcItem,
+  PalInventoryRpcResult,
+  Phase5Error,
+  Phase5ErrorCode,
+  PlayerBindingSummary,
+  ShareMutationData,
+  ShareMutationRpcResult,
+  InventoryDataStatusRpcResult,
+  UserContext,
+} from "./generated/phase5-web";
 export type { ReadinessStatus } from "./generated/readiness-status";
 export type { SystemStatus } from "./generated/system-status";
 export type {

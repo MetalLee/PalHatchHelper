@@ -1,15 +1,19 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import Home from "../app/page";
+import LoginPage from "../app/login/page";
 
-describe("home page", () => {
-  it("identifies the running Phase 0 skeleton", () => {
-    render(<Home />);
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
+}));
+
+describe("login page", () => {
+  it("identifies the Phase 5 inventory workspace", () => {
+    render(<LoginPage />);
 
     expect(
-      screen.getByRole("heading", { name: /PalHatch Helper/i }),
+      screen.getByRole("heading", { name: /回到你的帕鲁工作台/i }),
     ).toBeTruthy();
-    expect(screen.getByText(/工程骨架已运行/)).toBeTruthy();
+    expect(screen.getByText(/RLS\/RPC 授权/)).toBeTruthy();
   });
 });

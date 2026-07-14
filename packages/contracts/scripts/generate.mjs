@@ -22,6 +22,7 @@ const contracts = [
   "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
+  "phase5-web",
 ];
 const pythonContracts = [
   "readiness-status",
@@ -76,6 +77,29 @@ const bundledContractModels = {
     "BreedingModeRanking",
     "BreedingSearchDiagnostics",
     "BreedingEngineResult",
+  ],
+  "phase5-web": [
+    "InventoryScope",
+    "PalGender",
+    "PalLocationType",
+    "PalInventoryItem",
+    "PalInventoryPage",
+    "PalInventoryRpcItem",
+    "PalInventoryRpcData",
+    "PlayerBindingSummary",
+    "UserContext",
+    "InventoryDataStatus",
+    "OverviewSummary",
+    "Phase5ErrorCode",
+    "Phase5Error",
+    "Phase5RpcFailure",
+    "PalInventoryRpcSuccess",
+    "PalInventoryRpcResult",
+    "InventoryDataStatusRpcSuccess",
+    "InventoryDataStatusRpcResult",
+    "ShareMutationData",
+    "ShareMutationRpcSuccess",
+    "ShareMutationRpcResult",
   ],
 };
 

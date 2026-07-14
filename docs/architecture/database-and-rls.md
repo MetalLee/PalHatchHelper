@@ -45,6 +45,7 @@ scoring_profiles ── breeding_jobs ── breeding_plans ── breeding_rout
 
 - 自有完整当前库存：基础表受 RLS 保护，只允许 latest snapshot 且 owner 为当前绑定玩家。
 - 同公会共享库存：只能调用 `list_available_pals('all'|'mine'|'shared')`，函数返回固定字段，不包含 `raw_metadata`。
+- Phase 5 列表调用向前追加的 `list_available_pals_page`；它保持相同 owner/guild/share 约束，固定库存快照和活动 `game_data_version_id`，从该目录版本解析中文名称、图鉴编号与被动名，并以不透明游标执行最多 50 行的服务端分页。目录未配置或 ID 未知时返回显式稳定状态，不伪造显示事实。
 - 其他公会、owner/guild 未解析、明确关闭共享的条目：受控查询均排除。
 
 ## 身份与授权矩阵
@@ -78,10 +79,12 @@ Service Role 专用函数还检查 JWT role，不能只依赖函数授权。浏�
 - 幂等键与 fingerprint 必须一一对应；即使两个请求在唯一约束处并发竞争，冲突回读也会再次校验 fingerprint。
 - `set_pal_share_enabled`：只在当前世界 latest published 快照验证实例当前 owner 后 upsert。
 - `list_available_pals`：严格接受三种 scope，输出字段裁剪后的可用池。
+- `list_available_pals_page`：严格接受三种 scope 和 Phase 5 筛选，以固定 `snapshot_id + game_data_version_id` 的稳定 keyset 分页返回相同安全投影；名称/图鉴号搜索和显示均来自同一发布目录版本，不会返回 `raw_metadata`、原始存档字段或服务器路径。
+- `get_inventory_data_status`：只返回当前绑定世界的发布快照时间、Parser 版本和稳定错误码；若较新的解析失败则明确标记继续使用上一有效快照，不返回错误摘要、堆栈或路径。
 - `update_breeding_step_status` / `confirm_step_offspring`：校验计划所有权和有限状态转换，候选确认保存真实实例 UID。
 - 管理员 RPC：绑定、解绑以及发布/切换 validated 配种版本，管理员身份只从数据库读取。客户端不能直接插入 published 版本或修改 validated 配方。
 - Agent RPC：claim、heartbeat、complete、fail、release stale，以及库存 latest/catalog lookup、发布和失败记录。所有 Agent RPC 同时依赖最小 ACL 与 service-role JWT；claim 使用 `FOR UPDATE SKIP LOCKED` 并原子增加 attempt，complete 可安全重试。
 
 ## 索引依据
 
-索引围绕 world/UID 唯一性、latest snapshot owner/guild 列表、被动 GIN 查询、任务 requester 历史、pending claim 队列和失效 heartbeat 建立。活动任务 fingerprint 使用 partial unique index，避免重复点击并行创建相同工作。
+索引围绕 world/UID 唯一性、latest snapshot owner/guild 列表、被动 GIN 查询、任务 requester 历史、pending claim 队列和失效 heartbeat 建立。活动任务 fingerprint 使用 partial unique index，避免重复点击并行创建相同工作。Phase 5 未在缺少目标规模完整 RPC 基准的情况下新增推测性分页索引；后续若证明需要，必须使用独立并发迁移并记录数据规模、完整查询延迟和写入并发证据。

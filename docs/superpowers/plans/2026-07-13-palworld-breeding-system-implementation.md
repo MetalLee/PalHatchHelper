@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：Phase 4 代码与高风险门禁已完成，待人工真实数据验收
+- 状态：Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=pending、production_publish=blocked；Phase 5 implementation=completed、automated_gates=passed；Phase 6 受 Phase 4 真实数据验收阻塞
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -377,7 +377,7 @@
 - Phase 4A/4B 仅作为实现检查点，不改变本节的统一验收范围。
 - 已完成受审计来源入口、精确基础目录/provenance 绑定、六类非配种事实发布门禁、确定性两层搜索、实例分配、候选物理去重、四模式全候选池排名和完整评分明细。
 - 数据库已启用与引擎一致的四套 v2 评分配置；真实本地 Claim 必须经精确 published 目录、content hash、world 和固定库存快照校验后才能进入引擎。
-- 自动化高风险门禁已通过；真实来源的许可、固定版本、对应游戏 build 和配方真实性仍须人工确认，因此尚未开始 Phase 5。
+- 自动化高风险门禁已通过；真实来源的许可、固定 source commit/release、Palworld Steam build ID、游戏版本和配方真实性仍须人工确认。该门禁继续阻塞真实数据生产发布和 Phase 6，但不阻塞仅依赖 Phase 1、Phase 3 和非生产 Supabase 的 Phase 5。
 
 ### 阶段目标
 
@@ -448,6 +448,12 @@
 
 ## Phase 5：登录、概览和帕鲁列表
 
+### 当前进度（2026-07-15）
+
+- `implementation=completed`、`automated_gates=passed`；并行交付边界已由 `docs/decisions/0005-phase5-parallel-delivery-boundary.md` 批准。
+- 独立使用 Phase 1 RLS/RPC、Phase 3 脱敏库存以及本地或预览 Supabase。
+- 不要求也不得绕过 Phase 4 的真实数据人工验收和生产发布门禁。
+
 ### 阶段目标
 
 实现 Supabase 登录、角色绑定状态、概览和统一帕鲁列表，使用户只能看到权限允许的真实库存范围。
@@ -516,6 +522,10 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test:e2e && pnpm check`
 
 ## Phase 6：配种器、异步任务和路线比较
+
+### 当前阻塞（2026-07-15）
+
+- Phase 6 继续受 Phase 4 `real_data_acceptance=pending` 与 `production_publish=blocked` 阻塞；Phase 5 开发不解除该门禁。
 
 ### 阶段目标
 

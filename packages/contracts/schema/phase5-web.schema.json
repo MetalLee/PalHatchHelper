@@ -1,0 +1,444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/phase5-web.schema.json",
+  "title": "Phase5WebContracts",
+  "description": "Browser-safe Phase 5 session, inventory, overview and data-status payloads.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "InventoryScope": {
+      "type": "string",
+      "enum": ["all", "mine", "shared"]
+    },
+    "PalGender": {
+      "type": "string",
+      "enum": ["male", "female", "genderless", "unknown"]
+    },
+    "PalLocationType": {
+      "type": "string",
+      "enum": [
+        "player_party",
+        "player_storage",
+        "base",
+        "viewing_cage",
+        "unknown"
+      ]
+    },
+    "PalInventoryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pal_instance_uid",
+        "pal_id",
+        "encyclopedia_no",
+        "pal_display_name",
+        "catalog_entry_state",
+        "owner_filter_key",
+        "owner_display_name",
+        "gender",
+        "level",
+        "passive_skill_ids",
+        "passive_display_names",
+        "unknown_passive_skill_ids",
+        "location_type",
+        "location_name",
+        "share_enabled",
+        "is_owned_by_requester"
+      ],
+      "properties": {
+        "pal_instance_uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "encyclopedia_no": { "type": ["integer", "null"], "minimum": 1 },
+        "pal_display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "catalog_entry_state": {
+          "type": "string",
+          "enum": ["resolved", "unknown", "not_configured"]
+        },
+        "owner_filter_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "owner_display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "gender": { "$ref": "#/$defs/PalGender" },
+        "level": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+        "passive_skill_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "passive_display_names": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+        },
+        "unknown_passive_skill_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "location_type": { "$ref": "#/$defs/PalLocationType" },
+        "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "share_enabled": { "type": "boolean" },
+        "is_owned_by_requester": { "type": "boolean" }
+      }
+    },
+    "PalInventoryPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "game_data_version_id",
+        "catalog_state",
+        "items",
+        "total_count",
+        "next_cursor"
+      ],
+      "properties": {
+        "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
+        "game_data_version_id": {
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "catalog_state": {
+          "type": "string",
+          "enum": ["published", "not_configured"]
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/PalInventoryItem" }
+        },
+        "total_count": { "type": "integer", "minimum": 0 },
+        "next_cursor": { "type": ["string", "null"], "maxLength": 640 }
+      }
+    },
+    "PalInventoryRpcItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pal_instance_uid",
+        "pal_id",
+        "encyclopedia_no",
+        "pal_display_name",
+        "catalog_entry_state",
+        "owner_filter_key",
+        "owner_display_name",
+        "gender",
+        "level",
+        "passive_skill_ids",
+        "passive_display_names",
+        "unknown_passive_skill_ids",
+        "location_type",
+        "location_name",
+        "share_enabled",
+        "is_owned_by_requester"
+      ],
+      "properties": {
+        "pal_instance_uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "encyclopedia_no": { "type": ["integer", "null"], "minimum": 1 },
+        "pal_display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "catalog_entry_state": {
+          "type": "string",
+          "enum": ["resolved", "unknown", "not_configured"]
+        },
+        "owner_filter_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "owner_display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "gender": { "$ref": "#/$defs/PalGender" },
+        "level": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+        "passive_skill_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "passive_display_names": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+        },
+        "unknown_passive_skill_ids": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "location_type": { "$ref": "#/$defs/PalLocationType" },
+        "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "share_enabled": { "type": "boolean" },
+        "is_owned_by_requester": { "type": "boolean" }
+      }
+    },
+    "PalInventoryRpcData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "game_data_version_id",
+        "catalog_state",
+        "items",
+        "total_count",
+        "has_more"
+      ],
+      "properties": {
+        "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
+        "game_data_version_id": {
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "catalog_state": {
+          "type": "string",
+          "enum": ["published", "not_configured"]
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/PalInventoryRpcItem" }
+        },
+        "total_count": { "type": "integer", "minimum": 0 },
+        "has_more": { "type": "boolean" }
+      }
+    },
+    "PlayerBindingSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "player_id",
+        "player_nickname",
+        "guild_id",
+        "guild_name",
+        "world_id",
+        "world_name"
+      ],
+      "properties": {
+        "player_id": { "type": "string", "format": "uuid" },
+        "player_nickname": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "guild_id": { "type": ["string", "null"], "format": "uuid" },
+        "guild_name": { "type": ["string", "null"], "maxLength": 120 },
+        "world_id": { "type": "string", "format": "uuid" },
+        "world_name": { "type": "string", "minLength": 1, "maxLength": 120 }
+      }
+    },
+    "UserContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_id", "email", "display_name", "role", "binding"],
+      "properties": {
+        "user_id": { "type": "string", "format": "uuid" },
+        "email": { "type": "string", "format": "email" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["admin", "player"] },
+        "binding": {
+          "anyOf": [
+            { "$ref": "#/$defs/PlayerBindingSummary" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "InventoryDataStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "snapshot_id",
+        "captured_at",
+        "source_modified_at",
+        "parser_name",
+        "parser_version",
+        "last_attempt_at",
+        "error_code",
+        "using_previous_snapshot",
+        "game_data_state",
+        "game_data_version_id",
+        "game_build_id",
+        "game_version",
+        "algorithm_version"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["healthy", "stale", "parse_error", "empty"]
+        },
+        "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
+        "captured_at": { "type": ["string", "null"], "format": "date-time" },
+        "source_modified_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "parser_name": { "type": ["string", "null"], "maxLength": 120 },
+        "parser_version": { "type": ["string", "null"], "maxLength": 120 },
+        "last_attempt_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "error_code": { "type": ["string", "null"], "maxLength": 80 },
+        "using_previous_snapshot": { "type": "boolean" },
+        "game_data_state": {
+          "type": "string",
+          "enum": ["published", "not_configured", "review_pending", "blocked"]
+        },
+        "game_data_version_id": {
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "game_build_id": { "type": ["string", "null"], "maxLength": 160 },
+        "game_version": { "type": ["string", "null"], "maxLength": 160 },
+        "algorithm_version": {
+          "type": ["string", "null"],
+          "maxLength": 120
+        }
+      }
+    },
+    "OverviewSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["all_count", "owned_count", "shared_count", "data_status"],
+      "properties": {
+        "all_count": { "type": "integer", "minimum": 0 },
+        "owned_count": { "type": "integer", "minimum": 0 },
+        "shared_count": { "type": "integer", "minimum": 0 },
+        "data_status": { "$ref": "#/$defs/InventoryDataStatus" }
+      }
+    },
+    "Phase5ErrorCode": {
+      "type": "string",
+      "enum": [
+        "AUTH_REQUIRED",
+        "INVALID_CREDENTIALS",
+        "AUTH_UNAVAILABLE",
+        "PLAYER_BINDING_REQUIRED",
+        "INVALID_PAL_SCOPE",
+        "INVALID_PAL_FILTER",
+        "INVALID_PAGINATION",
+        "INVENTORY_SNAPSHOT_CHANGED",
+        "GAME_DATA_VERSION_CHANGED",
+        "PAL_NOT_OWNED",
+        "FORBIDDEN",
+        "DATA_UNAVAILABLE"
+      ]
+    },
+    "Phase5Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["error_code"],
+      "properties": {
+        "error_code": { "$ref": "#/$defs/Phase5ErrorCode" }
+      }
+    },
+    "Phase5RpcFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "error_code"],
+      "properties": {
+        "ok": { "const": false },
+        "error_code": { "$ref": "#/$defs/Phase5ErrorCode" }
+      }
+    },
+    "PalInventoryRpcSuccess": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "data"],
+      "properties": {
+        "ok": { "const": true },
+        "data": { "$ref": "#/$defs/PalInventoryRpcData" }
+      }
+    },
+    "PalInventoryRpcResult": {
+      "oneOf": [
+        { "$ref": "#/$defs/PalInventoryRpcSuccess" },
+        { "$ref": "#/$defs/Phase5RpcFailure" }
+      ]
+    },
+    "InventoryDataStatusRpcSuccess": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "data"],
+      "properties": {
+        "ok": { "const": true },
+        "data": { "$ref": "#/$defs/InventoryDataStatus" }
+      }
+    },
+    "InventoryDataStatusRpcResult": {
+      "oneOf": [
+        { "$ref": "#/$defs/InventoryDataStatusRpcSuccess" },
+        { "$ref": "#/$defs/Phase5RpcFailure" }
+      ]
+    },
+    "ShareMutationData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pal_instance_uid", "share_enabled"],
+      "properties": {
+        "pal_instance_uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "share_enabled": { "type": "boolean" }
+      }
+    },
+    "ShareMutationRpcSuccess": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "data"],
+      "properties": {
+        "ok": { "const": true },
+        "data": { "$ref": "#/$defs/ShareMutationData" }
+      }
+    },
+    "ShareMutationRpcResult": {
+      "oneOf": [
+        { "$ref": "#/$defs/ShareMutationRpcSuccess" },
+        { "$ref": "#/$defs/Phase5RpcFailure" }
+      ]
+    }
+  },
+  "required": [
+    "user_context",
+    "inventory_page",
+    "inventory_data_status",
+    "overview_summary",
+    "error"
+  ],
+  "properties": {
+    "user_context": { "$ref": "#/$defs/UserContext" },
+    "inventory_page": { "$ref": "#/$defs/PalInventoryPage" },
+    "inventory_data_status": { "$ref": "#/$defs/InventoryDataStatus" },
+    "overview_summary": { "$ref": "#/$defs/OverviewSummary" },
+    "error": { "$ref": "#/$defs/Phase5Error" }
+  }
+}

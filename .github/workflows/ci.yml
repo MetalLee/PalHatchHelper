@@ -84,6 +84,27 @@ jobs:
           cd apps/agent
           uv run pytest -m integration
 
+  phase5-e2e:
+    name: Phase 5 browser acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @palhatch/web exec playwright install --with-deps chromium
+      - run: pnpm check:phase5
+
   agent:
     name: Python Agent
     runs-on: ubuntu-latest
