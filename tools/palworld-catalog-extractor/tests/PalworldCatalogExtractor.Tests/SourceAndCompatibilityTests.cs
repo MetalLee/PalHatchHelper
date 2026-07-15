@@ -47,11 +47,14 @@ public sealed class SourceAndCompatibilityTests
   }
 
   [Fact]
-  public void InvalidTargetServerIdentityStopsConfiguration()
+  public void TargetServerFactsRemainConfigurationDriven()
   {
-    var config = TestConfig("v1.0.0", "v1.0.0", serverAppId: "not-palworld");
+    var config = TestConfig("v1.0.0", "v1.0.0", serverAppId: "fixture-dedicated-server");
+    config.Validate();
 
-    var error = Assert.Throws<ExtractorException>(config.Validate);
+    var invalid = TestConfig("v1.0.0", "v1.0.0", serverAppId: "");
+
+    var error = Assert.Throws<ExtractorException>(invalid.Validate);
 
     Assert.Equal(ErrorCodes.ConfigurationInvalid, error.Code);
   }

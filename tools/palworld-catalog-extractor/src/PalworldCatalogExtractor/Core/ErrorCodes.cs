@@ -27,6 +27,8 @@ public static class ErrorCodes
   public const string CatalogSourceEvidenceInvalid = "CATALOG_SOURCE_EVIDENCE_INVALID";
   public const string CatalogHashMismatch = "CATALOG_HASH_MISMATCH";
   public const string CatalogFileMissing = "CATALOG_FILE_MISSING";
+  public const string CatalogReproducibilityMismatch = "CATALOG_REPRODUCIBILITY_MISMATCH";
+  public const string CatalogOutputUnsafe = "CATALOG_OUTPUT_UNSAFE";
   public const string PackageForbiddenFile = "CATALOG_PACKAGE_FORBIDDEN_FILE";
   public const string AssetInventoryFailed = "ASSET_INVENTORY_FAILED";
   public const string WindowsAssetExtractionRequired = "WINDOWS_ASSET_EXTRACTION_REQUIRED";

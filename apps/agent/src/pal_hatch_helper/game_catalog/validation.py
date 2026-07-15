@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeGuard
+from typing import Literal, TypeGuard
 
 from pydantic import BaseModel, ValidationError
 
@@ -22,16 +22,28 @@ from pal_hatch_helper.generated import (
     GameCatalogManifest,
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
+from pal_hatch_helper.normalization.stable_id import build_stable_id_map
 
 SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.0.0", "1.1.0"})
 
 
 @dataclass(frozen=True, slots=True)
 class FileSpec:
-    filename: str
+    filename: "CatalogFilename"
     count_field: str
     model: type[BaseModel]
     key_fields: tuple[str, ...]
+
+
+CatalogFilename = Literal[
+    "pals.jsonl",
+    "passive-skills.jsonl",
+    "active-skills.jsonl",
+    "pal-active-skills.jsonl",
+    "partner-skills.jsonl",
+    "breeding-recipes.jsonl",
+    "localizations.jsonl",
+]
 
 
 FILE_SPECS = (
@@ -201,7 +213,7 @@ def validate_manifest_application_requirements(manifest: GameCatalogManifest) ->
     if manifest.schema_version != "1.1.0":
         return
     provenance = manifest.source_provenance
-    if provenance is None:
+    if provenance is None or manifest.extractor_name != "palhatch-full-catalog-extractor":
         raise StructuredError(
             code=ErrorCode.GAME_DATA_PROVENANCE_REQUIRED,
             summary="Catalog schema 1.1.0 requires full source provenance.",
@@ -370,9 +382,9 @@ def _validate_full_catalog_sidecars(
             raise ValueError
         for spec in FILE_SPECS:
             entries = categories.get(spec.count_field)
+            records = parsed.get(spec.count_field, [])
             expected_keys = {
-                _source_evidence_record_key(record, spec.key_fields)
-                for record in parsed.get(spec.count_field, [])
+                _source_evidence_record_key(record, spec.key_fields) for record in records
             }
             if not isinstance(entries, list) or len(entries) != len(expected_keys):
                 raise ValueError
@@ -395,8 +407,48 @@ def _validate_full_catalog_sidecars(
                 actual_keys.add(record_key)
             if actual_keys != expected_keys:
                 raise ValueError
+            if spec.count_field != "localizations":
+                source_by_key = {
+                    str(entry["record_key"]): str(entry["source_internal_name"])
+                    for entry in entries
+                }
+                for record in records:
+                    record_key = _source_evidence_record_key(record, spec.key_fields)
+                    metadata = record.model_dump().get("metadata")
+                    if (
+                        not isinstance(metadata, dict)
+                        or not _non_empty_text(metadata.get("source_internal_name"))
+                        or metadata["source_internal_name"] != source_by_key[record_key]
+                    ):
+                        raise ValueError
+                stable_id_field = _stable_id_source_field(spec.count_field)
+                if stable_id_field is not None:
+                    sources = [
+                        source_by_key[_source_evidence_record_key(record, spec.key_fields)]
+                        for record in records
+                    ]
+                    stable_ids = build_stable_id_map(sources)
+                    if any(
+                        getattr(record, stable_id_field)
+                        != stable_ids[
+                            source_by_key[_source_evidence_record_key(record, spec.key_fields)]
+                        ]
+                        for record in records
+                    ):
+                        raise ValueError
+    except StructuredError as error:
+        errors.add(error.code.value)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError):
         errors.add("CATALOG_SOURCE_EVIDENCE_INVALID")
+
+
+def _stable_id_source_field(count_field: str) -> str | None:
+    return {
+        "pals": "pal_id",
+        "passive_skills": "passive_skill_id",
+        "active_skills": "active_skill_id",
+        "partner_skills": "partner_skill_id",
+    }.get(count_field)
 
 
 def _source_evidence_record_key(record: BaseModel, fields: tuple[str, ...]) -> str:

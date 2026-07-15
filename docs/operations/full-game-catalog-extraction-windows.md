@@ -33,6 +33,8 @@ dotnet run --project src/PalworldCatalogExtractor -c Release -- inventory --conf
 
 `doctor` 必须全部通过：Windows x64、.NET 10、PAK 目录、`Pal-Windows.pak`、可解析 usmap、客户端 appmanifest、只读输入、至少 10 GiB 空间，以及 output 命中 Git ignore 且没有 tracked file。`inventory` 只生成六个结构清单和来源包指纹，不导出资产内容。
 
+inventory 会无条件枚举 DataTable row struct/字段，以及 Blueprint CDO 和组件中的 SoftObject、SoftClass、FName、FText、enum、array、map、struct 关系；关键词评分只另外写入 unresolved candidate，不会限制结构发现范围或自动确认字段。
+
 ## 4. Codex 资产字段确认
 
 将六个 inventory JSON 保留在忽略目录，交给 Codex/人工逐项确认七类 reader 的真实 DataTable、row struct、Blueprint CDO/组件、字段类型和 property chain。候选评分不能直接升级为事实。每一个最终字段映射都要经过代码评审并进入 `source-evidence.json`；所有 unresolved candidate 必须解决或以明确 excluded reason 审核，不能静默丢弃。
@@ -49,7 +51,15 @@ dotnet run --project src/PalworldCatalogExtractor -c Release -- verify --config 
 dotnet run --project src/PalworldCatalogExtractor -c Release -- package --config ../../data/game-catalog/extraction/windows/extraction.json
 ```
 
-人工复核 `validation-report.json` 为 valid、七类 count 全部大于零、provenance 为 exact match、source evidence 可反向追踪，并在相同输入上清空另一个忽略输出目录重复 extract，比较七个 JSONL、content hash 与 package hash。压缩包名为 `palworld-catalog-<server-build-id>-<content-hash-short>.tar.zst`，只能包含 normalized JSON、证据 JSON、manifest、验证报告和校验和。
+`extract` 先在 output 同级暂存目录生成、校验所有文件，只有成功后才切换完整目录；失败不会留下半套 normalized 文件，也不会覆盖已保留的 inventory。若 output 含未知文件、目录或链接，会以 `CATALOG_OUTPUT_UNSAFE` 停止。
+
+人工复核 `validation-report.json` 为 valid、七类 count 全部大于零、provenance 为 exact match、source evidence 可反向追踪。然后复制一份配置，仅把 `output_path` 改为另一个新的 Git-ignored 目录，在完全相同输入上再次运行 `extract`，并执行内置复现性比较：
+
+```powershell
+dotnet run --project src/PalworldCatalogExtractor -c Release -- verify --config ../../data/game-catalog/extraction/windows/extraction.json --compare C:\PalHatchHelper-output\repeat-extraction
+```
+
+结果必须包含 `reproducibility_status: identical`；工具会比较 source package hash、content hash 和七个 JSONL 的实际字节。压缩包名为 `palworld-catalog-<server-build-id>-<content-hash-short>.tar.zst`，只能包含 normalized JSON、证据 JSON、manifest、验证报告和校验和；相同目标名再次打包时也必须逐字节一致。
 
 ## 6. 传回腾讯云
 

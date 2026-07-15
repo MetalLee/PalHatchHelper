@@ -18,11 +18,17 @@ public static class Program
   {
     try
     {
-      if (args.Length != 3 || args[1] != "--config")
+      var compareDirectory = args.Length == 5
+          && args[0] == "verify"
+          && args[1] == "--config"
+          && args[3] == "--compare"
+          ? Path.GetFullPath(args[4])
+          : null;
+      if ((args.Length != 3 && compareDirectory is null) || args[1] != "--config")
       {
         throw new ExtractorException(
             ErrorCodes.ConfigurationInvalid,
-            "Usage: palworld-catalog-extractor <doctor|inventory|extract|verify|package> --config <path>");
+            "Usage: palworld-catalog-extractor <doctor|inventory|extract|verify|package> --config <path> [--compare <directory>]");
       }
 
       var config = ExtractionConfig.Load(args[2]);
@@ -31,7 +37,9 @@ public static class Program
         "doctor" => DoctorRunner.Run(config),
         "inventory" => AssetInventoryRunner.Run(config),
         "extract" => await ExtractAsync(config).ConfigureAwait(false),
-        "verify" => CatalogVerifier.Verify(config.OutputPath),
+        "verify" => compareDirectory is null
+            ? CatalogVerifier.Verify(config.OutputPath)
+            : CatalogVerifier.Verify(config.OutputPath, compareDirectory),
         "package" => Package(config.OutputPath),
         _ => throw new ExtractorException(ErrorCodes.ConfigurationInvalid, "Unknown extractor command."),
       };

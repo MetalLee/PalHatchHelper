@@ -94,7 +94,7 @@ export interface SourceProvenance {
   source_client_build_id: NonEmptyText;
   source_client_appmanifest_sha256: Sha256;
   source_client_game_version: NonEmptyText;
-  target_server_app_id: "2394010";
+  target_server_app_id: NonEmptyText;
   target_server_build_id: NonEmptyText;
   target_server_appmanifest_sha256: Sha256;
   target_server_game_version: NonEmptyText;

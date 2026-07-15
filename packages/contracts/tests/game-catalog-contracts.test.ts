@@ -134,6 +134,7 @@ describe("game catalog contracts", () => {
       validate({
         ...baseManifest,
         schema_version: "1.1.0",
+        extractor_name: "palhatch-full-catalog-extractor",
         source_provenance: provenance,
       }),
       JSON.stringify(validate.errors),
@@ -142,6 +143,7 @@ describe("game catalog contracts", () => {
       validate({
         ...baseManifest,
         schema_version: "1.1.0",
+        extractor_name: "palhatch-full-catalog-extractor",
         source_provenance: { ...provenance, cue4parse_version: "latest" },
       }),
     ).toBe(false);
@@ -149,10 +151,20 @@ describe("game catalog contracts", () => {
       validate({
         ...baseManifest,
         schema_version: "1.1.0",
+        extractor_name: "palhatch-full-catalog-extractor",
         source_provenance: {
           ...provenance,
-          target_server_app_id: "not-palworld-dedicated-server",
+          target_server_app_id: "fixture-dedicated-server",
         },
+      }),
+      JSON.stringify(validate.errors),
+    ).toBe(true);
+    expect(
+      validate({
+        ...baseManifest,
+        schema_version: "1.1.0",
+        extractor_name: "unreviewed-extractor",
+        source_provenance: provenance,
       }),
     ).toBe(false);
   });

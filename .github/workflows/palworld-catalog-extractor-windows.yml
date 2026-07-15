@@ -5,12 +5,14 @@ on:
     paths:
       - "tools/palworld-catalog-extractor/**"
       - "packages/contracts/data/palworld-stable-id-v1.json"
+      - "packages/contracts/schema/game-catalog.schema.json"
       - ".github/workflows/palworld-catalog-extractor-windows.yml"
   push:
     branches: [main]
     paths:
       - "tools/palworld-catalog-extractor/**"
       - "packages/contracts/data/palworld-stable-id-v1.json"
+      - "packages/contracts/schema/game-catalog.schema.json"
       - ".github/workflows/palworld-catalog-extractor-windows.yml"
 
 permissions:

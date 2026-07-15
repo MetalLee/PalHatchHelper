@@ -41,6 +41,17 @@ public static class AssetInventoryRunner
           ["package_name"] = pair.Value.NameWithoutExtension,
           ["virtual_asset_path"] = pair.Key,
         });
+        if (score > 0)
+        {
+          unresolved.Add(new JsonObject
+          {
+            ["candidate_score"] = score,
+            ["package_name"] = pair.Value.NameWithoutExtension,
+            ["reason_code"] = "SOURCE_MAPPING_UNCONFIRMED",
+            ["virtual_asset_path"] = pair.Key,
+          });
+        }
+
         if (pair.Value.Extension.Equals("locres", StringComparison.OrdinalIgnoreCase))
         {
           localizations.Add(new JsonObject
@@ -66,9 +77,9 @@ public static class AssetInventoryRunner
               dataTables.Add(DataTableInventory(pair.Key, table, config.InventorySampleLimit, score));
             }
 
-            if (score > 0 && IsBlueprintDiscoveryObject(export))
+            if (IsBlueprintDiscoveryObject(export.Name, export.ExportType))
             {
-              blueprintObjects.Add(BlueprintInventory(pair.Key, export, config.InventorySampleLimit, score));
+              blueprintObjects.Add(BlueprintInventory(pair.Key, export, score));
             }
           }
         }
@@ -129,14 +140,14 @@ public static class AssetInventoryRunner
     };
   }
 
-  private static JsonObject BlueprintInventory(string path, UObject export, int sampleLimit, int score)
+  private static JsonObject BlueprintInventory(string path, UObject export, int score)
   {
-    var properties = export.Properties.OrderBy(value => value.Name.Text, StringComparer.Ordinal).Take(sampleLimit)
-        .Select(property => (JsonNode)new JsonObject
+    var properties = export.Properties.OrderBy(value => value.Name.Text, StringComparer.Ordinal)
+        .Select(property =>
         {
-          ["property_name"] = property.Name.Text,
-          ["property_type"] = PropertyType(property),
-          ["reference_target_path"] = SafeReference(property),
+          var descriptor = InventoryPropertyShape.Describe(property, SafeReference(property));
+          descriptor["property_name"] = property.Name.Text;
+          return (JsonNode)descriptor;
         }).ToArray();
     return new JsonObject
     {
@@ -150,13 +161,13 @@ public static class AssetInventoryRunner
     };
   }
 
-  private static bool IsBlueprintDiscoveryObject(UObject value) =>
-      value.Name.StartsWith("Default__", StringComparison.Ordinal)
-      || value.ExportType.Contains("Blueprint", StringComparison.OrdinalIgnoreCase)
-      || value.ExportType.Contains("Component", StringComparison.OrdinalIgnoreCase);
+  public static bool IsBlueprintDiscoveryObject(string objectName, string exportType) =>
+      objectName.StartsWith("Default__", StringComparison.Ordinal)
+      || exportType.Contains("Blueprint", StringComparison.OrdinalIgnoreCase)
+      || exportType.Contains("Component", StringComparison.OrdinalIgnoreCase);
 
   private static string PropertyType(CUE4Parse.UE4.Assets.Objects.FPropertyTag property) =>
-      property.TagData?.ToString() ?? property.PropertyType.Text;
+      InventoryPropertyShape.Describe(property, null)["property_type"]!.GetValue<string>();
 
   private static string? SafeReference(CUE4Parse.UE4.Assets.Objects.FPropertyTag property)
   {
@@ -175,7 +186,7 @@ public static class AssetInventoryRunner
   private static string HashVirtualFile(CUE4Parse.FileProvider.Objects.GameFile file) =>
       Convert.ToHexStringLower(SHA256.HashData(file.Read()));
 
-  private static void WriteInventories(
+  internal static void WriteInventories(
       string output,
       JsonArray assets,
       JsonArray tables,

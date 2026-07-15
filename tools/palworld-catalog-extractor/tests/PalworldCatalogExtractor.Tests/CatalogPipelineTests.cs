@@ -1,4 +1,6 @@
+using System.Formats.Tar;
 using System.Text.Json.Nodes;
+using ZstdSharp;
 using PalHatchHelper.CatalogExtractor.Contracts;
 using PalHatchHelper.CatalogExtractor.Core;
 using PalHatchHelper.CatalogExtractor.Pipeline;
@@ -85,10 +87,24 @@ public sealed class CatalogPipelineTests
 
     File.Delete(Path.Combine(output.Path, "forbidden.pak"));
     var packagePath = CatalogPackager.Package(output.Path);
+    var firstPackage = File.ReadAllBytes(packagePath);
+    Assert.Equal(packagePath, CatalogPackager.Package(output.Path));
+    Assert.Equal(firstPackage, File.ReadAllBytes(packagePath));
 
     Assert.EndsWith(".tar.zst", packagePath, StringComparison.Ordinal);
     Assert.DoesNotContain("forbidden.pak", CatalogPackager.ListSourceFiles(output.Path));
     Assert.All(CatalogPackager.ListSourceFiles(output.Path), path => Assert.DoesNotContain(Path.GetExtension(path), CatalogPackager.ForbiddenExtensions));
+
+    using var package = File.OpenRead(packagePath);
+    using var decompressor = new DecompressionStream(package);
+    using var tar = new TarReader(decompressor);
+    var members = new List<string>();
+    while (tar.GetNextEntry() is { } entry)
+    {
+      members.Add(entry.Name);
+    }
+
+    Assert.Equal(CatalogPackager.ListSourceFiles(output.Path), members);
   }
 
   [Fact]
@@ -121,6 +137,17 @@ public sealed class CatalogPipelineTests
   }
 
   [Fact]
+  public async Task ExtractorExecutesSharedRecordSchemaWithoutAllowingUndeclaredFields()
+  {
+    using var output = new TemporaryDirectory();
+    var error = await Assert.ThrowsAsync<ExtractorException>(() =>
+        new CatalogExtractionPipeline(SyntheticReaders.Valid(mutation: "unknown-field")).ExtractAsync(
+            SyntheticReaders.Request(output.Path), CancellationToken.None));
+
+    Assert.Equal(ErrorCodes.CatalogSchemaInvalid, error.Code);
+  }
+
+  [Fact]
   public async Task VerifyFailsWhenAnyOfSevenNormalizedFilesIsMissing()
   {
     using var output = new TemporaryDirectory();
@@ -131,6 +158,104 @@ public sealed class CatalogPipelineTests
     var error = Assert.Throws<ExtractorException>(() => CatalogVerifier.Verify(output.Path));
 
     Assert.Equal(ErrorCodes.CatalogFileMissing, error.Code);
+  }
+
+  [Theory]
+  [InlineData("counts")]
+  [InlineData("checksums")]
+  [InlineData("provenance")]
+  public async Task VerifyRejectsTamperedManifestAndSidecars(string mutation)
+  {
+    using var output = new TemporaryDirectory();
+    await new CatalogExtractionPipeline(SyntheticReaders.Valid()).ExtractAsync(
+        SyntheticReaders.Request(output.Path), CancellationToken.None);
+
+    if (mutation == "checksums")
+    {
+      File.WriteAllText(Path.Combine(output.Path, "checksums.sha256"), $"{new string('0', 64)}  pals.jsonl\n");
+    }
+    else
+    {
+      var manifestPath = Path.Combine(output.Path, "manifest.json");
+      var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject();
+      if (mutation == "counts")
+      {
+        manifest["counts"]!["pals"] = 999;
+      }
+      else
+      {
+        manifest["source_provenance"]!.AsObject().Remove("upstream_license");
+      }
+
+      DeterministicJson.WriteFile(manifestPath, manifest);
+    }
+
+    Assert.Throws<ExtractorException>(() => CatalogVerifier.Verify(output.Path));
+  }
+
+  [Fact]
+  public async Task VerifyRejectsParentPairsThatAreNotCanonicallyOrdered()
+  {
+    using var output = new TemporaryDirectory();
+    var error = await Assert.ThrowsAsync<ExtractorException>(() =>
+        new CatalogExtractionPipeline(SyntheticReaders.Valid(mutation: "parent-order")).ExtractAsync(
+            SyntheticReaders.Request(output.Path), CancellationToken.None));
+
+    Assert.Equal(ErrorCodes.CatalogOrderInvalid, error.Code);
+  }
+
+  [Fact]
+  public async Task ExtractionRequiresAuditedSourceMetadataAndCollisionSemantics()
+  {
+    using var output = new TemporaryDirectory();
+    var metadataError = await Assert.ThrowsAsync<ExtractorException>(() =>
+        new CatalogExtractionPipeline(SyntheticReaders.Valid(mutation: "missing-source-metadata")).ExtractAsync(
+            SyntheticReaders.Request(output.Path), CancellationToken.None));
+    Assert.Equal(ErrorCodes.CatalogSourceEvidenceInvalid, metadataError.Code);
+
+    var collisionError = await Assert.ThrowsAsync<ExtractorException>(() =>
+        new CatalogExtractionPipeline(SyntheticReaders.WithStableIdCollision()).ExtractAsync(
+            SyntheticReaders.Request(output.Path), CancellationToken.None));
+    Assert.Equal(ErrorCodes.GameIdNormalizationCollision, collisionError.Code);
+  }
+
+  [Fact]
+  public async Task FailedExtractionDoesNotPublishPartialCatalogFiles()
+  {
+    using var output = new TemporaryDirectory();
+    var inventoryPath = Path.Combine(output.Path, "asset-inventory.json");
+    File.WriteAllText(inventoryPath, "{\"assets\":[]}\n");
+
+    await Assert.ThrowsAsync<ExtractorException>(() =>
+        new CatalogExtractionPipeline(SyntheticReaders.Valid(mutation: "missing-localization")).ExtractAsync(
+            SyntheticReaders.Request(output.Path), CancellationToken.None));
+
+    Assert.Equal("{\"assets\":[]}\n", File.ReadAllText(inventoryPath));
+    Assert.False(File.Exists(Path.Combine(output.Path, "pals.jsonl")));
+    Assert.False(Directory.EnumerateFileSystemEntries(
+        Path.GetDirectoryName(output.Path)!, $".{Path.GetFileName(output.Path)}.*.tmp").Any());
+  }
+
+  [Fact]
+  public async Task VerifyCanCompareTwoIndependentExtractionsOfTheSameSource()
+  {
+    using var first = new TemporaryDirectory();
+    using var second = new TemporaryDirectory();
+    await new CatalogExtractionPipeline(SyntheticReaders.Valid()).ExtractAsync(
+        SyntheticReaders.Request(first.Path), CancellationToken.None);
+    await new CatalogExtractionPipeline(SyntheticReaders.Valid(reverse: true)).ExtractAsync(
+        SyntheticReaders.Request(second.Path), CancellationToken.None);
+
+    var report = CatalogVerifier.Verify(first.Path, second.Path);
+    Assert.Equal("identical", report["reproducibility_status"]!.GetValue<string>());
+    var sameDirectoryError = Assert.Throws<ExtractorException>(() => CatalogVerifier.Verify(first.Path, first.Path));
+    Assert.Equal(ErrorCodes.CatalogReproducibilityMismatch, sameDirectoryError.Code);
+
+    using var different = new TemporaryDirectory();
+    await new CatalogExtractionPipeline(SyntheticReaders.Valid(mutation: "different-content")).ExtractAsync(
+        SyntheticReaders.Request(different.Path), CancellationToken.None);
+    var error = Assert.Throws<ExtractorException>(() => CatalogVerifier.Verify(first.Path, different.Path));
+    Assert.Equal(ErrorCodes.CatalogReproducibilityMismatch, error.Code);
   }
 
   [Fact]
@@ -157,6 +282,21 @@ internal static class SyntheticReaders
       ["rarity"] = 1,
       ["breeding_power"] = 100,
     });
+    if (mutation == "missing-source-metadata")
+    {
+      palA.Data["metadata"] = new JsonObject();
+    }
+
+    if (mutation == "different-content")
+    {
+      palA.Data["rarity"] = 3;
+    }
+
+    if (mutation == "unknown-field")
+    {
+      palA.Data["unreviewed_field"] = "not-in-shared-schema";
+    }
+
     var palB = Record("fixture-pal-b", "FixturePalB", new JsonObject
     {
       ["pal_id"] = "fixturepalb",
@@ -228,14 +368,22 @@ internal static class SyntheticReaders
             [
                 Record("recipe", "FixtureRecipe", new JsonObject
                 {
-                    ["parent_a_pal_id"] = "fixturepala",
-                    ["parent_b_pal_id"] = "fixturepalb",
+                    ["parent_a_pal_id"] = mutation == "parent-order" ? "fixturepalb" : "fixturepala",
+                    ["parent_b_pal_id"] = mutation == "parent-order" ? "fixturepala" : "fixturepalb",
                     ["child_pal_id"] = "fixturepalb",
                     ["recipe_type"] = "normal",
                 }),
             ]),
             new FixtureReader(CatalogCategory.Localizations, localizations),
         ];
+  }
+
+  internal static ICatalogReader[] WithStableIdCollision()
+  {
+    var readers = Valid().ToList();
+    var pals = readers.Single(reader => reader.Category == CatalogCategory.Pals);
+    readers[readers.IndexOf(pals)] = new CollisionFixtureReader(pals);
+    return readers.ToArray();
   }
 
   internal static ExtractionRequest Request(string outputPath)
@@ -315,6 +463,23 @@ internal sealed class UnresolvedFixtureReader(ICatalogReader inner) : ICatalogRe
     {
       UnresolvedRecords = [new UnresolvedRecord("pals", "candidate", "property_not_confirmed")],
     };
+  }
+}
+
+internal sealed class CollisionFixtureReader(ICatalogReader inner) : ICatalogReader
+{
+  public CatalogCategory Category => inner.Category;
+
+  public async Task<ReaderResult> ReadAsync(CancellationToken cancellationToken)
+  {
+    var result = await inner.ReadAsync(cancellationToken);
+    var records = result.NormalizedRecords.Select(value => (JsonObject)value.DeepClone()).ToList();
+    var evidence = result.SourceEvidenceRecords.ToList();
+    var duplicate = (JsonObject)records[0].DeepClone();
+    duplicate["encyclopedia_no"] = 99;
+    records.Add(duplicate);
+    evidence.Add(evidence[0] with { SourceInternalName = "fixturepala" });
+    return result with { NormalizedRecords = records, SourceEvidenceRecords = evidence };
   }
 }
 

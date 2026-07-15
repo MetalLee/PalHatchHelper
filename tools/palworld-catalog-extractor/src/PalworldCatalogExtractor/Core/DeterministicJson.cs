@@ -25,8 +25,11 @@ public static class DeterministicJson
 
   public static void WriteFile(string path, JsonNode node)
   {
-    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-    File.WriteAllText(path, $"{Serialize(node)}\n", new UTF8Encoding(false));
+    AtomicFileWriter.WriteUtf8(path, writer =>
+    {
+      writer.Write(Serialize(node));
+      writer.Write('\n');
+    });
   }
 
   private static void WriteNode(Utf8JsonWriter writer, JsonNode? node)

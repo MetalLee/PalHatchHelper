@@ -11,7 +11,7 @@ public static class CatalogPackager
         ".pak", ".utoc", ".ucas", ".uasset", ".uexp", ".ubulk", ".umap", ".usmap", ".png", ".jpg", ".jpeg", ".wav", ".ogg", ".mp3",
     };
 
-  private static readonly HashSet<string> AllowedFiles = new(StringComparer.Ordinal)
+  public static readonly IReadOnlySet<string> AllowedFileNames = new HashSet<string>(StringComparer.Ordinal)
     {
         "manifest.json",
         "pals.jsonl",
@@ -28,7 +28,7 @@ public static class CatalogPackager
         "extraction-summary.json",
     };
 
-  public static IReadOnlyList<string> ListSourceFiles(string directory) => AllowedFiles
+  public static IReadOnlyList<string> ListSourceFiles(string directory) => AllowedFileNames
       .Where(file => File.Exists(Path.Combine(directory, file)))
       .Order(StringComparer.Ordinal)
       .ToArray();
@@ -43,7 +43,7 @@ public static class CatalogPackager
     }
 
     var files = ListSourceFiles(directory);
-    if (files.Count != AllowedFiles.Count || files.Any(file => ForbiddenExtensions.Contains(Path.GetExtension(file))))
+    if (files.Count != AllowedFileNames.Count || files.Any(file => ForbiddenExtensions.Contains(Path.GetExtension(file))))
     {
       throw new ExtractorException(ErrorCodes.PackageForbiddenFile, "The package source set is incomplete or contains a forbidden file.");
     }
@@ -52,6 +52,7 @@ public static class CatalogPackager
     var buildId = SafeFilePart(manifest["game_build_id"]!.GetValue<string>());
     var hash = manifest["content_hash"]!.GetValue<string>();
     var destination = Path.Combine(directory, $"palworld-catalog-{buildId}-{hash[..12]}.tar.zst");
+    var temporary = Path.Combine(directory, $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
     using var tarBuffer = new MemoryStream();
     using (var tar = new TarWriter(tarBuffer, TarEntryFormat.Pax, leaveOpen: true))
     {
@@ -73,10 +74,43 @@ public static class CatalogPackager
     }
 
     tarBuffer.Position = 0;
-    using var output = File.Create(destination);
-    using var compressor = new CompressionStream(output, 10, leaveOpen: false);
-    tarBuffer.CopyTo(compressor);
-    return destination;
+    try
+    {
+      using (var output = new FileStream(
+                 temporary,
+                 FileMode.CreateNew,
+                 FileAccess.Write,
+                 FileShare.None,
+                 4096,
+                 FileOptions.WriteThrough))
+      {
+        using (var compressor = new CompressionStream(output, 10, leaveOpen: true))
+        {
+          tarBuffer.CopyTo(compressor);
+        }
+
+        output.Flush(flushToDisk: true);
+      }
+
+      if (File.Exists(destination))
+      {
+        if (Hashing.Sha256File(destination) != Hashing.Sha256File(temporary))
+        {
+          throw new ExtractorException(
+              ErrorCodes.CatalogReproducibilityMismatch,
+              "An existing package for this content hash is not byte-for-byte reproducible.");
+        }
+
+        return destination;
+      }
+
+      File.Move(temporary, destination);
+      return destination;
+    }
+    finally
+    {
+      File.Delete(temporary);
+    }
   }
 
   private static string SafeFilePart(string value)

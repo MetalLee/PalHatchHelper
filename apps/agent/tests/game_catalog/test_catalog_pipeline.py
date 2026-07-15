@@ -114,6 +114,26 @@ def test_schema_1_1_0_source_evidence_keys_must_match_normalized_records(
     fixture = Path(__file__).parents[4] / "data" / "catalog-fixtures" / "minimal-valid"
     catalog = tmp_path / "catalog"
     shutil.copytree(fixture, catalog)
+    stable_id_fields = {
+        "pals": "pal_id",
+        "passive_skills": "passive_skill_id",
+        "active_skills": "active_skill_id",
+        "partner_skills": "partner_skill_id",
+    }
+    for spec in FILE_SPECS:
+        records = list(read_jsonl(catalog / spec.filename))
+        if spec.count_field != "localizations":
+            for record in records:
+                source_field = stable_id_fields.get(spec.count_field)
+                source_name = (
+                    str(record[source_field])
+                    if source_field is not None
+                    else ".".join(str(record[field]) for field in spec.key_fields)
+                )
+                metadata = record.get("metadata")
+                assert isinstance(metadata, dict)
+                metadata["source_internal_name"] = source_name
+            write_jsonl_atomic(catalog / spec.filename, records, primary_key=spec.key_fields)
     manifest = json.loads((catalog / "manifest.json").read_text(encoding="utf-8"))
     assert isinstance(manifest, dict)
     file_hashes = [
@@ -167,10 +187,18 @@ def test_schema_1_1_0_source_evidence_keys_must_match_normalized_records(
             for field in spec.key_fields:
                 value = record[field]
                 key_parts.append(f"{value:020d}" if isinstance(value, int) else str(value))
+            metadata = record.get("metadata")
+            source_internal_name = (
+                str(record["text_key"])
+                if spec.count_field == "localizations"
+                else str(metadata["source_internal_name"])
+                if isinstance(metadata, dict)
+                else ""
+            )
             entries.append(
                 {
                     "record_key": "\0".join(key_parts),
-                    "source_internal_name": "FixtureSource",
+                    "source_internal_name": source_internal_name,
                     "sources": [
                         {
                             "asset_path": "Pal/Content/Fixture",
@@ -182,7 +210,6 @@ def test_schema_1_1_0_source_evidence_keys_must_match_normalized_records(
             )
         categories[spec.count_field] = entries
 
-    write_json_atomic(catalog / "manifest.json", manifest)
     write_json_atomic(catalog / "source-package-manifest.json", source_package_manifest)
     write_json_atomic(
         catalog / "source-evidence.json",
@@ -194,20 +221,20 @@ def test_schema_1_1_0_source_evidence_keys_must_match_normalized_records(
             "warnings": [],
         },
     )
-    write_json_atomic(
-        catalog / "validation-report.json",
-        {
-            "schema_version": "1.1.0",
-            "content_hash": content_hash,
-            "valid": True,
-            "errors": [],
-            "warnings": [],
-            "counts": manifest["counts"],
-        },
-    )
+    _refresh_catalog_integrity(catalog, manifest)
 
-    assert validate_catalog_directory(catalog).valid
+    initial_report = validate_catalog_directory(catalog)
+    assert initial_report.valid, initial_report.errors
 
+    manifest["extractor_name"] = "unreviewed-extractor"
+    write_json_atomic(catalog / "manifest.json", manifest)
+    report = validate_catalog_directory(catalog)
+    assert not report.valid
+    assert ErrorCode.GAME_DATA_PROVENANCE_REQUIRED.value in report.errors
+    manifest["extractor_name"] = "palhatch-full-catalog-extractor"
+    write_json_atomic(catalog / "manifest.json", manifest)
+
+    original_record_key = categories["pals"][0]["record_key"]
     categories["pals"][0]["record_key"] = "unrelated-record"
     write_json_atomic(
         catalog / "source-evidence.json",
@@ -223,3 +250,56 @@ def test_schema_1_1_0_source_evidence_keys_must_match_normalized_records(
     report = validate_catalog_directory(catalog)
     assert not report.valid
     assert "CATALOG_SOURCE_EVIDENCE_INVALID" in report.errors
+
+    categories["pals"][0]["record_key"] = original_record_key
+    write_json_atomic(
+        catalog / "source-evidence.json",
+        {
+            "categories": categories,
+            "excluded_records": [],
+            "schema_version": "1.0.0",
+            "unresolved_records": [],
+            "warnings": [],
+        },
+    )
+    pals = list(read_jsonl(catalog / "pals.jsonl"))
+    pals[0]["metadata"] = {}
+    write_jsonl_atomic(catalog / "pals.jsonl", pals, primary_key="pal_id")
+    _refresh_catalog_integrity(catalog, manifest)
+
+    report = validate_catalog_directory(catalog)
+    assert not report.valid
+    assert "CATALOG_SOURCE_EVIDENCE_INVALID" in report.errors
+
+
+def _refresh_catalog_integrity(catalog: Path, manifest: dict[str, object]) -> None:
+    file_hashes = [
+        (
+            spec.filename,
+            sha256_file(catalog / spec.filename),
+            len(list(read_jsonl(catalog / spec.filename))),
+        )
+        for spec in FILE_SPECS
+    ]
+    content_hash = compute_content_hash("1.1.0", file_hashes)
+    manifest["content_hash"] = content_hash
+    manifest["files"] = [
+        {"filename": filename, "sha256": sha256, "record_count": count}
+        for filename, sha256, count in sorted(file_hashes)
+    ]
+    write_json_atomic(catalog / "manifest.json", manifest)
+    write_json_atomic(
+        catalog / "validation-report.json",
+        {
+            "schema_version": "1.1.0",
+            "content_hash": content_hash,
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "counts": manifest["counts"],
+        },
+    )
+    (catalog / "checksums.sha256").write_text(
+        "".join(f"{sha256}  {filename}\n" for filename, sha256, _ in sorted(file_hashes)),
+        encoding="utf-8",
+    )

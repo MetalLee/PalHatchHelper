@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json.Nodes;
 using PalHatchHelper.CatalogExtractor.Contracts;
 using PalHatchHelper.CatalogExtractor.Core;
@@ -24,7 +23,6 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
   public async Task<ExtractionResult> ExtractAsync(ExtractionRequest request, CancellationToken cancellationToken)
   {
     EnsureReaderSet();
-    Directory.CreateDirectory(request.OutputPath);
 
     var results = new Dictionary<CatalogCategory, ReaderResult>();
     foreach (var reader in _readers.OrderBy(value => value.Category))
@@ -47,6 +45,11 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
           "A full catalog requires every one of the seven categories to be non-empty.");
     }
 
+    CatalogTraceability.ValidateReaderResults(results);
+
+    using var output = AtomicCatalogDirectory.Begin(request.OutputPath);
+    var stagedRequest = request with { OutputPath = output.StagingPath };
+
     var fileHashes = new List<CatalogFileHash>();
     var counts = new Dictionary<string, int>(StringComparer.Ordinal);
     foreach (var definition in CatalogCategories.All)
@@ -54,7 +57,7 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
       var records = results[definition.Category].NormalizedRecords
           .OrderBy(record => CatalogCategories.RecordKey(definition.Category, record), StringComparer.Ordinal)
           .ToArray();
-      var path = Path.Combine(request.OutputPath, definition.FileName);
+      var path = Path.Combine(output.StagingPath, definition.FileName);
       WriteJsonLines(path, records);
       counts.Add(definition.CountField, records.Length);
       fileHashes.Add(new CatalogFileHash(definition.FileName, Hashing.Sha256File(path), records.Length));
@@ -68,15 +71,16 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
     }
 
     DeterministicJson.WriteFile(
-        Path.Combine(request.OutputPath, "source-package-manifest.json"),
+        Path.Combine(output.StagingPath, "source-package-manifest.json"),
         request.SourcePackageManifest);
-    WriteEvidence(request.OutputPath, results);
-    WriteManifest(request, fileHashes, counts, contentHash, packageHash);
-    WriteChecksums(request.OutputPath, fileHashes);
-    WriteSummary(request.OutputPath, results, contentHash, packageHash);
+    WriteEvidence(output.StagingPath, results);
+    WriteManifest(stagedRequest, fileHashes, counts, contentHash, packageHash);
+    WriteChecksums(output.StagingPath, fileHashes);
+    WriteSummary(output.StagingPath, results, contentHash, packageHash);
 
-    var report = CatalogVerifier.Verify(request.OutputPath);
-    DeterministicJson.WriteFile(Path.Combine(request.OutputPath, "validation-report.json"), report);
+    var report = CatalogVerifier.VerifyForExtraction(output.StagingPath);
+    DeterministicJson.WriteFile(Path.Combine(output.StagingPath, "validation-report.json"), report);
+    output.Publish();
     return new ExtractionResult(contentHash, counts);
   }
 
@@ -94,12 +98,14 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
 
   private static void WriteJsonLines(string path, IEnumerable<JsonObject> records)
   {
-    using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-    foreach (var record in records)
+    AtomicFileWriter.WriteUtf8(path, writer =>
     {
-      writer.Write(DeterministicJson.Serialize(record));
-      writer.Write('\n');
-    }
+      foreach (var record in records)
+      {
+        writer.Write(DeterministicJson.Serialize(record));
+        writer.Write('\n');
+      }
+    });
   }
 
   private static void WriteManifest(
@@ -155,14 +161,21 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
           {
             ["record_key"] = value.RecordKey,
             ["source_internal_name"] = value.SourceInternalName,
-            ["sources"] = new JsonArray(value.Sources.Select(source => (JsonNode)new JsonObject
-            {
-              ["asset_path"] = source.AssetPath,
-              ["property_chain"] = source.PropertyChain,
-              ["row_name"] = source.RowName,
-            }).ToArray()),
+            ["sources"] = new JsonArray(value.Sources
+                .OrderBy(source => source.AssetPath, StringComparer.Ordinal)
+                .ThenBy(source => source.RowName, StringComparer.Ordinal)
+                .ThenBy(source => source.PropertyChain, StringComparer.Ordinal)
+                .Select(source => (JsonNode)new JsonObject
+                {
+                  ["asset_path"] = source.AssetPath,
+                  ["property_chain"] = source.PropertyChain,
+                  ["row_name"] = source.RowName,
+                }).ToArray()),
           }).ToArray());
-      foreach (var item in result.ExcludedRecords)
+      foreach (var item in result.ExcludedRecords
+                   .OrderBy(value => value.Category, StringComparer.Ordinal)
+                   .ThenBy(value => value.SourceInternalName, StringComparer.Ordinal)
+                   .ThenBy(value => value.ReasonCode, StringComparer.Ordinal))
       {
         excluded.Add(new JsonObject
         {
@@ -172,7 +185,9 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
         });
       }
 
-      foreach (var item in result.Warnings)
+      foreach (var item in result.Warnings
+                   .OrderBy(value => value.Code, StringComparer.Ordinal)
+                   .ThenBy(value => value.SourceCandidate, StringComparer.Ordinal))
       {
         warnings.Add(new JsonObject { ["code"] = item.Code, ["source_candidate"] = item.SourceCandidate });
       }
@@ -192,7 +207,7 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
   {
     var text = string.Concat(files.OrderBy(value => value.FileName, StringComparer.Ordinal)
         .Select(value => $"{value.Sha256}  {value.FileName}\n"));
-    File.WriteAllText(Path.Combine(outputPath, "checksums.sha256"), text, new UTF8Encoding(false));
+    AtomicFileWriter.WriteUtf8(Path.Combine(outputPath, "checksums.sha256"), writer => writer.Write(text));
   }
 
   private static void WriteSummary(

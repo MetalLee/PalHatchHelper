@@ -71,7 +71,7 @@ public sealed class ExtractionConfig
         || string.IsNullOrWhiteSpace(MappingsPath)
         || string.IsNullOrWhiteSpace(ClientAppmanifestPath)
         || string.IsNullOrWhiteSpace(ClientGameVersion)
-        || ServerAppId != "2394010"
+        || string.IsNullOrWhiteSpace(ServerAppId)
         || string.IsNullOrWhiteSpace(ServerBuildId)
         || string.IsNullOrWhiteSpace(ServerGameVersion)
         || string.IsNullOrWhiteSpace(OutputPath)

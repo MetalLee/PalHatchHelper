@@ -63,6 +63,10 @@
       "then": {
         "required": ["source_provenance"],
         "properties": {
+          "extractor_name": {
+            "type": "string",
+            "const": "palhatch-full-catalog-extractor"
+          },
           "source_provenance": { "$ref": "#/$defs/SourceProvenance" }
         }
       }
@@ -223,7 +227,7 @@
         "source_client_build_id": { "$ref": "#/$defs/NonEmptyText" },
         "source_client_appmanifest_sha256": { "$ref": "#/$defs/Sha256" },
         "source_client_game_version": { "$ref": "#/$defs/NonEmptyText" },
-        "target_server_app_id": { "type": "string", "const": "2394010" },
+        "target_server_app_id": { "$ref": "#/$defs/NonEmptyText" },
         "target_server_build_id": { "$ref": "#/$defs/NonEmptyText" },
         "target_server_appmanifest_sha256": { "$ref": "#/$defs/Sha256" },
         "target_server_game_version": { "$ref": "#/$defs/NonEmptyText" },
