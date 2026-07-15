@@ -2,12 +2,13 @@
   "paks_path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Palworld\\Pal\\Content\\Paks",
   "mappings_path": "C:\\PalHatchHelper-input\\Mappings.usmap",
   "client_appmanifest_path": "C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_1623730.acf",
-  "client_game_version": "v1.0.0.100427",
+  "client_app_id": "1623730",
+  "client_game_version": "v1.0.1.100619",
   "server_app_id": "2394010",
-  "server_build_id": "24088465",
-  "server_game_version": "v1.0.0.100427",
-  "server_appmanifest_sha256": "5dd1c163956fb8aff7ae7c0bc2e2ef1ed38ccb594919d3cc58d1ac1674a49b8c",
-  "output_path": "..\\..\\..\\data\\game-catalog\\extraction\\windows-full-catalog",
+  "server_build_id": "24181105",
+  "server_game_version": "v1.0.1.100619",
+  "server_appmanifest_sha256": "98ef29829ebfde6d71528f5a83883e6bfda96fa77ce363e52630205353c1a189",
+  "output_path": "..\\..\\..\\data\\game-catalog\\extraction\\v1.0.1.100619\\windows-full-catalog",
   "locales": ["en-US", "ja-JP", "zh-CN"],
   "inventory_sample_limit": 5
 }

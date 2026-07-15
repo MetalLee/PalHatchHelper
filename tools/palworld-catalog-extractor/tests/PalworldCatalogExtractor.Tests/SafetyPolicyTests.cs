@@ -18,7 +18,7 @@ public sealed class SafetyPolicyTests
     var error = Assert.Throws<ExtractorException>(() => InventorySafetyPolicy.Validate(
         new JsonObject { ["payload"] = Convert.ToBase64String([1, 2, 3]) }));
     Assert.Equal(ErrorCodes.AssetInventoryFailed, error.Code);
-    Assert.Equal(6, InventorySafetyPolicy.AllowedOutputFiles.Count);
+    Assert.Equal(7, InventorySafetyPolicy.AllowedOutputFiles.Count);
   }
 
   [Theory]
@@ -93,7 +93,7 @@ public sealed class SafetyPolicyTests
         .Order(StringComparer.Ordinal)
         .ToArray();
     var expectedFiles = InventorySafetyPolicy.AllowedOutputFiles
-        .Where(file => file != "source-package-manifest.json")
+        .Where(file => file is not "source-package-manifest.json" and not ExtractionEvidenceGuard.EvidenceManifestFileName)
         .Order(StringComparer.Ordinal)
         .ToArray();
     Assert.Equal(expectedFiles, actualFiles);

@@ -196,7 +196,7 @@ public static class CatalogVerifier
         || provenance["source_package_manifest_sha256"]?.GetValue<string>() != packageHash)
     {
       throw new ExtractorException(
-          ErrorCodes.GameVersionMismatch,
+          ErrorCodes.SourceGameVersionMismatch,
           "Client/server provenance is not an exact game-version match.");
     }
 

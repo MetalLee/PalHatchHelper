@@ -15,7 +15,8 @@ public static class ErrorCodes
   public const string InputNotReadable = "EXTRACTOR_INPUT_NOT_READABLE";
   public const string GameIdInvalid = "GAME_ID_INVALID";
   public const string GameIdNormalizationCollision = "GAME_ID_NORMALIZATION_COLLISION";
-  public const string GameVersionMismatch = "CLIENT_SERVER_GAME_VERSION_MISMATCH";
+  public const string SourceGameVersionMismatch = "SOURCE_GAME_VERSION_MISMATCH";
+  public const string StaleExtractionEvidence = "STALE_EXTRACTION_EVIDENCE";
   public const string FullCatalogReaderMissing = "FULL_CATALOG_READER_MISSING";
   public const string FullCatalogCategoryEmpty = "FULL_CATALOG_CATEGORY_EMPTY";
   public const string UnresolvedGameFacts = "UNRESOLVED_GAME_FACTS";

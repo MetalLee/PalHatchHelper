@@ -32,6 +32,7 @@ public static class Program
       }
 
       var config = ExtractionConfig.Load(args[2]);
+      ExtractionEvidenceGuard.RequireCurrent(config);
       JsonNode result = args[0] switch
       {
         "doctor" => DoctorRunner.Run(config),

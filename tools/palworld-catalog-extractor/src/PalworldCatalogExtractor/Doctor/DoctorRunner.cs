@@ -13,6 +13,7 @@ public static class DoctorRunner
 
   public static JsonObject Run(ExtractionConfig config)
   {
+    ExtractionEvidenceGuard.RequireCurrent(config);
     Require(Environment.Is64BitProcess && RuntimeInformation.IsOSPlatform(OSPlatform.Windows), ErrorCodes.WindowsX64Required, "Windows x64 is required.");
     Require(Environment.Version.Major == 10, ErrorCodes.Dotnet10Required, ".NET 10 is required.");
     Require(Directory.Exists(config.PaksPath), ErrorCodes.PakDirectoryInvalid, "The PAK directory is missing.");
@@ -43,6 +44,7 @@ public static class DoctorRunner
     var drive = new DriveInfo(Path.GetPathRoot(config.OutputPath)!);
     Require(drive.AvailableFreeSpace >= MinimumFreeBytes, ErrorCodes.DiskSpaceInsufficient, "At least 10 GiB of free output space is required.");
     var appManifest = SteamAppManifestReader.Read(config.ClientAppmanifestPath);
+    ExtractionEvidenceGuard.RequireCurrent(config, appManifest);
     var compatibility = CompatibilityEvaluator.RequireExact(config, appManifest);
     return new JsonObject
     {

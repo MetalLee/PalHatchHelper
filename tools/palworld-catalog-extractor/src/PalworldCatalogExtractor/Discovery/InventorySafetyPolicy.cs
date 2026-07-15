@@ -8,6 +8,7 @@ public static class InventorySafetyPolicy
   public static readonly IReadOnlySet<string> AllowedOutputFiles = new HashSet<string>(StringComparer.Ordinal)
     {
         "source-package-manifest.json",
+        "extraction-evidence-manifest.json",
         "asset-inventory.json",
         "data-table-inventory.json",
         "blueprint-property-inventory.json",

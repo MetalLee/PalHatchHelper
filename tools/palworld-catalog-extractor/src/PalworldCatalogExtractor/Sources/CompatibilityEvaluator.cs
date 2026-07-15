@@ -25,10 +25,19 @@ public static class CompatibilityEvaluator
 
   public static CompatibilityResult RequireExact(ExtractionConfig config, SteamAppManifest clientManifest)
   {
+    if (!StringComparer.Ordinal.Equals(config.ClientAppId, clientManifest.AppId))
+    {
+      throw new ExtractorException(
+          ErrorCodes.ClientAppmanifestInvalid,
+          "The client appmanifest App ID does not match the configured client App ID.");
+    }
+
     var result = Evaluate(config, clientManifest);
     if (result.Status != "exact_game_version_match")
     {
-      throw new ExtractorException(ErrorCodes.GameVersionMismatch, "Client and target Dedicated Server game versions are not identical.");
+      throw new ExtractorException(
+          ErrorCodes.SourceGameVersionMismatch,
+          "Client and target Dedicated Server game versions are not identical.");
     }
 
     return result;

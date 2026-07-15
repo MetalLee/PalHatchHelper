@@ -21,6 +21,9 @@ public sealed class ExtractionConfig
   [JsonPropertyName("client_appmanifest_path")]
   public required string ClientAppmanifestPath { get; init; }
 
+  [JsonPropertyName("client_app_id")]
+  public required string ClientAppId { get; init; }
+
   [JsonPropertyName("client_game_version")]
   public required string ClientGameVersion { get; init; }
 
@@ -70,6 +73,7 @@ public sealed class ExtractionConfig
         string.IsNullOrWhiteSpace(PaksPath)
         || string.IsNullOrWhiteSpace(MappingsPath)
         || string.IsNullOrWhiteSpace(ClientAppmanifestPath)
+        || ClientAppId != "1623730"
         || string.IsNullOrWhiteSpace(ClientGameVersion)
         || string.IsNullOrWhiteSpace(ServerAppId)
         || string.IsNullOrWhiteSpace(ServerBuildId)
@@ -88,6 +92,7 @@ public sealed class ExtractionConfig
     PaksPath = Resolve(root, PaksPath),
     MappingsPath = Resolve(root, MappingsPath),
     ClientAppmanifestPath = Resolve(root, ClientAppmanifestPath),
+    ClientAppId = ClientAppId,
     ClientGameVersion = ClientGameVersion,
     ServerAppId = ServerAppId,
     ServerBuildId = ServerBuildId,
