@@ -8,6 +8,7 @@ public static class ErrorCodes
   public const string PakDirectoryInvalid = "PAK_DIRECTORY_INVALID";
   public const string PalWindowsPakMissing = "PAL_WINDOWS_PAK_MISSING";
   public const string MappingsInvalid = "MAPPINGS_USMAP_INVALID";
+  public const string MappingsVersionIncompatible = "MAPPINGS_VERSION_INCOMPATIBLE";
   public const string ClientAppmanifestInvalid = "CLIENT_APPMANIFEST_INVALID";
   public const string OutputNotIgnored = "OUTPUT_PATH_NOT_GIT_IGNORED";
   public const string OutputTracked = "OUTPUT_PATH_GIT_TRACKED";

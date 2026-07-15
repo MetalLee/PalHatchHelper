@@ -307,6 +307,13 @@ function pythonFieldLines(name, type, optionalDefault) {
   return ["    " + name + ": (", `        ${type}`, `    )${optionalDefault}`];
 }
 
+function pythonLiteral(value) {
+  if (value === null) return "None";
+  if (value === true) return "True";
+  if (value === false) return "False";
+  return JSON.stringify(value);
+}
+
 function pythonAliasLines(name, type) {
   const prefix = `type ${name} = `;
   if (prefix.length + type.length <= 100) {
@@ -364,7 +371,9 @@ async function generatePythonContracts() {
     lines.push(`class ${name}(BaseModel):`);
     lines.push('    model_config = ConfigDict(extra="forbid")', "");
     for (const [name, property] of Object.entries(schema.properties ?? {})) {
-      const optionalDefault = required.has(name) ? "" : " = None";
+      const optionalDefault = required.has(name)
+        ? ""
+        : ` = ${pythonLiteral(property.default ?? null)}`;
       lines.push(
         ...pythonFieldLines(name, pythonType(property), optionalDefault),
       );

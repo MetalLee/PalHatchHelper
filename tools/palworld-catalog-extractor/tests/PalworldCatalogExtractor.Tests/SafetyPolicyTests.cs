@@ -104,7 +104,25 @@ public sealed class SafetyPolicyTests
   }
 
   [Fact]
-  public void OutputMustBeIgnoredAndUntracked()
+  public void InvalidSyntheticInventoryDoesNotPublishPartialDocuments()
+  {
+    using var output = new TemporaryDirectory();
+
+    var error = Assert.Throws<ExtractorException>(() => AssetInventoryRunner.WriteInventories(
+        output.Path,
+        new JsonArray(new JsonObject { ["virtual_asset_path"] = "Pal/Content/Fixture.uasset" }),
+        new JsonArray(),
+        new JsonArray(new JsonObject { ["payload"] = "forbidden" }),
+        new JsonArray(),
+        new JsonArray(),
+        new Dictionary<string, string>(StringComparer.Ordinal)));
+
+    Assert.Equal(ErrorCodes.AssetInventoryFailed, error.Code);
+    Assert.Empty(Directory.EnumerateFiles(output.Path));
+  }
+
+  [Fact]
+  public void OutputMayBeOutsideTheWorktreeOrIgnoredAndUntrackedInsideIt()
   {
     using var repository = new TemporaryDirectory();
     RunGit(repository.Path, "init");
@@ -119,6 +137,8 @@ public sealed class SafetyPolicyTests
     {
       Environment.CurrentDirectory = repository.Path;
       GitOutputGuard.RequireIgnoredAndUntracked(Path.Combine(repository.Path, "ignored", "catalog"));
+      using var externalOutput = new TemporaryDirectory();
+      GitOutputGuard.RequireIgnoredAndUntracked(Path.Combine(externalOutput.Path, "catalog"));
       var error = Assert.Throws<ExtractorException>(() =>
         GitOutputGuard.RequireIgnoredAndUntracked(Path.Combine(repository.Path, "visible", "catalog")));
       Assert.Equal(ErrorCodes.OutputNotIgnored, error.Code);

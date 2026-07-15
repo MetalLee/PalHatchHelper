@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Nodes;
 using CUE4Parse.UE4.Assets.Exports;
 using CUE4Parse.UE4.Assets.Exports.Engine;
@@ -20,91 +21,60 @@ public static class AssetInventoryRunner
   {
     _ = DoctorRunner.Run(config);
     Directory.CreateDirectory(config.OutputPath);
+    var stagingDirectory = Path.Combine(
+        Path.GetDirectoryName(config.OutputPath)!,
+        $".{Path.GetFileName(config.OutputPath)}.inventory.{Guid.NewGuid():N}.tmp");
+    Directory.CreateDirectory(stagingDirectory);
     try
     {
-      using var provider = ProviderFactory.OpenReadOnly(config);
       var sourceManifest = SourcePackageManifestBuilder.Build(config);
       DeterministicJson.WriteFile(Path.Combine(config.OutputPath, "source-package-manifest.json"), sourceManifest);
       var packageHash = SourcePackageManifestBuilder.ComputePackageHash(sourceManifest);
       ExtractionEvidenceGuard.WriteCurrent(config, SteamAppManifestReader.Read(config.ClientAppmanifestPath), packageHash);
 
-      var assets = new JsonArray();
-      var dataTables = new JsonArray();
-      var blueprintObjects = new JsonArray();
-      var localizations = new JsonArray();
-      var unresolved = new JsonArray();
-      foreach (var pair in provider.Files.OrderBy(value => value.Key, StringComparer.Ordinal))
+      InventoryResult inventory;
+      var blueprintPath = Path.Combine(stagingDirectory, "blueprint-property-inventory.json");
+      using (var stream = new FileStream(
+                 blueprintPath,
+                 FileMode.CreateNew,
+                 FileAccess.Write,
+                 FileShare.None,
+                 4096,
+                 FileOptions.WriteThrough))
       {
-        var score = Score(pair.Key);
-        assets.Add(new JsonObject
+        using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 4096, leaveOpen: true))
         {
-          ["candidate_score"] = score,
-          ["package_name"] = pair.Value.NameWithoutExtension,
-          ["virtual_asset_path"] = pair.Key,
-        });
-        if (score > 0)
-        {
-          unresolved.Add(new JsonObject
+          writer.Write("{\"blueprint_objects\":[");
+          var first = true;
+          inventory = ScanAssets(config, blueprint =>
           {
-            ["candidate_score"] = score,
-            ["package_name"] = pair.Value.NameWithoutExtension,
-            ["reason_code"] = "SOURCE_MAPPING_UNCONFIRMED",
-            ["virtual_asset_path"] = pair.Key,
-          });
-        }
-
-        if (pair.Value.Extension.Equals("locres", StringComparison.OrdinalIgnoreCase))
-        {
-          localizations.Add(new JsonObject
-          {
-            ["byte_count"] = pair.Value.Size,
-            ["sha256"] = HashVirtualFile(pair.Value),
-            ["virtual_asset_path"] = pair.Key,
-          });
-        }
-
-        if (!pair.Value.IsUePackage)
-        {
-          continue;
-        }
-
-        try
-        {
-          var package = provider.LoadPackage(pair.Value);
-          foreach (var export in package.GetExports())
-          {
-            if (export is UDataTable table)
+            InventorySafetyPolicy.Validate(blueprint);
+            if (!first)
             {
-              dataTables.Add(DataTableInventory(pair.Key, table, config.InventorySampleLimit, score));
+              writer.Write(',');
             }
 
-            if (IsBlueprintDiscoveryObject(export.Name, export.ExportType))
-            {
-              blueprintObjects.Add(BlueprintInventory(pair.Key, export, score));
-            }
-          }
-        }
-        catch (Exception)
-        {
-          unresolved.Add(new JsonObject
-          {
-            ["candidate_score"] = score,
-            ["reason_code"] = "PACKAGE_STRUCTURE_UNREADABLE",
-            ["virtual_asset_path"] = pair.Key,
+            writer.Write(DeterministicJson.Serialize(blueprint));
+            first = false;
           });
+          writer.Write("]}\n");
+          writer.Flush();
         }
+
+        stream.Flush(flushToDisk: true);
       }
 
-      WriteInventories(config.OutputPath, assets, dataTables, blueprintObjects, localizations, unresolved, provider.VirtualPaths);
+      WriteNonBlueprintInventories(stagingDirectory, inventory);
+      PublishInventoryFiles(stagingDirectory, config.OutputPath);
       return new JsonObject
       {
-        ["asset_count"] = assets.Count,
-        ["blueprint_object_count"] = blueprintObjects.Count,
-        ["data_table_count"] = dataTables.Count,
-        ["localization_resource_count"] = localizations.Count,
+        ["asset_count"] = inventory.Assets.Count,
+        ["blueprint_object_count"] = inventory.BlueprintObjectCount,
+        ["data_table_count"] = inventory.DataTables.Count,
+        ["localization_resource_count"] = inventory.Localizations.Count,
         ["package_hash"] = packageHash,
         ["status"] = "inventory_complete",
-        ["unresolved_source_candidate_count"] = unresolved.Count,
+        ["unresolved_source_candidate_count"] = inventory.Unresolved.Count,
       };
     }
     catch (ExtractorException)
@@ -115,6 +85,113 @@ public static class AssetInventoryRunner
     {
       throw new ExtractorException(ErrorCodes.AssetInventoryFailed, "CUE4Parse could not inventory the mounted assets.");
     }
+    finally
+    {
+      if (Directory.Exists(stagingDirectory))
+      {
+        Directory.Delete(stagingDirectory, recursive: true);
+      }
+    }
+  }
+
+  private static InventoryResult ScanAssets(ExtractionConfig config, Action<JsonObject> writeBlueprint)
+  {
+    using var provider = ProviderFactory.OpenReadOnly(config);
+    var assets = new JsonArray();
+    var dataTables = new JsonArray();
+    var localizations = new JsonArray();
+    var unresolved = new JsonArray();
+    var blueprintObjectCount = 0;
+    var uePackageCount = 0;
+    foreach (var pair in provider.Files.OrderBy(value => value.Key, StringComparer.Ordinal))
+    {
+      var score = Score(pair.Key);
+      assets.Add(new JsonObject
+      {
+        ["candidate_score"] = score,
+        ["package_name"] = pair.Value.NameWithoutExtension,
+        ["virtual_asset_path"] = pair.Key,
+      });
+      if (score > 0)
+      {
+        unresolved.Add(new JsonObject
+        {
+          ["candidate_score"] = score,
+          ["package_name"] = pair.Value.NameWithoutExtension,
+          ["reason_code"] = "SOURCE_MAPPING_UNCONFIRMED",
+          ["virtual_asset_path"] = pair.Key,
+        });
+      }
+
+      if (pair.Value.Extension.Equals("locres", StringComparison.OrdinalIgnoreCase))
+      {
+        localizations.Add(new JsonObject
+        {
+          ["byte_count"] = pair.Value.Size,
+          ["sha256"] = HashVirtualFile(pair.Value),
+          ["virtual_asset_path"] = pair.Key,
+        });
+      }
+
+      if (!pair.Value.IsUePackage)
+      {
+        continue;
+      }
+
+      var packageTables = new List<JsonObject>();
+      var packageBlueprints = new List<JsonObject>();
+      try
+      {
+        var package = provider.LoadPackage(pair.Value);
+        foreach (var export in package.GetExports())
+        {
+          if (export is UDataTable table)
+          {
+            packageTables.Add(DataTableInventory(pair.Key, table, config.InventorySampleLimit, score));
+          }
+
+          if (IsBlueprintDiscoveryObject(export.Name, export.ExportType))
+          {
+            packageBlueprints.Add(BlueprintInventory(pair.Key, export, score));
+          }
+        }
+      }
+      catch (Exception error) when (error is not OutOfMemoryException)
+      {
+        unresolved.Add(new JsonObject
+        {
+          ["candidate_score"] = score,
+          ["reason_code"] = "PACKAGE_STRUCTURE_UNREADABLE",
+          ["virtual_asset_path"] = pair.Key,
+        });
+        continue;
+      }
+
+      foreach (var table in packageTables)
+      {
+        dataTables.Add(table);
+      }
+
+      foreach (var blueprint in packageBlueprints)
+      {
+        writeBlueprint(blueprint);
+        blueprintObjectCount++;
+      }
+
+      uePackageCount++;
+      if (uePackageCount % 1000 == 0)
+      {
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: false);
+      }
+    }
+
+    return new InventoryResult(
+        assets,
+        dataTables,
+        blueprintObjectCount,
+        localizations,
+        unresolved,
+        provider.VirtualPaths.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
   }
 
   private static JsonObject DataTableInventory(string path, UDataTable table, int sampleLimit, int score)
@@ -187,6 +264,32 @@ public static class AssetInventoryRunner
   private static string HashVirtualFile(CUE4Parse.FileProvider.Objects.GameFile file) =>
       Convert.ToHexStringLower(SHA256.HashData(file.Read()));
 
+  private static void WriteNonBlueprintInventories(string output, InventoryResult inventory)
+  {
+    var documents = new Dictionary<string, JsonNode>(StringComparer.Ordinal)
+    {
+      ["asset-inventory.json"] = new JsonObject
+      {
+        ["assets"] = inventory.Assets,
+        ["mounted_virtual_paths"] = new JsonArray(inventory.VirtualPaths.Keys.Order(StringComparer.Ordinal).Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+      },
+      ["data-table-inventory.json"] = new JsonObject { ["data_tables"] = inventory.DataTables },
+      ["localization-inventory.json"] = new JsonObject { ["resources"] = inventory.Localizations },
+      ["unresolved-source-candidates.json"] = new JsonObject { ["candidates"] = inventory.Unresolved },
+    };
+    ValidateAndWriteDocuments(output, documents);
+  }
+
+  private static void PublishInventoryFiles(string stagingDirectory, string output)
+  {
+    foreach (var fileName in InventorySafetyPolicy.AllowedOutputFiles
+                 .Where(file => file is not "source-package-manifest.json" and not ExtractionEvidenceGuard.EvidenceManifestFileName)
+                 .Order(StringComparer.Ordinal))
+    {
+      File.Move(Path.Combine(stagingDirectory, fileName), Path.Combine(output, fileName), overwrite: true);
+    }
+  }
+
   internal static void WriteInventories(
       string output,
       JsonArray assets,
@@ -208,10 +311,27 @@ public static class AssetInventoryRunner
       ["localization-inventory.json"] = new JsonObject { ["resources"] = localizations },
       ["unresolved-source-candidates.json"] = new JsonObject { ["candidates"] = unresolved },
     };
+    ValidateAndWriteDocuments(output, documents);
+  }
+
+  private static void ValidateAndWriteDocuments(string output, IReadOnlyDictionary<string, JsonNode> documents)
+  {
     foreach (var document in documents)
     {
       InventorySafetyPolicy.Validate(document.Value);
+    }
+
+    foreach (var document in documents)
+    {
       DeterministicJson.WriteFile(Path.Combine(output, document.Key), document.Value);
     }
   }
+
+  private sealed record InventoryResult(
+      JsonArray Assets,
+      JsonArray DataTables,
+      int BlueprintObjectCount,
+      JsonArray Localizations,
+      JsonArray Unresolved,
+      IDictionary<string, string> VirtualPaths);
 }

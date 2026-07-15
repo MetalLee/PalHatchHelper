@@ -183,7 +183,9 @@ export interface CatalogLocalization {
 }
 export interface CatalogBreedingRecipe {
   parent_a_pal_id: StableId;
+  parent_a_gender?: "any" | "female" | "male";
   parent_b_pal_id: StableId;
+  parent_b_gender?: "any" | "female" | "male";
   child_pal_id: StableId;
   recipe_type: "normal" | "special";
   metadata: Metadata;

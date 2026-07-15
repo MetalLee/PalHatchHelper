@@ -80,7 +80,9 @@ def transform_and_validate_recipes(
         parent_a, parent_b = sorted(source_record.parents)
         recipe = CatalogBreedingRecipe(
             parent_a_pal_id=parent_a,
+            parent_a_gender="any",
             parent_b_pal_id=parent_b,
+            parent_b_gender="any",
             child_pal_id=source_record.child_pal_id,
             recipe_type=source_record.recipe_type.value,
             metadata=source_record.metadata,
