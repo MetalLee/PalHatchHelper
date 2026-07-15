@@ -493,5 +493,16 @@ internal sealed class TemporaryDirectory : IDisposable
 
   internal string Path { get; }
 
-  public void Dispose() => Directory.Delete(Path, true);
+  public void Dispose()
+  {
+    if (OperatingSystem.IsWindows())
+    {
+      foreach (var file in Directory.EnumerateFiles(Path, "*", SearchOption.AllDirectories))
+      {
+        File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+      }
+    }
+
+    Directory.Delete(Path, true);
+  }
 }
