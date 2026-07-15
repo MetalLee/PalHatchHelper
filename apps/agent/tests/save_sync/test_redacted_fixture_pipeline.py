@@ -85,8 +85,8 @@ def test_redacted_fixture_reaches_repository_through_the_sandboxed_parser(
             parser=parser,
             validator=CanonicalSnapshotValidator(
                 expected_world_uid="fixture-world-001",
-                known_pal_ids={"Lamball"},
-                known_passive_skill_ids={"Artisan"},
+                known_pal_ids={"lamball"},
+                known_passive_skill_ids={"artisan"},
             ),
             repository=SupabaseInventoryRepository(database),
         )
@@ -121,16 +121,20 @@ def test_redacted_fixture_reaches_repository_through_the_sandboxed_parser(
                 "instance_uid": "fixture-pal-instance-001",
                 "owner_player_uid": "fixture-player-001",
                 "guild_uid": "fixture-guild-001",
-                "pal_id": "Lamball",
+                "pal_id": "lamball",
                 "gender": "female",
                 "level": 12,
-                "passive_skill_ids": ["Artisan"],
+                "passive_skill_ids": ["artisan"],
                 "location_type": "base",
                 "location_name": "Fixture Base",
                 "owner_resolved": True,
                 "guild_resolved": True,
                 "shared_eligible": True,
                 "warning_codes": [],
+                "metadata": {
+                    "source_internal_name": "Lamball",
+                    "source_passive_skill_internal_names": ["Artisan"],
+                },
             }
         ]
 

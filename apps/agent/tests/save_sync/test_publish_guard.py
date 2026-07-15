@@ -27,11 +27,20 @@ SNAPSHOT_ID = UUID("40000000-0000-4000-8000-000000000004")
 
 
 def _validated_snapshot() -> object:
+    payload = canonical_payload()
+    pals = payload["pals"]
+    assert isinstance(pals, list) and isinstance(pals[0], dict)
+    pals[0]["pal_id"] = "lamball"
+    pals[0]["passive_skill_ids"] = ["artisan"]
+    pals[0]["metadata"] = {
+        "source_internal_name": "Lamball",
+        "source_passive_skill_internal_names": ["Artisan"],
+    }
     return CanonicalSnapshotValidator(
         expected_world_uid="fixture-world-001",
-        known_pal_ids={"Lamball"},
-        known_passive_skill_ids={"Artisan"},
-    ).validate(CanonicalSnapshot.model_validate(canonical_payload()))
+        known_pal_ids={"lamball"},
+        known_passive_skill_ids={"artisan"},
+    ).validate(CanonicalSnapshot.model_validate(payload))
 
 
 def test_inventory_drop_below_half_and_over_fifty_is_rejected() -> None:
@@ -56,7 +65,7 @@ class StubDatabase:
                 "pal_count": 1,
             }
         if function_name == "get_inventory_catalog_ids_for_agent":
-            return {"pal_ids": ["Lamball"], "passive_skill_ids": ["Artisan"]}
+            return {"pal_ids": ["lamball"], "passive_skill_ids": ["artisan"]}
         if function_name == "publish_inventory_snapshot":
             return str(SNAPSHOT_ID)
         if function_name == "record_inventory_snapshot_failure":
@@ -74,8 +83,8 @@ def test_repository_writes_only_normalized_payload_via_atomic_rpc() -> None:
         latest = await repository.latest(WORLD_ID)
         assert latest is not None and latest.pal_count == 1
         catalog = await repository.catalog_ids(WORLD_ID)
-        assert catalog.pal_ids == {"Lamball"}
-        assert catalog.passive_skill_ids == {"Artisan"}
+        assert catalog.pal_ids == {"lamball"}
+        assert catalog.passive_skill_ids == {"artisan"}
         request = InventoryPublishRequest(
             world_id=WORLD_ID,
             source_save_hash="b" * 64,
@@ -191,8 +200,8 @@ def _service(
         parser=parser,
         validator=CanonicalSnapshotValidator(
             expected_world_uid="fixture-world-001",
-            known_pal_ids={"Lamball"},
-            known_passive_skill_ids={"Artisan"},
+            known_pal_ids={"lamball"},
+            known_passive_skill_ids={"artisan"},
         ),
         repository=repository,
     )

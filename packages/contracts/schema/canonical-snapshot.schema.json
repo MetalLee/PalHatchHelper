@@ -64,6 +64,27 @@
         }
       }
     },
+    "CanonicalPalSourceMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_internal_name",
+        "source_passive_skill_internal_names"
+      ],
+      "properties": {
+        "source_internal_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "source_passive_skill_internal_names": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      }
+    },
     "CanonicalPal": {
       "type": "object",
       "additionalProperties": false,
@@ -120,6 +141,13 @@
           "type": ["string", "null"],
           "minLength": 1,
           "maxLength": 160
+        },
+        "metadata": {
+          "anyOf": [
+            { "$ref": "#/$defs/CanonicalPalSourceMetadata" },
+            { "type": "null" }
+          ],
+          "default": null
         }
       }
     }

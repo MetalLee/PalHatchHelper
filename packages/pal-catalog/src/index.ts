@@ -19,6 +19,11 @@ export {
   parseJsonLines,
 } from "./jsonl";
 export { fixtureCatalog } from "./fixture";
+export {
+  buildPalworldStableIdMap,
+  normalizePalworldStableId,
+  PalworldStableIdError,
+} from "./stable-id";
 export type {
   CatalogBrowserPal,
   CatalogQueryResult,

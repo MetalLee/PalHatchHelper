@@ -1,11 +1,12 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeGuard
 
 from pydantic import BaseModel, ValidationError
 
-from pal_hatch_helper.game_catalog.hashing import compute_content_hash, sha256_file
-from pal_hatch_helper.game_catalog.jsonl import read_jsonl
+from pal_hatch_helper.game_catalog.hashing import compute_content_hash, sha256_bytes, sha256_file
+from pal_hatch_helper.game_catalog.jsonl import canonical_json, read_jsonl
 from pal_hatch_helper.game_catalog.models import LoadedGameCatalog
 from pal_hatch_helper.generated import (
     CatalogActiveSkill,
@@ -22,7 +23,7 @@ from pal_hatch_helper.generated import (
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
-SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.0.0"})
+SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.0.0", "1.1.0"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +128,10 @@ def validate_catalog_directory(
             ((item.filename, item.sha256, item.record_count) for item in checksums),
         )
     if manifest is not None:
+        try:
+            validate_manifest_application_requirements(manifest)
+        except StructuredError as error:
+            errors.add(error.code.value)
         localization_locales = {
             record.locale for record in _typed(parsed.get("localizations", []), CatalogLocalization)
         }
@@ -139,6 +144,7 @@ def validate_catalog_directory(
             errors,
         )
         _validate_sidecars(directory, counts, checksums, content_hash, errors)
+        _validate_full_catalog_sidecars(directory, manifest, parsed, errors)
 
     return CatalogValidationReport(
         schema_version=manifest.schema_version if manifest is not None else "1.0.0",
@@ -166,6 +172,7 @@ def load_catalog_directory(directory: Path) -> LoadedGameCatalog:
     manifest = GameCatalogManifest.model_validate_json(
         (directory / "manifest.json").read_text(encoding="utf-8")
     )
+    validate_manifest_application_requirements(manifest)
     if manifest.schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         raise StructuredError(
             code=ErrorCode.GAME_DATA_SCHEMA_UNSUPPORTED,
@@ -188,6 +195,47 @@ def load_catalog_directory(directory: Path) -> LoadedGameCatalog:
         breeding_recipes=tuple(_typed(records["breeding_recipes"], CatalogBreedingRecipe)),
         localizations=tuple(_typed(records["localizations"], CatalogLocalization)),
     )
+
+
+def validate_manifest_application_requirements(manifest: GameCatalogManifest) -> None:
+    if manifest.schema_version != "1.1.0":
+        return
+    provenance = manifest.source_provenance
+    if provenance is None:
+        raise StructuredError(
+            code=ErrorCode.GAME_DATA_PROVENANCE_REQUIRED,
+            summary="Catalog schema 1.1.0 requires full source provenance.",
+            retryable=False,
+        )
+    if (
+        provenance.compatibility_status != "exact_game_version_match"
+        or provenance.source_client_game_version != provenance.target_server_game_version
+        or provenance.target_server_build_id != manifest.game_build_id
+        or provenance.target_server_game_version != manifest.game_version
+        or provenance.source_package_manifest_sha256 != manifest.package_hash
+    ):
+        raise StructuredError(
+            code=ErrorCode.GAME_DATA_PROVENANCE_REQUIRED,
+            summary="Catalog source provenance is not compatible with the target server facts.",
+            retryable=False,
+        )
+    if any(
+        getattr(manifest.counts, field) <= 0
+        for field in (
+            "pals",
+            "passive_skills",
+            "active_skills",
+            "pal_active_skills",
+            "partner_skills",
+            "breeding_recipes",
+            "localizations",
+        )
+    ):
+        raise StructuredError(
+            code=ErrorCode.GAME_DATA_VALIDATION_FAILED,
+            summary="A full catalog requires all seven categories to be non-empty.",
+            retryable=False,
+        )
 
 
 def _typed[T: BaseModel](records: list[BaseModel], model: type[T]) -> list[T]:
@@ -286,6 +334,87 @@ def _validate_sidecars(
     else:
         if actual_checksums != expected_checksums:
             errors.add(ErrorCode.GAME_DATA_HASH_MISMATCH.value)
+
+
+def _validate_full_catalog_sidecars(
+    directory: Path,
+    manifest: GameCatalogManifest,
+    parsed: dict[str, list[BaseModel]],
+    errors: set[str],
+) -> None:
+    if manifest.schema_version != "1.1.0":
+        return
+    source_manifest_path = directory / "source-package-manifest.json"
+    source_evidence_path = directory / "source-evidence.json"
+    if not source_manifest_path.is_file() or not source_evidence_path.is_file():
+        errors.add("CATALOG_SIDECAR_MISSING")
+        return
+    try:
+        source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+        if not isinstance(source_manifest, dict):
+            raise ValueError
+        package_hash = sha256_bytes(canonical_json(source_manifest).encode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        errors.add("CATALOG_SOURCE_PACKAGE_MANIFEST_INVALID")
+    else:
+        if package_hash != manifest.package_hash:
+            errors.add(ErrorCode.GAME_DATA_HASH_MISMATCH.value)
+    try:
+        source_evidence = json.loads(source_evidence_path.read_text(encoding="utf-8"))
+        categories = source_evidence["categories"]
+        if (
+            not isinstance(categories, dict)
+            or set(categories) != {spec.count_field for spec in FILE_SPECS}
+            or source_evidence.get("unresolved_records") != []
+        ):
+            raise ValueError
+        for spec in FILE_SPECS:
+            entries = categories.get(spec.count_field)
+            expected_keys = {
+                _source_evidence_record_key(record, spec.key_fields)
+                for record in parsed.get(spec.count_field, [])
+            }
+            if not isinstance(entries, list) or len(entries) != len(expected_keys):
+                raise ValueError
+            actual_keys: set[str] = set()
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    raise ValueError
+                record_key = entry.get("record_key")
+                source_internal_name = entry.get("source_internal_name")
+                sources = entry.get("sources")
+                if (
+                    not _non_empty_text(record_key)
+                    or not _non_empty_text(source_internal_name)
+                    or not isinstance(sources, list)
+                    or not sources
+                    or not all(_valid_source_location(source) for source in sources)
+                    or record_key in actual_keys
+                ):
+                    raise ValueError
+                actual_keys.add(record_key)
+            if actual_keys != expected_keys:
+                raise ValueError
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        errors.add("CATALOG_SOURCE_EVIDENCE_INVALID")
+
+
+def _source_evidence_record_key(record: BaseModel, fields: tuple[str, ...]) -> str:
+    parts: list[str] = []
+    for field in fields:
+        value = getattr(record, field)
+        parts.append(f"{value:020d}" if isinstance(value, int) else str(value))
+    return "\0".join(parts)
+
+
+def _valid_source_location(value: object) -> bool:
+    return isinstance(value, dict) and all(
+        _non_empty_text(value.get(field)) for field in ("asset_path", "row_name", "property_chain")
+    )
+
+
+def _non_empty_text(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and bool(value.strip())
 
 
 def _validate_relationships(parsed: dict[str, list[BaseModel]], errors: set[str]) -> None:

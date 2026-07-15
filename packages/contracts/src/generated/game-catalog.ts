@@ -1,31 +1,11 @@
 /* Generated from game-catalog.schema.json. Do not edit directly. */
 
-export type SchemaVersion = string;
-export type NonEmptyText = string;
-export type Sha256 = string;
-export type Locale = string;
-export type StableId = string;
-export type TextKey = string;
-
-export interface GameCatalogContracts {
-  GameCatalogManifest: GameCatalogManifest;
-  BreedingSourceProvenance: BreedingSourceProvenance;
-  GameDataSource: GameDataSource;
-  GameDataVersion: GameDataVersion;
-  CatalogPal: CatalogPal;
-  CatalogPassiveSkill: CatalogPassiveSkill;
-  CatalogActiveSkill: CatalogActiveSkill;
-  CatalogPalActiveSkill: CatalogPalActiveSkill;
-  CatalogPartnerSkill: CatalogPartnerSkill;
-  CatalogLocalization: CatalogLocalization;
-  CatalogBreedingRecipe: CatalogBreedingRecipe;
-  CatalogValidationReport: CatalogValidationReport;
-  CatalogFileChecksum: CatalogFileChecksum;
-}
 /**
  * Manifest for one immutable, normalized game catalog version.
  */
-export interface GameCatalogManifest {
+export type GameCatalogManifest = {
+  [k: string]: unknown;
+} & {
   schema_version: SchemaVersion;
   game_build_id: NonEmptyText;
   game_version: NonEmptyText;
@@ -45,6 +25,31 @@ export interface GameCatalogManifest {
   files: [CatalogFileChecksum, ...CatalogFileChecksum[]];
   compression: "tar.gz" | "tar.zst";
   breeding_source_provenance?: BreedingSourceProvenance | null;
+  source_provenance?: SourceProvenance | null;
+};
+export type SchemaVersion = string;
+export type NonEmptyText = string;
+export type Sha256 = string;
+export type Locale = string;
+export type CompatibilityStatus = "exact_game_version_match" | "mismatch" | "unknown";
+export type StableId = string;
+export type TextKey = string;
+
+export interface GameCatalogContracts {
+  GameCatalogManifest: GameCatalogManifest;
+  BreedingSourceProvenance: BreedingSourceProvenance;
+  SourceProvenance: SourceProvenance;
+  GameDataSource: GameDataSource;
+  GameDataVersion: GameDataVersion;
+  CatalogPal: CatalogPal;
+  CatalogPassiveSkill: CatalogPassiveSkill;
+  CatalogActiveSkill: CatalogActiveSkill;
+  CatalogPalActiveSkill: CatalogPalActiveSkill;
+  CatalogPartnerSkill: CatalogPartnerSkill;
+  CatalogLocalization: CatalogLocalization;
+  CatalogBreedingRecipe: CatalogBreedingRecipe;
+  CatalogValidationReport: CatalogValidationReport;
+  CatalogFileChecksum: CatalogFileChecksum;
 }
 export interface CatalogCounts {
   pals: number;
@@ -76,6 +81,31 @@ export interface BreedingSourceProvenance {
   raw_content_hash: Sha256;
   fetched_at: string;
   base_content_hash: Sha256;
+}
+export interface SourceProvenance {
+  extraction_mode: "full_game_catalog";
+  upstream_reference_repository: "tylercamp/palcalc";
+  upstream_reference_commit: "b822c7fda4f019bd7c57f45437f14a74061a29bc";
+  upstream_license: "MIT";
+  extractor_repository_commit: string;
+  extractor_build: NonEmptyText;
+  cue4parse_version: "1.2.2.202607";
+  source_client_app_id: "1623730";
+  source_client_build_id: NonEmptyText;
+  source_client_appmanifest_sha256: Sha256;
+  source_client_game_version: NonEmptyText;
+  target_server_app_id: "2394010";
+  target_server_build_id: NonEmptyText;
+  target_server_appmanifest_sha256: Sha256;
+  target_server_game_version: NonEmptyText;
+  mappings_usmap_sha256: Sha256;
+  source_package_manifest_sha256: Sha256;
+  extracted_at: string;
+  compatibility_status: CompatibilityStatus;
+  /**
+   * @minItems 1
+   */
+  compatibility_evidence: [NonEmptyText, ...NonEmptyText[]];
 }
 export interface GameDataSource {
   id: string;

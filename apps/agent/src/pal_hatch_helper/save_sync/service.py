@@ -4,10 +4,9 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from pydantic import ValidationError
-
 from pal_hatch_helper.generated import CanonicalSnapshot
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
+from pal_hatch_helper.normalization.stable_id import normalize_parser_snapshot_payload
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import ParserAdapter
 from pal_hatch_helper.repositories.inventory import (
@@ -131,14 +130,7 @@ class InventorySyncService:
         with tempfile.TemporaryDirectory(prefix="parser-", dir=self._runtime_root) as output_dir:
             output_path = Path(output_dir) / "canonical.json"
             parser_result = self._parser.parse(snapshot_path, output_path)
-            try:
-                return CanonicalSnapshot.model_validate(parser_result.payload)
-            except ValidationError as error:
-                raise StructuredError(
-                    code=ErrorCode.CANONICAL_SCHEMA_INVALID,
-                    summary="Parser JSON does not satisfy the CanonicalSnapshot schema.",
-                    retryable=False,
-                ) from error
+            return normalize_parser_snapshot_payload(parser_result.payload)
 
 
 def _failure_status(code: ErrorCode) -> Literal["failed", "rejected"]:

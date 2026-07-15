@@ -37,6 +37,8 @@ uv run pal-hatch-helper catalog diff --from-version-id <uuid> --to-version-id <u
 
 Phase 4A 配种来源的 staging、特殊配方优先级和人工审核流程见 [`breeding-data.md`](./breeding-data.md)。
 
+完整 Windows 游戏资产发现与七类目录提取是独立的离线工具链，见 [`full-game-catalog-extraction-windows.md`](./full-game-catalog-extraction-windows.md)。Linux Agent 仍不读取游戏包；Windows 输出在真实性审核和明确批准前不得 stage 或 publish。
+
 ## 精确版本故障处理
 
 `GAME_DATA_VERSION_NOT_FOUND`、`GAME_DATA_ARTIFACT_MISSING`、`GAME_DATA_HASH_MISMATCH`、`GAME_DATA_SCHEMA_UNSUPPORTED` 和 `GAME_DATA_CACHE_CORRUPTED` 都是稳定错误码。缓存元数据不匹配或 SQLite 损坏时可删除 `cache/<version-id>.sqlite` 后从同一精确版本重建；不得改用当前世界版本或其他本地版本。制品/hash/关系本身损坏时停止加载并调查，不通过清缓存掩盖事实错误。

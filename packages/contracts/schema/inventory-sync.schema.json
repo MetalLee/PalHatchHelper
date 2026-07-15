@@ -82,6 +82,15 @@
           "minLength": 1,
           "maxLength": 160
         },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "canonical-snapshot.schema.json#/$defs/CanonicalPalSourceMetadata"
+            },
+            { "type": "null" }
+          ],
+          "default": null
+        },
         "owner_resolved": { "type": "boolean" },
         "guild_resolved": { "type": "boolean" },
         "shared_eligible": { "type": "boolean" },
