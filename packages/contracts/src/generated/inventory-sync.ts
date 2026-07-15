@@ -48,10 +48,18 @@ export interface InventoryPublishPal {
   passive_skill_ids: string[];
   location_type: "player_party" | "player_storage" | "base" | "viewing_cage" | "unknown";
   location_name: string | null;
+  metadata?: CanonicalPalSourceMetadata | null;
   owner_resolved: boolean;
   guild_resolved: boolean;
   shared_eligible: boolean;
   warning_codes: string[];
+}
+export interface CanonicalPalSourceMetadata {
+  source_internal_name: string;
+  /**
+   * @maxItems 64
+   */
+  source_passive_skill_internal_names: string[];
 }
 export interface InventoryValidationWarning {
   code: string;

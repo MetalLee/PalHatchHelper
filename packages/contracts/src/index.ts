@@ -86,6 +86,7 @@ export type {
   CatalogPassiveSkill,
   CatalogValidationReport,
   BreedingSourceProvenance,
+  SourceProvenance,
   GameDataSource,
   GameCatalogManifest,
   GameDataVersion,

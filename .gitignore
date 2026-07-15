@@ -28,3 +28,8 @@ supabase/.temp/
 data/snapshots/
 data/runtime/
 data/parser-cache/
+data/game-catalog/
+
+# Local .NET extractor build products.
+tools/palworld-catalog-extractor/**/bin/
+tools/palworld-catalog-extractor/**/obj/

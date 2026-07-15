@@ -38,6 +38,7 @@ const bundledContractModels = {
   "game-catalog": [
     "GameCatalogManifest",
     "BreedingSourceProvenance",
+    "SourceProvenance",
     "GameDataSource",
     "GameDataVersion",
     "CatalogPal",

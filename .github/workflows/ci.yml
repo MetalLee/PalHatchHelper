@@ -143,6 +143,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prettier --check .
       - run: pnpm check:structure
+      - run: pnpm check:forbidden-assets
       - run: pnpm scan:secrets
       - name: Assert required documentation is non-empty
         run: |

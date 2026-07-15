@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(31);
+select plan(33);
 
 select has_function(
   'public',
@@ -129,7 +129,11 @@ select
           'owner_resolved', true,
           'guild_resolved', true,
           'shared_eligible', true,
-          'warning_codes', jsonb_build_array('UNKNOWN_PAL', 'UNKNOWN_PASSIVE')
+          'warning_codes', jsonb_build_array('UNKNOWN_PAL', 'UNKNOWN_PASSIVE'),
+          'metadata', jsonb_build_object(
+            'source_internal_name', 'FuturePal',
+            'source_passive_skill_internal_names', jsonb_build_array('FuturePassive')
+          )
         )
       ),
       'warnings', jsonb_build_array()
@@ -187,6 +191,15 @@ select is(
   'published Pal metadata contains only filtered resolution data'
 );
 select is(
+  (
+    select raw_metadata -> 'source_passive_skill_internal_names'
+    from public.pal_snapshot_items
+    where pal_instance_uid = 'phase3-pal-001'
+  ),
+  '["FuturePassive"]'::jsonb,
+  'stable-ID source metadata is preserved through an audited filtered field set'
+);
+select is(
   public.publish_inventory_snapshot(
     '10000000-0000-4000-8000-000000000001',
     jsonb_build_object(
@@ -210,6 +223,39 @@ select is(
   (select count(*)::integer from public.inventory_snapshots where world_id = '10000000-0000-4000-8000-000000000001' and source_save_hash = repeat('c', 64)),
   1,
   'duplicate publication does not create another snapshot row'
+);
+select public.publish_inventory_snapshot(
+  '10000000-0000-4000-8000-000000000001',
+  jsonb_build_object(
+    'source_save_hash', repeat('c', 64),
+    'source_modified_at', '2026-07-14T03:00:00Z',
+    'save_version', 'fixture-save-v2',
+    'captured_at', '2026-07-14T03:00:00Z',
+    'parser_name', 'fixture-parser',
+    'parser_version', '2.0.0',
+    'server', jsonb_build_object('world_uid', 'fixture-world-local'),
+    'guilds', '[]'::jsonb,
+    'players', '[]'::jsonb,
+    'pals', jsonb_build_array(
+      jsonb_build_object(
+        'instance_uid', 'phase3-pal-001',
+        'metadata', jsonb_build_object(
+          'source_internal_name', 'TamperedReplay',
+          'source_passive_skill_internal_names', jsonb_build_array('TamperedReplay')
+        )
+      )
+    ),
+    'warnings', '[]'::jsonb
+  )
+);
+select is(
+  (
+    select raw_metadata ->> 'source_internal_name'
+    from public.pal_snapshot_items
+    where pal_instance_uid = 'phase3-pal-001'
+  ),
+  'FuturePal',
+  'idempotent replay cannot mutate immutable stable-ID source metadata'
 );
 
 select throws_ok(

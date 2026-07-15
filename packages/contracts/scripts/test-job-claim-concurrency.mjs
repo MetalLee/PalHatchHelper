@@ -81,7 +81,7 @@ async function verifyIdempotencyConcurrency() {
     await connectionA`
       select *
       from public.create_breeding_job(
-        'concurrency_target_a',
+        'test_parent_a',
         array['test_passive_a'],
         'balanced',
         ${idempotencyKey}
@@ -91,7 +91,7 @@ async function verifyIdempotencyConcurrency() {
     const conflictingRequest = connectionB`
       select *
       from public.create_breeding_job(
-        'concurrency_target_b',
+        'test_parent_b',
         array['test_passive_b'],
         'balanced',
         ${idempotencyKey}

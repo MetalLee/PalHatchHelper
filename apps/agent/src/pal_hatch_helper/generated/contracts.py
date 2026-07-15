@@ -136,6 +136,41 @@ class BreedingSourceProvenance(BaseModel):
     base_content_hash: Sha256
 
 
+class CompatibilityStatus(StrEnum):
+    EXACT_GAME_VERSION_MATCH = "exact_game_version_match"
+    MISMATCH = "mismatch"
+    UNKNOWN = "unknown"
+
+
+class SourceProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    extraction_mode: Literal["full_game_catalog"]
+    upstream_reference_repository: Literal["tylercamp/palcalc"]
+    upstream_reference_commit: Literal["b822c7fda4f019bd7c57f45437f14a74061a29bc"]
+    upstream_license: Literal["MIT"]
+    extractor_repository_commit: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    extractor_build: NonEmptyText
+    cue4parse_version: Literal["1.2.2.202607"]
+    source_client_app_id: Literal["1623730"]
+    source_client_build_id: NonEmptyText
+    source_client_appmanifest_sha256: Sha256
+    source_client_game_version: NonEmptyText
+    target_server_app_id: NonEmptyText
+    target_server_build_id: NonEmptyText
+    target_server_appmanifest_sha256: Sha256
+    target_server_game_version: NonEmptyText
+    mappings_usmap_sha256: Sha256
+    source_package_manifest_sha256: Sha256
+    extracted_at: AwareDatetime
+    compatibility_status: CompatibilityStatus
+    compatibility_evidence: Annotated[
+        list[NonEmptyText],
+        Field(min_length=1),
+        AfterValidator(_ensure_unique),
+    ]
+
+
 class GameDataSource(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -674,6 +709,17 @@ class CanonicalPlayer(BaseModel):
     guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
 
 
+class CanonicalPalSourceMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_internal_name: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    source_passive_skill_internal_names: Annotated[
+        list[Annotated[str, Field(min_length=1), Field(max_length=120)]],
+        Field(max_length=64),
+        AfterValidator(_ensure_unique),
+    ]
+
+
 class CanonicalPal(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -690,6 +736,7 @@ class CanonicalPal(BaseModel):
     ]
     location_type: Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
     location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    metadata: CanonicalPalSourceMetadata | None = None
 
 
 class InventoryValidationWarning(BaseModel):
@@ -716,6 +763,7 @@ class InventoryPublishPal(BaseModel):
     ]
     location_type: Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
     location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    metadata: CanonicalPalSourceMetadata | None = None
     owner_resolved: bool
     guild_resolved: bool
     shared_eligible: bool
@@ -841,6 +889,7 @@ class GameCatalogManifest(BaseModel):
     files: Annotated[list[CatalogFileChecksum], Field(min_length=1), AfterValidator(_ensure_unique)]
     compression: Literal["tar.gz", "tar.zst"]
     breeding_source_provenance: BreedingSourceProvenance | None = None
+    source_provenance: SourceProvenance | None = None
 
 
 class BreedingRecipeSourceDocument(BaseModel):

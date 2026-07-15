@@ -7,6 +7,7 @@ import os
 import resource
 import signal
 import subprocess
+import tempfile
 import time
 from collections.abc import Sequence
 from pathlib import Path, PurePosixPath
@@ -138,70 +139,85 @@ class SubprocessParserAdapter:
                 retryable=False,
             )
 
-        command = tuple(
-            argument.replace("{snapshot_path}", str(snapshot)).replace(
-                "{output_path}", str(output_path)
-            )
-            for argument in self._command
-        )
         started = time.monotonic()
-        try:
-            process = subprocess.Popen(
-                command,
-                cwd=snapshot,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                env={
-                    "HOME": str(output_parent),
-                    "LANG": "C.UTF-8",
-                    "LC_ALL": "C.UTF-8",
-                    "PYTHONDONTWRITEBYTECODE": "1",
-                    "PYTHONUTF8": "1",
-                    "TMPDIR": str(output_parent),
-                },
-                close_fds=True,
-                start_new_session=True,
-                preexec_fn=functools.partial(
-                    self._child_limits,
-                    snapshot,
-                    output_parent,
-                    Path(command[0]),
-                ),
+        with tempfile.TemporaryDirectory(
+            prefix=".parser-output-",
+            dir=output_parent,
+        ) as sandbox_output_directory:
+            sandbox_output_parent = Path(sandbox_output_directory)
+            sandbox_output_path = sandbox_output_parent / output_path.name
+            command = tuple(
+                argument.replace("{snapshot_path}", str(snapshot)).replace(
+                    "{output_path}", str(sandbox_output_path)
+                )
+                for argument in self._command
             )
-        except (OSError, subprocess.SubprocessError) as error:
-            raise StructuredError(
-                code=ErrorCode.PARSER_SANDBOX_FAILED,
-                summary="Parser subprocess sandbox could not be established.",
-                retryable=False,
-            ) from error
-        try:
-            process.communicate(timeout=self._timeout_seconds)
-        except subprocess.TimeoutExpired as error:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.communicate()
-            raise StructuredError(
-                code=ErrorCode.PARSER_TIMEOUT,
-                summary="Parser subprocess exceeded its configured timeout.",
-                retryable=True,
-            ) from error
-        if process.returncode != 0:
-            raise StructuredError(
-                code=ErrorCode.PARSER_EXIT_NONZERO,
-                summary="Parser subprocess exited unsuccessfully.",
-                retryable=False,
-            )
-        try:
-            if not _output_directory_within_limit(output_parent, self._max_output_bytes):
-                raise OSError("parser aggregate output exceeds configured size")
-            if output_path.is_symlink():
-                raise OSError("parser output cannot be a symlink")
-            output_size = output_path.stat().st_size
-            if output_size > self._max_output_bytes:
-                raise OSError("parser output exceeds configured size")
-            decoded = cast(object, json.loads(output_path.read_text(encoding="utf-8")))
-        except (OSError, UnicodeError, json.JSONDecodeError) as error:
-            raise _invalid_output() from error
+            try:
+                process = subprocess.Popen(
+                    command,
+                    cwd=snapshot,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    env={
+                        "HOME": str(sandbox_output_parent),
+                        "LANG": "C.UTF-8",
+                        "LC_ALL": "C.UTF-8",
+                        "PYTHONDONTWRITEBYTECODE": "1",
+                        "PYTHONUTF8": "1",
+                        "TMPDIR": str(sandbox_output_parent),
+                    },
+                    close_fds=True,
+                    start_new_session=True,
+                    preexec_fn=functools.partial(
+                        self._child_limits,
+                        snapshot,
+                        sandbox_output_parent,
+                        Path(command[0]),
+                    ),
+                )
+            except (OSError, subprocess.SubprocessError) as error:
+                raise StructuredError(
+                    code=ErrorCode.PARSER_SANDBOX_FAILED,
+                    summary="Parser subprocess sandbox could not be established.",
+                    retryable=False,
+                ) from error
+            try:
+                process.communicate(timeout=self._timeout_seconds)
+            except subprocess.TimeoutExpired as error:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.communicate()
+                raise StructuredError(
+                    code=ErrorCode.PARSER_TIMEOUT,
+                    summary="Parser subprocess exceeded its configured timeout.",
+                    retryable=True,
+                ) from error
+            if process.returncode != 0:
+                raise StructuredError(
+                    code=ErrorCode.PARSER_EXIT_NONZERO,
+                    summary="Parser subprocess exited unsuccessfully.",
+                    retryable=False,
+                )
+            try:
+                if not _output_directory_within_limit(
+                    sandbox_output_parent,
+                    self._max_output_bytes,
+                ):
+                    raise OSError("parser aggregate output exceeds configured size")
+                if sandbox_output_path.is_symlink():
+                    raise OSError("parser output cannot be a symlink")
+                output_size = sandbox_output_path.stat().st_size
+                if output_size > self._max_output_bytes:
+                    raise OSError("parser output exceeds configured size")
+                decoded = cast(
+                    object,
+                    json.loads(sandbox_output_path.read_text(encoding="utf-8")),
+                )
+                if not _is_json_object(decoded):
+                    raise OSError("parser output must be a JSON object")
+                os.link(sandbox_output_path, output_path, follow_symlinks=False)
+            except (OSError, UnicodeError, json.JSONDecodeError) as error:
+                raise _invalid_output() from error
         if not _is_json_object(decoded):
             raise _invalid_output()
         return ParserResult(

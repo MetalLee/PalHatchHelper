@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "specification": "palworld-stable-id-v1",
+  "normalization_form": "NFKC",
+  "allowed_pattern": "^[a-z0-9][a-z0-9._-]*$",
+  "collision_error_code": "GAME_ID_NORMALIZATION_COLLISION",
+  "vectors": [
+    { "source": "Lamball", "stable_id": "lamball" },
+    { "source": "PlantSlime_Flower", "stable_id": "plantslime_flower" },
+    { "source": "PAL.Skill-01", "stable_id": "pal.skill-01" },
+    { "source": "Ｌａｍｂａｌｌ", "stable_id": "lamball" },
+    { "source": "Pal_01-BOSS.Variant", "stable_id": "pal_01-boss.variant" },
+    { "source": "\u212aelvin", "stable_id": "kelvin" }
+  ],
+  "invalid_vectors": [
+    { "source": "", "error_code": "GAME_ID_INVALID" },
+    { "source": " Pal", "error_code": "GAME_ID_INVALID" },
+    { "source": "Pal Name", "error_code": "GAME_ID_INVALID" },
+    { "source": "Pal/Variant", "error_code": "GAME_ID_INVALID" },
+    { "source": "\u5e15\u9c81", "error_code": "GAME_ID_INVALID" },
+    { "source": "_Pal", "error_code": "GAME_ID_INVALID" }
+  ],
+  "collision_vectors": [
+    {
+      "sources": ["Lamball", "lamball"],
+      "stable_id": "lamball",
+      "error_code": "GAME_ID_NORMALIZATION_COLLISION"
+    },
+    {
+      "sources": ["\uff2b\uff45\uff4c\uff56\uff49\uff4e", "Kelvin"],
+      "stable_id": "kelvin",
+      "error_code": "GAME_ID_NORMALIZATION_COLLISION"
+    }
+  ]
+}
