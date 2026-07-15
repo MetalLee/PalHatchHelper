@@ -11,10 +11,18 @@ cd tools/palworld-catalog-extractor
 dotnet restore PalworldCatalogExtractor.sln -p:Platform=x64
 dotnet build PalworldCatalogExtractor.sln -c Release -p:Platform=x64 --no-restore
 dotnet test PalworldCatalogExtractor.sln -c Release -p:Platform=x64 --no-build
-Copy-Item config/extraction.example.json ../../data/game-catalog/extraction/windows/extraction.json
+$Config = "../../data/game-catalog/extraction/v1.0.1.100619/extraction.json"
+New-Item -ItemType Directory -Force (Split-Path $Config) | Out-Null
+Copy-Item config/extraction.example.json $Config
 ```
 
-只读核对 `steamapps/appmanifest_1623730.acf` 的 App ID、Build ID、`LastUpdated` 和 SHA-256。客户端游戏内自报版本必须与配置中的目标服务器 `server_game_version` 完全相同；不同则立即停止。Client Build ID 与 Server Build ID 可以不同，不能据此判不兼容。
+本轮目标服务器事实固定为 App ID `2394010`、Build ID `24181105`、游戏版本 `v1.0.1.100619`、appmanifest SHA-256 `98ef29829ebfde6d71528f5a83883e6bfda96fa77ce363e52630205353c1a189`。这些值来自忽略目录中的本地审计证据，不能从旧报告复制。
+
+只读核对 `steamapps/appmanifest_1623730.acf` 的 App ID、Build ID、`LastUpdated` 和 SHA-256，并把工作站实际路径写入 `$Config`。客户端 Build ID、客户端 appmanifest SHA-256、Mappings.usmap SHA-256 和 source package hash 必须在本次 Windows 运行中动态取得，示例配置不得预填。客户端游戏内自报版本必须满足 `client_game_version == server_game_version == v1.0.1.100619`；否则以 `SOURCE_GAME_VERSION_MISMATCH` 立即停止。Client Build ID 与 Server Build ID 可以不同，不能据此判不兼容。
+
+每个目标版本使用全新目录：输入证据使用 `data/game-catalog/extraction/v1.0.1.100619/`，回传包只进入 `data/game-catalog/incoming/24181105/`。不要把旧目录复制为新目录的起点。
+
+若 output 中存在旧 `manifest.json`、`extraction-evidence-manifest.json`，或存在没有目标绑定 manifest 的 legacy inventory，`doctor`/`extract` 必须以 `STALE_EXTRACTION_EVIDENCE` 停止。不得自动覆盖或复用 Build `24088465` / `v1.0.0.100427` 的 Mappings、client appmanifest hash、source-package-manifest、asset inventory、run-a/run-b、package hash 或 content hash。
 
 ## 2. 生成 Mappings.usmap
 
@@ -27,11 +35,11 @@ Copy-Item config/extraction.example.json ../../data/game-catalog/extraction/wind
 编辑忽略目录中的 `extraction.json`，路径使用本机绝对路径。示例中的服务器事实仅是待核对输入，不是程序硬编码。
 
 ```powershell
-dotnet run --project src/PalworldCatalogExtractor -c Release -- doctor --config ../../data/game-catalog/extraction/windows/extraction.json
-dotnet run --project src/PalworldCatalogExtractor -c Release -- inventory --config ../../data/game-catalog/extraction/windows/extraction.json
+dotnet run --project src/PalworldCatalogExtractor -c Release -- doctor --config $Config
+dotnet run --project src/PalworldCatalogExtractor -c Release -- inventory --config $Config
 ```
 
-`doctor` 必须全部通过：Windows x64、.NET 10、PAK 目录、`Pal-Windows.pak`、可解析 usmap、客户端 appmanifest、只读输入、至少 10 GiB 空间，以及 output 命中 Git ignore 且没有 tracked file。`inventory` 只生成六个结构清单和来源包指纹，不导出资产内容。
+`doctor` 必须全部通过：Windows x64、.NET 10、PAK 目录、`Pal-Windows.pak`、可解析 usmap、客户端 appmanifest、只读输入、至少 10 GiB 空间，以及 output 命中 Git ignore 且没有 tracked file。`inventory` 只生成五个结构清单、来源包指纹和目标绑定 manifest，不导出资产内容。
 
 inventory 会无条件枚举 DataTable row struct/字段，以及 Blueprint CDO 和组件中的 SoftObject、SoftClass、FName、FText、enum、array、map、struct 关系；关键词评分只另外写入 unresolved candidate，不会限制结构发现范围或自动确认字段。
 
@@ -46,9 +54,9 @@ inventory 会无条件枚举 DataTable row struct/字段，以及 Blueprint CDO 
 确认所有事实来源且客户端/服务器游戏版本仍完全一致后运行：
 
 ```powershell
-dotnet run --project src/PalworldCatalogExtractor -c Release -- extract --config ../../data/game-catalog/extraction/windows/extraction.json
-dotnet run --project src/PalworldCatalogExtractor -c Release -- verify --config ../../data/game-catalog/extraction/windows/extraction.json
-dotnet run --project src/PalworldCatalogExtractor -c Release -- package --config ../../data/game-catalog/extraction/windows/extraction.json
+dotnet run --project src/PalworldCatalogExtractor -c Release -- extract --config $Config
+dotnet run --project src/PalworldCatalogExtractor -c Release -- verify --config $Config
+dotnet run --project src/PalworldCatalogExtractor -c Release -- package --config $Config
 ```
 
 `extract` 先在 output 同级暂存目录生成、校验所有文件，只有成功后才切换完整目录；失败不会留下半套 normalized 文件，也不会覆盖已保留的 inventory。若 output 含未知文件、目录或链接，会以 `CATALOG_OUTPUT_UNSAFE` 停止。
@@ -56,7 +64,7 @@ dotnet run --project src/PalworldCatalogExtractor -c Release -- package --config
 人工复核 `validation-report.json` 为 valid、七类 count 全部大于零、provenance 为 exact match、source evidence 可反向追踪。然后复制一份配置，仅把 `output_path` 改为另一个新的 Git-ignored 目录，在完全相同输入上再次运行 `extract`，并执行内置复现性比较：
 
 ```powershell
-dotnet run --project src/PalworldCatalogExtractor -c Release -- verify --config ../../data/game-catalog/extraction/windows/extraction.json --compare C:\PalHatchHelper-output\repeat-extraction
+dotnet run --project src/PalworldCatalogExtractor -c Release -- verify --config $Config --compare C:\PalHatchHelper-output\v1.0.1.100619-run-b
 ```
 
 结果必须包含 `reproducibility_status: identical`；工具会比较 source package hash、content hash 和七个 JSONL 的实际字节。压缩包名为 `palworld-catalog-<server-build-id>-<content-hash-short>.tar.zst`，只能包含 normalized JSON、证据 JSON、manifest、验证报告和校验和；相同目标名再次打包时也必须逐字节一致。

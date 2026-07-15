@@ -26,6 +26,7 @@ public static class AssetInventoryRunner
       var sourceManifest = SourcePackageManifestBuilder.Build(config);
       DeterministicJson.WriteFile(Path.Combine(config.OutputPath, "source-package-manifest.json"), sourceManifest);
       var packageHash = SourcePackageManifestBuilder.ComputePackageHash(sourceManifest);
+      ExtractionEvidenceGuard.WriteCurrent(config, SteamAppManifestReader.Read(config.ClientAppmanifestPath), packageHash);
 
       var assets = new JsonArray();
       var dataTables = new JsonArray();

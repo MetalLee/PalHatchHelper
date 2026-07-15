@@ -4,7 +4,9 @@ Catalog Schema 1.1.0 为真实七类目录增加 `source_provenance`。Schema 1.
 
 ## 版本事实
 
-客户端来源固定为 Steam App `1623730`。目标 Dedicated Server App ID 是受审计的配置输入；当前示例事实为 `2394010`，程序和 Schema 不把该示例硬编码为永久常量。两个 App 的 Build ID 没有相等要求，必须分别记录。真实 candidate 只接受客户端和服务器进程自报的游戏版本字符串完全一致；`mismatch` 或 `unknown` 都必须停止。
+客户端来源固定为 Steam App `1623730`。目标 Dedicated Server App ID 是受审计的配置输入；当前示例事实为 App `2394010`、Build `24181105`、游戏版本 `v1.0.1.100619`，程序和 Schema 不把服务器 App ID 或 Build ID 硬编码为永久常量。两个 App 的 Build ID 没有相等要求，必须分别记录。真实 candidate 只接受 `client_game_version == server_game_version == v1.0.1.100619`；不一致以 `SOURCE_GAME_VERSION_MISMATCH` 停止。
+
+每次目标刷新必须使用版本隔离目录。inventory 会写入 `extraction-evidence-manifest.json`，把动态客户端 appmanifest、Mappings 与 source package hash 绑定到目标服务器事实。`doctor` 和 `extract` 在读取既有证据前校验该绑定；旧目标 manifest 或没有目标绑定的 legacy inventory 统一以 `STALE_EXTRACTION_EVIDENCE` 拒绝，绝不自动覆盖。旧 Mappings、client appmanifest hash、source-package-manifest、asset inventory、run-a/run-b、package hash 和 content hash 不跨游戏版本复用。
 
 顶层 `game_build_id`、`game_version` 分别表示目标服务器 Build ID 和游戏版本。`extractor_name` 固定为 `palhatch-full-catalog-extractor`；`extractor_version` 是提取器 Git commit 或明确版本。
 

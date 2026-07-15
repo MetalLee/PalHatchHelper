@@ -26,4 +26,4 @@ Windows workflow 已配置 `windows-latest`、.NET 10、restore/build/test，并
 
 ## 后续人工门禁
 
-必须按 Windows 运行手册核对客户端/服务器游戏版本、生成并哈希 usmap、执行 doctor/inventory、审核七类来源字段、实现经证据确认的 reader，再执行 extract/verify/package 与重复性检查。只有 exact game version match、七类非空、零 unresolved、完整反向证据和全部测试通过后，才可申请真实 candidate 的下一阶段批准。
+目标服务器已刷新为 Build `24181105` / `v1.0.1.100619`，但没有执行真实客户端资产提取。必须按 Windows 运行手册在全新的版本隔离目录中动态取得客户端 Build/appmanifest hash、Mappings hash 和 source package hash，再执行 doctor/inventory、审核七类来源字段、实现经证据确认的 reader，最后执行 extract/verify/package 与重复性检查。只有 exact game version match、七类非空、零 unresolved、完整反向证据和全部测试通过后，才可申请真实 candidate 的下一阶段批准。

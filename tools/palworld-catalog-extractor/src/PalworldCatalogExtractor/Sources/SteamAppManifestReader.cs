@@ -25,7 +25,7 @@ public static partial class SteamAppManifestReader
           || !values.TryGetValue("buildid", out var buildId)
           || !values.TryGetValue("LastUpdated", out var lastUpdatedText)
           || !long.TryParse(lastUpdatedText, NumberStyles.None, CultureInfo.InvariantCulture, out var lastUpdated)
-          || appId != "1623730"
+          || string.IsNullOrWhiteSpace(appId)
           || string.IsNullOrWhiteSpace(buildId))
       {
         throw new ExtractorException(ErrorCodes.ClientAppmanifestInvalid, "The client appmanifest lacks the required fixed fields.");
