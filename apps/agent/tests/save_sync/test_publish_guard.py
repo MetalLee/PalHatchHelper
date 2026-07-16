@@ -10,6 +10,7 @@ from pal_hatch_helper.generated import CanonicalSnapshot
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import CompatibilityResult, ParserResult
+from pal_hatch_helper.plans.processor import PublishedSnapshotProcessor
 from pal_hatch_helper.repositories.database import JSONValue
 from pal_hatch_helper.repositories.inventory import (
     InventoryFailureRequest,
@@ -188,6 +189,7 @@ def _service(
     tmp_path: Path,
     parser: FakeParser,
     repository: FakeInventoryRepository,
+    published_snapshot_processor: PublishedSnapshotProcessor | None = None,
 ) -> InventorySyncService:
     return InventorySyncService(
         world_id=WORLD_ID,
@@ -204,6 +206,7 @@ def _service(
             known_passive_skill_ids={"artisan"},
         ),
         repository=repository,
+        published_snapshot_processor=published_snapshot_processor,
     )
 
 
@@ -245,6 +248,34 @@ def test_successful_canonical_snapshot_is_published_once(tmp_path: Path) -> None
         assert result.snapshot_id == SNAPSHOT_ID
         assert parser.parse_calls == 1
         assert len(repository.publish_requests) == 1
+
+    import asyncio
+
+    asyncio.run(scenario())
+
+
+class FakePublishedSnapshotProcessor:
+    def __init__(self) -> None:
+        self.snapshot_ids: list[UUID] = []
+
+    async def process_snapshot(self, snapshot_id: UUID) -> None:
+        self.snapshot_ids.append(snapshot_id)
+
+
+def test_candidate_processing_runs_after_publish_and_duplicate_recovery(
+    tmp_path: Path,
+) -> None:
+    async def scenario() -> None:
+        repository = FakeInventoryRepository()
+        processor = FakePublishedSnapshotProcessor()
+        service = _service(tmp_path, FakeParser(), repository, processor)
+
+        published = await service.sync_once()
+        repository.latest_value = LatestInventorySnapshot(SNAPSHOT_ID, published.content_hash, 1)
+        duplicate = await service.sync_once()
+
+        assert duplicate.status == "duplicate"
+        assert processor.snapshot_ids == [SNAPSHOT_ID, SNAPSHOT_ID]
 
     import asyncio
 

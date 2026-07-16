@@ -24,6 +24,7 @@ const contracts = [
   "inventory-sync",
   "phase5-web",
   "phase6-breeder",
+  "phase7-execution-plans",
 ];
 const pythonContracts = [
   "readiness-status",
@@ -35,6 +36,7 @@ const pythonContracts = [
   "canonical-snapshot",
   "inventory-sync",
   "phase6-breeder",
+  "phase7-execution-plans",
 ];
 const bundledContractModels = {
   "game-catalog": [
@@ -132,6 +134,40 @@ const bundledContractModels = {
     "BreedingJobDetailRpcSuccess",
     "BreedingJobDetailRpcFailure",
     "BreedingJobDetailRpcResult",
+  ],
+  "phase7-execution-plans": [
+    "AdoptRouteRequest",
+    "AdoptRouteResponse",
+    "PlanSummary",
+    "PlanDetail",
+    "PlanVersionPin",
+    "PlanStep",
+    "PlanStepStatus",
+    "PlanStatus",
+    "Phase7ErrorCode",
+    "OffspringCandidate",
+    "CandidateMatchBreakdown",
+    "UpdateStepStatusRequest",
+    "StartBreedingRequest",
+    "ContinueAttemptRequest",
+    "SelectExistingPalRequest",
+    "ConfirmOffspringRequest",
+    "RejectCandidateRequest",
+    "PausePlanRequest",
+    "ResumePlanRequest",
+    "SkipStepRequest",
+    "RecalculatePlanRequest",
+    "InvalidationReason",
+    "PlanEventSummary",
+    "OptimisticConcurrencyConflict",
+    "PlanMutationResponse",
+    "RecalculatePlanResponse",
+    "PlanListPage",
+    "PlanListRpcResult",
+    "PlanDetailRpcResult",
+    "DetectionStepContext",
+    "CandidateDetectionWrite",
+    "CandidateDetectionBatchRequest",
   ],
 };
 
@@ -427,12 +463,16 @@ async function generatePythonContracts() {
   }
 
   for (const schema of schemas) {
-    emitModel(schema.title, schema);
+    if (!definitions.has(schema.title)) {
+      emitModel(schema.title, schema);
+    }
   }
 
   const exportedNames = [
     ...definitions.keys(),
-    ...schemas.map((schema) => schema.title),
+    ...schemas
+      .map((schema) => schema.title)
+      .filter((name) => !definitions.has(name)),
   ].sort();
   const initLines = [
     '"""Generated shared contract models."""',
@@ -455,6 +495,25 @@ async function generatePythonContracts() {
   }
   await writeFile(contractsPath, `${lines.join("\n")}\n`, "utf8");
   await writeFile(initPath, initLines.join("\n"), "utf8");
+  const lintFixer = spawnSync(
+    "uv",
+    [
+      "run",
+      "--project",
+      resolve(repositoryRoot, "apps/agent"),
+      "ruff",
+      "check",
+      "--fix",
+      contractsPath,
+      initPath,
+    ],
+    { encoding: "utf8" },
+  );
+  if (lintFixer.status !== 0) {
+    throw new Error(
+      `Unable to lint generated Python contracts: ${lintFixer.stderr}`,
+    );
+  }
   const formatter = spawnSync(
     "uv",
     [

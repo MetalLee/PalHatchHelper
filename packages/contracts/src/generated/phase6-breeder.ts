@@ -291,6 +291,8 @@ export interface AIExplanationResult {
     | [AIRouteExplanation, AIRouteExplanation, AIRouteExplanation];
 }
 export interface BreedingRoute {
+  route_id: string;
+  execution_plan_id: string | null;
   route_key: BreederSha256;
   rank: number;
   optimization_mode: BreederOptimizationMode;

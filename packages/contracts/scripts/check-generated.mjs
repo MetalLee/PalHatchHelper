@@ -11,8 +11,12 @@ const generatedPaths = [
   "pal-list-item",
   "game-catalog",
   "breeding-data",
+  "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
+  "phase5-web",
+  "phase6-breeder",
+  "phase7-execution-plans",
 ].map((contract) => resolve(packageRoot, `src/generated/${contract}.ts`));
 generatedPaths.push(
   resolve(

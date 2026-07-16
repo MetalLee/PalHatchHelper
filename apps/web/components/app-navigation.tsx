@@ -4,12 +4,15 @@ const primaryItems = [
   { href: "/overview", label: "概览", glyph: "◫" },
   { href: "/pals", label: "帕鲁", glyph: "◇" },
   { href: "/breeder", label: "配种器", glyph: "△" },
+  { href: "/plans", label: "计划", glyph: "□" },
 ] as const;
 
 const utilityItems = [
   { href: "/data-status", label: "数据状态", glyph: "●" },
   { href: "/account", label: "账号", glyph: "○" },
 ] as const;
+
+const mobileItems = [...primaryItems, utilityItems[0]] as const;
 
 function NavigationLink({
   href,
@@ -79,7 +82,7 @@ export function AppNavigation({
       </aside>
 
       <nav className="mobile-bottom-nav" aria-label="移动端导航">
-        {[...primaryItems, ...utilityItems].map((item) => (
+        {mobileItems.map((item) => (
           <NavigationLink
             key={item.href}
             {...item}

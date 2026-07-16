@@ -9,7 +9,7 @@ import {
   type CreateBreedingJobResponse,
 } from "@palhatch/contracts";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 type CreateJob = (
   request: CreateBreedingJobRequest,
@@ -69,6 +69,8 @@ export function BreederForm({
   const [maxGenerations, setMaxGenerations] = useState(5);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const visiblePassives = useMemo(() => {
     const query = passiveQuery.trim().toLocaleLowerCase("zh-CN");
     if (!query) return context.passive_skills;
@@ -231,7 +233,11 @@ export function BreederForm({
             {errorCode}
           </p>
         )}
-        <button className="primary-button" type="submit" disabled={submitting}>
+        <button
+          className="primary-button"
+          type="submit"
+          disabled={!hydrated || submitting}
+        >
           {submitting ? "正在创建…" : "创建配种任务"}
         </button>
       </section>

@@ -1,11 +1,14 @@
 "use client";
 
 import {
+  parseAdoptRouteResponse,
   parseBreedingJobDetailRpcResult,
   type BreedingJobDetailRpcSuccess,
   type BreedingRoute,
   type BreedingRouteViewParent,
 } from "@palhatch/contracts";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 const terminal = new Set(["completed", "failed", "cancelled"]);
@@ -24,11 +27,14 @@ export function BreedingJobView({
   initialResult,
   poll = true,
 }: Readonly<{ initialResult: BreedingJobDetailRpcSuccess; poll?: boolean }>) {
+  const router = useRouter();
   const [result, setResult] = useState(initialResult);
   const [selectedKey, setSelectedKey] = useState(
     initialResult.data.plan?.routes[0]?.route_key ?? null,
   );
   const [pollPaused, setPollPaused] = useState(false);
+  const [adoptingRouteId, setAdoptingRouteId] = useState<string | null>(null);
+  const [adoptionError, setAdoptionError] = useState<string | null>(null);
   useEffect(() => {
     if (!poll || terminal.has(result.data.status)) return;
     let attempts = 0;
@@ -72,6 +78,41 @@ export function BreedingJobView({
       plan?.routes[0],
     [plan, selectedKey],
   );
+
+  async function adoptSelectedRoute(route: BreedingRoute): Promise<void> {
+    setAdoptingRouteId(route.route_id);
+    setAdoptionError(null);
+    try {
+      const response = await fetch("/api/plans/adopt", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          route_id: route.route_id,
+          idempotency_key: `adopt:${route.route_id}`,
+        }),
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const code =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error_code" in payload &&
+          typeof payload.error_code === "string"
+            ? payload.error_code
+            : "ROUTE_NOT_ADOPTABLE";
+        throw new Error(code);
+      }
+      const adopted = parseAdoptRouteResponse(payload);
+      router.push(`/plans/${adopted.plan_id}`);
+    } catch (error) {
+      setAdoptionError(
+        error instanceof Error ? error.message : "ROUTE_NOT_ADOPTABLE",
+      );
+    } finally {
+      setAdoptingRouteId(null);
+    }
+  }
 
   return (
     <div className="grid min-w-0 gap-5">
@@ -167,7 +208,38 @@ export function BreedingJobView({
                 </button>
               ))}
             </div>
-            {selected === undefined ? null : <RouteFacts route={selected} />}
+            {selected === undefined ? null : (
+              <>
+                <RouteFacts route={selected} />
+                {result.data.status !== "completed" ? null : (
+                  <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
+                    {selected.execution_plan_id === null ? (
+                      <button
+                        className="primary-button"
+                        disabled={adoptingRouteId !== null}
+                        onClick={() => void adoptSelectedRoute(selected)}
+                      >
+                        {adoptingRouteId === selected.route_id
+                          ? "正在采用…"
+                          : "采用此方案"}
+                      </button>
+                    ) : (
+                      <Link
+                        className="primary-button"
+                        href={`/plans/${selected.execution_plan_id}`}
+                      >
+                        查看执行计划
+                      </Link>
+                    )}
+                    {adoptionError === null ? null : (
+                      <p className="text-sm text-rose-200" role="alert">
+                        {adoptionError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </section>
           <section className="content-panel min-w-0">
             <p className="eyebrow">AI EXPLANATION · NON-AUTHORITATIVE</p>
