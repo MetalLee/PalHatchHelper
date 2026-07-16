@@ -207,24 +207,24 @@ Aggregate deterministic digest:
 
 ## Validation results
 
-| Gate                                             | Result                                                                                       |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Node / Python runtime                            | Node `22.23.1`; Python `3.12.13`                                                             |
-| `pnpm install --frozen-lockfile`                 | passed                                                                                       |
-| `pnpm check`                                     | passed; Agent 168 passed, 1 separately exercised integration test skipped in this invocation |
-| Agent integration test with loopback credentials | 1 passed                                                                                     |
-| `uv run pytest tests/breeding`                   | 41 passed                                                                                    |
-| ruff check / format check / mypy                 | passed; 66 typed source files                                                                |
-| real catalog acceptance tests                    | 3 passed; integrity/audit, route smoke, reproducible private bundle                          |
-| package safety tests                             | 4 malicious member cases passed plus real tar.zst audit                                      |
-| Parser Landlock                                  | ABI 4; parser sandbox tests passed fail-closed behavior                                      |
-| `supabase db lint`                               | passed, no schema errors                                                                     |
-| `supabase test db`                               | passed, 222 tests across 9 files                                                             |
-| contracts generation/drift                       | passed                                                                                       |
-| Stable ID cross-language                         | TypeScript and Python tests passed; Windows extractor check awaits Draft PR CI               |
-| Web unit/build                                   | passed in `pnpm check`                                                                       |
-| iPhone Playwright                                | 5 passed after installing the locked test browser/runtime libraries                          |
-| forbidden assets / secret scan                   | passed                                                                                       |
+| Gate                                             | Result                                                                                         |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Node / Python runtime                            | Node `22.23.1`; Python `3.12.13`                                                               |
+| `pnpm install --frozen-lockfile`                 | passed                                                                                         |
+| `pnpm check`                                     | passed; Agent 168 passed, 1 separately exercised integration test skipped in this invocation   |
+| Agent integration test with loopback credentials | 1 passed                                                                                       |
+| `uv run pytest tests/breeding`                   | 41 passed                                                                                      |
+| ruff check / format check / mypy                 | passed; 66 typed source files                                                                  |
+| real catalog acceptance tests                    | 3 passed; integrity/audit, route smoke, reproducible private bundle                            |
+| package safety tests                             | 4 malicious member cases passed plus real tar.zst audit                                        |
+| Parser Landlock                                  | ABI 4; parser sandbox tests passed fail-closed behavior                                        |
+| `supabase db lint`                               | passed, no schema errors                                                                       |
+| `supabase test db`                               | passed, 222 tests across 9 files                                                               |
+| contracts generation/drift                       | passed                                                                                         |
+| Stable ID cross-language                         | TypeScript and Python tests passed; Windows .NET 10 x64 extractor checks passed in Draft PR CI |
+| Web unit/build                                   | passed in `pnpm check`                                                                         |
+| iPhone Playwright                                | 5 passed after installing the locked test browser/runtime libraries                            |
+| forbidden assets / secret scan                   | passed                                                                                         |
 
 The Linux host does not provide `dotnet`, so Windows extractor verification is not
 claimed as a local pass. It must come from the Draft PR required GitHub Actions check.
@@ -232,12 +232,23 @@ claimed as a local pass. It must come from the Draft PR required GitHub Actions 
 ## Draft PR and CI
 
 Draft PR [#5](https://github.com/MetalLee/PalHatchHelper/pull/5) targets `main` from
-`agent/phase-4-full-catalog-acceptance-24181105` and remains unmerged. Required CI is
-in progress. A synthetic extractor regression verifies that gender-qualified recipe
-outcomes retain distinct canonical keys; this extractor-path change schedules the
-Windows .NET 10 x64 build and test workflow for the acceptance PR. Final check results
-will be recorded after GitHub reports a terminal state; the report remains pending
-until every required check passes.
+`agent/phase-4-full-catalog-acceptance-24181105` and remains unmerged. All applicable
+required CI passed for acceptance head `cb1c700ed78270a680ac358feabcda2f5eb8f73d`:
+
+| Check                          | Result  |
+| ------------------------------ | ------- |
+| `.NET 10 x64 synthetic checks` | success |
+| `Web and workspace`            | success |
+| `Local Supabase database`      | success |
+| `Python Agent`                 | success |
+| `Structure, docs, and secrets` | success |
+| `Phase 5 browser acceptance`   | success |
+
+The Windows run compiled and tested the synthetic extractor on `windows-latest`. Its
+new regression verifies that gender-qualified recipe outcomes retain distinct
+canonical keys. The evidence-only report update is subject to the same PR checks;
+handoff occurs only after the latest PR head is also green. The report remains pending
+for independent human approval.
 
 ## Rollback target and known limits
 
@@ -251,7 +262,7 @@ Known limits:
 - this is private internal acceptance only; public redistribution is not allowed;
 - the fixture diff is not a real old-version game diff;
 - no local publish/rollback exercise occurs until the explicitly approved publish mode;
-- Draft PR required CI is pending, including the Windows extractor check;
+- Draft PR is intentionally unmerged and awaiting independent human approval;
 - production publish and deployment are not authorized.
 
 ## Human approval checklist
