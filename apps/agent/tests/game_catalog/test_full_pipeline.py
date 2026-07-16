@@ -232,8 +232,6 @@ def test_supabase_artifact_store_uses_private_object_path_and_redacts_failures()
 
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
-        if request.method == "HEAD":
-            return httpx.Response(200)
         if request.method == "GET":
             return httpx.Response(200, content=b"fixture")
         return httpx.Response(200, json={"Key": "fixture"})
@@ -254,6 +252,7 @@ def test_supabase_artifact_store_uses_private_object_path_and_redacts_failures()
     asyncio.run(scenario())
     assert all("game-catalog-artifacts/versions/" in str(request.url) for request in requests)
     assert all(request.headers["authorization"] == f"Bearer {service_role}" for request in requests)
+    assert requests[3].headers["range"] == "bytes=0-0"
 
 
 def test_supabase_artifact_store_treats_wrapped_duplicate_as_idempotent() -> None:
@@ -284,6 +283,39 @@ def test_supabase_artifact_store_treats_wrapped_duplicate_as_idempotent() -> Non
             await store.put_version_bundle("a" * 64, b"fixture")
             with pytest.raises(StructuredError) as caught:
                 await store.put_version_bundle("b" * 64, b"fixture")
+            assert caught.value.code is ErrorCode.GAME_DATA_IMPORT_REJECTED
+
+    asyncio.run(scenario())
+
+
+def test_supabase_artifact_store_recognizes_local_wrapped_not_found() -> None:
+    responses = iter(
+        (
+            httpx.Response(
+                400,
+                json={
+                    "statusCode": "404",
+                    "error": "not_found",
+                    "message": "Object not found",
+                },
+            ),
+            httpx.Response(400, json={"message": "invalid object"}),
+        )
+    )
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _: next(responses))
+        ) as client:
+            store = SupabaseCatalogArtifactStore(
+                base_url="http://127.0.0.1:54321",
+                service_role_key=SecretStr("fixture-secret"),
+                bucket="game-catalog-artifacts",
+                http_client=client,
+            )
+            assert not await store.exists("a" * 64)
+            with pytest.raises(StructuredError) as caught:
+                await store.exists("b" * 64)
             assert caught.value.code is ErrorCode.GAME_DATA_IMPORT_REJECTED
 
     asyncio.run(scenario())

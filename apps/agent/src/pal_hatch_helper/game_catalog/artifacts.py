@@ -173,7 +173,7 @@ class SupabaseCatalogArtifactStore:
 
     async def get_version_bundle(self, content_hash: str) -> bytes:
         response = await self._request("GET", content_hash, headers=self._headers)
-        if response.status_code == 404:
+        if self._is_not_found_response(response):
             raise StructuredError(
                 code=ErrorCode.GAME_DATA_ARTIFACT_MISSING,
                 summary="The exact requested catalog artifact is missing.",
@@ -184,8 +184,12 @@ class SupabaseCatalogArtifactStore:
         return response.content
 
     async def exists(self, content_hash: str) -> bool:
-        response = await self._request("HEAD", content_hash, headers=self._headers)
-        if response.status_code == 404:
+        response = await self._request(
+            "GET",
+            content_hash,
+            headers={**self._headers, "Range": "bytes=0-0"},
+        )
+        if self._is_not_found_response(response):
             return False
         if response.is_error:
             raise self._storage_error(response.status_code)
@@ -233,6 +237,22 @@ class SupabaseCatalogArtifactStore:
                 summary="Catalog artifact storage is temporarily unavailable.",
                 retryable=True,
             ) from error
+
+    @staticmethod
+    def _is_not_found_response(response: httpx.Response) -> bool:
+        if response.status_code == 404:
+            return True
+        if response.status_code != 400:
+            return False
+        try:
+            payload = response.json()
+        except ValueError:
+            return False
+        return bool(
+            isinstance(payload, dict)
+            and str(payload.get("statusCode")) == "404"
+            and str(payload.get("error", "")).lower() in {"not_found", "not found"}
+        )
 
     @staticmethod
     def _storage_error(status_code: int) -> StructuredError:

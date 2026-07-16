@@ -81,6 +81,12 @@ class SupabaseBreedingRuntimeRepository:
                 summary="The exact catalog metadata and loaded facts disagree.",
                 retryable=False,
             )
+        if metadata.content_hash != claim.job.game_data_content_hash:
+            raise StructuredError(
+                code=ErrorCode.BREEDING_GAME_DATA_CONTENT_MISMATCH,
+                summary="The claimed job content hash does not match catalog metadata.",
+                retryable=False,
+            )
         inventory = _inventory_snapshot(inventory_payload)
         return BreedingRuntimeFacts(
             catalog=VersionedBreedingCatalog(

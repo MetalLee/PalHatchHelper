@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 本地开发与测试门禁已解除
+- 状态：Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -525,7 +525,7 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 ### 当前状态（2026-07-16）
 
-- Phase 4 `real_data_acceptance=completed` 且 `local_test_publish=completed`，Phase 6 本地开发与测试门禁已解除。生产 Supabase 与 Vercel 部署仍未授权，生产发布属于 Phase 8。
+- Phase 4 `real_data_acceptance=completed` 且 `local_test_publish=completed`；Phase 6 `implementation=completed`、`automated_gates=passed`、`local_integration=completed`。生产 Supabase 与 Vercel 部署仍未授权，Phase 6 `production_deploy=not_started`，生产发布属于 Phase 8。
 
 ### 阶段目标
 

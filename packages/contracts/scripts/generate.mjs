@@ -23,6 +23,7 @@ const contracts = [
   "canonical-snapshot",
   "inventory-sync",
   "phase5-web",
+  "phase6-breeder",
 ];
 const pythonContracts = [
   "readiness-status",
@@ -33,6 +34,7 @@ const pythonContracts = [
   "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
+  "phase6-breeder",
 ];
 const bundledContractModels = {
   "game-catalog": [
@@ -101,6 +103,35 @@ const bundledContractModels = {
     "ShareMutationData",
     "ShareMutationRpcSuccess",
     "ShareMutationRpcResult",
+  ],
+  "phase6-breeder": [
+    "CreateBreedingJobRequest",
+    "CreateBreedingJobResponse",
+    "BreederCatalogPalOption",
+    "BreederPassiveOption",
+    "BreederFormContext",
+    "BreederFormContextRpcSuccess",
+    "BreederFormContextRpcFailure",
+    "BreederFormContextRpcResult",
+    "JobProgress",
+    "RouteRawScoreMetrics",
+    "RouteScoreComponent",
+    "RouteModeScore",
+    "RouteScoreBreakdown",
+    "BreedingRouteViewParent",
+    "BreedingRouteViewStep",
+    "AIExplanation",
+    "AIExplanationRouteSummary",
+    "AIExplanationRequest",
+    "AIRouteExplanation",
+    "AIExplanationResult",
+    "BreedingRoute",
+    "BreedingPlan",
+    "RouteComparison",
+    "BreedingError",
+    "BreedingJobDetailRpcSuccess",
+    "BreedingJobDetailRpcFailure",
+    "BreedingJobDetailRpcResult",
   ],
 };
 
@@ -206,7 +237,7 @@ function pythonType(schema) {
   let result;
 
   if (schema.const !== undefined) {
-    result = `Literal[${JSON.stringify(schema.const)}]`;
+    result = `Literal[${pythonLiteral(schema.const)}]`;
   } else if (schema.enum) {
     result = `Literal[${schema.enum.map((value) => JSON.stringify(value)).join(", ")}]`;
   } else if (kind === "string" && schema.format === "uuid") {

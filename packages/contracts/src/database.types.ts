@@ -123,6 +123,9 @@ export type Database = {
           completed_at: string | null;
           lease_token: string | null;
           game_data_version_id: string;
+          game_data_content_hash: string;
+          allow_guild_shared: boolean;
+          max_generations: number;
         };
         Insert: {
           id?: string;
@@ -152,6 +155,9 @@ export type Database = {
           completed_at?: string | null;
           lease_token?: string | null;
           game_data_version_id: string;
+          game_data_content_hash: string;
+          allow_guild_shared?: boolean;
+          max_generations?: number;
         };
         Update: {
           id?: string;
@@ -181,6 +187,9 @@ export type Database = {
           completed_at?: string | null;
           lease_token?: string | null;
           game_data_version_id?: string;
+          game_data_content_hash?: string;
+          allow_guild_shared?: boolean;
+          max_generations?: number;
         };
         Relationships: [
           {
@@ -250,6 +259,11 @@ export type Database = {
           ai_model: string | null;
           ai_explanation: string | null;
           generated_at: string;
+          result_digest: string | null;
+          route_count: number;
+          explanation_codes: string[];
+          diagnostics: Json;
+          ai_degraded: boolean;
         };
         Insert: {
           id?: string;
@@ -259,6 +273,11 @@ export type Database = {
           ai_model?: string | null;
           ai_explanation?: string | null;
           generated_at?: string;
+          result_digest?: string | null;
+          route_count?: number;
+          explanation_codes?: string[];
+          diagnostics?: Json;
+          ai_degraded?: boolean;
         };
         Update: {
           id?: string;
@@ -268,6 +287,11 @@ export type Database = {
           ai_model?: string | null;
           ai_explanation?: string | null;
           generated_at?: string;
+          result_digest?: string | null;
+          route_count?: number;
+          explanation_codes?: string[];
+          diagnostics?: Json;
+          ai_degraded?: boolean;
         };
         Relationships: [
           {
@@ -351,6 +375,12 @@ export type Database = {
           inheritance_score: number;
           score_breakdown: Json;
           created_at: string;
+          route_key: string;
+          optimization_mode: Database["public"]["Enums"]["optimization_mode"];
+          difficulty: string;
+          route_payload: Json;
+          ai_explanation: string | null;
+          ai_labels: string[];
         };
         Insert: {
           id?: string;
@@ -365,6 +395,12 @@ export type Database = {
           inheritance_score: number;
           score_breakdown: Json;
           created_at?: string;
+          route_key: string;
+          optimization_mode: Database["public"]["Enums"]["optimization_mode"];
+          difficulty: string;
+          route_payload?: Json;
+          ai_explanation?: string | null;
+          ai_labels?: string[];
         };
         Update: {
           id?: string;
@@ -379,6 +415,12 @@ export type Database = {
           inheritance_score?: number;
           score_breakdown?: Json;
           created_at?: string;
+          route_key?: string;
+          optimization_mode?: Database["public"]["Enums"]["optimization_mode"];
+          difficulty?: string;
+          route_payload?: Json;
+          ai_explanation?: string | null;
+          ai_labels?: string[];
         };
         Relationships: [
           {
@@ -1461,6 +1503,16 @@ export type Database = {
         };
         Returns: { job_id: string; reused: boolean }[];
       };
+      create_breeding_job_v2: {
+        Args: {
+          p_target_pal_id: string;
+          p_desired_passive_ids?: string[];
+          p_optimization_mode?: Database["public"]["Enums"]["optimization_mode"];
+          p_allow_guild_shared?: boolean;
+          p_max_generations?: number;
+        };
+        Returns: { job_id: string; reused: boolean }[];
+      };
       current_guild_id: {
         Args: Record<string, never>;
         Returns: string;
@@ -1489,6 +1541,12 @@ export type Database = {
           weights: Json;
         }[];
       };
+      get_breeder_form_context: {
+        Args: {
+          p_locale?: string;
+        };
+        Returns: Json;
+      };
       get_breeding_data_diff: {
         Args: {
           p_from_version_id: string;
@@ -1497,6 +1555,12 @@ export type Database = {
         Returns: Json;
       };
       get_breeding_inventory_for_agent: {
+        Args: {
+          p_job_id: string;
+        };
+        Returns: Json;
+      };
+      get_breeding_job_detail: {
         Args: {
           p_job_id: string;
         };
@@ -1581,6 +1645,28 @@ export type Database = {
           p_page_size?: number;
         };
         Returns: Json;
+      };
+      persist_breeding_ai_result: {
+        Args: {
+          p_job_id: string;
+          p_worker_id: string;
+          p_lease_token: string;
+          p_provider: string;
+          p_model: string;
+          p_explanation: string;
+          p_degraded: boolean;
+          p_route_explanations?: Json;
+        };
+        Returns: boolean;
+      };
+      persist_breeding_algorithm_result: {
+        Args: {
+          p_job_id: string;
+          p_worker_id: string;
+          p_lease_token: string;
+          p_result: Json;
+        };
+        Returns: string;
       };
       publish_inventory_snapshot: {
         Args: {

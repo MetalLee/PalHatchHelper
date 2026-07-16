@@ -3,6 +3,7 @@ import Link from "next/link";
 const primaryItems = [
   { href: "/overview", label: "概览", glyph: "◫" },
   { href: "/pals", label: "帕鲁", glyph: "◇" },
+  { href: "/breeder", label: "配种器", glyph: "△" },
 ] as const;
 
 const utilityItems = [

@@ -8,6 +8,14 @@ from uuid import UUID
 
 import uvicorn
 
+from pal_hatch_helper.ai.providers import (
+    AIProvider,
+    CodexCliProvider,
+    FallbackAIProvider,
+    OpenAICompatibleProvider,
+    TemplateProvider,
+)
+from pal_hatch_helper.breeding.adapter import BreedingEngineAdapter
 from pal_hatch_helper.breeding.data_sources import (
     BreedingDataSourceAdapter,
     RegisteredRemoteDataSourceAdapter,
@@ -18,6 +26,7 @@ from pal_hatch_helper.breeding.data_sources import (
     stage_breeding_source,
 )
 from pal_hatch_helper.breeding.handler import BreedingJobHandler
+from pal_hatch_helper.breeding.phase6_handler import Phase6BreedingJobHandler
 from pal_hatch_helper.breeding.supply_chain import prepare_breeding_catalog_version
 from pal_hatch_helper.game_catalog.artifacts import SupabaseCatalogArtifactStore
 from pal_hatch_helper.game_catalog.gateway import SupabaseCatalogGateway
@@ -31,6 +40,8 @@ from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.observability.logging import configure_logging, get_logger
 from pal_hatch_helper.parsers.subprocess import SubprocessParserAdapter
+from pal_hatch_helper.repositories.breeding import SupabaseBreedingRuntimeRepository
+from pal_hatch_helper.repositories.breeding_results import SupabaseBreedingResultRepository
 from pal_hatch_helper.repositories.database import SupabaseDatabaseClient
 from pal_hatch_helper.repositories.inventory import SupabaseInventoryRepository
 from pal_hatch_helper.repositories.jobs import SupabaseJobRepository
@@ -54,7 +65,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     api_parser.add_argument("--port", default=18765, type=int)
 
-    subparsers.add_parser("job-worker", help="run outbound breeding job polling")
+    job_worker_parser = subparsers.add_parser(
+        "job-worker", help="run outbound breeding job polling"
+    )
+    job_worker_parser.add_argument(
+        "--once",
+        action="store_true",
+        help="reap stale leases and process at most one job before exiting",
+    )
     subparsers.add_parser("save-worker", help="run read-only save snapshot synchronization")
     catalog_parser = subparsers.add_parser("catalog", help="manage immutable game catalog versions")
     catalog_commands = catalog_parser.add_subparsers(dest="catalog_command", required=True)
@@ -129,7 +147,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         return 0
 
     try:
-        asyncio.run(run_job_worker(settings))
+        asyncio.run(run_job_worker(settings, run_once=bool(parsed.once)))
     except StructuredError as error:
         get_logger(__name__).error(
             "job_worker_start_failed",
@@ -311,17 +329,13 @@ async def _run_remote_catalog_command(parsed: argparse.Namespace, settings: Sett
 async def run_job_worker(
     settings: Settings,
     handler: BreedingJobHandler | None = None,
+    *,
+    run_once: bool = False,
 ) -> None:
     if not settings.database_configured:
         raise StructuredError(
             code=ErrorCode.DATABASE_UNAVAILABLE,
             summary="Job Worker database configuration is incomplete.",
-            retryable=False,
-        )
-    if handler is None:
-        raise StructuredError(
-            code=ErrorCode.BREEDING_HANDLER_NOT_CONFIGURED,
-            summary="A BreedingJobHandler is required before jobs may be claimed.",
             retryable=False,
         )
     assert settings.supabase_url is not None
@@ -332,6 +346,38 @@ async def run_job_worker(
         request_timeout_seconds=settings.database_request_timeout_seconds,
     )
     repository = SupabaseJobRepository(database)
+    artifacts: SupabaseCatalogArtifactStore | None = None
+    external_provider: OpenAICompatibleProvider | None = None
+    if handler is None:
+        artifacts = SupabaseCatalogArtifactStore(
+            base_url=settings.supabase_url,
+            service_role_key=settings.supabase_service_role_key,
+            bucket=settings.game_catalog_bucket,
+            request_timeout_seconds=settings.database_request_timeout_seconds,
+        )
+        gateway = SupabaseCatalogGateway(database)
+        paths = CatalogPaths(settings.palhatch_data_dir)
+        paths.ensure()
+        catalog_repository = LayeredGameCatalogRepository(
+            paths=paths,
+            metadata_store=gateway,
+            artifact_store=artifacts,
+            projection_store=gateway,
+            max_memory_versions=settings.game_catalog_cache_max_versions,
+        )
+        runtime_repository = SupabaseBreedingRuntimeRepository(
+            database,
+            catalog_gateway=gateway,
+            catalog_repository=catalog_repository,
+        )
+        algorithm = BreedingEngineAdapter(runtime_repository)
+        await algorithm.initialize()
+        ai_provider, external_provider = _build_ai_provider(settings)
+        handler = Phase6BreedingJobHandler(
+            algorithm,
+            SupabaseBreedingResultRepository(database),
+            ai_provider,
+        )
     reaper = StaleJobReaper(
         repository=repository,
         lease_timeout_seconds=settings.job_lease_timeout_seconds,
@@ -355,9 +401,46 @@ async def run_job_worker(
         with contextlib.suppress(NotImplementedError, RuntimeError):
             loop.add_signal_handler(handled_signal, worker.handle_signal, handled_signal)
     try:
-        await worker.run()
+        if run_once:
+            await reaper.reap()
+            await worker.run_once()
+        else:
+            await worker.run()
     finally:
+        if external_provider is not None:
+            await external_provider.close()
+        if artifacts is not None:
+            await artifacts.close()
         await database.close()
+
+
+def _build_ai_provider(
+    settings: Settings,
+) -> tuple[AIProvider, OpenAICompatibleProvider | None]:
+    providers: list[AIProvider] = []
+    external: OpenAICompatibleProvider | None = None
+    if (
+        settings.ai_openai_compatible_base_url is not None
+        and settings.ai_openai_compatible_api_key is not None
+        and settings.ai_openai_compatible_model is not None
+    ):
+        external = OpenAICompatibleProvider(
+            base_url=settings.ai_openai_compatible_base_url,
+            api_key=settings.ai_openai_compatible_api_key,
+            model=settings.ai_openai_compatible_model,
+            timeout_seconds=settings.ai_provider_timeout_seconds,
+            maximum_response_bytes=settings.ai_maximum_response_bytes,
+        )
+        providers.append(external)
+    if settings.ai_codex_cli_enabled:
+        providers.append(
+            CodexCliProvider(
+                timeout_seconds=settings.ai_provider_timeout_seconds,
+                maximum_response_bytes=settings.ai_maximum_response_bytes,
+            )
+        )
+    providers.append(TemplateProvider())
+    return FallbackAIProvider(tuple(providers)), external
 
 
 async def run_save_worker(

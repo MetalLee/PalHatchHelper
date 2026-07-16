@@ -531,6 +531,48 @@ values
     '独行'
   );
 
+-- The legacy breeding-data compatibility trigger creates placeholder metadata.
+-- Phase 6 executes the real exact-version catalog loader, so the synthetic local
+-- fixture must expose a complete supported manifest rather than bypassing that gate.
+update public.game_data_versions
+set
+  game_build_id = 'fixture-build-1',
+  game_version = 'fixture-v1',
+  schema_version = '1.0.0',
+  extractor_name = 'palhatch-local-fixture',
+  extractor_version = '1.0.0',
+  manifest = jsonb_build_object(
+    'schema_version', '1.0.0',
+    'game_build_id', 'fixture-build-1',
+    'game_version', 'fixture-v1',
+    'package_hash', repeat('c', 64),
+    'content_hash', repeat('c', 64),
+    'extractor_name', 'palhatch-local-fixture',
+    'extractor_version', '1.0.0',
+    'created_at', '2026-07-13T07:00:00Z',
+    'locales', jsonb_build_array('zh-CN'),
+    'counts', jsonb_build_object(
+      'pals', 8,
+      'passive_skills', 3,
+      'active_skills', 0,
+      'pal_active_skills', 0,
+      'partner_skills', 0,
+      'breeding_recipes', 2,
+      'localizations', 6
+    ),
+    'files', jsonb_build_array(
+      jsonb_build_object('filename', 'pals.jsonl', 'sha256', repeat('c', 64), 'record_count', 8),
+      jsonb_build_object('filename', 'passive-skills.jsonl', 'sha256', repeat('c', 64), 'record_count', 3),
+      jsonb_build_object('filename', 'active-skills.jsonl', 'sha256', repeat('c', 64), 'record_count', 0),
+      jsonb_build_object('filename', 'pal-active-skills.jsonl', 'sha256', repeat('c', 64), 'record_count', 0),
+      jsonb_build_object('filename', 'partner-skills.jsonl', 'sha256', repeat('c', 64), 'record_count', 0),
+      jsonb_build_object('filename', 'breeding-recipes.jsonl', 'sha256', repeat('c', 64), 'record_count', 2),
+      jsonb_build_object('filename', 'localizations.jsonl', 'sha256', repeat('c', 64), 'record_count', 6)
+    ),
+    'compression', 'tar.zst'
+  )
+where id = '51000000-0000-4000-8000-000000000001';
+
 update public.breeding_data_versions
 set
   status = 'published',
@@ -718,11 +760,14 @@ values (
 insert into public.breeding_routes (
   id,
   plan_id,
+  route_key,
   rank,
+  optimization_mode,
   total_score,
   generation_count,
   estimated_attempts_min,
   estimated_attempts_max,
+  difficulty,
   borrowed_pal_count,
   inventory_coverage,
   inheritance_score,
@@ -732,11 +777,14 @@ insert into public.breeding_routes (
 values (
   '62000000-0000-4000-8000-000000000001',
   '61000000-0000-4000-8000-000000000001',
+  repeat('4', 64),
   1,
+  'balanced',
   0.85,
   1,
   1,
   3,
+  'low',
   1,
   1.0,
   0.75,

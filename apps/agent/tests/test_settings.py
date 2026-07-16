@@ -24,6 +24,15 @@ def test_service_role_is_stored_as_a_redacted_secret() -> None:
     assert service_role not in repr(settings)
 
 
+def test_optional_ai_api_key_is_redacted_and_codex_is_opt_in() -> None:
+    secret = "fixture-ai-secret-that-must-not-leak"
+    settings = Settings(ai_openai_compatible_api_key=secret)
+
+    assert isinstance(settings.ai_openai_compatible_api_key, SecretStr)
+    assert secret not in repr(settings)
+    assert settings.ai_codex_cli_enabled is False
+
+
 def test_heartbeat_must_be_shorter_than_the_lease_timeout() -> None:
     with pytest.raises(ValidationError):
         Settings(job_heartbeat_interval_seconds=30, job_lease_timeout_seconds=30)
