@@ -126,6 +126,8 @@ export type Database = {
           game_data_content_hash: string;
           allow_guild_shared: boolean;
           max_generations: number;
+          source_plan_id: string | null;
+          recalculation_reason: string | null;
         };
         Insert: {
           id?: string;
@@ -158,6 +160,8 @@ export type Database = {
           game_data_content_hash: string;
           allow_guild_shared?: boolean;
           max_generations?: number;
+          source_plan_id?: string | null;
+          recalculation_reason?: string | null;
         };
         Update: {
           id?: string;
@@ -190,6 +194,8 @@ export type Database = {
           game_data_content_hash?: string;
           allow_guild_shared?: boolean;
           max_generations?: number;
+          source_plan_id?: string | null;
+          recalculation_reason?: string | null;
         };
         Relationships: [
           {
@@ -240,6 +246,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "inventory_snapshots";
             referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "breeding_jobs_source_plan_id_fkey";
+            columns: ["source_plan_id"];
+            isOneToOne: false;
+            referencedRelation: "execution_plans";
+            referencedColumns: ["id"];
           },
           {
             foreignKeyName: "breeding_jobs_world_id_fkey";
@@ -446,6 +459,20 @@ export type Database = {
           completed_at: string | null;
           created_at: string;
           updated_at: string;
+          execution_plan_id: string | null;
+          parent_a_source_kind: string | null;
+          parent_a_step_index: number | null;
+          parent_a_required_gender: string | null;
+          parent_b_source_kind: string | null;
+          parent_b_step_index: number | null;
+          parent_b_required_gender: string | null;
+          preferred_gender: string | null;
+          baseline_snapshot_id: string | null;
+          candidate_detection_started_at: string | null;
+          attempt_number: number;
+          concurrency_version: number;
+          skip_reason: string | null;
+          invalidation_reasons: Json;
         };
         Insert: {
           id?: string;
@@ -460,6 +487,20 @@ export type Database = {
           completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          execution_plan_id?: string | null;
+          parent_a_source_kind?: string | null;
+          parent_a_step_index?: number | null;
+          parent_a_required_gender?: string | null;
+          parent_b_source_kind?: string | null;
+          parent_b_step_index?: number | null;
+          parent_b_required_gender?: string | null;
+          preferred_gender?: string | null;
+          baseline_snapshot_id?: string | null;
+          candidate_detection_started_at?: string | null;
+          attempt_number?: number;
+          concurrency_version?: number;
+          skip_reason?: string | null;
+          invalidation_reasons?: Json;
         };
         Update: {
           id?: string;
@@ -474,8 +515,36 @@ export type Database = {
           completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          execution_plan_id?: string | null;
+          parent_a_source_kind?: string | null;
+          parent_a_step_index?: number | null;
+          parent_a_required_gender?: string | null;
+          parent_b_source_kind?: string | null;
+          parent_b_step_index?: number | null;
+          parent_b_required_gender?: string | null;
+          preferred_gender?: string | null;
+          baseline_snapshot_id?: string | null;
+          candidate_detection_started_at?: string | null;
+          attempt_number?: number;
+          concurrency_version?: number;
+          skip_reason?: string | null;
+          invalidation_reasons?: Json;
         };
         Relationships: [
+          {
+            foreignKeyName: "breeding_steps_baseline_snapshot_id_fkey";
+            columns: ["baseline_snapshot_id"];
+            isOneToOne: false;
+            referencedRelation: "inventory_snapshots";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "breeding_steps_execution_plan_id_fkey";
+            columns: ["execution_plan_id"];
+            isOneToOne: false;
+            referencedRelation: "execution_plans";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "breeding_steps_route_id_fkey";
             columns: ["route_id"];
@@ -759,6 +828,250 @@ export type Database = {
             columns: ["version_id"];
             isOneToOne: false;
             referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      execution_candidate_detection_runs: {
+        Row: {
+          step_id: string;
+          detected_snapshot_id: string;
+          candidate_count: number;
+          processed_at: string;
+        };
+        Insert: {
+          step_id: string;
+          detected_snapshot_id: string;
+          candidate_count?: number;
+          processed_at?: string;
+        };
+        Update: {
+          step_id?: string;
+          detected_snapshot_id?: string;
+          candidate_count?: number;
+          processed_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "execution_candidate_detection_runs_detected_snapshot_id_fkey";
+            columns: ["detected_snapshot_id"];
+            isOneToOne: false;
+            referencedRelation: "inventory_snapshots";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_candidate_detection_runs_step_id_fkey";
+            columns: ["step_id"];
+            isOneToOne: false;
+            referencedRelation: "breeding_steps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      execution_plan_events: {
+        Row: {
+          id: string;
+          plan_id: string;
+          step_id: string | null;
+          event_type: string;
+          actor_user_id: string | null;
+          actor_kind: string;
+          from_status: string | null;
+          to_status: string | null;
+          safe_metadata: Json;
+          idempotency_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          step_id?: string | null;
+          event_type: string;
+          actor_user_id?: string | null;
+          actor_kind: string;
+          from_status?: string | null;
+          to_status?: string | null;
+          safe_metadata?: Json;
+          idempotency_key: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          step_id?: string | null;
+          event_type?: string;
+          actor_user_id?: string | null;
+          actor_kind?: string;
+          from_status?: string | null;
+          to_status?: string | null;
+          safe_metadata?: Json;
+          idempotency_key?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "execution_plan_events_actor_user_id_fkey";
+            columns: ["actor_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_plan_events_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "execution_plans";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_plan_events_step_id_fkey";
+            columns: ["step_id"];
+            isOneToOne: false;
+            referencedRelation: "breeding_steps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      execution_plans: {
+        Row: {
+          id: string;
+          adopted_route_id: string;
+          source_job_id: string;
+          requester_user_id: string;
+          player_id: string;
+          world_id: string;
+          guild_id: string | null;
+          target_pal_id: string;
+          desired_passive_ids: string[];
+          optimization_mode: Database["public"]["Enums"]["optimization_mode"];
+          allow_guild_shared: boolean;
+          max_generations: number;
+          inventory_snapshot_id: string;
+          game_data_version_id: string;
+          content_hash: string;
+          algorithm_version: string;
+          scoring_profile_version: string;
+          status: Database["public"]["Enums"]["execution_plan_status"];
+          current_step_index: number;
+          concurrency_version: number;
+          invalidation_reasons: Json;
+          adopted_idempotency_key: string;
+          created_at: string;
+          updated_at: string;
+          completed_at: string | null;
+          paused_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          adopted_route_id: string;
+          source_job_id: string;
+          requester_user_id: string;
+          player_id: string;
+          world_id: string;
+          guild_id?: string | null;
+          target_pal_id: string;
+          desired_passive_ids?: string[];
+          optimization_mode: Database["public"]["Enums"]["optimization_mode"];
+          allow_guild_shared: boolean;
+          max_generations: number;
+          inventory_snapshot_id: string;
+          game_data_version_id: string;
+          content_hash: string;
+          algorithm_version: string;
+          scoring_profile_version: string;
+          status?: Database["public"]["Enums"]["execution_plan_status"];
+          current_step_index?: number;
+          concurrency_version?: number;
+          invalidation_reasons?: Json;
+          adopted_idempotency_key: string;
+          created_at?: string;
+          updated_at?: string;
+          completed_at?: string | null;
+          paused_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          adopted_route_id?: string;
+          source_job_id?: string;
+          requester_user_id?: string;
+          player_id?: string;
+          world_id?: string;
+          guild_id?: string | null;
+          target_pal_id?: string;
+          desired_passive_ids?: string[];
+          optimization_mode?: Database["public"]["Enums"]["optimization_mode"];
+          allow_guild_shared?: boolean;
+          max_generations?: number;
+          inventory_snapshot_id?: string;
+          game_data_version_id?: string;
+          content_hash?: string;
+          algorithm_version?: string;
+          scoring_profile_version?: string;
+          status?: Database["public"]["Enums"]["execution_plan_status"];
+          current_step_index?: number;
+          concurrency_version?: number;
+          invalidation_reasons?: Json;
+          adopted_idempotency_key?: string;
+          created_at?: string;
+          updated_at?: string;
+          completed_at?: string | null;
+          paused_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "execution_plans_adopted_route_id_fkey";
+            columns: ["adopted_route_id"];
+            isOneToOne: false;
+            referencedRelation: "breeding_routes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_plans_game_data_version_id_fkey";
+            columns: ["game_data_version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_plans_guild_world_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "execution_plans_player_world_fkey";
+            columns: ["player_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "execution_plans_requester_user_id_fkey";
+            columns: ["requester_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_plans_scoring_profile_version_fkey";
+            columns: ["scoring_profile_version"];
+            isOneToOne: false;
+            referencedRelation: "scoring_profiles";
+            referencedColumns: ["version"];
+          },
+          {
+            foreignKeyName: "execution_plans_snapshot_world_fkey";
+            columns: ["inventory_snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "execution_plans_source_job_id_fkey";
+            columns: ["source_job_id"];
+            isOneToOne: false;
+            referencedRelation: "breeding_jobs";
             referencedColumns: ["id"];
           },
         ];
@@ -1325,6 +1638,20 @@ export type Database = {
           confirmed: boolean;
           confirmed_at: string | null;
           confirmed_by: string | null;
+          candidate_key: string | null;
+          pal_id: string | null;
+          species_match: boolean;
+          required_passive_count: number;
+          gender: string | null;
+          level: number | null;
+          owner_display_name: string | null;
+          location_type: string | null;
+          location_name: string | null;
+          accessible: boolean;
+          match_breakdown: Json;
+          rejected_at: string | null;
+          rejected_by: string | null;
+          rejection_reason: string | null;
         };
         Insert: {
           step_id: string;
@@ -1336,6 +1663,20 @@ export type Database = {
           confirmed?: boolean;
           confirmed_at?: string | null;
           confirmed_by?: string | null;
+          candidate_key?: string | null;
+          pal_id?: string | null;
+          species_match?: boolean;
+          required_passive_count?: number;
+          gender?: string | null;
+          level?: number | null;
+          owner_display_name?: string | null;
+          location_type?: string | null;
+          location_name?: string | null;
+          accessible?: boolean;
+          match_breakdown?: Json;
+          rejected_at?: string | null;
+          rejected_by?: string | null;
+          rejection_reason?: string | null;
         };
         Update: {
           step_id?: string;
@@ -1347,6 +1688,20 @@ export type Database = {
           confirmed?: boolean;
           confirmed_at?: string | null;
           confirmed_by?: string | null;
+          candidate_key?: string | null;
+          pal_id?: string | null;
+          species_match?: boolean;
+          required_passive_count?: number;
+          gender?: string | null;
+          level?: number | null;
+          owner_display_name?: string | null;
+          location_type?: string | null;
+          location_name?: string | null;
+          accessible?: boolean;
+          match_breakdown?: Json;
+          rejected_at?: string | null;
+          rejected_by?: string | null;
+          rejection_reason?: string | null;
         };
         Relationships: [
           {
@@ -1359,6 +1714,13 @@ export type Database = {
           {
             foreignKeyName: "step_offspring_candidates_confirmed_by_fkey";
             columns: ["confirmed_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "step_offspring_candidates_rejected_by_fkey";
+            columns: ["rejected_by"];
             isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
@@ -1453,6 +1815,18 @@ export type Database = {
         };
         Returns: boolean;
       };
+      adopt_breeding_route: {
+        Args: {
+          p_route_id: string;
+          p_idempotency_key: string;
+        };
+        Returns: {
+          plan_id: string;
+          reused: boolean;
+          status: Database["public"]["Enums"]["execution_plan_status"];
+          concurrency_version: number;
+        }[];
+      };
       cancel_breeding_job: {
         Args: {
           p_job_id: string;
@@ -1486,6 +1860,15 @@ export type Database = {
         };
         Returns: string;
       };
+      confirm_offspring_candidate: {
+        Args: {
+          p_step_id: string;
+          p_candidate_key: string;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
       confirm_step_offspring: {
         Args: {
           p_step_id: string;
@@ -1493,6 +1876,14 @@ export type Database = {
           p_detected_snapshot_id: string;
         };
         Returns: boolean;
+      };
+      continue_breeding_attempt: {
+        Args: {
+          p_step_id: string;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
       };
       create_breeding_job: {
         Args: {
@@ -1566,6 +1957,25 @@ export type Database = {
         };
         Returns: Json;
       };
+      get_execution_detection_context: {
+        Args: {
+          p_detected_snapshot_id: string;
+        };
+        Returns: Json;
+      };
+      get_execution_plan_detail: {
+        Args: {
+          p_plan_id: string;
+        };
+        Returns: Json;
+      };
+      get_execution_snapshot_delta: {
+        Args: {
+          p_step_id: string;
+          p_detected_snapshot_id: string;
+        };
+        Returns: Json;
+      };
       get_game_data_source_for_agent: {
         Args: {
           p_source_id: string;
@@ -1602,6 +2012,12 @@ export type Database = {
           p_lease_token: string;
         };
         Returns: boolean;
+      };
+      invalidate_execution_plan_dependencies: {
+        Args: {
+          p_detected_snapshot_id: string;
+        };
+        Returns: number;
       };
       is_admin: {
         Args: Record<string, never>;
@@ -1646,6 +2062,24 @@ export type Database = {
         };
         Returns: Json;
       };
+      list_execution_plans: {
+        Args: {
+          p_status?: string;
+          p_limit?: number;
+          p_cursor_created_at?: string | null;
+          p_cursor_id?: string | null;
+          p_query_boundary?: string | null;
+        };
+        Returns: Json;
+      };
+      pause_execution_plan: {
+        Args: {
+          p_plan_id: string;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
       persist_breeding_ai_result: {
         Args: {
           p_job_id: string;
@@ -1675,12 +2109,38 @@ export type Database = {
         };
         Returns: string;
       };
+      recalculate_execution_plan: {
+        Args: {
+          p_plan_id: string;
+          p_expected_concurrency_version: number;
+          p_reason: string;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      record_execution_candidates: {
+        Args: {
+          p_step_id: string;
+          p_detected_snapshot_id: string;
+          p_candidates: Json;
+        };
+        Returns: number;
+      };
       record_inventory_snapshot_failure: {
         Args: {
           p_world_id: string;
           p_failure: Json;
         };
         Returns: string;
+      };
+      reject_offspring_candidate: {
+        Args: {
+          p_candidate_key: string;
+          p_reason: string;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
       };
       release_breeding_job: {
         Args: {
@@ -1697,6 +2157,24 @@ export type Database = {
         };
         Returns: number;
       };
+      resume_execution_plan: {
+        Args: {
+          p_plan_id: string;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      select_existing_pal_for_step: {
+        Args: {
+          p_step_id: string;
+          p_pal_instance_uid: string;
+          p_allow_passive_mismatch: boolean;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
       set_pal_share_enabled: {
         Args: {
           p_pal_instance_uid: string;
@@ -1708,6 +2186,23 @@ export type Database = {
         Args: {
           p_pal_instance_uid: string;
           p_enabled: boolean;
+        };
+        Returns: Json;
+      };
+      skip_breeding_step: {
+        Args: {
+          p_step_id: string;
+          p_reason: string;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      start_breeding_step: {
+        Args: {
+          p_step_id: string;
+          p_expected_concurrency_version: number;
+          p_idempotency_key: string;
         };
         Returns: Json;
       };
@@ -1740,6 +2235,13 @@ export type Database = {
         | "retrying"
         | "skipped"
         | "invalidated";
+      execution_plan_status:
+        | "active"
+        | "awaiting_confirmation"
+        | "paused"
+        | "completed"
+        | "invalidated"
+        | "cancelled";
       game_data_entity_type:
         | "pals"
         | "passive_skills"

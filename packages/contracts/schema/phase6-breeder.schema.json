@@ -560,6 +560,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "route_id",
+        "execution_plan_id",
         "route_key",
         "rank",
         "optimization_mode",
@@ -579,6 +581,8 @@
         "ai_labels"
       ],
       "properties": {
+        "route_id": { "type": "string", "format": "uuid" },
+        "execution_plan_id": { "type": ["string", "null"], "format": "uuid" },
         "route_key": { "$ref": "#/$defs/BreederSha256" },
         "rank": { "type": "integer", "minimum": 1, "maximum": 3 },
         "optimization_mode": { "$ref": "#/$defs/BreederOptimizationMode" },

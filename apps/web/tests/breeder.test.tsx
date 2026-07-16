@@ -7,14 +7,25 @@ import type {
   RouteScoreComponent,
 } from "@palhatch/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BreederForm } from "../features/breeder/breeder-form";
 import { BreedingJobView } from "../features/breeder/breeding-job-view";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+const { routerPush, routerRefresh } = vi.hoisted(() => ({
+  routerPush: vi.fn(),
+  routerRefresh: vi.fn(),
 }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
+}));
+
+beforeEach(() => {
+  routerPush.mockReset();
+  routerRefresh.mockReset();
+  vi.unstubAllGlobals();
+});
 
 const context: BreederFormContext = {
   data_state: "healthy",
@@ -82,6 +93,8 @@ const modeScores: RouteModeScore[] = [
 
 function route(rank: number): BreedingRoute {
   return {
+    route_id: `62000000-0000-4000-8000-${String(rank).padStart(12, "0")}`,
+    execution_plan_id: null,
     route_key: String(rank).repeat(64),
     rank,
     optimization_mode: "balanced",
@@ -334,5 +347,52 @@ describe("Phase 6 job comparison", () => {
 
     expect(screen.getByText("当前没有合法路线")).toBeTruthy();
     expect(screen.getByText(/可减少期望被动/)).toBeTruthy();
+  });
+
+  it("adopts a completed route idempotently and navigates to its execution plan", async () => {
+    let captured: { input: RequestInfo | URL; init?: RequestInit } | undefined;
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        captured = { input, init };
+        return new Response(
+          JSON.stringify({
+            plan_id: "71000000-0000-4000-8000-000000000001",
+            reused: true,
+            status: "active",
+            concurrency_version: 1,
+          }),
+          { status: 201, headers: { "content-type": "application/json" } },
+        );
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BreedingJobView initialResult={completedJob()} poll={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "采用此方案" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(captured?.input).toBe("/api/plans/adopt");
+    expect(JSON.parse(String(captured?.init?.body))).toMatchObject({
+      route_id: "62000000-0000-4000-8000-000000000001",
+      idempotency_key: "adopt:62000000-0000-4000-8000-000000000001",
+    });
+    expect(routerPush).toHaveBeenCalledWith(
+      "/plans/71000000-0000-4000-8000-000000000001",
+    );
+  });
+
+  it("links directly to an execution plan when the route was already adopted", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    const adopted = value.data.plan.routes.at(0);
+    if (adopted === undefined) throw new Error("fixture route missing");
+    adopted.execution_plan_id = "71000000-0000-4000-8000-000000000001";
+
+    render(<BreedingJobView initialResult={value} poll={false} />);
+
+    expect(
+      screen.getByRole("link", { name: "查看执行计划" }).getAttribute("href"),
+    ).toBe("/plans/71000000-0000-4000-8000-000000000001");
+    expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
   });
 });

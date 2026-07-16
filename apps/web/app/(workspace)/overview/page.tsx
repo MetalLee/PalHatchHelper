@@ -66,7 +66,7 @@ export default async function OverviewPage() {
             库存协作基础已就绪
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-400">
-            当前阶段提供安全登录、库存筛选和共享控制。配种任务、路线比较和执行计划属于后续阶段，本页不会提前创建或计算它们。
+            当前阶段提供安全登录、库存筛选、共享控制、确定性路线比较和人工推进的执行计划。系统不会自动操作游戏、修改存档或确认候选子代。
           </p>
         </div>
         <Link className="status-callout" href="/data-status">

@@ -9,7 +9,7 @@ from pal_hatch_helper.settings import Settings
 
 
 @pytest.mark.parametrize("command", ["api", "job-worker", "save-worker"])
-def test_cli_keeps_three_explicit_process_boundaries(command: str) -> None:
+def test_cli_keeps_long_running_process_boundaries(command: str) -> None:
     arguments = build_parser().parse_args([command])
 
     assert arguments.command == command
@@ -19,6 +19,18 @@ def test_job_worker_accepts_one_shot_execution_for_integration_checks() -> None:
     arguments = build_parser().parse_args(["job-worker", "--once"])
 
     assert arguments.once is True
+
+
+def test_candidate_detector_requires_one_published_snapshot_identity() -> None:
+    arguments = build_parser().parse_args(
+        [
+            "candidate-detector",
+            "--snapshot-id",
+            "40000000-0000-4000-8000-000000000003",
+        ]
+    )
+
+    assert str(arguments.snapshot_id) == "40000000-0000-4000-8000-000000000003"
 
 
 def test_cli_help_is_available_without_runtime_credentials(

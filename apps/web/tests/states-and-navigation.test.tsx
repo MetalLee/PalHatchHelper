@@ -32,7 +32,7 @@ describe("Phase 5 states and navigation", () => {
     expect(gameDataStatusPresentation("blocked").title).toMatch(/受阻/);
   });
 
-  it("adds the Phase 6 breeder without exposing Phase 7 plans", () => {
+  it("exposes the Phase 7 plan center on desktop and mobile", () => {
     render(<AppNavigation activePath="/pals" displayName="Fixture Player A" />);
 
     expect(
@@ -42,8 +42,8 @@ describe("Phase 5 states and navigation", () => {
       screen.getAllByRole("link", { name: "帕鲁" }).length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "数据状态" })).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: /账号/ })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /账号/ })).toHaveLength(1);
     expect(screen.getAllByRole("link", { name: "配种器" })).toHaveLength(2);
-    expect(screen.queryByRole("link", { name: "计划" })).toBeNull();
+    expect(screen.getAllByRole("link", { name: "计划" })).toHaveLength(2);
   });
 });
