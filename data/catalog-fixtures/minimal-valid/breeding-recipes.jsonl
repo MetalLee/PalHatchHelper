@@ -1,1 +1,1 @@
-{"child_pal_id":"fixture-pal-c","metadata":{"fictional":true},"parent_a_pal_id":"fixture-pal-a","parent_b_pal_id":"fixture-pal-b","recipe_type":"normal"}
+{"child_pal_id":"fixture-pal-c","metadata":{"fictional":true},"parent_a_gender":"any","parent_a_pal_id":"fixture-pal-a","parent_b_gender":"any","parent_b_pal_id":"fixture-pal-b","recipe_type":"normal"}
