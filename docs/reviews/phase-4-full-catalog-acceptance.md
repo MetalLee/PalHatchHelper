@@ -231,11 +231,13 @@ claimed as a local pass. It must come from the Draft PR required GitHub Actions 
 
 ## Draft PR and CI
 
-`gh` version 2.68.0 is authenticated for the project owner's GitHub account. This
-acceptance commit is ready to push to the dedicated branch; Draft PR identity and
-required CI results will be recorded here after the first push. The report remains
-pending until a Draft PR exists and all required checks, including Windows extractor
-verification, pass.
+Draft PR [#5](https://github.com/MetalLee/PalHatchHelper/pull/5) targets `main` from
+`agent/phase-4-full-catalog-acceptance-24181105` and remains unmerged. Required CI is
+in progress. A synthetic extractor regression verifies that gender-qualified recipe
+outcomes retain distinct canonical keys; this extractor-path change schedules the
+Windows .NET 10 x64 build and test workflow for the acceptance PR. Final check results
+will be recorded after GitHub reports a terminal state; the report remains pending
+until every required check passes.
 
 ## Rollback target and known limits
 
@@ -249,7 +251,7 @@ Known limits:
 - this is private internal acceptance only; public redistribution is not allowed;
 - the fixture diff is not a real old-version game diff;
 - no local publish/rollback exercise occurs until the explicitly approved publish mode;
-- Draft PR and required CI are pending this acceptance commit and branch push;
+- Draft PR required CI is pending, including the Windows extractor check;
 - production publish and deployment are not authorized.
 
 ## Human approval checklist
