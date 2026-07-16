@@ -233,7 +233,7 @@ Aggregate deterministic digest:
 | ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | Node / Python runtime                            | Node `22.23.1`; Python `3.12.13`                                                               |
 | `pnpm install --frozen-lockfile`                 | passed                                                                                         |
-| `pnpm check`                                     | passed; Agent 165 passed, 4 environment-gated tests skipped in this invocation                  |
+| `pnpm check`                                     | passed; Agent 165 passed, 4 environment-gated tests skipped in this invocation                 |
 | Agent integration test with loopback credentials | 1 passed                                                                                       |
 | `uv run pytest tests/breeding`                   | 41 passed                                                                                      |
 | ruff check / format check / mypy                 | passed; 66 typed source files                                                                  |
