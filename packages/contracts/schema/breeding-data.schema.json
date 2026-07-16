@@ -46,6 +46,10 @@
       "type": "string",
       "enum": ["normal", "special"]
     },
+    "BreedingParentGender": {
+      "type": "string",
+      "enum": ["any", "female", "male"]
+    },
     "BreedingRecipeSourceRecord": {
       "type": "object",
       "additionalProperties": false,
@@ -162,14 +166,18 @@
       "additionalProperties": false,
       "required": [
         "parent_a_pal_id",
+        "parent_a_gender",
         "parent_b_pal_id",
+        "parent_b_gender",
         "child_pal_id",
         "recipe_type",
         "metadata"
       ],
       "properties": {
         "parent_a_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "parent_a_gender": { "$ref": "#/$defs/BreedingParentGender" },
         "parent_b_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "parent_b_gender": { "$ref": "#/$defs/BreedingParentGender" },
         "child_pal_id": { "$ref": "#/$defs/BreedingStableId" },
         "recipe_type": { "$ref": "#/$defs/BreedingRecipeType" },
         "metadata": { "$ref": "#/$defs/BreedingMetadata" }
@@ -180,7 +188,9 @@
       "additionalProperties": false,
       "required": [
         "parent_a_pal_id",
+        "parent_a_gender",
         "parent_b_pal_id",
+        "parent_b_gender",
         "recipe_type",
         "before_child_pal_id",
         "after_child_pal_id",
@@ -188,7 +198,9 @@
       ],
       "properties": {
         "parent_a_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "parent_a_gender": { "$ref": "#/$defs/BreedingParentGender" },
         "parent_b_pal_id": { "$ref": "#/$defs/BreedingStableId" },
+        "parent_b_gender": { "$ref": "#/$defs/BreedingParentGender" },
         "recipe_type": { "$ref": "#/$defs/BreedingRecipeType" },
         "before_child_pal_id": { "$ref": "#/$defs/BreedingStableId" },
         "after_child_pal_id": { "$ref": "#/$defs/BreedingStableId" },

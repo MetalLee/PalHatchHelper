@@ -1,17 +1,25 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(28);
+select plan(29);
 
-select is(
-  (select count(*)::integer from public.game_data_sources),
-  (select count(*)::integer from public.breeding_data_sources),
+select ok(
+  not exists (
+    select 1
+      from public.breeding_data_sources as legacy
+      left join public.game_data_sources as unified on unified.id = legacy.id
+     where unified.id is null
+  ),
   'legacy breeding sources are mirrored into unified game data sources'
 );
 
-select is(
-  (select count(*)::integer from public.game_data_versions),
-  (select count(*)::integer from public.breeding_data_versions),
+select ok(
+  not exists (
+    select 1
+      from public.breeding_data_versions as legacy
+      left join public.game_data_versions as unified on unified.id = legacy.id
+     where unified.id is null
+  ),
   'legacy breeding versions are mirrored with reusable UUIDs'
 );
 
@@ -97,7 +105,7 @@ from public.begin_game_data_import(
       'active_skills', 1,
       'pal_active_skills', 1,
       'partner_skills', 1,
-      'breeding_recipes', 1,
+      'breeding_recipes', 2,
       'localizations', 8
     ),
     'files', jsonb_build_array(),
@@ -127,7 +135,7 @@ select public.stage_catalog_batch(
   (select import_run_id from test_game_import),
   'passive_skills',
   'passives:0',
-  '[{"passive_skill_id":"fixture-passive-a","name_key":"fixture.passive.a.name","description_key":"fixture.passive.a.description","rank":1,"is_negative":false,"metadata":{"fictional":true}}]'::jsonb
+  '[{"passive_skill_id":"fixture-passive-a","name_key":"fixture.passive.a.name","description_key":"fixture.passive.a.description","rank":-1,"is_negative":true,"metadata":{"fictional":true}}]'::jsonb
 );
 select public.stage_catalog_batch(
   (select import_run_id from test_game_import),
@@ -151,7 +159,10 @@ select public.stage_catalog_batch(
   (select import_run_id from test_game_import),
   'breeding_recipes',
   'breeding:0',
-  '[{"parent_a_pal_id":"fixture-pal-b","parent_b_pal_id":"fixture-pal-a","child_pal_id":"fixture-pal-c","recipe_type":"normal","metadata":{"fictional":true}}]'::jsonb
+  '[
+    {"parent_a_pal_id":"fixture-pal-a","parent_a_gender":"female","parent_b_pal_id":"fixture-pal-b","parent_b_gender":"male","child_pal_id":"fixture-pal-c","recipe_type":"special","metadata":{"fictional":true}},
+    {"parent_a_pal_id":"fixture-pal-a","parent_a_gender":"male","parent_b_pal_id":"fixture-pal-b","parent_b_gender":"female","child_pal_id":"fixture-pal-b","recipe_type":"special","metadata":{"fictional":true}}
+  ]'::jsonb
 );
 select public.stage_catalog_batch(
   (select import_run_id from test_game_import),
@@ -181,14 +192,26 @@ select is(
   'a complete valid import becomes validated'
 );
 
+select is(
+  (select rank from public.catalog_passive_skills
+    where version_id = (select version_id from test_game_import)
+      and passive_skill_id = 'fixture-passive-a'),
+  -1,
+  'negative passive ranks remain exact in the relational projection'
+);
+
 select results_eq(
   $$
-    select parent_a_pal_id, parent_b_pal_id
+    select parent_a_pal_id, parent_a_gender, parent_b_pal_id, parent_b_gender
       from public.catalog_breeding_recipes
      where version_id = (select version_id from test_game_import)
+     order by parent_a_gender
   $$,
-  $$ values ('fixture-pal-a'::text, 'fixture-pal-b'::text) $$,
-  'parent order is normalized during relational projection'
+  $$ values
+    ('fixture-pal-a'::text, 'female'::text, 'fixture-pal-b'::text, 'male'::text),
+    ('fixture-pal-a'::text, 'male'::text, 'fixture-pal-b'::text, 'female'::text)
+  $$,
+  'gender-specific parent orientations remain distinct in relational projection'
 );
 
 select is(

@@ -21,6 +21,7 @@ from pal_hatch_helper.breeding.recipes import resolve_breeding_child
 from pal_hatch_helper.breeding.supply_chain import prepare_breeding_catalog_version
 from pal_hatch_helper.game_catalog.paths import CatalogPaths
 from pal_hatch_helper.game_catalog.validation import load_catalog_directory
+from pal_hatch_helper.generated import CatalogBreedingRecipe
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
 FIXTURE_ROOT = Path(__file__).parents[4] / "data" / "breeding-fixtures"
@@ -109,6 +110,44 @@ def test_diff_report_is_stable_and_separates_added_removed_and_changed_recipes()
             to_content_hash=after.report.raw_content_hash,
         ).model_dump_json()
     )
+
+
+def test_diff_keeps_gender_specific_recipe_orientations_distinct() -> None:
+    recipes = (
+        CatalogBreedingRecipe(
+            parent_a_pal_id="fixture-pal-a",
+            parent_a_gender="female",
+            parent_b_pal_id="fixture-pal-b",
+            parent_b_gender="male",
+            child_pal_id="fixture-child-a",
+            recipe_type="special",
+            metadata={},
+        ),
+        CatalogBreedingRecipe(
+            parent_a_pal_id="fixture-pal-a",
+            parent_a_gender="male",
+            parent_b_pal_id="fixture-pal-b",
+            parent_b_gender="female",
+            child_pal_id="fixture-child-b",
+            recipe_type="special",
+            metadata={},
+        ),
+    )
+
+    report = build_breeding_data_diff(
+        (),
+        recipes,
+        from_content_hash="a" * 64,
+        to_content_hash="b" * 64,
+    )
+
+    assert report.counts.added == 2
+    assert {
+        (item.parent_a_gender, item.parent_b_gender, item.child_pal_id) for item in report.added
+    } == {
+        ("female", "male", "fixture-child-a"),
+        ("male", "female", "fixture-child-b"),
+    }
 
 
 def test_validated_source_builds_an_unpublished_local_version_with_source_provenance(

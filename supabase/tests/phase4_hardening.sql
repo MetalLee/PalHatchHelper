@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(17);
+select plan(19);
 
 insert into public.game_data_versions (
   id, package_hash, content_hash, schema_version, extractor_name, extractor_version,
@@ -154,6 +154,19 @@ select lives_ok(
   'administrators can create an audited disabled/enabled source record through RPC'
 );
 
+select lives_ok(
+  $$
+    select public.configure_game_data_source(
+      '76000000-0000-4000-8000-000000000002',
+      'Audited Local Game Package',
+      'game_package',
+      null,
+      true
+    )
+  $$,
+  'administrators can register a local game package without persisting a host path'
+);
+
 select throws_ok(
   $$
     select public.get_breeding_data_diff(
@@ -201,6 +214,29 @@ select is(
   )),
   'upload',
   'Agent resolves the exact audited source record by UUID'
+);
+
+select lives_ok(
+  $$
+    select * from public.begin_game_data_import(
+      '76000000-0000-4000-8000-000000000002',
+      jsonb_build_object(
+        'schema_version', '1.1.0',
+        'game_build_id', '24181105',
+        'game_version', 'v1.0.1.100619',
+        'package_hash', repeat('8', 64),
+        'content_hash', repeat('9', 64),
+        'extractor_name', 'palhatch-full-catalog-extractor',
+        'extractor_version', 'fixture',
+        'counts', '{}'::jsonb,
+        'files', '[]'::jsonb,
+        'breeding_source_provenance', null
+      ),
+      'game-catalog-artifacts',
+      'versions/' || repeat('9', 64) || '/catalog.tar.gz'
+    )
+  $$,
+  'a full catalog import treats JSON null breeding provenance as absent'
 );
 
 select throws_ok(

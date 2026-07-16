@@ -298,6 +298,10 @@ export type Database = {
           recipe_type: Database["public"]["Enums"]["breeding_recipe_type"];
           metadata: Json;
           created_at: string;
+          parent_a_gender: string;
+          parent_b_gender: string;
+          normalized_parent_a_gender: string | null;
+          normalized_parent_b_gender: string | null;
         };
         Insert: {
           id?: string;
@@ -308,6 +312,8 @@ export type Database = {
           recipe_type: Database["public"]["Enums"]["breeding_recipe_type"];
           metadata?: Json;
           created_at?: string;
+          parent_a_gender?: string;
+          parent_b_gender?: string;
         };
         Update: {
           id?: string;
@@ -318,6 +324,8 @@ export type Database = {
           recipe_type?: Database["public"]["Enums"]["breeding_recipe_type"];
           metadata?: Json;
           created_at?: string;
+          parent_a_gender?: string;
+          parent_b_gender?: string;
         };
         Relationships: [
           {
@@ -481,6 +489,8 @@ export type Database = {
           child_pal_id: string;
           recipe_type: Database["public"]["Enums"]["breeding_recipe_type"];
           metadata: Json;
+          parent_a_gender: string;
+          parent_b_gender: string;
         };
         Insert: {
           version_id: string;
@@ -489,6 +499,8 @@ export type Database = {
           child_pal_id: string;
           recipe_type: Database["public"]["Enums"]["breeding_recipe_type"];
           metadata?: Json;
+          parent_a_gender?: string;
+          parent_b_gender?: string;
         };
         Update: {
           version_id?: string;
@@ -497,6 +509,8 @@ export type Database = {
           child_pal_id?: string;
           recipe_type?: Database["public"]["Enums"]["breeding_recipe_type"];
           metadata?: Json;
+          parent_a_gender?: string;
+          parent_b_gender?: string;
         };
         Relationships: [
           {

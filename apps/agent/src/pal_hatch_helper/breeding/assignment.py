@@ -116,7 +116,14 @@ def assign_species_route(
             ("male", "female"),
             ("female", "male"),
         )
-        if node.parent_a.signature == node.parent_b.signature:
+        assert node.recipe is not None
+        orientations = tuple(
+            (left_gender, right_gender)
+            for left_gender, right_gender in orientations
+            if node.recipe.parent_a_gender in ("any", left_gender)
+            and node.recipe.parent_b_gender in ("any", right_gender)
+        )
+        if node.parent_a.signature == node.parent_b.signature and len(orientations) > 1:
             orientations = orientations[:1]
         for left_gender, right_gender in orientations:
             left_states = solve(node.parent_a, left_gender)

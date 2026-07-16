@@ -198,6 +198,53 @@ def test_same_species_candidates_equal_unique_unordered_instance_pairs() -> None
     assert len({route.route_key for route in result.routes}) == 4
 
 
+def test_gender_specific_recipe_rejects_the_opposite_parent_orientation() -> None:
+    recipes = (
+        recipe(
+            "pal-a",
+            "pal-b",
+            "pal-target-a",
+            recipe_type="special",
+            parent_a_gender="female",
+            parent_b_gender="male",
+        ),
+        recipe(
+            "pal-a",
+            "pal-b",
+            "pal-target-b",
+            recipe_type="special",
+            parent_a_gender="male",
+            parent_b_gender="female",
+        ),
+    )
+    matching = search(
+        DeterministicBreedingEngine(),
+        request(
+            "pal-target-a",
+            (
+                inventory_pal("a-f", "pal-a", "female"),
+                inventory_pal("b-m", "pal-b", "male"),
+            ),
+        ),
+        recipes,
+    )
+    opposite = search(
+        DeterministicBreedingEngine(),
+        request(
+            "pal-target-a",
+            (
+                inventory_pal("a-m", "pal-a", "male"),
+                inventory_pal("b-f", "pal-b", "female"),
+            ),
+        ),
+        recipes,
+    )
+
+    assert matching.routes
+    assert matching.routes[0].steps[0].child_pal_id == "pal-target-a"
+    assert opposite.routes == []
+
+
 def test_requester_inventory_does_not_require_a_share_flag() -> None:
     result = search(
         DeterministicBreedingEngine(),

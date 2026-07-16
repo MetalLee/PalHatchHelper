@@ -33,3 +33,35 @@ def test_conflicting_children_in_the_same_recipe_type_are_rejected() -> None:
         )
 
     assert raised.value.code is ErrorCode.BREEDING_RECIPE_CONFLICT
+
+
+def test_gender_specific_children_are_selected_by_parent_orientation() -> None:
+    index = BreedingRecipeIndex.build(
+        (
+            recipe(
+                "pal-a",
+                "pal-b",
+                "child-a",
+                recipe_type="special",
+                parent_a_gender="female",
+                parent_b_gender="male",
+            ),
+            recipe(
+                "pal-a",
+                "pal-b",
+                "child-b",
+                recipe_type="special",
+                parent_a_gender="male",
+                parent_b_gender="female",
+            ),
+        )
+    )
+
+    female_male = index.resolve("pal-a", "pal-b", "female", "male")
+    male_female = index.resolve("pal-a", "pal-b", "male", "female")
+
+    assert female_male is not None
+    assert female_male.child_pal_id == "child-a"
+    assert male_female is not None
+    assert male_female.child_pal_id == "child-b"
+    assert index.effective_recipe_count == 2

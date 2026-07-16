@@ -1,6 +1,9 @@
 import asyncio
+import gzip
+import io
 import json
 import shutil
+import tarfile
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
@@ -10,6 +13,7 @@ import pytest
 from pydantic import SecretStr
 
 from pal_hatch_helper.game_catalog.artifacts import (
+    ARTIFACT_FILENAMES,
     SupabaseCatalogArtifactStore,
     create_catalog_bundle,
     extract_catalog_bundle_atomic,
@@ -44,13 +48,13 @@ def version_metadata(*, schema_version: str = "1.0.0") -> GameDataVersion:
         game_build_id="fixture-build",
         game_version="fixture-version",
         package_hash="e" * 64,
-        content_hash="80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4",
+        content_hash="471a576b1660288347e76a45bd1d48a60366517dbd390b4ccdb30416712a389f",
         schema_version=schema_version,
         extractor_name="fixture-extractor",
         extractor_version="1.0.0",
         artifact_bucket="game-catalog-artifacts",
         artifact_path=(
-            "versions/80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4/"
+            "versions/471a576b1660288347e76a45bd1d48a60366517dbd390b4ccdb30416712a389f/"
             "catalog.tar.gz"
         ),
         status="published",
@@ -137,6 +141,45 @@ def test_bundle_round_trip_and_exact_repository_cache_rebuild(tmp_path: Path) ->
     assert load_catalog_directory(destination).content_hash == metadata.content_hash
 
 
+@pytest.mark.parametrize("unsafe_type", ("duplicate", "symlink", "hardlink", "device"))
+def test_bundle_extraction_rejects_duplicate_and_non_regular_members(
+    tmp_path: Path, unsafe_type: str
+) -> None:
+    uncompressed = io.BytesIO()
+    with tarfile.open(fileobj=uncompressed, mode="w", format=tarfile.PAX_FORMAT) as archive:
+        for position, filename in enumerate(sorted(ARTIFACT_FILENAMES)):
+            payload = (fixture_directory() / filename).read_bytes()
+            info = tarfile.TarInfo(filename)
+            info.size = len(payload)
+            if position == 0 and unsafe_type != "duplicate":
+                info.size = 0
+                if unsafe_type == "symlink":
+                    info.type = tarfile.SYMTYPE
+                    info.linkname = "manifest.json"
+                elif unsafe_type == "hardlink":
+                    info.type = tarfile.LNKTYPE
+                    info.linkname = "manifest.json"
+                else:
+                    info.type = tarfile.CHRTYPE
+                    info.devmajor = 1
+                    info.devminor = 3
+                archive.addfile(info)
+            else:
+                archive.addfile(info, io.BytesIO(payload))
+        if unsafe_type == "duplicate":
+            duplicate = tarfile.TarInfo("manifest.json")
+            duplicate.size = 3
+            archive.addfile(duplicate, io.BytesIO(b"{}\n"))
+    compressed = io.BytesIO()
+    with gzip.GzipFile(fileobj=compressed, mode="wb", mtime=0) as output:
+        output.write(uncompressed.getvalue())
+
+    with pytest.raises(StructuredError) as caught:
+        extract_catalog_bundle_atomic(compressed.getvalue(), tmp_path / "unsafe")
+
+    assert caught.value.code is ErrorCode.GAME_DATA_VALIDATION_FAILED
+
+
 def test_repository_stops_on_unsupported_requested_schema(tmp_path: Path) -> None:
     paths = CatalogPaths(tmp_path)
     paths.ensure()
@@ -211,6 +254,39 @@ def test_supabase_artifact_store_uses_private_object_path_and_redacts_failures()
     asyncio.run(scenario())
     assert all("game-catalog-artifacts/versions/" in str(request.url) for request in requests)
     assert all(request.headers["authorization"] == f"Bearer {service_role}" for request in requests)
+
+
+def test_supabase_artifact_store_treats_wrapped_duplicate_as_idempotent() -> None:
+    responses = iter(
+        (
+            httpx.Response(
+                400,
+                json={
+                    "statusCode": "409",
+                    "error": "Duplicate",
+                    "message": "The resource already exists",
+                },
+            ),
+            httpx.Response(400, json={"message": "invalid object"}),
+        )
+    )
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _: next(responses))
+        ) as client:
+            store = SupabaseCatalogArtifactStore(
+                base_url="https://example.supabase.co",
+                service_role_key=SecretStr("fixture-secret"),
+                bucket="game-catalog-artifacts",
+                http_client=client,
+            )
+            await store.put_version_bundle("a" * 64, b"fixture")
+            with pytest.raises(StructuredError) as caught:
+                await store.put_version_bundle("b" * 64, b"fixture")
+            assert caught.value.code is ErrorCode.GAME_DATA_IMPORT_REJECTED
+
+    asyncio.run(scenario())
 
 
 class _MissingArtifactStore:

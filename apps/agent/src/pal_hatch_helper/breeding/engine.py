@@ -3,11 +3,11 @@ import json
 import time
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Final
+from typing import Final, cast
 
 from pal_hatch_helper.breeding.assignment import assign_species_route
 from pal_hatch_helper.breeding.facts import BreedingRuntimeFacts
-from pal_hatch_helper.breeding.index import BreedingRecipeIndex
+from pal_hatch_helper.breeding.index import BreedingRecipeIndex, ConcreteGender
 from pal_hatch_helper.breeding.inventory import select_eligible_inventory
 from pal_hatch_helper.breeding.limits import SearchBudget, SearchStopped
 from pal_hatch_helper.breeding.planning import (
@@ -376,7 +376,21 @@ def _validate_serialized_relations(
 ) -> None:
     for step in steps:
         # Kept behind the generated DTO boundary so no unvalidated relation can escape.
-        effective = index.resolve(step.parent_a.pal_id, step.parent_b.pal_id)
+        if step.parent_a.gender is None or step.parent_b.gender is None:
+            raise RuntimeError("serialized breeding route contains a parent without gender")
+        parent_a_gender = step.parent_a.gender.value
+        parent_b_gender = step.parent_b.gender.value
+        if parent_a_gender not in ("female", "male") or parent_b_gender not in (
+            "female",
+            "male",
+        ):
+            raise RuntimeError("serialized breeding route contains a non-breeding gender")
+        effective = index.resolve(
+            step.parent_a.pal_id,
+            step.parent_b.pal_id,
+            cast(ConcreteGender, parent_a_gender),
+            cast(ConcreteGender, parent_b_gender),
+        )
         if (
             effective is None
             or effective.child_pal_id != step.child_pal_id

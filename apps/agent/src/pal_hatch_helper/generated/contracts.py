@@ -314,6 +314,12 @@ class BreedingRecipeType(StrEnum):
     SPECIAL = "special"
 
 
+class BreedingParentGender(StrEnum):
+    ANY = "any"
+    FEMALE = "female"
+    MALE = "male"
+
+
 class BreedingRecipeSourceRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -368,7 +374,9 @@ class BreedingRecipeSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     parent_a_pal_id: BreedingStableId
+    parent_a_gender: BreedingParentGender
     parent_b_pal_id: BreedingStableId
+    parent_b_gender: BreedingParentGender
     child_pal_id: BreedingStableId
     recipe_type: BreedingRecipeType
     metadata: BreedingMetadata
@@ -378,7 +386,9 @@ class BreedingRecipeChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     parent_a_pal_id: BreedingStableId
+    parent_a_gender: BreedingParentGender
     parent_b_pal_id: BreedingStableId
+    parent_b_gender: BreedingParentGender
     recipe_type: BreedingRecipeType
     before_child_pal_id: BreedingStableId
     after_child_pal_id: BreedingStableId

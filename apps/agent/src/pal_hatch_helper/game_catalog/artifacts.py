@@ -24,6 +24,11 @@ ARTIFACT_FILENAMES = (
     "validation-report.json",
     "checksums.sha256",
 )
+FULL_CATALOG_SIDECAR_FILENAMES = (
+    "source-package-manifest.json",
+    "source-evidence.json",
+    "extraction-summary.json",
+)
 
 
 class CatalogArtifactStore(Protocol):
@@ -145,10 +150,26 @@ class SupabaseCatalogArtifactStore:
             content=payload,
             headers={**self._headers, "Content-Type": content_type, "x-upsert": "false"},
         )
-        if response.status_code == 409:
+        if self._is_duplicate_response(response):
             return
         if response.is_error:
             raise self._storage_error(response.status_code)
+
+    @staticmethod
+    def _is_duplicate_response(response: httpx.Response) -> bool:
+        if response.status_code == 409:
+            return True
+        if response.status_code != 400:
+            return False
+        try:
+            payload = response.json()
+        except ValueError:
+            return False
+        return bool(
+            isinstance(payload, dict)
+            and str(payload.get("statusCode")) == "409"
+            and payload.get("error") == "Duplicate"
+        )
 
     async def get_version_bundle(self, content_hash: str) -> bytes:
         response = await self._request("GET", content_hash, headers=self._headers)
@@ -227,13 +248,16 @@ class SupabaseCatalogArtifactStore:
 
 
 def create_catalog_bundle(directory: Path) -> bytes:
-    load_catalog_directory(directory)
+    catalog = load_catalog_directory(directory)
+    filenames = ARTIFACT_FILENAMES
+    if catalog.schema_version == "1.1.0":
+        filenames = (*filenames, *FULL_CATALOG_SIDECAR_FILENAMES)
     output = io.BytesIO()
     with (
         gzip.GzipFile(fileobj=output, mode="wb", filename="", mtime=0) as compressed,
         tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as archive,
     ):
-        for filename in sorted(ARTIFACT_FILENAMES):
+        for filename in sorted(filenames):
             path = directory / filename
             if not path.is_file():
                 raise StructuredError(
@@ -261,7 +285,11 @@ def extract_catalog_bundle_atomic(bundle: bytes, destination: Path) -> None:
         with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as archive:
             members = archive.getmembers()
             names = {member.name for member in members}
-            if names != set(ARTIFACT_FILENAMES):
+            allowed_file_sets = (
+                set(ARTIFACT_FILENAMES),
+                set((*ARTIFACT_FILENAMES, *FULL_CATALOG_SIDECAR_FILENAMES)),
+            )
+            if len(members) != len(names) or names not in allowed_file_sets:
                 raise StructuredError(
                     code=ErrorCode.GAME_DATA_VALIDATION_FAILED,
                     summary="Catalog bundle contains an invalid file set.",
@@ -269,7 +297,7 @@ def extract_catalog_bundle_atomic(bundle: bytes, destination: Path) -> None:
                 )
             for member in members:
                 path = PurePosixPath(member.name)
-                if member.isdir() or path.is_absolute() or ".." in path.parts:
+                if not member.isfile() or path.is_absolute() or ".." in path.parts:
                     raise StructuredError(
                         code=ErrorCode.GAME_DATA_VALIDATION_FAILED,
                         summary="Catalog bundle contains an unsafe path.",
