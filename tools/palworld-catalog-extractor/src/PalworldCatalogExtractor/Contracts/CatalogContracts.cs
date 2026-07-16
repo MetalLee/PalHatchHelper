@@ -29,7 +29,7 @@ public static class CatalogCategories
         new(CatalogCategory.ActiveSkills, "active_skills", "active-skills.jsonl", ["active_skill_id"]),
         new(CatalogCategory.PalActiveSkills, "pal_active_skills", "pal-active-skills.jsonl", ["pal_id", "active_skill_id", "learn_level"]),
         new(CatalogCategory.PartnerSkills, "partner_skills", "partner-skills.jsonl", ["partner_skill_id"]),
-        new(CatalogCategory.BreedingRecipes, "breeding_recipes", "breeding-recipes.jsonl", ["parent_a_pal_id", "parent_b_pal_id", "recipe_type"]),
+        new(CatalogCategory.BreedingRecipes, "breeding_recipes", "breeding-recipes.jsonl", ["parent_a_pal_id", "parent_a_gender", "parent_b_pal_id", "parent_b_gender", "recipe_type"]),
         new(CatalogCategory.Localizations, "localizations", "localizations.jsonl", ["locale", "text_key"]),
     ];
 

@@ -63,6 +63,9 @@ def test_repository_regression_fixture_normalizes_parents_and_prefers_special_re
         ("fixture-pal-a", "fixture-pal-c"),
         ("fixture-pal-d", "fixture-pal-e"),
     ]
+    assert all(
+        item.parent_a_gender == "any" and item.parent_b_gender == "any" for item in result.recipes
+    )
     assert (
         resolve_breeding_child(result.recipes, "fixture-pal-b", "fixture-pal-a") == "fixture-pal-d"
     )

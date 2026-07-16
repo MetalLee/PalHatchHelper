@@ -1,3 +1,4 @@
+using PalHatchHelper.CatalogExtractor.Configuration;
 using PalHatchHelper.CatalogExtractor.Contracts;
 
 namespace PalHatchHelper.CatalogExtractor.Readers;
@@ -45,4 +46,6 @@ public static class ProductionReaderSet
         new UnconfirmedBreedingRecipeReader(),
         new UnconfirmedLocalizationReader(),
     ];
+
+  public static ICatalogReader[] Create(ExtractionConfig config) => ConfirmedCatalogReaders.Create(config);
 }

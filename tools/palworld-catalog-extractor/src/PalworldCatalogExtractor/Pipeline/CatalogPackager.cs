@@ -54,12 +54,12 @@ public static class CatalogPackager
     var destination = Path.Combine(directory, $"palworld-catalog-{buildId}-{hash[..12]}.tar.zst");
     var temporary = Path.Combine(directory, $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
     using var tarBuffer = new MemoryStream();
-    using (var tar = new TarWriter(tarBuffer, TarEntryFormat.Pax, leaveOpen: true))
+    using (var tar = new TarWriter(tarBuffer, TarEntryFormat.Ustar, leaveOpen: true))
     {
       foreach (var file in files)
       {
         using var data = File.Open(Path.Combine(directory, file), FileMode.Open, FileAccess.Read, FileShare.Read);
-        var entry = new PaxTarEntry(TarEntryType.RegularFile, file)
+        var entry = new UstarTarEntry(TarEntryType.RegularFile, file)
         {
           DataStream = data,
           Gid = 0,

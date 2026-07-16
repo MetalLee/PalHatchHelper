@@ -7,18 +7,21 @@ public static class GitOutputGuard
 {
   public static void RequireIgnoredAndUntracked(string outputPath)
   {
-    var root = RunGit(Environment.CurrentDirectory, ["rev-parse", "--show-toplevel"]);
-    if (root.ExitCode != 0 || string.IsNullOrWhiteSpace(root.Output))
+    var fullOutputPath = Path.GetFullPath(outputPath);
+    var containingRoot = FindContainingWorktreeRoot(fullOutputPath);
+    var root = containingRoot is null
+        ? RunGit(Environment.CurrentDirectory, ["rev-parse", "--show-toplevel"])
+        : null;
+    if (containingRoot is null && (root!.ExitCode != 0 || string.IsNullOrWhiteSpace(root.Output)))
     {
       throw new ExtractorException(ErrorCodes.OutputNotIgnored, "A Git worktree is required to audit the output path.");
     }
 
-    var repositoryRoot = Path.GetFullPath(root.Output.Trim());
-    var fullOutputPath = Path.GetFullPath(outputPath);
+    var repositoryRoot = Path.GetFullPath(containingRoot ?? root!.Output.Trim());
     var relative = Path.GetRelativePath(repositoryRoot, fullOutputPath).Replace('\\', '/');
     if (relative == ".." || relative.StartsWith("../", StringComparison.Ordinal))
     {
-      throw new ExtractorException(ErrorCodes.OutputNotIgnored, "The output path must be inside this ignored Git worktree.");
+      return;
     }
 
     var ignored = RunGit(repositoryRoot, ["check-ignore", "--no-index", "--quiet", "--", relative]);
@@ -32,6 +35,23 @@ public static class GitOutputGuard
     {
       throw new ExtractorException(ErrorCodes.OutputTracked, "The output path contains Git-tracked files.");
     }
+  }
+
+  private static string? FindContainingWorktreeRoot(string outputPath)
+  {
+    var current = new DirectoryInfo(Directory.Exists(outputPath) ? outputPath : Path.GetDirectoryName(outputPath)!);
+    while (current is not null)
+    {
+      var gitEntry = Path.Combine(current.FullName, ".git");
+      if (Directory.Exists(gitEntry) || File.Exists(gitEntry))
+      {
+        return current.FullName;
+      }
+
+      current = current.Parent;
+    }
+
+    return null;
   }
 
   private static ProcessResult RunGit(string workingDirectory, IReadOnlyList<string> arguments)

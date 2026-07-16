@@ -219,7 +219,7 @@ class CatalogPassiveSkill(BaseModel):
     passive_skill_id: StableId
     name_key: TextKey
     description_key: TextKey | None
-    rank: Annotated[int, Field(ge=0)]
+    rank: int
     is_negative: bool
     metadata: Metadata
 
@@ -267,7 +267,9 @@ class CatalogBreedingRecipe(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     parent_a_pal_id: StableId
+    parent_a_gender: Literal["any", "female", "male"] = "any"
     parent_b_pal_id: StableId
+    parent_b_gender: Literal["any", "female", "male"] = "any"
     child_pal_id: StableId
     recipe_type: Literal["normal", "special"]
     metadata: Metadata

@@ -355,7 +355,7 @@
         "description_key": {
           "anyOf": [{ "$ref": "#/$defs/TextKey" }, { "type": "null" }]
         },
-        "rank": { "type": "integer", "minimum": 0 },
+        "rank": { "type": "integer" },
         "is_negative": { "type": "boolean" },
         "metadata": { "$ref": "#/$defs/Metadata" }
       }
@@ -440,7 +440,17 @@
       ],
       "properties": {
         "parent_a_pal_id": { "$ref": "#/$defs/StableId" },
+        "parent_a_gender": {
+          "type": "string",
+          "enum": ["any", "female", "male"],
+          "default": "any"
+        },
         "parent_b_pal_id": { "$ref": "#/$defs/StableId" },
+        "parent_b_gender": {
+          "type": "string",
+          "enum": ["any", "female", "male"],
+          "default": "any"
+        },
         "child_pal_id": { "$ref": "#/$defs/StableId" },
         "recipe_type": { "type": "string", "enum": ["normal", "special"] },
         "metadata": { "$ref": "#/$defs/Metadata" }

@@ -44,13 +44,13 @@ def version_metadata(*, schema_version: str = "1.0.0") -> GameDataVersion:
         game_build_id="fixture-build",
         game_version="fixture-version",
         package_hash="e" * 64,
-        content_hash="80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4",
+        content_hash="471a576b1660288347e76a45bd1d48a60366517dbd390b4ccdb30416712a389f",
         schema_version=schema_version,
         extractor_name="fixture-extractor",
         extractor_version="1.0.0",
         artifact_bucket="game-catalog-artifacts",
         artifact_path=(
-            "versions/80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4/"
+            "versions/471a576b1660288347e76a45bd1d48a60366517dbd390b4ccdb30416712a389f/"
             "catalog.tar.gz"
         ),
         status="published",

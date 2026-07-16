@@ -88,6 +88,7 @@ public sealed class CatalogPipelineTests
     File.Delete(Path.Combine(output.Path, "forbidden.pak"));
     var packagePath = CatalogPackager.Package(output.Path);
     var firstPackage = File.ReadAllBytes(packagePath);
+    Thread.Sleep(TimeSpan.FromSeconds(1.1));
     Assert.Equal(packagePath, CatalogPackager.Package(output.Path));
     Assert.Equal(firstPackage, File.ReadAllBytes(packagePath));
 
@@ -329,8 +330,8 @@ internal static class SyntheticReaders
                     ["passive_skill_id"] = "fixturepassive",
                     ["name_key"] = "passive.fixture.name",
                     ["description_key"] = "passive.fixture.description",
-                    ["rank"] = 1,
-                    ["is_negative"] = false,
+                    ["rank"] = -1,
+                    ["is_negative"] = true,
                 }),
             ]),
             new FixtureReader(CatalogCategory.ActiveSkills,
@@ -369,7 +370,9 @@ internal static class SyntheticReaders
                 Record("recipe", "FixtureRecipe", new JsonObject
                 {
                     ["parent_a_pal_id"] = mutation == "parent-order" ? "fixturepalb" : "fixturepala",
+                    ["parent_a_gender"] = "any",
                     ["parent_b_pal_id"] = mutation == "parent-order" ? "fixturepala" : "fixturepalb",
+                    ["parent_b_gender"] = "any",
                     ["child_pal_id"] = "fixturepalb",
                     ["recipe_type"] = "normal",
                 }),

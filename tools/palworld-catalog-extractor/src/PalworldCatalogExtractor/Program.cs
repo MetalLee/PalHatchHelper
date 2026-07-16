@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using PalHatchHelper.CatalogExtractor.Configuration;
@@ -77,7 +76,7 @@ public static class Program
     var sourceManifest = SourcePackageManifestBuilder.Build(config);
     var packageHash = SourcePackageManifestBuilder.ComputePackageHash(sourceManifest);
     var provenance = new SourceProvenance(
-        ReadRepositoryCommit(),
+        ExtractorBuildIdentity.ReadRepositoryCommit(),
         Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unversioned",
         client.AppId,
         client.BuildId,
@@ -92,7 +91,7 @@ public static class Program
         DateTimeOffset.UtcNow);
     try
     {
-      var result = await new CatalogExtractionPipeline(ProductionReaderSet.Create()).ExtractAsync(
+      var result = await new CatalogExtractionPipeline(ProductionReaderSet.Create(config)).ExtractAsync(
           new ExtractionRequest(
               config.OutputPath,
               config.ServerBuildId,
@@ -118,36 +117,4 @@ public static class Program
     return new JsonObject { ["package_path"] = path, ["status"] = "packaged" };
   }
 
-  private static string ReadRepositoryCommit()
-  {
-    using var process = new Process
-    {
-      StartInfo = new ProcessStartInfo
-      {
-        FileName = "git",
-        RedirectStandardOutput = true,
-        RedirectStandardError = true,
-        UseShellExecute = false,
-        CreateNoWindow = true,
-      },
-    };
-    process.StartInfo.ArgumentList.Add("rev-parse");
-    process.StartInfo.ArgumentList.Add("HEAD");
-    try
-    {
-      process.Start();
-      var value = process.StandardOutput.ReadToEnd().Trim();
-      process.WaitForExit();
-      if (process.ExitCode == 0 && value.Length == 40)
-      {
-        return value;
-      }
-    }
-    catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException)
-    {
-      // Report a stable explicit build identity instead of emitting environment details.
-    }
-
-    return "uncommitted-extractor-build";
-  }
 }

@@ -1,6 +1,6 @@
 {
   "compression": "tar.gz",
-  "content_hash": "80b369685de4f506e8b72251718db93f70ae209a93d56a6d1f5c012de4fb2be4",
+  "content_hash": "471a576b1660288347e76a45bd1d48a60366517dbd390b4ccdb30416712a389f",
   "counts": {
     "active_skills": 1,
     "breeding_recipes": 1,
@@ -22,7 +22,7 @@
     {
       "filename": "breeding-recipes.jsonl",
       "record_count": 1,
-      "sha256": "585ab4b15cf2c07c397a4c840b2a9ae49db9807d57826193874fdbb65a6467c4"
+      "sha256": "b353e474332b16a49c5524fbef93b3d2c2baeb3cbea90f1a72ea4efadc72414e"
     },
     {
       "filename": "localizations.jsonl",
