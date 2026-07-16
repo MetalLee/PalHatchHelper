@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=pending、production_publish=blocked；Phase 5 implementation=completed、automated_gates=passed；Phase 6 受 Phase 4 真实数据验收阻塞
+- 状态：Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 本地开发与测试门禁已解除
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -372,12 +372,12 @@
 
 ## Phase 4：配种数据版本和确定性配种算法
 
-### 当前进度（2026-07-15）
+### 当前进度（2026-07-16）
 
 - Phase 4A/4B 仅作为实现检查点，不改变本节的统一验收范围。
 - 已完成受审计来源入口、精确基础目录/provenance 绑定、六类非配种事实发布门禁、确定性两层搜索、实例分配、候选物理去重、四模式全候选池排名和完整评分明细。
 - 数据库已启用与引擎一致的四套 v2 评分配置；真实本地 Claim 必须经精确 published 目录、content hash、world 和固定库存快照校验后才能进入引擎。
-- 自动化高风险门禁已通过；真实来源的许可、固定 source commit/release、Palworld Steam build ID、游戏版本和配方真实性仍须人工确认。该门禁继续阻塞真实数据生产发布和 Phase 6，但不阻塞仅依赖 Phase 1、Phase 3 和非生产 Supabase 的 Phase 5。
+- Build `24181105` 的真实七类目录已完成人工批准、本地测试 world 发布、回滚与恢复演练；Phase 4 的 `real_data_acceptance` 和 `local_test_publish` 已完成。生产 Supabase/Vercel 发布仍为 `not_started`，属于 Phase 8，不能把本地测试发布描述为生产发布。
 
 ### 阶段目标
 
@@ -523,9 +523,9 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 ## Phase 6：配种器、异步任务和路线比较
 
-### 当前阻塞（2026-07-15）
+### 当前状态（2026-07-16）
 
-- Phase 6 继续受 Phase 4 `real_data_acceptance=pending` 与 `production_publish=blocked` 阻塞；Phase 5 开发不解除该门禁。
+- Phase 4 `real_data_acceptance=completed` 且 `local_test_publish=completed`，Phase 6 本地开发与测试门禁已解除。生产 Supabase 与 Vercel 部署仍未授权，生产发布属于 Phase 8。
 
 ### 阶段目标
 

@@ -113,3 +113,33 @@ for (const [path, expectedStatus] of phase5StatusDocuments) {
     process.exitCode = 1;
   }
 }
+
+const phase4StatusDocuments = [
+  [
+    "docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md",
+    "Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started",
+  ],
+  [
+    "docs/superpowers/plans/2026-07-13-palworld-breeding-system-implementation.md",
+    "Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started",
+  ],
+  [
+    "docs/project-status.md",
+    "| Phase 4 | `real_data_acceptance` | `completed`",
+  ],
+  [
+    "docs/project-status.md",
+    "| Phase 4 | `local_test_publish`   | `completed`",
+  ],
+  [
+    "docs/project-status.md",
+    "| Phase 4 | `production_publish`   | `not_started`",
+  ],
+];
+for (const [path, expectedStatus] of phase4StatusDocuments) {
+  const contents = await readFile(path, "utf8");
+  if (!contents.includes(expectedStatus)) {
+    console.error(`Phase 4 completion status is inconsistent: ${path}`);
+    process.exitCode = 1;
+  }
+}

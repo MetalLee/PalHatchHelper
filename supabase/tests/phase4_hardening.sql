@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(19);
+select plan(20);
 
 insert into public.game_data_versions (
   id, package_hash, content_hash, schema_version, extractor_name, extractor_version,
@@ -50,6 +50,27 @@ select throws_ok(
   'P0001', 'BREEDING_BASE_CATALOG_MISMATCH',
   'the world pointer cannot publish a breeding candidate with hidden base-catalog changes'
 );
+
+update public.game_data_versions
+   set manifest = jsonb_build_object('breeding_source_provenance', null),
+       status = 'published',
+       published_at = now()
+ where id = '75000000-0000-4000-8000-000000000001';
+
+select lives_ok(
+  $$
+    update public.worlds
+       set active_game_data_version_id = '75000000-0000-4000-8000-000000000001'
+     where id = '10000000-0000-4000-8000-000000000001'
+  $$,
+  'a full catalog with JSON null breeding provenance can become active'
+);
+
+select set_config('app.game_data_rollback', 'true', true);
+update public.worlds
+   set active_game_data_version_id = '51000000-0000-4000-8000-000000000001'
+ where id = '10000000-0000-4000-8000-000000000001';
+select set_config('app.game_data_rollback', 'false', true);
 
 select is(
   (select count(*)::integer from public.scoring_profiles

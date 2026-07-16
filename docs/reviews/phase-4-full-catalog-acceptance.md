@@ -1,20 +1,42 @@
 ---
-decision: pending
-status: candidate_validated
+decision: approved_for_private_internal_use
+approved_by: MetalLee
+approved_at: 2026/7/16
+status: published_to_local_test_world
 scope: private_internal_use
 target_server_build_id: "24181105"
 candidate_version_id: f2718a96-5463-43ff-863e-225102bdfca2
 candidate_status: validated
 content_hash: 872e4a79af5b5043ee97d9a4287a41bba407afc96ff3b0a6de56fff827d334b3
+published_version_id: f2718a96-5463-43ff-863e-225102bdfca2
+published_version_status: published
+published_at: 2026-07-16T05:33:21.888027Z
+local_test_world_id: 10000000-0000-4000-8000-000024181105
+previous_version_id: 51000000-0000-4000-8000-000000000001
+rollback_exercise: passed
+restored_active_version_id: f2718a96-5463-43ff-863e-225102bdfca2
+final_deterministic_digest: 656b27f1442b759cf78acd2d3197c094a28bafccfa878352a12318711de10082
+production_publish: not_started
+risk_acceptance:
+  client_and_server_app_ids_are_different: true
+  client_and_server_game_versions_match: true
+  both_build_ids_and_manifests_are_fixed: true
+  mappings_usmap_is_fixed: true
+  source_package_fingerprint_is_fixed: true
+  extractor_commit_is_fixed: true
+  private_internal_use_only: true
+  public_redistribution_allowed: false
 ---
 
 # Phase 4 full catalog acceptance — Build 24181105
 
 ## Decision boundary
 
-This report records a validated local candidate only. No catalog publish, rollback,
-warm-cache operation, production Supabase access, Vercel deployment, Palworld
-container change, or Phase 6 work was performed. Human approval is absent by design.
+The project owner approved the validated candidate for private internal use. The
+approved version was published only to the local test world, exercised through
+rollback and recovery, and warmed through the exact-version cache. No production
+Supabase access, Vercel deployment, Palworld container change, or production publish
+was performed.
 
 The current published fixture is fictional test data, not a previous real Palworld
 catalog version. It is used only as a local difference and rollback baseline.
@@ -211,7 +233,7 @@ Aggregate deterministic digest:
 | ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | Node / Python runtime                            | Node `22.23.1`; Python `3.12.13`                                                               |
 | `pnpm install --frozen-lockfile`                 | passed                                                                                         |
-| `pnpm check`                                     | passed; Agent 168 passed, 1 separately exercised integration test skipped in this invocation   |
+| `pnpm check`                                     | passed; Agent 165 passed, 4 environment-gated tests skipped in this invocation                  |
 | Agent integration test with loopback credentials | 1 passed                                                                                       |
 | `uv run pytest tests/breeding`                   | 41 passed                                                                                      |
 | ruff check / format check / mypy                 | passed; 66 typed source files                                                                  |
@@ -219,7 +241,7 @@ Aggregate deterministic digest:
 | package safety tests                             | 4 malicious member cases passed plus real tar.zst audit                                        |
 | Parser Landlock                                  | ABI 4; parser sandbox tests passed fail-closed behavior                                        |
 | `supabase db lint`                               | passed, no schema errors                                                                       |
-| `supabase test db`                               | passed, 222 tests across 9 files                                                               |
+| `supabase test db`                               | passed, 223 tests across 9 files                                                               |
 | contracts generation/drift                       | passed                                                                                         |
 | Stable ID cross-language                         | TypeScript and Python tests passed; Windows .NET 10 x64 extractor checks passed in Draft PR CI |
 | Web unit/build                                   | passed in `pnpm check`                                                                         |
@@ -233,7 +255,8 @@ claimed as a local pass. It must come from the Draft PR required GitHub Actions 
 
 Draft PR [#5](https://github.com/MetalLee/PalHatchHelper/pull/5) targets `main` from
 `agent/phase-4-full-catalog-acceptance-24181105` and remains unmerged. All applicable
-required CI passed for acceptance head `cb1c700ed78270a680ac358feabcda2f5eb8f73d`:
+required CI passed for the human-approval head
+`040bb6371368c038da4727c72f24357cd30f3811`:
 
 | Check                          | Result  |
 | ------------------------------ | ------- |
@@ -246,33 +269,54 @@ required CI passed for acceptance head `cb1c700ed78270a680ac358feabcda2f5eb8f73d
 
 The Windows run compiled and tested the synthetic extractor on `windows-latest`. Its
 new regression verifies that gender-qualified recipe outcomes retain distinct
-canonical keys. The evidence-only report update is subject to the same PR checks;
-handoff occurs only after the latest PR head is also green. The report remains pending
-for independent human approval.
+canonical keys. The Phase 4 closure commit, including the forward database migration,
+is subject to the same required checks before branch handoff.
 
 ## Rollback target and known limits
 
 The recorded local rollback target is published fixture version
-`51000000-0000-4000-8000-000000000001`. Rollback was not called in prepare mode.
-The candidate is intentionally unreadable to ordinary authenticated users: direct
-candidate Pal and passive visibility both returned zero through RLS.
+`51000000-0000-4000-8000-000000000001`. The local test world was created in one
+audited local database transaction as `phase4-local-build-24181105`, with ID
+`10000000-0000-4000-8000-000024181105` and both initial pointers fixed to that
+rollback target.
+
+The first publish attempt was atomically rejected because the existing fail-closed
+breeding-only publish trigger treated JSON `null` provenance as an object. A failing
+pgTAP regression reproduced `BREEDING_BASE_CATALOG_MISMATCH`; forward migration
+`20260716020000_phase4_full_catalog_publish_null_provenance.sql` now treats only an
+absent or JSON-null optional value as a full catalog while retaining the object
+provenance mismatch gate. The targeted database test passes 20/20 and database lint
+reports no errors.
+
+The existing `catalog publish` RPC then published version
+`f2718a96-5463-43ff-863e-225102bdfca2` at
+`2026-07-16T05:33:21.888027Z`. Both active pointers moved to the new version, all
+seven relational projections and the 41,617-row compatibility recipe projection
+were present, and exact-version warm-cache metadata matched the version, content
+hash, and Schema 1.1.0.
+
+The rollback RPC returned both pointers to the old fixture, the old projection was
+readable, and all three historical jobs retained their original snapshot and old
+version IDs. The same publish RPC then restored both pointers to the approved
+version. Final smoke testing retained aggregate deterministic digest
+`656b27f1442b759cf78acd2d3197c094a28bafccfa878352a12318711de10082`.
+
+Before publication, the validated candidate was intentionally unreadable to ordinary
+authenticated users: direct candidate Pal and passive visibility both returned zero
+through RLS. Browser and task access remain bound to a user's authorized world and
+published pointers.
 
 Known limits:
 
 - this is private internal acceptance only; public redistribution is not allowed;
 - the fixture diff is not a real old-version game diff;
-- no local publish/rollback exercise occurs until the explicitly approved publish mode;
-- Draft PR is intentionally unmerged and awaiting independent human approval;
-- production publish and deployment are not authorized.
+- Draft PR remains intentionally unmerged while the local acceptance branch is closed;
+- production Supabase publish and deployment remain not started and unauthorized;
+- this local test publish does not authorize public redistribution.
 
 ## Human approval checklist
 
-Before approval, the project owner must confirm the Draft PR remains unmerged and
-every required check passes. The owner must then independently verify the fixed
-package/provenance, counts, exclusion audit, partner absence, passive arithmetic,
-deterministic smoke digest, rollback target, asset restrictions, and private-use
-scope.
-
-Only the project owner may change the pending decision, add the approver identity and
-actual approval time, and record all required risk-acceptance statements. Codex must
-not add or alter those approval facts.
+The project owner independently recorded the approval identity, actual approval date,
+decision, and required risk-acceptance statements in the front matter. Those facts
+remain human-owned and were not added or altered by Codex. The approval applies only
+to private internal use and this local test publication.

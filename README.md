@@ -1,6 +1,6 @@
 # PalHatchHelper
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。当前仓库的 Phase 4 代码实现已完成且自动化高风险门禁已通过；真实来源许可、固定 source commit/release、Palworld Steam build ID、游戏版本和配方真实性仍待人工验收，因此真实数据生产发布继续阻塞，Phase 4 不标记为最终完成。Phase 5 Web 基础已按批准的并行边界完成实现与自动化门禁，只使用 Phase 1 RLS/RPC、Phase 3 脱敏库存以及本地或预览 Supabase。仓库不连接生产 Supabase、不读取真实 Palworld 存档或游戏包，也未接入真实生产配种数据。
+PalHatchHelper 第一版是“帕鲁配种协作工作台”。Phase 4 的实现、自动化门禁、Build `24181105` 真实目录验收及本地测试 world 发布/回滚演练均已完成；这不是生产发布，生产 Supabase 与 Vercel 部署仍为 `not_started`，属于 Phase 8。Phase 5 Web 基础已按批准的并行边界完成实现与自动化门禁。Phase 6 的本地开发与测试门禁现已解除，但仓库仍不连接生产 Supabase、不读取真实 Palworld 存档，也不部署生产服务。
 
 ## 前置工具
 
