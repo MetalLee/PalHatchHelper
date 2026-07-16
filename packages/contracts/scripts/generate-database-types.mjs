@@ -101,11 +101,14 @@ const functions = await sql`
       'configure_game_data_source',
       'confirm_step_offspring',
       'create_breeding_job',
+      'create_breeding_job_v2',
       'current_guild_id',
       'current_player_id',
       'fail_breeding_job',
       'heartbeat_breeding_job',
       'get_breeding_data_diff',
+      'get_breeder_form_context',
+      'get_breeding_job_detail',
       'get_active_scoring_profiles_for_agent',
       'get_breeding_inventory_for_agent',
       'get_game_data_source_for_agent',
@@ -121,6 +124,8 @@ const functions = await sql`
       'set_pal_share_enabled',
       'set_pal_share_enabled_for_web',
       'publish_inventory_snapshot',
+      'persist_breeding_ai_result',
+      'persist_breeding_algorithm_result',
       'update_breeding_step_status'
     )
   order by procedure.proname, procedure.oid

@@ -36,10 +36,14 @@ def recipe(
     child: str,
     *,
     recipe_type: str = "normal",
+    parent_a_gender: str = "any",
+    parent_b_gender: str = "any",
 ) -> CatalogBreedingRecipe:
     return CatalogBreedingRecipe(
         parent_a_pal_id=parent_a,
+        parent_a_gender=parent_a_gender,
         parent_b_pal_id=parent_b,
+        parent_b_gender=parent_b_gender,
         child_pal_id=child,
         recipe_type=recipe_type,
         metadata={"fixture": True},

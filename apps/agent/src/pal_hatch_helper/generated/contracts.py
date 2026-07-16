@@ -314,6 +314,12 @@ class BreedingRecipeType(StrEnum):
     SPECIAL = "special"
 
 
+class BreedingParentGender(StrEnum):
+    ANY = "any"
+    FEMALE = "female"
+    MALE = "male"
+
+
 class BreedingRecipeSourceRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -368,7 +374,9 @@ class BreedingRecipeSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     parent_a_pal_id: BreedingStableId
+    parent_a_gender: BreedingParentGender
     parent_b_pal_id: BreedingStableId
+    parent_b_gender: BreedingParentGender
     child_pal_id: BreedingStableId
     recipe_type: BreedingRecipeType
     metadata: BreedingMetadata
@@ -378,7 +386,9 @@ class BreedingRecipeChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     parent_a_pal_id: BreedingStableId
+    parent_a_gender: BreedingParentGender
     parent_b_pal_id: BreedingStableId
+    parent_b_gender: BreedingParentGender
     recipe_type: BreedingRecipeType
     before_child_pal_id: BreedingStableId
     after_child_pal_id: BreedingStableId
@@ -811,6 +821,373 @@ class InventoryFailureRpcRequest(BaseModel):
     failure: InventoryFailurePayload
 
 
+type BreederStableId = Annotated[
+    str,
+    Field(min_length=1),
+    Field(max_length=120),
+    Field(pattern="^[a-z0-9][a-z0-9._-]*$"),
+]
+
+
+type BreederSha256 = Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
+
+
+class BreederOptimizationMode(StrEnum):
+    BALANCED = "balanced"
+    FASTEST = "fastest"
+    HIGHEST_SUCCESS = "highest_success"
+    LEAST_BORROWING = "least_borrowing"
+
+
+class BreederJobStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    ALGORITHM_COMPLETED = "algorithm_completed"
+    AI_ENRICHING = "ai_enriching"
+    RETRY_PENDING = "retry_pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class BreederDifficulty(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class AIProviderName(StrEnum):
+    OPENAI_COMPATIBLE = "openai_compatible"
+    CODEX_CLI = "codex_cli"
+    TEMPLATE = "template"
+
+
+class CreateBreedingJobResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: UUID
+    reused: bool
+    status: BreederJobStatus
+
+
+class BreederCatalogPalOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pal_id: BreederStableId
+    encyclopedia_no: Annotated[int, Field(ge=1)] | None
+    display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    element_types: Annotated[
+        list[Annotated[str, Field(min_length=1), Field(max_length=80)]],
+        Field(min_length=1),
+        AfterValidator(_ensure_unique),
+    ]
+
+
+class BreederPassiveOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    passive_skill_id: BreederStableId
+    display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    rank: int
+    is_negative: bool
+
+
+class BreederFormContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_state: Literal["healthy", "stale", "parse_error"]
+    inventory_snapshot_id: UUID
+    game_data_version_id: UUID
+    game_data_content_hash: BreederSha256
+    game_build_id: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    game_version: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    algorithm_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    scoring_profile_versions: dict[str, object]
+    pals: list[BreederCatalogPalOption]
+    passive_skills: list[BreederPassiveOption]
+
+
+class BreederFormContextRpcSuccess(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ok: Literal[True]
+    data: BreederFormContext
+
+
+class BreederFormContextRpcFailure(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ok: Literal[False]
+    error_code: Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]
+
+
+type BreederFormContextRpcResult = BreederFormContextRpcSuccess | BreederFormContextRpcFailure
+
+
+class JobProgress(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: BreederJobStatus
+    attempt_count: Annotated[int, Field(ge=0)]
+    error_code: Annotated[str, Field(max_length=100), Field(pattern="^[A-Z][A-Z0-9_]*$")] | None
+
+
+class RouteRawScoreMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    generation_count: Annotated[int, Field(ge=0)]
+    step_count: Annotated[int, Field(ge=0)]
+    unique_starting_instance_count: Annotated[int, Field(ge=1)]
+    borrowed_pal_count: Annotated[int, Field(ge=0)]
+    inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    passive_carrier_count: Annotated[int, Field(ge=0)]
+    passive_concentration: Annotated[float, Field(ge=0), Field(le=1)]
+    extra_passive_count: Annotated[int, Field(ge=0)]
+    intermediate_pal_count: Annotated[int, Field(ge=0)]
+    intermediate_passive_checkpoint_count: Annotated[int, Field(ge=0)]
+    required_gender_checkpoint_count: Annotated[int, Field(ge=0)]
+    estimated_attempts_min: Annotated[int, Field(ge=0)]
+    estimated_attempts_max: Annotated[int, Field(ge=0)]
+    difficulty: BreederDifficulty
+
+
+class RouteScoreComponent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    component: Literal[
+        "route_length",
+        "inventory_coverage",
+        "passive_concentration",
+        "borrowing",
+        "intermediate_cost",
+        "attempt_cost",
+        "stability",
+    ]
+    raw_value: Annotated[float, Field(ge=0)]
+    normalized_score: Annotated[float, Field(ge=0), Field(le=100)]
+    weight: Annotated[float, Field(ge=0), Field(le=1)]
+    weighted_score: Annotated[float, Field(ge=0), Field(le=100)]
+
+
+class RouteModeScore(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    optimization_mode: BreederOptimizationMode
+    scoring_profile_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    total_score: Annotated[float, Field(ge=0), Field(le=100)]
+    components: Annotated[list[RouteScoreComponent], Field(min_length=7), Field(max_length=7)]
+
+
+class RouteScoreBreakdown(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scoring_profile_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    estimate_basis: Literal["strategy_heuristic_no_verified_probability"]
+    raw_metrics: RouteRawScoreMetrics
+    mode_scores: Annotated[list[RouteModeScore], Field(min_length=4), Field(max_length=4)]
+
+
+class BreedingRouteViewParent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_type: Literal["inventory", "intermediate"]
+    pal_id: BreederStableId
+    instance_uid: Annotated[str, Field(max_length=160)] | None
+    owner_display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    gender: Literal["male", "female", "genderless", "unknown"] | None
+    passive_skill_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=64),
+        AfterValidator(_ensure_unique),
+    ]
+    required_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    borrowed: bool
+    produced_by_step_index: Annotated[int, Field(ge=0)] | None
+    location_type: (
+        Literal[
+            "player_party",
+            "player_storage",
+            "base",
+            "viewing_cage",
+            "unknown",
+        ]
+        | None
+    )
+    location_name: Annotated[str, Field(max_length=160)] | None
+
+
+class BreedingRouteViewStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    step_index: Annotated[int, Field(ge=0)]
+    generation: Annotated[int, Field(ge=1), Field(le=8)]
+    recipe_type: Literal["normal", "special"]
+    parent_a: BreedingRouteViewParent
+    parent_b: BreedingRouteViewParent
+    child_pal_id: BreederStableId
+    child_required_gender: Literal["male", "female"] | None
+    required_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+
+
+class AIExplanation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: AIProviderName
+    model: Annotated[str, Field(max_length=120)] | None
+    explanation: Annotated[str, Field(max_length=10000)] | None
+    degraded: bool
+
+
+class AIExplanationRouteSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_key: BreederSha256
+    rank: Annotated[int, Field(ge=1), Field(le=3)]
+    total_score: Annotated[float, Field(ge=0), Field(le=100)]
+    generation_count: Annotated[int, Field(ge=0), Field(le=8)]
+    borrowed_pal_count: Annotated[int, Field(ge=0)]
+    inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    difficulty: BreederDifficulty
+    pal_sequence: Annotated[
+        list[BreederStableId],
+        Field(max_length=64),
+        AfterValidator(_ensure_unique),
+    ]
+    score_breakdown: RouteScoreBreakdown
+
+
+class AIExplanationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_pal_id: BreederStableId
+    desired_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    optimization_mode: BreederOptimizationMode
+    version_summary: dict[str, object]
+    routes: Annotated[list[AIExplanationRouteSummary], Field(max_length=3)]
+
+
+class AIRouteExplanation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_key: BreederSha256
+    explanation: Annotated[str, Field(min_length=1), Field(max_length=4000)]
+    labels: Annotated[
+        list[Annotated[str, Field(min_length=1), Field(max_length=80)]],
+        Field(max_length=6),
+    ]
+
+
+class AIExplanationResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: AIProviderName
+    model: Annotated[str, Field(max_length=120)] | None
+    degraded: bool
+    explanation: Annotated[str, Field(min_length=1), Field(max_length=10000)]
+    route_explanations: Annotated[list[AIRouteExplanation], Field(max_length=3)]
+
+
+class BreedingRoute(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_key: BreederSha256
+    rank: Annotated[int, Field(ge=1), Field(le=3)]
+    optimization_mode: BreederOptimizationMode
+    total_score: Annotated[float, Field(ge=0), Field(le=100)]
+    generation_count: Annotated[int, Field(ge=0), Field(le=8)]
+    step_count: Annotated[int, Field(ge=0)]
+    estimated_attempts_min: Annotated[int, Field(ge=0)]
+    estimated_attempts_max: Annotated[int, Field(ge=0)]
+    difficulty: BreederDifficulty
+    borrowed_pal_count: Annotated[int, Field(ge=0)]
+    inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    inheritance_score: Annotated[float, Field(ge=0), Field(le=1)]
+    existing_target_instance_uid: Annotated[str, Field(max_length=160)] | None
+    score_breakdown: RouteScoreBreakdown
+    steps: list[BreedingRouteViewStep]
+    ai_explanation: Annotated[str, Field(max_length=4000)] | None
+    ai_labels: Annotated[list[Annotated[str, Field(max_length=80)]], Field(max_length=6)]
+
+
+class BreedingPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: UUID
+    result_digest: BreederSha256
+    route_count: Annotated[int, Field(ge=0), Field(le=3)]
+    explanation_codes: Annotated[
+        list[Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]],
+        AfterValidator(_ensure_unique),
+    ]
+    diagnostics: dict[str, object]
+    ai: AIExplanation
+    routes: Annotated[list[BreedingRoute], Field(max_length=3)]
+
+
+class RouteComparison(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: UUID
+    progress: JobProgress
+    target_pal_id: BreederStableId
+    desired_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    optimization_mode: BreederOptimizationMode
+    allow_guild_shared: bool
+    max_generations: Annotated[int, Field(ge=1), Field(le=8)]
+    inventory_snapshot_id: UUID
+    game_data_version_id: UUID
+    game_data_content_hash: BreederSha256
+    algorithm_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    scoring_profile_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    created_at: AwareDatetime
+    completed_at: AwareDatetime | None
+    plan: BreedingPlan | None
+
+
+class BreedingError(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    error_code: Annotated[
+        str,
+        Field(min_length=1),
+        Field(max_length=100),
+        Field(pattern="^[A-Z][A-Z0-9_]*$"),
+    ]
+
+
+class BreedingJobDetailRpcSuccess(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ok: Literal[True]
+    data: dict[str, object]
+
+
+class BreedingJobDetailRpcFailure(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ok: Literal[False]
+    error_code: Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]
+
+
+type BreedingJobDetailRpcResult = BreedingJobDetailRpcSuccess | BreedingJobDetailRpcFailure
+
+
 class ReadinessStatus(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -844,8 +1221,11 @@ class BreedingJob(BaseModel):
     inventory_snapshot_id: UUID
     game_data_version_id: UUID
     breeding_data_version_id: UUID
+    game_data_content_hash: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
     algorithm_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
     scoring_profile_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    allow_guild_shared: bool
+    max_generations: Annotated[int, Field(ge=1), Field(le=8)]
     status: BreedingJobStatus
     attempt_count: Annotated[int, Field(ge=0)]
     error_code: Annotated[str, Field(max_length=100), Field(pattern="^[A-Z][A-Z0-9_]*$")] | None
@@ -943,3 +1323,18 @@ class InventoryPublishRpcRequest(BaseModel):
 
     world_id: UUID
     snapshot: InventoryPublishPayload
+
+
+class CreateBreedingJobRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_pal_id: BreederStableId
+    desired_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(min_length=0),
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    optimization_mode: BreederOptimizationMode
+    allow_guild_shared: bool
+    max_generations: Annotated[int, Field(ge=1), Field(le=8)]

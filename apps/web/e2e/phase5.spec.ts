@@ -55,18 +55,23 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
 
   await page.getByLabel("名称、图鉴编号或稳定 ID").fill("棉悠悠");
   await page.getByRole("button", { name: "应用筛选" }).click();
+  await page.waitForLoadState("networkidle");
 
   const sharing = page.getByRole("switch", { name: "棉悠悠 公会共享" });
   await expect(sharing).toHaveAttribute("aria-checked", "true");
-  const shareResponsePromise = page.waitForResponse((response) =>
-    response.url().includes("/api/pals/fixture-pal-a-owned-001/share"),
+  const shareResponsePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/pals/fixture-pal-a-owned-001/share"),
+    { timeout: 30_000 },
   );
   await sharing.click();
   const shareResponse = await shareResponsePromise;
   expect(shareResponse.status()).toBe(200);
   await expect(sharing).toHaveAttribute("aria-checked", "false");
-  const restoreResponsePromise = page.waitForResponse((response) =>
-    response.url().includes("/api/pals/fixture-pal-a-owned-001/share"),
+  const restoreResponsePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/pals/fixture-pal-a-owned-001/share"),
+    { timeout: 30_000 },
   );
   await sharing.click();
   expect((await restoreResponsePromise).status()).toBe(200);

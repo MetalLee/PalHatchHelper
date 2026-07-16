@@ -47,6 +47,12 @@ class Settings(BaseSettings):
         ge=1024,
         le=100 * 1024 * 1024,
     )
+    ai_openai_compatible_base_url: str | None = None
+    ai_openai_compatible_api_key: SecretStr | None = None
+    ai_openai_compatible_model: str | None = Field(default=None, min_length=1, max_length=120)
+    ai_codex_cli_enabled: bool = False
+    ai_provider_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    ai_maximum_response_bytes: int = Field(default=32_000, ge=1024, le=1_000_000)
     palworld_compose_dir: Path | None = None
     palworld_save_root: Path | None = None
     palworld_world_id: UUID | None = None

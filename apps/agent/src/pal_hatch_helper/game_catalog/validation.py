@@ -71,7 +71,13 @@ FILE_SPECS = (
         "breeding-recipes.jsonl",
         "breeding_recipes",
         CatalogBreedingRecipe,
-        ("parent_a_pal_id", "parent_b_pal_id", "recipe_type"),
+        (
+            "parent_a_pal_id",
+            "parent_a_gender",
+            "parent_b_pal_id",
+            "parent_b_gender",
+            "recipe_type",
+        ),
     ),
     FileSpec(
         "localizations.jsonl",
@@ -502,7 +508,7 @@ def _validate_relationships(parsed: dict[str, list[BaseModel]], errors: set[str]
     if any(skill.pal_id not in pal_ids for skill in partner_skills):
         errors.add("CATALOG_REFERENCE_INVALID")
 
-    recipe_keys: dict[tuple[str, str, str], str] = {}
+    recipe_keys: dict[tuple[str, str, str, str, str], str] = {}
     for recipe in recipes:
         if (
             recipe.parent_a_pal_id not in pal_ids
@@ -512,7 +518,13 @@ def _validate_relationships(parsed: dict[str, list[BaseModel]], errors: set[str]
             errors.add("CATALOG_REFERENCE_INVALID")
         if recipe.parent_a_pal_id > recipe.parent_b_pal_id:
             errors.add("CATALOG_PARENT_ORDER_INVALID")
-        key = (recipe.parent_a_pal_id, recipe.parent_b_pal_id, recipe.recipe_type)
+        key = (
+            recipe.parent_a_pal_id,
+            recipe.parent_a_gender,
+            recipe.parent_b_pal_id,
+            recipe.parent_b_gender,
+            recipe.recipe_type,
+        )
         previous_child = recipe_keys.get(key)
         if previous_child is not None:
             errors.add(

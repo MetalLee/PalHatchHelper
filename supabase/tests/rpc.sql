@@ -10,6 +10,19 @@ create temporary table test_lease_tokens (
 
 grant select, insert on test_lease_tokens to service_role;
 
+update public.breeding_jobs
+   set status = 'pending',
+       locked_by = null,
+       locked_at = null,
+       heartbeat_at = null,
+       attempt_count = 0,
+       error_code = null,
+       error_summary = null,
+       completed_at = null,
+       lease_token = null,
+       updated_at = created_at
+ where id = '60000000-0000-4000-8000-000000000001';
+
 insert into public.breeding_jobs (
   id,
   requester_user_id,

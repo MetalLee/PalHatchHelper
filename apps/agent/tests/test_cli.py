@@ -1,10 +1,10 @@
-import asyncio
 from pathlib import Path
 
 import pytest
 
-from pal_hatch_helper.cli import build_parser, main, run_job_worker
-from pal_hatch_helper.models.errors import ErrorCode, StructuredError
+from pal_hatch_helper.ai.providers import FallbackAIProvider
+from pal_hatch_helper.cli import _build_ai_provider, build_parser, main
+from pal_hatch_helper.models.errors import ErrorCode
 from pal_hatch_helper.settings import Settings
 
 
@@ -13,6 +13,12 @@ def test_cli_keeps_three_explicit_process_boundaries(command: str) -> None:
     arguments = build_parser().parse_args([command])
 
     assert arguments.command == command
+
+
+def test_job_worker_accepts_one_shot_execution_for_integration_checks() -> None:
+    arguments = build_parser().parse_args(["job-worker", "--once"])
+
+    assert arguments.once is True
 
 
 def test_cli_help_is_available_without_runtime_credentials(
@@ -101,18 +107,8 @@ def test_save_worker_requires_explicit_configuration(
     assert ErrorCode.SAVE_WORKER_CONFIGURATION_REQUIRED.value in capsys.readouterr().out
 
 
-def test_job_worker_refuses_to_claim_without_a_real_handler() -> None:
-    async def scenario() -> None:
-        settings = Settings(
-            app_env="test",
-            supabase_url="http://127.0.0.1:54321",
-            supabase_service_role_key="fixture-local-service-role",
-        )
+def test_job_worker_has_a_template_safe_ai_chain_without_external_credentials() -> None:
+    provider, external = _build_ai_provider(Settings(app_env="test"))
 
-        with pytest.raises(StructuredError) as caught:
-            await run_job_worker(settings)
-
-        assert caught.value.code is ErrorCode.BREEDING_HANDLER_NOT_CONFIGURED
-        assert not caught.value.retryable
-
-    asyncio.run(scenario())
+    assert isinstance(provider, FallbackAIProvider)
+    assert external is None

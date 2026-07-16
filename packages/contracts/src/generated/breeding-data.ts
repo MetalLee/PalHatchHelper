@@ -4,6 +4,7 @@ export type BreedingSourceVersion = string;
 export type BreedingSha256 = string;
 export type BreedingStableId = string;
 export type BreedingRecipeType = "normal" | "special";
+export type BreedingParentGender = "any" | "female" | "male";
 
 export interface BreedingRecipeSourceDocumentContracts {
   BreedingRecipeSourceDocument: BreedingRecipeSourceDocument;
@@ -71,14 +72,18 @@ export interface BreedingDataValidationReport {
 }
 export interface BreedingRecipeSnapshot {
   parent_a_pal_id: BreedingStableId;
+  parent_a_gender: BreedingParentGender;
   parent_b_pal_id: BreedingStableId;
+  parent_b_gender: BreedingParentGender;
   child_pal_id: BreedingStableId;
   recipe_type: BreedingRecipeType;
   metadata: BreedingMetadata;
 }
 export interface BreedingRecipeChange {
   parent_a_pal_id: BreedingStableId;
+  parent_a_gender: BreedingParentGender;
   parent_b_pal_id: BreedingStableId;
+  parent_b_gender: BreedingParentGender;
   recipe_type: BreedingRecipeType;
   before_child_pal_id: BreedingStableId;
   after_child_pal_id: BreedingStableId;

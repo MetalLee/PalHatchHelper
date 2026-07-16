@@ -9,7 +9,7 @@ from pal_hatch_helper.generated import (
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
-type RecipeKey = tuple[str, str, str]
+type RecipeKey = tuple[str, str, str, str, str]
 
 
 def build_breeding_data_diff(
@@ -36,8 +36,10 @@ def build_breeding_data_diff(
             changed.append(
                 BreedingRecipeChange(
                     parent_a_pal_id=key[0],
-                    parent_b_pal_id=key[1],
-                    recipe_type=key[2],
+                    parent_a_gender=key[1],
+                    parent_b_pal_id=key[2],
+                    parent_b_gender=key[3],
+                    recipe_type=key[4],
                     before_child_pal_id=old.child_pal_id,
                     after_child_pal_id=new.child_pal_id,
                     metadata_changed=metadata_changed,
@@ -64,7 +66,13 @@ def build_breeding_data_diff(
 def _by_key(recipes: Iterable[CatalogBreedingRecipe]) -> dict[RecipeKey, CatalogBreedingRecipe]:
     values: dict[RecipeKey, CatalogBreedingRecipe] = {}
     for recipe in recipes:
-        key = (recipe.parent_a_pal_id, recipe.parent_b_pal_id, recipe.recipe_type)
+        key = (
+            recipe.parent_a_pal_id,
+            recipe.parent_a_gender,
+            recipe.parent_b_pal_id,
+            recipe.parent_b_gender,
+            recipe.recipe_type,
+        )
         previous = values.get(key)
         if previous is not None and previous != recipe:
             raise StructuredError(
@@ -79,7 +87,9 @@ def _by_key(recipes: Iterable[CatalogBreedingRecipe]) -> dict[RecipeKey, Catalog
 def _snapshot(recipe: CatalogBreedingRecipe) -> BreedingRecipeSnapshot:
     return BreedingRecipeSnapshot(
         parent_a_pal_id=recipe.parent_a_pal_id,
+        parent_a_gender=recipe.parent_a_gender,
         parent_b_pal_id=recipe.parent_b_pal_id,
+        parent_b_gender=recipe.parent_b_gender,
         child_pal_id=recipe.child_pal_id,
         recipe_type=recipe.recipe_type,
         metadata=recipe.metadata,

@@ -37,6 +37,56 @@ def canonical_json(value: object, *, set_fields: set[str] | None = None) -> str:
         ) from error
 
 
+def _dotnet_canonical_json(value: object) -> str:
+    """Serialize with the escaping used by the audited .NET extractor."""
+
+    normalized = _normalize(value, set_fields=set(_DEFAULT_SET_FIELDS))
+    serialized = json.dumps(
+        normalized,
+        ensure_ascii=True,
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    output: list[str] = []
+    in_string = False
+    index = 0
+    html_escapes = {
+        "&": "\\u0026",
+        "'": "\\u0027",
+        "+": "\\u002B",
+        "<": "\\u003C",
+        ">": "\\u003E",
+        "`": "\\u0060",
+    }
+    while index < len(serialized):
+        character = serialized[index]
+        if character == '"':
+            in_string = not in_string
+            output.append(character)
+            index += 1
+            continue
+        if in_string and character == "\\" and index + 1 < len(serialized):
+            escape = serialized[index + 1]
+            if escape == "u" and index + 5 < len(serialized):
+                output.append("\\u" + serialized[index + 2 : index + 6].upper())
+                index += 6
+                continue
+            if escape == '"':
+                output.append("\\u0022")
+                index += 2
+                continue
+            output.extend((character, escape))
+            index += 2
+            continue
+        if in_string and character in html_escapes:
+            output.append(html_escapes[character])
+        else:
+            output.append(character)
+        index += 1
+    return "".join(output)
+
+
 def read_jsonl(path: Path, *, require_canonical: bool = True) -> Iterator[JSONRecord]:
     try:
         with path.open("r", encoding="utf-8", newline="") as source:
@@ -59,7 +109,11 @@ def read_jsonl(path: Path, *, require_canonical: bool = True) -> Iterator[JSONRe
                 if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
                     raise _jsonl_error(path, line_number, "Each JSONL record must be an object.")
                 record = _as_record(value)
-                if require_canonical and canonical_json(record) != line:
+                if (
+                    require_canonical
+                    and canonical_json(record) != line
+                    and _dotnet_canonical_json(record) != line
+                ):
                     raise _jsonl_error(path, line_number, "Catalog JSONL is not canonical.")
                 yield record
     except UnicodeDecodeError as error:

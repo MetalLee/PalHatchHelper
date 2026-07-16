@@ -98,10 +98,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.28"
+          enable-cache: true
+          cache-dependency-glob: apps/agent/uv.lock
       - uses: supabase/setup-cli@v1
         with:
           version: 2.109.1
       - run: pnpm install --frozen-lockfile
+      - run: uv python install 3.12
+      - run: uv sync --frozen --no-dev
+        working-directory: apps/agent
       - run: pnpm --filter @palhatch/web exec playwright install --with-deps chromium
       - run: pnpm check:phase5
 

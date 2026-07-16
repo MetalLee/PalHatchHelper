@@ -1,0 +1,397 @@
+/* Generated from phase6-breeder.schema.json. Do not edit directly. */
+
+export type BreederStableId = string;
+export type BreederOptimizationMode = "balanced" | "fastest" | "highest_success" | "least_borrowing";
+export type BreederJobStatus =
+  | "pending"
+  | "processing"
+  | "algorithm_completed"
+  | "ai_enriching"
+  | "retry_pending"
+  | "completed"
+  | "failed"
+  | "cancelled";
+export type BreederSha256 = string;
+export type BreederFormContextRpcResult = BreederFormContextRpcSuccess | BreederFormContextRpcFailure;
+export type BreederDifficulty = "low" | "medium" | "high";
+export type AIProviderName = "openai_compatible" | "codex_cli" | "template";
+export type BreedingJobDetailRpcResult = BreedingJobDetailRpcSuccess | BreedingJobDetailRpcFailure;
+
+export interface CreateBreedingJobRequestContracts {
+  CreateBreedingJobRequest: CreateBreedingJobRequest;
+  CreateBreedingJobResponse: CreateBreedingJobResponse;
+  BreederCatalogPalOption: BreederCatalogPalOption;
+  BreederPassiveOption: BreederPassiveOption;
+  BreederFormContext: BreederFormContext;
+  BreederFormContextRpcSuccess: BreederFormContextRpcSuccess;
+  BreederFormContextRpcFailure: BreederFormContextRpcFailure;
+  BreederFormContextRpcResult: BreederFormContextRpcResult;
+  JobProgress: JobProgress;
+  RouteRawScoreMetrics: RouteRawScoreMetrics;
+  RouteScoreComponent: RouteScoreComponent;
+  RouteModeScore: RouteModeScore;
+  RouteScoreBreakdown: RouteScoreBreakdown;
+  BreedingRouteViewParent: BreedingRouteViewParent;
+  BreedingRouteViewStep: BreedingRouteViewStep;
+  AIExplanation: AIExplanation;
+  AIExplanationRouteSummary: AIExplanationRouteSummary;
+  AIExplanationRequest: AIExplanationRequest;
+  AIRouteExplanation: AIRouteExplanation;
+  AIExplanationResult: AIExplanationResult;
+  BreedingRoute: BreedingRoute;
+  BreedingPlan: BreedingPlan;
+  RouteComparison: RouteComparison;
+  BreedingError: BreedingError;
+  BreedingJobDetailRpcSuccess: BreedingJobDetailRpcSuccess;
+  BreedingJobDetailRpcFailure: BreedingJobDetailRpcFailure;
+  BreedingJobDetailRpcResult: BreedingJobDetailRpcResult;
+}
+/**
+ * Phase 6 browser, Worker explanation, and route-comparison contracts.
+ */
+export interface CreateBreedingJobRequest {
+  target_pal_id: BreederStableId;
+  /**
+   * @minItems 0
+   * @maxItems 4
+   */
+  desired_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+  optimization_mode: BreederOptimizationMode;
+  allow_guild_shared: boolean;
+  max_generations: number;
+}
+export interface CreateBreedingJobResponse {
+  job_id: string;
+  reused: boolean;
+  status: BreederJobStatus;
+}
+export interface BreederCatalogPalOption {
+  pal_id: BreederStableId;
+  encyclopedia_no: number | null;
+  display_name: string;
+  /**
+   * @minItems 1
+   */
+  element_types: [string, ...string[]];
+}
+export interface BreederPassiveOption {
+  passive_skill_id: BreederStableId;
+  display_name: string;
+  rank: number;
+  is_negative: boolean;
+}
+export interface BreederFormContext {
+  data_state: "healthy" | "stale" | "parse_error";
+  inventory_snapshot_id: string;
+  game_data_version_id: string;
+  game_data_content_hash: BreederSha256;
+  game_build_id: string;
+  game_version: string;
+  algorithm_version: string;
+  scoring_profile_versions: {
+    balanced: string;
+    fastest: string;
+    highest_success: string;
+    least_borrowing: string;
+  };
+  pals: BreederCatalogPalOption[];
+  passive_skills: BreederPassiveOption[];
+}
+export interface BreederFormContextRpcSuccess {
+  ok: true;
+  data: BreederFormContext;
+}
+export interface BreederFormContextRpcFailure {
+  ok: false;
+  error_code: string;
+}
+export interface JobProgress {
+  status: BreederJobStatus;
+  attempt_count: number;
+  error_code: string | null;
+}
+export interface RouteRawScoreMetrics {
+  generation_count: number;
+  step_count: number;
+  unique_starting_instance_count: number;
+  borrowed_pal_count: number;
+  inventory_coverage: number;
+  passive_carrier_count: number;
+  passive_concentration: number;
+  extra_passive_count: number;
+  intermediate_pal_count: number;
+  intermediate_passive_checkpoint_count: number;
+  required_gender_checkpoint_count: number;
+  estimated_attempts_min: number;
+  estimated_attempts_max: number;
+  difficulty: BreederDifficulty;
+}
+export interface RouteScoreComponent {
+  component:
+    | "route_length"
+    | "inventory_coverage"
+    | "passive_concentration"
+    | "borrowing"
+    | "intermediate_cost"
+    | "attempt_cost"
+    | "stability";
+  raw_value: number;
+  normalized_score: number;
+  weight: number;
+  weighted_score: number;
+}
+export interface RouteModeScore {
+  optimization_mode: BreederOptimizationMode;
+  scoring_profile_version: string;
+  total_score: number;
+  /**
+   * @minItems 7
+   * @maxItems 7
+   */
+  components: [
+    RouteScoreComponent,
+    RouteScoreComponent,
+    RouteScoreComponent,
+    RouteScoreComponent,
+    RouteScoreComponent,
+    RouteScoreComponent,
+    RouteScoreComponent
+  ];
+}
+export interface RouteScoreBreakdown {
+  scoring_profile_version: string;
+  estimate_basis: "strategy_heuristic_no_verified_probability";
+  raw_metrics: RouteRawScoreMetrics;
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  mode_scores: [RouteModeScore, RouteModeScore, RouteModeScore, RouteModeScore];
+}
+export interface BreedingRouteViewParent {
+  source_type: "inventory" | "intermediate";
+  pal_id: BreederStableId;
+  instance_uid: string | null;
+  owner_display_name: string;
+  gender: ("male" | "female" | "genderless" | "unknown") | null;
+  /**
+   * @maxItems 64
+   */
+  passive_skill_ids: BreederStableId[];
+  /**
+   * @maxItems 4
+   */
+  required_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+  borrowed: boolean;
+  produced_by_step_index: number | null;
+  location_type: ("player_party" | "player_storage" | "base" | "viewing_cage" | "unknown") | null;
+  location_name: string | null;
+}
+export interface BreedingRouteViewStep {
+  step_index: number;
+  generation: number;
+  recipe_type: "normal" | "special";
+  parent_a: BreedingRouteViewParent;
+  parent_b: BreedingRouteViewParent;
+  child_pal_id: BreederStableId;
+  child_required_gender: ("male" | "female") | null;
+  /**
+   * @maxItems 4
+   */
+  required_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+}
+export interface AIExplanation {
+  provider: AIProviderName;
+  model: string | null;
+  explanation: string | null;
+  degraded: boolean;
+}
+export interface AIExplanationRouteSummary {
+  route_key: BreederSha256;
+  rank: number;
+  total_score: number;
+  generation_count: number;
+  borrowed_pal_count: number;
+  inventory_coverage: number;
+  difficulty: BreederDifficulty;
+  /**
+   * @maxItems 64
+   */
+  pal_sequence: BreederStableId[];
+  score_breakdown: RouteScoreBreakdown;
+}
+export interface AIExplanationRequest {
+  target_pal_id: BreederStableId;
+  /**
+   * @maxItems 4
+   */
+  desired_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+  optimization_mode: BreederOptimizationMode;
+  version_summary: {
+    game_data_content_hash: BreederSha256;
+    algorithm_version: string;
+    scoring_profile_version: string;
+  };
+  /**
+   * @maxItems 3
+   */
+  routes:
+    | []
+    | [AIExplanationRouteSummary]
+    | [AIExplanationRouteSummary, AIExplanationRouteSummary]
+    | [AIExplanationRouteSummary, AIExplanationRouteSummary, AIExplanationRouteSummary];
+}
+export interface AIRouteExplanation {
+  route_key: BreederSha256;
+  explanation: string;
+  /**
+   * @maxItems 6
+   */
+  labels:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string];
+}
+export interface AIExplanationResult {
+  provider: AIProviderName;
+  model: string | null;
+  degraded: boolean;
+  explanation: string;
+  /**
+   * @maxItems 3
+   */
+  route_explanations:
+    | []
+    | [AIRouteExplanation]
+    | [AIRouteExplanation, AIRouteExplanation]
+    | [AIRouteExplanation, AIRouteExplanation, AIRouteExplanation];
+}
+export interface BreedingRoute {
+  route_key: BreederSha256;
+  rank: number;
+  optimization_mode: BreederOptimizationMode;
+  total_score: number;
+  generation_count: number;
+  step_count: number;
+  estimated_attempts_min: number;
+  estimated_attempts_max: number;
+  difficulty: BreederDifficulty;
+  borrowed_pal_count: number;
+  inventory_coverage: number;
+  inheritance_score: number;
+  existing_target_instance_uid: string | null;
+  score_breakdown: RouteScoreBreakdown;
+  steps: BreedingRouteViewStep[];
+  ai_explanation: string | null;
+  /**
+   * @maxItems 6
+   */
+  ai_labels:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string];
+}
+export interface BreedingPlan {
+  plan_id: string;
+  result_digest: BreederSha256;
+  route_count: number;
+  explanation_codes: string[];
+  diagnostics: {
+    [k: string]: unknown;
+  };
+  ai: AIExplanation;
+  /**
+   * @maxItems 3
+   */
+  routes: [] | [BreedingRoute] | [BreedingRoute, BreedingRoute] | [BreedingRoute, BreedingRoute, BreedingRoute];
+}
+export interface RouteComparison {
+  job_id: string;
+  progress: JobProgress;
+  target_pal_id: BreederStableId;
+  /**
+   * @maxItems 4
+   */
+  desired_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+  optimization_mode: BreederOptimizationMode;
+  allow_guild_shared: boolean;
+  max_generations: number;
+  inventory_snapshot_id: string;
+  game_data_version_id: string;
+  game_data_content_hash: BreederSha256;
+  algorithm_version: string;
+  scoring_profile_version: string;
+  created_at: string;
+  completed_at: string | null;
+  plan: BreedingPlan | null;
+}
+export interface BreedingError {
+  error_code: string;
+}
+export interface BreedingJobDetailRpcSuccess {
+  ok: true;
+  data: {
+    job_id: string;
+    status: BreederJobStatus;
+    target_pal_id: BreederStableId;
+    /**
+     * @maxItems 4
+     */
+    desired_passive_ids:
+      | []
+      | [BreederStableId]
+      | [BreederStableId, BreederStableId]
+      | [BreederStableId, BreederStableId, BreederStableId]
+      | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+    optimization_mode: BreederOptimizationMode;
+    allow_guild_shared: boolean;
+    max_generations: number;
+    inventory_snapshot_id: string;
+    game_data_version_id: string;
+    game_data_content_hash: BreederSha256;
+    algorithm_version: string;
+    scoring_profile_version: string;
+    attempt_count: number;
+    error_code: string | null;
+    created_at: string;
+    completed_at: string | null;
+    plan: BreedingPlan | null;
+  };
+}
+export interface BreedingJobDetailRpcFailure {
+  ok: false;
+  error_code: string;
+}

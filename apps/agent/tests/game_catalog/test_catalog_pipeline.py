@@ -54,6 +54,25 @@ def test_jsonl_reader_rejects_invalid_json(tmp_path: Path) -> None:
     assert caught.value.code is ErrorCode.GAME_DATA_JSON_INVALID
 
 
+def test_jsonl_reader_accepts_dotnet_canonical_string_escaping(tmp_path: Path) -> None:
+    path = tmp_path / "dotnet-canonical.jsonl"
+    path.write_text(
+        '{"locale":"zh-CN","text":"\\u68C9\\u0026\\u003Ctag\\u003E\\u002B\\u0027",'
+        '"text_key":"fixture.key"}\n',
+        encoding="utf-8",
+    )
+
+    records = list(read_jsonl(path))
+
+    assert records == [
+        {
+            "locale": "zh-CN",
+            "text": "棉&<tag>+'",
+            "text_key": "fixture.key",
+        }
+    ]
+
+
 def test_validation_rejects_duplicate_ids_and_broken_references(tmp_path: Path) -> None:
     fixture = tmp_path / "catalog"
     fixture.mkdir()
@@ -70,6 +89,47 @@ def test_validation_rejects_duplicate_ids_and_broken_references(tmp_path: Path) 
     assert not report.valid
     assert "CATALOG_DUPLICATE_ID" in report.errors
     assert json.loads(report.model_dump_json())["valid"] is False
+
+
+def test_validation_distinguishes_gender_specific_breeding_recipes(tmp_path: Path) -> None:
+    fixture = tmp_path / "catalog"
+    fixture.mkdir()
+    write_jsonl_atomic(
+        fixture / "breeding-recipes.jsonl",
+        [
+            {
+                "parent_a_pal_id": "pal-a",
+                "parent_a_gender": "female",
+                "parent_b_pal_id": "pal-b",
+                "parent_b_gender": "male",
+                "child_pal_id": "child-a",
+                "recipe_type": "special",
+                "metadata": {},
+            },
+            {
+                "parent_a_pal_id": "pal-a",
+                "parent_a_gender": "male",
+                "parent_b_pal_id": "pal-b",
+                "parent_b_gender": "female",
+                "child_pal_id": "child-b",
+                "recipe_type": "special",
+                "metadata": {},
+            },
+        ],
+        primary_key=(
+            "parent_a_pal_id",
+            "parent_a_gender",
+            "parent_b_pal_id",
+            "parent_b_gender",
+            "recipe_type",
+        ),
+    )
+
+    report = validate_catalog_directory(fixture, require_manifest=False)
+
+    assert "CATALOG_DUPLICATE_ID" not in report.errors
+    assert "CATALOG_ORDER_INVALID" not in report.errors
+    assert "CATALOG_RECIPE_CONFLICT" not in report.errors
 
 
 def test_application_requires_source_provenance_for_schema_1_1_0() -> None:
@@ -124,6 +184,9 @@ def test_schema_1_1_0_source_evidence_keys_must_match_normalized_records(
         records = list(read_jsonl(catalog / spec.filename))
         if spec.count_field != "localizations":
             for record in records:
+                if spec.count_field == "breeding_recipes":
+                    record.setdefault("parent_a_gender", "any")
+                    record.setdefault("parent_b_gender", "any")
                 source_field = stable_id_fields.get(spec.count_field)
                 source_name = (
                     str(record[source_field])

@@ -68,6 +68,13 @@ class BreedingEngineAdapter:
             )
         facts = await self._repository.load_facts(claim)
         job = claim.job
+        if facts.catalog.content_hash != job.game_data_content_hash:
+            raise StructuredError(
+                code=ErrorCode.BREEDING_GAME_DATA_CONTENT_MISMATCH,
+                summary="The claimed job content hash does not match its exact catalog facts.",
+                retryable=False,
+            )
+        limits = self._limits.model_copy(update={"max_generations": job.max_generations})
         request = BreedingEngineRequest(
             target_pal_id=job.target_pal_id,
             desired_passive_ids=sorted(job.desired_passive_ids),
@@ -80,10 +87,10 @@ class BreedingEngineAdapter:
             optimization_mode=job.optimization_mode,
             requester_player_id=job.player_id,
             requester_guild_id=job.guild_id,
-            allow_shared_inventory=True,
+            allow_shared_inventory=job.allow_guild_shared,
             allow_locked_reuse=False,
             inventory=list(facts.inventory.items),
-            limits=self._limits,
+            limits=limits,
         )
         return self._engine.search(request, facts)
 

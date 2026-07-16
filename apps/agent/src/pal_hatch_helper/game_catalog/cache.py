@@ -81,10 +81,18 @@ class CatalogSQLiteCache:
                     );
                     create table breeding_recipes (
                       parent_a_pal_id text not null,
+                      parent_a_gender text not null,
                       parent_b_pal_id text not null,
+                      parent_b_gender text not null,
                       recipe_type text not null,
                       payload text not null,
-                      primary key (parent_a_pal_id, parent_b_pal_id, recipe_type)
+                      primary key (
+                        parent_a_pal_id,
+                        parent_a_gender,
+                        parent_b_pal_id,
+                        parent_b_gender,
+                        recipe_type
+                      )
                     );
                     create table localizations (
                       locale text not null,
@@ -223,11 +231,13 @@ class CatalogSQLiteCache:
             ),
         )
         connection.executemany(
-            "insert into breeding_recipes values (?, ?, ?, ?)",
+            "insert into breeding_recipes values (?, ?, ?, ?, ?, ?)",
             (
                 (
                     item.parent_a_pal_id,
+                    item.parent_a_gender,
                     item.parent_b_pal_id,
+                    item.parent_b_gender,
                     item.recipe_type,
                     canonical_json(item.model_dump(mode="json")),
                 )

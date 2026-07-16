@@ -25,12 +25,22 @@ function localSupabaseEnvironment(source) {
   }
   const url = values.get("API_URL");
   const anonKey = values.get("ANON_KEY");
-  if (url !== "http://127.0.0.1:54321" || anonKey === undefined) {
+  const serviceRoleKey = values.get("SERVICE_ROLE_KEY");
+  if (
+    url !== "http://127.0.0.1:54321" ||
+    anonKey === undefined ||
+    serviceRoleKey === undefined
+  ) {
     throw new Error("Phase 5 E2E requires the repository-local Supabase stack");
   }
   return {
     NEXT_PUBLIC_SUPABASE_URL: url,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+    PALHATCH_E2E_SUPABASE_URL: url,
+    PALHATCH_E2E_SERVICE_ROLE_KEY: serviceRoleKey,
+    PALHATCH_E2E_AGENT_DATA_DIR: `/tmp/palhatch-phase6-e2e-${process.pid}`,
+    NO_PROXY: "127.0.0.1,localhost",
+    no_proxy: "127.0.0.1,localhost",
   };
 }
 

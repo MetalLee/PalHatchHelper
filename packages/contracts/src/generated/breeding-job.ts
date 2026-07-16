@@ -36,8 +36,11 @@ export interface BreedingJob {
   inventory_snapshot_id: string;
   game_data_version_id: string;
   breeding_data_version_id: string;
+  game_data_content_hash: string;
   algorithm_version: string;
   scoring_profile_version: string;
+  allow_guild_shared: boolean;
+  max_generations: number;
   status: BreedingJobStatus;
   attempt_count: number;
   error_code: string | null;
