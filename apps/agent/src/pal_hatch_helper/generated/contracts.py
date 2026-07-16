@@ -1566,6 +1566,339 @@ class CandidateDetectionBatchRequest(BaseModel):
     candidates: Annotated[list[CandidateDetectionWrite], Field(max_length=500)]
 
 
+type Uuid = UUID
+
+
+type NullableUuid = UUID | None
+
+
+type Timestamp = AwareDatetime
+
+
+type NullableTimestamp = AwareDatetime | None
+
+
+type ContentHash = Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
+
+
+type StableErrorCode = Annotated[
+    str,
+    Field(min_length=1),
+    Field(max_length=100),
+    Field(pattern="^[A-Z][A-Z0-9_]*$"),
+]
+
+
+class AdminHealthState(StrEnum):
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    OFFLINE = "offline"
+    NOT_CONFIGURED = "not_configured"
+    UNKNOWN = "unknown"
+
+
+class AdminWorkerStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: AdminHealthState
+    last_heartbeat_at: NullableTimestamp
+    stale: bool
+
+
+class AdminSnapshotSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    snapshot_id: Uuid
+    captured_at: Timestamp
+    pal_count: Annotated[int, Field(ge=0)]
+    parser_name: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    parser_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+
+
+class AdminParserIdentity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Annotated[str, Field(max_length=100)] | None
+    version: Annotated[str, Field(max_length=100)] | None
+
+
+class AdminCatalogIdentity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version_id: NullableUuid
+    build: Annotated[str, Field(max_length=80)] | None
+    game_version: Annotated[str, Field(max_length=80)] | None
+    content_hash: ContentHash | None
+
+
+class AdminJobCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pending: Annotated[int, Field(ge=0)]
+    processing: Annotated[int, Field(ge=0)]
+    retry: Annotated[int, Field(ge=0)]
+    failed: Annotated[int, Field(ge=0)]
+
+
+class AdminAIProviderStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    state: AdminHealthState
+    degraded: bool
+    last_checked_at: NullableTimestamp
+
+
+class AdminFailureSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    error_code: StableErrorCode
+    summary: Annotated[str, Field(min_length=1), Field(max_length=500)]
+    occurred_at: Timestamp
+
+
+class AdminDiskStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    level: Literal["normal", "warning", "critical", "unknown"]
+    available_bytes: Annotated[int, Field(ge=0)] | None
+    checked_at: NullableTimestamp
+
+
+class AdminBindingCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: Uuid
+    user_display: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    role: Literal["admin", "player"]
+    player_id: NullableUuid
+    player_nickname: Annotated[str, Field(max_length=120)] | None
+    world_name: Annotated[str, Field(max_length=120)] | None
+    guild_name: Annotated[str, Field(max_length=120)] | None
+    binding_version: Annotated[int, Field(ge=1)] | None
+    bound_at: NullableTimestamp
+    conflict_code: StableErrorCode | None
+
+
+class AdminBindingEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: Uuid
+    event_type: Literal["binding_created", "binding_updated", "binding_deleted"]
+    user_id: Uuid
+    player_id: NullableUuid
+    actor_display: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    created_at: Timestamp
+
+
+class AdminSaveParserStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    worker: AdminWorkerStatus
+    save_root_configured: bool
+    read_only_mount: Literal["verified", "unverified", "not_configured"]
+    latest_snapshot: AdminSnapshotSummary | None
+    review_snapshot_id: NullableUuid
+    recent_failure: AdminFailureSummary | None
+    parser: AdminParserIdentity
+    parse_duration_ms: Annotated[int, Field(ge=0)] | None
+    pal_count: Annotated[int, Field(ge=0)] | None
+    inventory_drop_state: Literal["normal", "review_required", "rejected", "unknown"]
+    disk: AdminDiskStatus
+    snapshot_retention_count: Annotated[int, Field(ge=1), Field(le=20)]
+    stale: bool
+
+
+class AdminCatalogCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pals: Annotated[int, Field(ge=0)]
+    passive_skills: Annotated[int, Field(ge=0)]
+    active_skills: Annotated[int, Field(ge=0)]
+    pal_active_skills: Annotated[int, Field(ge=0)]
+    partner_skills: Annotated[int, Field(ge=0)]
+    breeding_recipes: Annotated[int, Field(ge=0)]
+    localizations: Annotated[int, Field(ge=0)]
+
+
+class AdminCatalogVersion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version_id: Uuid
+    source: Annotated[str, Field(max_length=120)] | None
+    build: Annotated[str, Field(max_length=80)] | None
+    game_version: Annotated[str, Field(max_length=80)] | None
+    content_hash: ContentHash
+    package_hash: ContentHash
+    counts: AdminCatalogCounts
+    validation_state: Literal["extracting", "staging", "validated", "published", "rejected"]
+    published_world: Annotated[str, Field(max_length=120)] | None
+    previous_version_id: NullableUuid
+    diff_summary: dict[str, object]
+    provenance: dict[str, object]
+    imported_at: Timestamp
+
+
+class AdminCatalogAction(StrEnum):
+    UPLOAD = "upload"
+    VALIDATE = "validate"
+    STAGE = "stage"
+    PUBLISH = "publish"
+    ROLLBACK = "rollback"
+    INSPECT = "inspect"
+    WARM_CACHE = "warm_cache"
+    REJECT = "reject"
+
+
+class AdminJobSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: Uuid
+    requester_display: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    status: Annotated[str, Field(min_length=1), Field(max_length=40)]
+    snapshot_id: Uuid
+    catalog_version_id: Uuid
+    attempt_count: Annotated[int, Field(ge=0)]
+    heartbeat_at: NullableTimestamp
+    locked: bool
+    error_code: StableErrorCode | None
+    route_count: Annotated[int, Field(ge=0)]
+    ai_provider: Annotated[str, Field(max_length=80)] | None
+    degraded: bool
+    execution_plan_id: NullableUuid
+    created_at: Timestamp
+
+
+class AdminJobAction(StrEnum):
+    RETRY = "retry"
+    CANCEL = "cancel"
+    REAP_STALE_LOCK = "reap_stale_lock"
+    SET_CREATION_ENABLED = "set_creation_enabled"
+    TEMPLATE_AI_HEALTHCHECK = "template_ai_healthcheck"
+
+
+class RuntimeSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_creation_enabled: bool
+    max_generations: Annotated[int, Field(ge=1), Field(le=8)]
+    job_worker_concurrency: Annotated[int, Field(ge=1), Field(le=4)]
+    ai_concurrency: Annotated[int, Field(ge=1), Field(le=2)]
+    parser_timeout_seconds: Annotated[int, Field(ge=30), Field(le=1800)]
+    snapshot_retention_count: Annotated[int, Field(ge=1), Field(le=20)]
+    data_stale_threshold_minutes: Annotated[int, Field(ge=5), Field(le=1440)]
+    ai_provider_order: Annotated[
+        list[AIProviderName],
+        Field(min_length=1),
+        Field(max_length=3),
+        AfterValidator(_ensure_unique),
+    ]
+    maintenance_announcement: Annotated[str, Field(max_length=500)] | None
+
+
+class RuntimeSettingsVersion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version_id: Uuid
+    version: Annotated[int, Field(ge=1)]
+    settings: RuntimeSettings
+    created_by_display: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    created_at: Timestamp
+    rolled_back_from_version: Annotated[int, Field(ge=1)] | None
+
+
+class AgentCommandType(StrEnum):
+    SYNC_SAVE_ONCE = "sync_save_once"
+    REPARSE_SNAPSHOT = "reparse_snapshot"
+    APPROVE_INVENTORY_SNAPSHOT = "approve_inventory_snapshot"
+    REJECT_INVENTORY_SNAPSHOT = "reject_inventory_snapshot"
+    CLEANUP_EXPIRED_AGENT_SNAPSHOTS = "cleanup_expired_agent_snapshots"
+    RETRY_BREEDING_JOB = "retry_breeding_job"
+    CANCEL_BREEDING_JOB = "cancel_breeding_job"
+    REAP_STALE_JOB_LOCK = "reap_stale_job_lock"
+    TEMPLATE_AI_HEALTHCHECK = "template_ai_healthcheck"
+    WARM_CATALOG_CACHE = "warm_catalog_cache"
+
+
+class AgentCommandStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
+
+class AgentCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: Uuid
+    command_type: AgentCommandType
+    payload: dict[str, object]
+    idempotency_key: IdempotencyKey
+    status: AgentCommandStatus
+    created_at: Timestamp
+    expires_at: Timestamp
+
+
+class AdminAuditEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event_id: Uuid
+    event_type: Annotated[
+        str,
+        Field(min_length=1),
+        Field(max_length=100),
+        Field(pattern="^[a-z][a-z0-9_.]*$"),
+    ]
+    actor_display: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    target_type: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    target_id: Annotated[str, Field(max_length=160)] | None
+    safe_summary: dict[str, object]
+    created_at: Timestamp
+
+
+class SecretConfigurationStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    status: Literal["configured", "not_configured"]
+    last_checked_at: NullableTimestamp
+
+
+class AdminErrorCode(StrEnum):
+    ADMIN_ACCESS_DENIED = "ADMIN_ACCESS_DENIED"
+    ADMIN_AUTH_REQUIRED = "ADMIN_AUTH_REQUIRED"
+    ADMIN_DATA_UNAVAILABLE = "ADMIN_DATA_UNAVAILABLE"
+    ADMIN_CONTRACT_INVALID = "ADMIN_CONTRACT_INVALID"
+    BINDING_CONFLICT = "BINDING_CONFLICT"
+    BINDING_VERSION_CONFLICT = "BINDING_VERSION_CONFLICT"
+    BINDING_NOT_FOUND = "BINDING_NOT_FOUND"
+    AGENT_COMMAND_NOT_ALLOWED = "AGENT_COMMAND_NOT_ALLOWED"
+    AGENT_COMMAND_EXPIRED = "AGENT_COMMAND_EXPIRED"
+    AGENT_COMMAND_CONFLICT = "AGENT_COMMAND_CONFLICT"
+    CATALOG_UPLOAD_INVALID = "CATALOG_UPLOAD_INVALID"
+    CATALOG_UPLOAD_CONFLICT = "CATALOG_UPLOAD_CONFLICT"
+    CATALOG_UPLOAD_NOT_FOUND = "CATALOG_UPLOAD_NOT_FOUND"
+    CATALOG_UPLOAD_INCOMPLETE = "CATALOG_UPLOAD_INCOMPLETE"
+    CATALOG_UPLOAD_NOT_READY = "CATALOG_UPLOAD_NOT_READY"
+    CATALOG_UPLOAD_NOT_VALIDATED = "CATALOG_UPLOAD_NOT_VALIDATED"
+    CATALOG_ACTION_INVALID = "CATALOG_ACTION_INVALID"
+    CATALOG_ACTION_CONFLICT = "CATALOG_ACTION_CONFLICT"
+    CATALOG_CONFIRMATION_REQUIRED = "CATALOG_CONFIRMATION_REQUIRED"
+    JOB_ACTION_INVALID = "JOB_ACTION_INVALID"
+    RUNTIME_SETTINGS_INVALID = "RUNTIME_SETTINGS_INVALID"
+    RUNTIME_SETTINGS_VERSION_CONFLICT = "RUNTIME_SETTINGS_VERSION_CONFLICT"
+    RUNTIME_SETTINGS_NOT_FOUND = "RUNTIME_SETTINGS_NOT_FOUND"
+
+
+class AdminError(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    error_code: AdminErrorCode
+    retryable: bool
+
+
 class ReadinessStatus(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1716,3 +2049,21 @@ class CreateBreedingJobRequest(BaseModel):
     optimization_mode: BreederOptimizationMode
     allow_guild_shared: bool
     max_generations: Annotated[int, Field(ge=1), Field(le=8)]
+
+
+class AdminOverview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    agent: AdminWorkerStatus
+    save_worker: AdminWorkerStatus
+    job_worker: AdminWorkerStatus
+    candidate_detector: AdminWorkerStatus
+    latest_successful_snapshot: AdminSnapshotSummary | None
+    parser: AdminParserIdentity
+    catalog: AdminCatalogIdentity
+    job_counts: AdminJobCounts
+    ai_provider: AdminAIProviderStatus
+    recent_failure: AdminFailureSummary | None
+    disk: AdminDiskStatus
+    deployment_version: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    stale: bool

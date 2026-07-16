@@ -183,6 +183,20 @@ class SupabaseCatalogArtifactStore:
             raise self._storage_error(response.status_code)
         return response.content
 
+    async def get_private_object(self, object_path: str) -> bytes:
+        """Read a server-generated private object path with the Agent credential."""
+
+        response = await self._request_path("GET", object_path, headers=self._headers)
+        if self._is_not_found_response(response):
+            raise StructuredError(
+                code=ErrorCode.GAME_DATA_ARTIFACT_MISSING,
+                summary="The requested private catalog upload is missing.",
+                retryable=False,
+            )
+        if response.is_error:
+            raise self._storage_error(response.status_code)
+        return response.content
+
     async def exists(self, content_hash: str) -> bool:
         response = await self._request(
             "GET",

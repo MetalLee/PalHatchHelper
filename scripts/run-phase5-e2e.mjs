@@ -44,8 +44,31 @@ function localSupabaseEnvironment(source) {
   };
 }
 
+function refreshLocalGateway() {
+  run("docker", ["restart", "supabase_kong_pal-hatch-helper-local"], {
+    stdio: "inherit",
+  });
+}
+
+function pauseOptionalLocalServices() {
+  run(
+    "docker",
+    [
+      "stop",
+      "supabase_studio_pal-hatch-helper-local",
+      "supabase_analytics_pal-hatch-helper-local",
+      "supabase_realtime_pal-hatch-helper-local",
+      "supabase_inbucket_pal-hatch-helper-local",
+      "supabase_pg_meta_pal-hatch-helper-local",
+    ],
+    { stdio: "inherit" },
+  );
+}
+
 run("supabase", ["start"]);
 run("supabase", ["db", "reset"], { stdio: "inherit" });
+refreshLocalGateway();
+pauseOptionalLocalServices();
 const localEnvironment = localSupabaseEnvironment(
   run("supabase", ["status", "-o", "env"]),
 );
@@ -60,6 +83,7 @@ try {
   testFailure = error;
 } finally {
   run("supabase", ["db", "reset"], { stdio: "inherit" });
+  refreshLocalGateway();
 }
 
 if (testFailure !== undefined) throw testFailure;

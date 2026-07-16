@@ -1,0 +1,154 @@
+x-agent-environment: &agent-environment
+  APP_ENV: production
+  APP_VERSION: ${DEPLOY_GIT_SHA:?DEPLOY_GIT_SHA is required}
+  SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required}
+  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+  DATABASE_REQUEST_TIMEOUT_SECONDS: ${DATABASE_REQUEST_TIMEOUT_SECONDS:-10}
+  PALHATCH_DATA_DIR: /app/data
+  GAME_CATALOG_BUCKET: ${GAME_CATALOG_BUCKET:-game-catalog-artifacts}
+  GAME_CATALOG_CACHE_MAX_VERSIONS: ${GAME_CATALOG_CACHE_MAX_VERSIONS:-2}
+  JOB_POLL_INTERVAL_SECONDS: ${JOB_POLL_INTERVAL_SECONDS:-2}
+  JOB_HEARTBEAT_INTERVAL_SECONDS: ${JOB_HEARTBEAT_INTERVAL_SECONDS:-10}
+  JOB_LEASE_TIMEOUT_SECONDS: ${JOB_LEASE_TIMEOUT_SECONDS:-30}
+  JOB_LEASE_SAFETY_MARGIN_SECONDS: ${JOB_LEASE_SAFETY_MARGIN_SECONDS:-5}
+  JOB_STALE_REAP_INTERVAL_SECONDS: ${JOB_STALE_REAP_INTERVAL_SECONDS:-15}
+  JOB_SHUTDOWN_GRACE_SECONDS: ${JOB_SHUTDOWN_GRACE_SECONDS:-30}
+  COMMAND_POLL_INTERVAL_SECONDS: ${COMMAND_POLL_INTERVAL_SECONDS:-2}
+  COMMAND_STALE_AFTER_SECONDS: ${COMMAND_STALE_AFTER_SECONDS:-120}
+  AI_OPENAI_COMPATIBLE_BASE_URL: ${AI_OPENAI_COMPATIBLE_BASE_URL:-}
+  AI_OPENAI_COMPATIBLE_API_KEY: ${AI_OPENAI_COMPATIBLE_API_KEY:-}
+  AI_OPENAI_COMPATIBLE_MODEL: ${AI_OPENAI_COMPATIBLE_MODEL:-}
+  AI_CODEX_CLI_ENABLED: ${AI_CODEX_CLI_ENABLED:-false}
+  AI_PROVIDER_TIMEOUT_SECONDS: ${AI_PROVIDER_TIMEOUT_SECONDS:-30}
+  BREEDING_REMOTE_SOURCES_ENABLED: ${BREEDING_REMOTE_SOURCES_ENABLED:-false}
+  BREEDING_SOURCE_TIMEOUT_SECONDS: ${BREEDING_SOURCE_TIMEOUT_SECONDS:-30}
+  BREEDING_SOURCE_MAXIMUM_BYTES: ${BREEDING_SOURCE_MAXIMUM_BYTES:-10485760}
+
+x-agent-service: &agent-service
+  image: ${AGENT_IMAGE:?AGENT_IMAGE must be an immutable tag or digest}
+  user: "10001:10001"
+  init: true
+  restart: unless-stopped
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  tmpfs:
+    - /tmp:size=64m,uid=10001,gid=10001,mode=1777
+  pids_limit: 128
+  stop_grace_period: 35s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+  volumes:
+    - type: bind
+      source: ${PALHATCH_DATA_DIR:?PALHATCH_DATA_DIR is required}
+      target: /app/data
+      read_only: false
+      bind:
+        create_host_path: false
+
+x-save-environment: &save-environment
+  PALWORLD_COMPOSE_DIR: /palworld-compose
+  PALWORLD_SAVE_ROOT: /palworld-save
+  PALWORLD_SAVE_MOUNT_READ_ONLY_VERIFIED: "true"
+  PALWORLD_WORLD_ID: ${PALWORLD_WORLD_ID:?PALWORLD_WORLD_ID is required}
+  PALWORLD_WORLD_UID: ${PALWORLD_WORLD_UID:?PALWORLD_WORLD_UID is required}
+  PARSER_NAME: ${PARSER_NAME:?PARSER_NAME is required}
+  PARSER_VERSION: ${PARSER_VERSION:?PARSER_VERSION is required}
+  PARSER_COMMAND_JSON: ${PARSER_COMMAND_JSON:?PARSER_COMMAND_JSON is required}
+  PARSER_REQUIRED_FILES_JSON: ${PARSER_REQUIRED_FILES_JSON:?PARSER_REQUIRED_FILES_JSON is required}
+  SAVE_POLL_INTERVAL_SECONDS: ${SAVE_POLL_INTERVAL_SECONDS:-300}
+  SAVE_STABILITY_DELAY_SECONDS: ${SAVE_STABILITY_DELAY_SECONDS:-10}
+  PARSER_TIMEOUT_SECONDS: ${PARSER_TIMEOUT_SECONDS:-180}
+  PARSER_MEMORY_LIMIT_BYTES: ${PARSER_MEMORY_LIMIT_BYTES:-1610612736}
+  PARSER_CPU_LIMIT_SECONDS: ${PARSER_CPU_LIMIT_SECONDS:-180}
+
+x-save-volumes: &save-volumes
+  - type: bind
+    source: ${PALHATCH_DATA_DIR:?PALHATCH_DATA_DIR is required}
+    target: /app/data
+    read_only: false
+    bind:
+      create_host_path: false
+  - type: bind
+    source: ${PALWORLD_COMPOSE_DIR:?PALWORLD_COMPOSE_DIR is required}
+    target: /palworld-compose
+    read_only: true
+    bind:
+      create_host_path: false
+  - type: bind
+    source: ${PALWORLD_SAVE_ROOT:?PALWORLD_SAVE_ROOT is required}
+    target: /palworld-save
+    read_only: true
+    bind:
+      create_host_path: false
+  - type: bind
+    source: ${PARSER_BUNDLE_DIR:?PARSER_BUNDLE_DIR is required}
+    target: /app/parser
+    read_only: true
+    bind:
+      create_host_path: false
+
+services:
+  api:
+    <<: *agent-service
+    command: ["pal-hatch-helper", "api", "--host", "0.0.0.0", "--port", "18765"]
+    environment:
+      <<: *agent-environment
+      WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-api
+    ports:
+      - target: 18765
+        published: "18765"
+        protocol: tcp
+        host_ip: 127.0.0.1
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18765/healthz', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    cpus: "0.50"
+    mem_limit: 512m
+
+  job-worker:
+    <<: *agent-service
+    command: ["pal-hatch-helper", "job-worker"]
+    environment:
+      <<: *agent-environment
+      WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-job
+    cpus: "1.50"
+    mem_limit: 1536m
+
+  save-worker:
+    <<: *agent-service
+    command: ["pal-hatch-helper", "save-worker"]
+    environment:
+      <<: [*agent-environment, *save-environment]
+      WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-save
+    volumes: *save-volumes
+    tmpfs:
+      - /tmp:size=64m,uid=10001,gid=10001,mode=1777
+      - /app/data/runtime/parser:size=64m,uid=10001,gid=10001,mode=0700
+    pids_limit: 32
+    cpus: "1.00"
+    mem_limit: 2g
+
+  command-worker:
+    <<: *agent-service
+    command: ["pal-hatch-helper", "command-worker"]
+    environment:
+      <<: [*agent-environment, *save-environment]
+      WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-command
+    volumes: *save-volumes
+    cpus: "1.00"
+    mem_limit: 1g

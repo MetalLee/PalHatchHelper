@@ -23,6 +23,20 @@ export {
   parseRecalculatePlanResponse,
   Phase7ContractError,
 } from "./phase7-validation";
+export {
+  parseAdminAuditEvents,
+  parseAdminBindingCandidates,
+  parseAdminBindingEvents,
+  parseAdminCatalogVersions,
+  parseAdminError,
+  parseAdminJobs,
+  parseAdminOverview,
+  parseAdminSaveParserStatus,
+  parseRuntimeSettingsVersion,
+  parseRuntimeSettings,
+  parseSecretConfigurationStatuses,
+  Phase8ContractError,
+} from "./phase8-validation";
 export type { BreedingJob } from "./generated/breeding-job";
 export type {
   AIExplanation,
@@ -141,6 +155,25 @@ export type {
 } from "./generated/phase5-web";
 export type { ReadinessStatus } from "./generated/readiness-status";
 export type { SystemStatus } from "./generated/system-status";
+export type {
+  AdminAuditEvent,
+  AdminBindingCandidate,
+  AdminBindingEvent,
+  AdminCatalogAction,
+  AdminCatalogVersion,
+  AdminError,
+  AdminErrorCode,
+  AdminJobAction,
+  AdminJobSummary,
+  AdminOverview,
+  AdminSaveParserStatus,
+  AgentCommand,
+  AgentCommandStatus,
+  AgentCommandType,
+  RuntimeSettings,
+  RuntimeSettingsVersion,
+  SecretConfigurationStatus,
+} from "./generated/phase8-admin";
 export type {
   InventoryPublishPal,
   InventoryPublishPayload,

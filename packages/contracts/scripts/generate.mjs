@@ -25,6 +25,7 @@ const contracts = [
   "phase5-web",
   "phase6-breeder",
   "phase7-execution-plans",
+  "phase8-admin",
 ];
 const pythonContracts = [
   "readiness-status",
@@ -37,6 +38,7 @@ const pythonContracts = [
   "inventory-sync",
   "phase6-breeder",
   "phase7-execution-plans",
+  "phase8-admin",
 ];
 const bundledContractModels = {
   "game-catalog": [
@@ -168,6 +170,25 @@ const bundledContractModels = {
     "DetectionStepContext",
     "CandidateDetectionWrite",
     "CandidateDetectionBatchRequest",
+  ],
+  "phase8-admin": [
+    "AdminOverview",
+    "AdminBindingCandidate",
+    "AdminBindingEvent",
+    "AdminSaveParserStatus",
+    "AdminCatalogVersion",
+    "AdminCatalogAction",
+    "AdminJobSummary",
+    "AdminJobAction",
+    "RuntimeSettings",
+    "RuntimeSettingsVersion",
+    "AgentCommand",
+    "AgentCommandType",
+    "AgentCommandStatus",
+    "AdminAuditEvent",
+    "SecretConfigurationStatus",
+    "AdminError",
+    "AdminErrorCode",
   ],
 };
 

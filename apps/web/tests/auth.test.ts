@@ -124,4 +124,25 @@ describe("authenticate", () => {
       ).rejects.toMatchObject({ code } satisfies Partial<Phase5DataError>);
     },
   );
+
+  it("retries one structured auth request timeout", async () => {
+    const client = userContextClient();
+    const successfulGetUser = client.auth.getUser.bind(client.auth);
+    let attempts = 0;
+    client.auth.getUser = (async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return {
+          data: { user: null },
+          error: { code: "request_timeout", name: "AuthRetryableError" },
+        };
+      }
+      return successfulGetUser();
+    }) as typeof client.auth.getUser;
+
+    await expect(loadUserContext(client)).resolves.toMatchObject({
+      user_id: "00000000-0000-4000-8000-000000000002",
+    });
+    expect(attempts).toBe(2);
+  });
 });

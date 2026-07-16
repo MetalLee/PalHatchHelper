@@ -1,7 +1,9 @@
 import argparse
 import asyncio
 import contextlib
+import shutil
 import signal
+import time
 from collections.abc import Sequence
 from pathlib import Path, PurePosixPath
 from uuid import UUID
@@ -11,6 +13,7 @@ import uvicorn
 from pal_hatch_helper.ai.providers import (
     AIProvider,
     CodexCliProvider,
+    ConcurrencyLimitedAIProvider,
     FallbackAIProvider,
     OpenAICompatibleProvider,
     TemplateProvider,
@@ -28,6 +31,13 @@ from pal_hatch_helper.breeding.data_sources import (
 from pal_hatch_helper.breeding.handler import BreedingJobHandler
 from pal_hatch_helper.breeding.phase6_handler import Phase6BreedingJobHandler
 from pal_hatch_helper.breeding.supply_chain import prepare_breeding_catalog_version
+from pal_hatch_helper.commands.actions import DefaultCommandActions
+from pal_hatch_helper.commands.catalog_operations import (
+    CatalogAdminOperationWorker,
+    SupabaseCatalogOperationRepository,
+)
+from pal_hatch_helper.commands.repository import SupabaseCommandRepository
+from pal_hatch_helper.commands.worker import CommandDispatcher, CommandWorker
 from pal_hatch_helper.game_catalog.artifacts import SupabaseCatalogArtifactStore
 from pal_hatch_helper.game_catalog.gateway import SupabaseCatalogGateway
 from pal_hatch_helper.game_catalog.importer import stage_catalog_version
@@ -35,6 +45,7 @@ from pal_hatch_helper.game_catalog.jsonl import canonical_json
 from pal_hatch_helper.game_catalog.paths import CatalogPaths
 from pal_hatch_helper.game_catalog.repository import LayeredGameCatalogRepository
 from pal_hatch_helper.game_catalog.validation import validate_catalog_directory
+from pal_hatch_helper.generated import RuntimeSettings
 from pal_hatch_helper.main import create_app
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
@@ -43,10 +54,12 @@ from pal_hatch_helper.parsers.subprocess import SubprocessParserAdapter
 from pal_hatch_helper.plans.processor import CandidateDetectionProcessor
 from pal_hatch_helper.repositories.breeding import SupabaseBreedingRuntimeRepository
 from pal_hatch_helper.repositories.breeding_results import SupabaseBreedingResultRepository
-from pal_hatch_helper.repositories.database import SupabaseDatabaseClient
+from pal_hatch_helper.repositories.database import JSONValue, SupabaseDatabaseClient
 from pal_hatch_helper.repositories.execution_plans import SupabaseExecutionPlanRepository
 from pal_hatch_helper.repositories.inventory import SupabaseInventoryRepository
 from pal_hatch_helper.repositories.jobs import SupabaseJobRepository
+from pal_hatch_helper.runtime_settings import load_agent_runtime_settings
+from pal_hatch_helper.save_sync.registry import SnapshotRegistry
 from pal_hatch_helper.save_sync.service import InventorySyncService
 from pal_hatch_helper.save_sync.snapshot import SnapshotCopier
 from pal_hatch_helper.settings import Settings
@@ -76,6 +89,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="reap stale leases and process at most one job before exiting",
     )
     subparsers.add_parser("save-worker", help="run read-only save snapshot synchronization")
+    command_worker_parser = subparsers.add_parser(
+        "command-worker", help="poll and execute allowlisted administrator commands"
+    )
+    command_worker_parser.add_argument(
+        "--once", action="store_true", help="process at most one command before exiting"
+    )
     candidate_parser = subparsers.add_parser(
         "candidate-detector",
         help="idempotently process one already-published normalized snapshot",
@@ -160,6 +179,19 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 "candidate_detector_failed",
                 extra={
                     "event": "candidate_detector_failed",
+                    "error_code": error.code.value,
+                },
+            )
+            return 2
+        return 0
+    if parsed.command == "command-worker":
+        try:
+            asyncio.run(run_command_worker(settings, run_once=bool(parsed.once)))
+        except StructuredError as error:
+            get_logger(__name__).error(
+                "command_worker_start_failed",
+                extra={
+                    "event": "command_worker_start_failed",
                     "error_code": error.code.value,
                 },
             )
@@ -366,6 +398,8 @@ async def run_job_worker(
         request_timeout_seconds=settings.database_request_timeout_seconds,
     )
     repository = SupabaseJobRepository(database)
+    runtime_state = await load_agent_runtime_settings(database)
+    runtime_settings = runtime_state.settings
     artifacts: SupabaseCatalogArtifactStore | None = None
     external_provider: OpenAICompatibleProvider | None = None
     if handler is None:
@@ -392,7 +426,7 @@ async def run_job_worker(
         )
         algorithm = BreedingEngineAdapter(runtime_repository)
         await algorithm.initialize()
-        ai_provider, external_provider = _build_ai_provider(settings)
+        ai_provider, external_provider = _build_ai_provider(settings, runtime_settings)
         handler = Phase6BreedingJobHandler(
             algorithm,
             SupabaseBreedingResultRepository(database),
@@ -402,31 +436,58 @@ async def run_job_worker(
         repository=repository,
         lease_timeout_seconds=settings.job_lease_timeout_seconds,
     )
-    worker = JobWorker(
-        repository,
-        handler,
-        worker_id=settings.worker_id,
-        poll_interval_seconds=settings.job_poll_interval_seconds,
-        heartbeat_interval_seconds=settings.job_heartbeat_interval_seconds,
-        heartbeat_request_timeout_seconds=settings.database_request_timeout_seconds,
-        lease_timeout_seconds=settings.job_lease_timeout_seconds,
-        lease_safety_margin_seconds=settings.job_lease_safety_margin_seconds,
-        shutdown_grace_seconds=settings.job_shutdown_grace_seconds,
-        stale_reap_interval_seconds=settings.job_stale_reap_interval_seconds,
-        stale_job_reaper=reaper,
-        logger=get_logger("pal_hatch_helper.job_worker"),
-    )
+    workers = [
+        JobWorker(
+            repository,
+            handler,
+            worker_id=(
+                settings.worker_id
+                if runtime_settings.job_worker_concurrency == 1
+                else f"{settings.worker_id}-{index + 1}"
+            ),
+            poll_interval_seconds=settings.job_poll_interval_seconds,
+            heartbeat_interval_seconds=settings.job_heartbeat_interval_seconds,
+            heartbeat_request_timeout_seconds=settings.database_request_timeout_seconds,
+            lease_timeout_seconds=settings.job_lease_timeout_seconds,
+            lease_safety_margin_seconds=settings.job_lease_safety_margin_seconds,
+            shutdown_grace_seconds=settings.job_shutdown_grace_seconds,
+            stale_reap_interval_seconds=settings.job_stale_reap_interval_seconds,
+            stale_job_reaper=reaper if index == 0 else None,
+            logger=get_logger("pal_hatch_helper.job_worker"),
+        )
+        for index in range(runtime_settings.job_worker_concurrency)
+    ]
     loop = asyncio.get_running_loop()
     for handled_signal in (signal.SIGTERM, signal.SIGINT):
         with contextlib.suppress(NotImplementedError, RuntimeError):
-            loop.add_signal_handler(handled_signal, worker.handle_signal, handled_signal)
+            loop.add_signal_handler(
+                handled_signal,
+                _stop_job_workers,
+                workers,
+                handled_signal,
+            )
     try:
+        heartbeat_task = asyncio.create_task(
+            _worker_heartbeat_loop(
+                database,
+                settings,
+                "job_worker",
+                {
+                    "runtime_settings_version": runtime_state.version,
+                    "worker_concurrency": runtime_settings.job_worker_concurrency,
+                    "ai_concurrency": runtime_settings.ai_concurrency,
+                },
+            )
+        )
         if run_once:
             await reaper.reap()
-            await worker.run_once()
+            await workers[0].run_once()
         else:
-            await worker.run()
+            async with asyncio.TaskGroup() as task_group:
+                for worker in workers:
+                    task_group.create_task(worker.run())
     finally:
+        await _cancel_background(heartbeat_task)
         if external_provider is not None:
             await external_provider.close()
         if artifacts is not None:
@@ -449,17 +510,112 @@ async def run_candidate_detector(settings: Settings, snapshot_id: UUID) -> None:
         request_timeout_seconds=settings.database_request_timeout_seconds,
     )
     try:
+        await _record_worker_heartbeat(database, settings, "candidate_detector")
         await CandidateDetectionProcessor(
             SupabaseExecutionPlanRepository(database)
         ).process_snapshot(snapshot_id)
+        await _record_worker_heartbeat(database, settings, "candidate_detector")
     finally:
+        await database.close()
+
+
+async def run_command_worker(settings: Settings, *, run_once: bool = False) -> None:
+    if not settings.database_configured:
+        raise StructuredError(
+            code=ErrorCode.DATABASE_UNAVAILABLE,
+            summary="Command Worker database configuration is incomplete.",
+            retryable=False,
+        )
+    assert settings.supabase_url is not None
+    assert settings.supabase_service_role_key is not None
+    database = SupabaseDatabaseClient(
+        base_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        request_timeout_seconds=settings.database_request_timeout_seconds,
+    )
+    runtime_state = await load_agent_runtime_settings(database)
+    artifacts = SupabaseCatalogArtifactStore(
+        base_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        bucket=settings.game_catalog_bucket,
+        request_timeout_seconds=settings.database_request_timeout_seconds,
+    )
+    paths = CatalogPaths(settings.palhatch_data_dir)
+    paths.ensure()
+    catalog_gateway = SupabaseCatalogGateway(database)
+    catalog_repository = LayeredGameCatalogRepository(
+        paths=paths,
+        metadata_store=catalog_gateway,
+        artifact_store=artifacts,
+        projection_store=catalog_gateway,
+        max_memory_versions=settings.game_catalog_cache_max_versions,
+    )
+    inventory_sync: InventorySyncService | None = None
+    registry: SnapshotRegistry | None = None
+    if settings.save_worker_configured:
+        inventory_sync = await _build_inventory_sync_service(
+            settings, database, runtime_state.settings
+        )
+        registry = SnapshotRegistry(
+            settings.palhatch_data_dir / "snapshots",
+            successful_count=runtime_state.settings.snapshot_retention_count,
+        )
+    worker = CommandWorker(
+        SupabaseCommandRepository(database),
+        CommandDispatcher(
+            DefaultCommandActions(
+                database,
+                inventory_sync=inventory_sync,
+                snapshot_registry=registry,
+                catalog_warmer=catalog_repository,
+            )
+        ),
+        worker_id=settings.worker_id,
+        deployment_version=settings.app_version,
+        poll_interval_seconds=settings.command_poll_interval_seconds,
+        stale_after_seconds=settings.command_stale_after_seconds,
+        logger=get_logger("pal_hatch_helper.command_worker"),
+    )
+    catalog_operation_worker = CatalogAdminOperationWorker(
+        SupabaseCatalogOperationRepository(database),
+        artifact_store=artifacts,
+        gateway=catalog_gateway,
+        paths=paths,
+        artifact_bucket=settings.game_catalog_bucket,
+        worker_id=settings.worker_id,
+        stale_after_seconds=settings.command_stale_after_seconds,
+    )
+    loop = asyncio.get_running_loop()
+    for handled_signal in (signal.SIGTERM, signal.SIGINT):
+        with contextlib.suppress(NotImplementedError, RuntimeError):
+            loop.add_signal_handler(handled_signal, worker.request_stop)
+    try:
+        heartbeat_task = asyncio.create_task(
+            _worker_heartbeat_loop(database, settings, "command_worker")
+        )
+        if run_once:
+            processed = await worker.run_once()
+            if not processed:
+                await catalog_operation_worker.run_once()
+        else:
+            while not worker.stopped:
+                processed = await worker.run_once()
+                if not processed:
+                    processed = await catalog_operation_worker.run_once()
+                if not processed:
+                    await asyncio.sleep(settings.command_poll_interval_seconds)
+    finally:
+        await _cancel_background(heartbeat_task)
+        await artifacts.close()
         await database.close()
 
 
 def _build_ai_provider(
     settings: Settings,
+    runtime_settings: RuntimeSettings | None = None,
 ) -> tuple[AIProvider, OpenAICompatibleProvider | None]:
-    providers: list[AIProvider] = []
+    runtime = runtime_settings or _default_runtime_settings()
+    available: dict[str, AIProvider] = {"template": TemplateProvider()}
     external: OpenAICompatibleProvider | None = None
     if (
         settings.ai_openai_compatible_base_url is not None
@@ -473,16 +629,21 @@ def _build_ai_provider(
             timeout_seconds=settings.ai_provider_timeout_seconds,
             maximum_response_bytes=settings.ai_maximum_response_bytes,
         )
-        providers.append(external)
+        available["openai_compatible"] = external
     if settings.ai_codex_cli_enabled:
-        providers.append(
-            CodexCliProvider(
-                timeout_seconds=settings.ai_provider_timeout_seconds,
-                maximum_response_bytes=settings.ai_maximum_response_bytes,
-            )
+        available["codex_cli"] = CodexCliProvider(
+            timeout_seconds=settings.ai_provider_timeout_seconds,
+            maximum_response_bytes=settings.ai_maximum_response_bytes,
         )
-    providers.append(TemplateProvider())
-    return FallbackAIProvider(tuple(providers)), external
+    providers = [
+        available[name.value] for name in runtime.ai_provider_order if name.value in available
+    ]
+    if not any(isinstance(provider, TemplateProvider) for provider in providers):
+        providers.append(available["template"])
+    return (
+        ConcurrencyLimitedAIProvider(FallbackAIProvider(tuple(providers)), runtime.ai_concurrency),
+        external,
+    )
 
 
 async def run_save_worker(
@@ -500,6 +661,84 @@ async def run_save_worker(
         )
     assert settings.supabase_url is not None
     assert settings.supabase_service_role_key is not None
+    database = SupabaseDatabaseClient(
+        base_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        request_timeout_seconds=settings.database_request_timeout_seconds,
+    )
+    try:
+        runtime_state = await load_agent_runtime_settings(database)
+        service = await _build_inventory_sync_service(settings, database, runtime_state.settings)
+        stopped = stop_event or asyncio.Event()
+        loop = asyncio.get_running_loop()
+        for handled_signal in (signal.SIGTERM, signal.SIGINT):
+            with contextlib.suppress(NotImplementedError, RuntimeError):
+                loop.add_signal_handler(handled_signal, stopped.set)
+        logger = get_logger("pal_hatch_helper.save_worker")
+        while not stopped.is_set():
+            started_at = time.monotonic()
+            try:
+                result = await service.sync_once()
+                await _record_worker_heartbeat(
+                    database,
+                    settings,
+                    "save_worker",
+                    {
+                        "save_root_configured": True,
+                        "read_only_mount": (
+                            "verified"
+                            if settings.palworld_save_mount_read_only_verified
+                            else "unverified"
+                        ),
+                        "parse_duration_ms": max(0, int((time.monotonic() - started_at) * 1000)),
+                        "runtime_settings_version": runtime_state.version,
+                        "parser_timeout_seconds": runtime_state.settings.parser_timeout_seconds,
+                        "snapshot_retention_count": runtime_state.settings.snapshot_retention_count,
+                    },
+                )
+                logger.info(
+                    "save_sync_completed",
+                    extra={"event": "save_sync_completed", "status": result.status},
+                )
+            except StructuredError as error:
+                await _record_worker_heartbeat(
+                    database,
+                    settings,
+                    "save_worker",
+                    {
+                        "save_root_configured": True,
+                        "read_only_mount": (
+                            "verified"
+                            if settings.palworld_save_mount_read_only_verified
+                            else "unverified"
+                        ),
+                        "last_error_code": error.code.value,
+                        "runtime_settings_version": runtime_state.version,
+                        "parser_timeout_seconds": runtime_state.settings.parser_timeout_seconds,
+                        "snapshot_retention_count": runtime_state.settings.snapshot_retention_count,
+                    },
+                )
+                logger.warning(
+                    "save_sync_skipped",
+                    extra={
+                        "event": "save_sync_skipped",
+                        "error_code": error.code.value,
+                    },
+                )
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(
+                    stopped.wait(),
+                    timeout=settings.save_poll_interval_seconds,
+                )
+    finally:
+        await database.close()
+
+
+async def _build_inventory_sync_service(
+    settings: Settings,
+    database: SupabaseDatabaseClient,
+    runtime_settings: RuntimeSettings | None = None,
+) -> InventorySyncService:
     assert settings.palworld_compose_dir is not None
     assert settings.palworld_save_root is not None
     assert settings.palworld_world_id is not None
@@ -516,68 +755,122 @@ async def run_save_worker(
             summary="The explicitly configured Compose and save directories are not available.",
             retryable=False,
         )
-
-    database = SupabaseDatabaseClient(
-        base_url=settings.supabase_url,
-        service_role_key=settings.supabase_service_role_key,
-        request_timeout_seconds=settings.database_request_timeout_seconds,
-    )
     repository = SupabaseInventoryRepository(database)
+    catalog = await repository.catalog_ids(settings.palworld_world_id)
+    runtime = runtime_settings or _default_runtime_settings()
+    parser = SubprocessParserAdapter(
+        name=settings.parser_name,
+        version=settings.parser_version,
+        command=settings.parser_command,
+        declared_files=tuple(PurePosixPath(path) for path in settings.parser_required_files),
+        timeout_seconds=runtime.parser_timeout_seconds,
+        memory_limit_bytes=settings.parser_memory_limit_bytes,
+        cpu_limit_seconds=settings.parser_cpu_limit_seconds,
+    )
+    return InventorySyncService(
+        world_id=settings.palworld_world_id,
+        source_root=settings.palworld_save_root,
+        runtime_root=settings.palhatch_data_dir / "runtime" / "parser",
+        copier=SnapshotCopier(
+            snapshot_root=settings.palhatch_data_dir / "snapshots",
+            stability_delay_seconds=settings.save_stability_delay_seconds,
+        ),
+        parser=parser,
+        validator=CanonicalSnapshotValidator(
+            expected_world_uid=settings.palworld_world_uid,
+            known_pal_ids=catalog.pal_ids,
+            known_passive_skill_ids=catalog.passive_skill_ids,
+        ),
+        repository=repository,
+        registry=SnapshotRegistry(
+            settings.palhatch_data_dir / "snapshots",
+            successful_count=runtime.snapshot_retention_count,
+        ),
+        published_snapshot_processor=CandidateDetectionProcessor(
+            SupabaseExecutionPlanRepository(database)
+        ),
+    )
+
+
+async def _record_worker_heartbeat(
+    database: SupabaseDatabaseClient,
+    settings: Settings,
+    worker_kind: str,
+    metadata: dict[str, JSONValue] | None = None,
+) -> None:
+    safe_metadata: dict[str, JSONValue] = dict(metadata or {})
+    safe_metadata["database_configured"] = settings.database_configured
+    safe_metadata["ai_provider_configured"] = bool(
+        settings.ai_codex_cli_enabled
+        or (
+            settings.ai_openai_compatible_base_url is not None
+            and settings.ai_openai_compatible_api_key is not None
+            and settings.ai_openai_compatible_model is not None
+        )
+    )
     try:
-        catalog = await repository.catalog_ids(settings.palworld_world_id)
-        parser = SubprocessParserAdapter(
-            name=settings.parser_name,
-            version=settings.parser_version,
-            command=settings.parser_command,
-            declared_files=tuple(PurePosixPath(path) for path in settings.parser_required_files),
-            timeout_seconds=settings.parser_timeout_seconds,
-            memory_limit_bytes=settings.parser_memory_limit_bytes,
-            cpu_limit_seconds=settings.parser_cpu_limit_seconds,
+        disk = shutil.disk_usage(settings.palhatch_data_dir)
+        safe_metadata["disk_available_bytes"] = disk.free
+        safe_metadata["disk_level"] = (
+            "critical"
+            if disk.free < 512 * 1024 * 1024
+            else "warning"
+            if disk.free < 2 * 1024 * 1024 * 1024
+            else "normal"
         )
-        service = InventorySyncService(
-            world_id=settings.palworld_world_id,
-            source_root=settings.palworld_save_root,
-            runtime_root=settings.palhatch_data_dir / "runtime" / "parser",
-            copier=SnapshotCopier(
-                snapshot_root=settings.palhatch_data_dir / "snapshots",
-                stability_delay_seconds=settings.save_stability_delay_seconds,
-            ),
-            parser=parser,
-            validator=CanonicalSnapshotValidator(
-                expected_world_uid=settings.palworld_world_uid,
-                known_pal_ids=catalog.pal_ids,
-                known_passive_skill_ids=catalog.passive_skill_ids,
-            ),
-            repository=repository,
-            published_snapshot_processor=CandidateDetectionProcessor(
-                SupabaseExecutionPlanRepository(database)
-            ),
+    except OSError:
+        safe_metadata["disk_level"] = "unknown"
+    for kind in ("agent", worker_kind):
+        result = await database.rpc(
+            "record_agent_worker_heartbeat",
+            {
+                "p_worker_kind": kind,
+                "p_worker_id": settings.worker_id,
+                "p_deployment_version": settings.app_version,
+                "p_safe_metadata": safe_metadata,
+            },
         )
-        stopped = stop_event or asyncio.Event()
-        loop = asyncio.get_running_loop()
-        for handled_signal in (signal.SIGTERM, signal.SIGINT):
-            with contextlib.suppress(NotImplementedError, RuntimeError):
-                loop.add_signal_handler(handled_signal, stopped.set)
-        logger = get_logger("pal_hatch_helper.save_worker")
-        while not stopped.is_set():
-            try:
-                result = await service.sync_once()
-                logger.info(
-                    "save_sync_completed",
-                    extra={"event": "save_sync_completed", "status": result.status},
-                )
-            except StructuredError as error:
-                logger.warning(
-                    "save_sync_skipped",
-                    extra={
-                        "event": "save_sync_skipped",
-                        "error_code": error.code.value,
-                    },
-                )
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(
-                    stopped.wait(),
-                    timeout=settings.save_poll_interval_seconds,
-                )
-    finally:
-        await database.close()
+        if result is not True:
+            raise StructuredError(
+                code=ErrorCode.DATABASE_RESPONSE_INVALID,
+                summary="Worker heartbeat RPC returned an invalid response.",
+                retryable=False,
+            )
+
+
+async def _worker_heartbeat_loop(
+    database: SupabaseDatabaseClient,
+    settings: Settings,
+    worker_kind: str,
+    metadata: dict[str, JSONValue] | None = None,
+) -> None:
+    while True:
+        await _record_worker_heartbeat(database, settings, worker_kind, metadata)
+        await asyncio.sleep(30)
+
+
+def _stop_job_workers(workers: Sequence[JobWorker], received_signal: signal.Signals) -> None:
+    for worker in workers:
+        worker.handle_signal(received_signal)
+
+
+def _default_runtime_settings() -> RuntimeSettings:
+    return RuntimeSettings.model_validate(
+        {
+            "job_creation_enabled": True,
+            "max_generations": 5,
+            "job_worker_concurrency": 1,
+            "ai_concurrency": 1,
+            "parser_timeout_seconds": 180,
+            "snapshot_retention_count": 3,
+            "data_stale_threshold_minutes": 15,
+            "ai_provider_order": ["openai_compatible", "codex_cli", "template"],
+            "maintenance_announcement": None,
+        }
+    )
+
+
+async def _cancel_background(task: asyncio.Task[None]) -> None:
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task

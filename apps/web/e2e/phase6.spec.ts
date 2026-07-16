@@ -58,6 +58,19 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   await page.getByLabel("最大代数").fill("5");
   const createButton = page.getByRole("button", { name: "创建配种任务" });
   await expect(createButton).toBeEnabled();
+  await page.waitForFunction(
+    () => {
+      const button = [...document.querySelectorAll("button")].find(
+        (element) => element.textContent?.trim() === "创建配种任务",
+      );
+      return (
+        button !== undefined &&
+        Object.keys(button).some((key) => key.startsWith("__reactProps$"))
+      );
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
   await createButton.click();
   await expect(page).toHaveURL(/\/breeder\/jobs\/[0-9a-f-]{36}$/, {
     timeout: 30_000,

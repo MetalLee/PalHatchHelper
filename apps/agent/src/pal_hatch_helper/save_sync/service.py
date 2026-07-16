@@ -105,8 +105,7 @@ class InventorySyncService:
                 )
             )
         except StructuredError as error:
-            self._registry.record(outcome.path, "failed", error_code=error.code.value)
-            await self._repository.record_failure(
+            failure_id = await self._repository.record_failure(
                 InventoryFailureRequest(
                     world_id=self._world_id,
                     source_save_hash=outcome.content_hash,
@@ -118,10 +117,24 @@ class InventorySyncService:
                     error_summary=error.summary,
                 )
             )
+            self._registry.record(
+                outcome.path,
+                "failed",
+                error_code=error.code.value,
+                snapshot_id=failure_id,
+                content_hash=outcome.content_hash,
+                source_modified_at=outcome.source_modified_at,
+            )
             self._registry.enforce_retention()
             raise
 
-        self._registry.record(outcome.path, "success")
+        self._registry.record(
+            outcome.path,
+            "success",
+            snapshot_id=snapshot_id,
+            content_hash=outcome.content_hash,
+            source_modified_at=outcome.source_modified_at,
+        )
         self._registry.enforce_retention()
         if self._published_snapshot_processor is not None:
             await self._published_snapshot_processor.process_snapshot(snapshot_id)
@@ -130,6 +143,56 @@ class InventorySyncService:
             content_hash=outcome.content_hash,
             snapshot_id=snapshot_id,
             local_snapshot_path=outcome.path,
+        )
+
+    async def reparse_snapshot(
+        self,
+        snapshot_id: UUID,
+        *,
+        approve_inventory_drop: bool = False,
+    ) -> InventorySyncResult:
+        record = self._registry.find_snapshot(snapshot_id)
+        compatibility = self._parser.detect_compatibility(record.path)
+        if not compatibility.compatible:
+            raise StructuredError(
+                code=ErrorCode.PARSER_INCOMPATIBLE,
+                summary="ParserAdapter rejected the existing Agent-owned snapshot.",
+                retryable=False,
+            )
+        canonical = self._parse_canonical(record.path)
+        validated = self._validator.validate(canonical)
+        latest = await self._repository.latest(self._world_id)
+        if not approve_inventory_drop:
+            self._drop_guard.ensure_publishable(
+                previous_count=latest.pal_count if latest is not None else 0,
+                new_count=len(validated.pals),
+            )
+        assert record.content_hash is not None
+        assert record.source_modified_at is not None
+        published_id = await self._repository.publish(
+            InventoryPublishRequest(
+                world_id=self._world_id,
+                source_save_hash=record.content_hash,
+                source_modified_at=record.source_modified_at,
+                parser_name=self._parser.name,
+                parser_version=self._parser.version,
+                snapshot=validated,
+            )
+        )
+        self._registry.record(
+            record.path,
+            "success",
+            snapshot_id=published_id,
+            content_hash=record.content_hash,
+            source_modified_at=record.source_modified_at,
+        )
+        if self._published_snapshot_processor is not None:
+            await self._published_snapshot_processor.process_snapshot(published_id)
+        return InventorySyncResult(
+            status="published",
+            content_hash=record.content_hash,
+            snapshot_id=published_id,
+            local_snapshot_path=record.path,
         )
 
     def _parse_canonical(self, snapshot_path: Path) -> CanonicalSnapshot:

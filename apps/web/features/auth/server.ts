@@ -15,13 +15,21 @@ function assertQueryAvailable(error: { code?: string } | null): void {
   if (error !== null) throw new Phase5DataError(databaseFailureCode(error));
 }
 
+async function getUserWithTimeoutRetry(supabase: SupabaseClient<Database>) {
+  let result = await supabase.auth.getUser();
+  if (result.error?.code !== "request_timeout") return result;
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  result = await supabase.auth.getUser();
+  return result;
+}
+
 export async function loadUserContext(
   supabase: SupabaseClient<Database>,
 ): Promise<UserContext | null> {
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser();
+  } = await getUserWithTimeoutRetry(supabase);
   const authCode = authUserErrorCode(user, authError);
   if (authCode === "AUTH_REQUIRED") return null;
   if (authCode !== null) throw new Phase5DataError(authCode);

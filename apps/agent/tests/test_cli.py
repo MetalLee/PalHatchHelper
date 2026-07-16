@@ -2,13 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from pal_hatch_helper.ai.providers import FallbackAIProvider
+from pal_hatch_helper.ai.providers import ConcurrencyLimitedAIProvider
 from pal_hatch_helper.cli import _build_ai_provider, build_parser, main
 from pal_hatch_helper.models.errors import ErrorCode
 from pal_hatch_helper.settings import Settings
 
 
-@pytest.mark.parametrize("command", ["api", "job-worker", "save-worker"])
+@pytest.mark.parametrize("command", ["api", "job-worker", "save-worker", "command-worker"])
 def test_cli_keeps_long_running_process_boundaries(command: str) -> None:
     arguments = build_parser().parse_args([command])
 
@@ -17,6 +17,12 @@ def test_cli_keeps_long_running_process_boundaries(command: str) -> None:
 
 def test_job_worker_accepts_one_shot_execution_for_integration_checks() -> None:
     arguments = build_parser().parse_args(["job-worker", "--once"])
+
+    assert arguments.once is True
+
+
+def test_command_worker_accepts_one_shot_execution_for_recovery_checks() -> None:
+    arguments = build_parser().parse_args(["command-worker", "--once"])
 
     assert arguments.once is True
 
@@ -122,5 +128,5 @@ def test_save_worker_requires_explicit_configuration(
 def test_job_worker_has_a_template_safe_ai_chain_without_external_credentials() -> None:
     provider, external = _build_ai_provider(Settings(app_env="test"))
 
-    assert isinstance(provider, FallbackAIProvider)
+    assert isinstance(provider, ConcurrencyLimitedAIProvider)
     assert external is None

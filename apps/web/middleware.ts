@@ -4,7 +4,15 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { getPublicSupabaseConfig } from "@/lib/supabase/config";
 
-const protectedPrefixes = ["/overview", "/pals", "/data-status", "/account"];
+const protectedPrefixes = [
+  "/overview",
+  "/pals",
+  "/breeder",
+  "/plans",
+  "/data-status",
+  "/account",
+  "/admin",
+];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -38,6 +46,10 @@ export async function middleware(request: NextRequest) {
   if (user !== null && pathname === "/login") {
     return NextResponse.redirect(new URL("/overview", request.url));
   }
+  if (protectedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    response.headers.set("Vary", "Cookie");
+  }
   return response;
 }
 
@@ -48,5 +60,8 @@ export const config = {
     "/pals/:path*",
     "/data-status/:path*",
     "/account/:path*",
+    "/breeder/:path*",
+    "/plans/:path*",
+    "/admin/:path*",
   ],
 };

@@ -10,6 +10,298 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_audit_events: {
+        Row: {
+          id: string;
+          actor_user_id: string | null;
+          event_type: string;
+          target_type: string;
+          target_id: string | null;
+          idempotency_key: string | null;
+          safe_summary: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_user_id?: string | null;
+          event_type: string;
+          target_type: string;
+          target_id?: string | null;
+          idempotency_key?: string | null;
+          safe_summary?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          actor_user_id?: string | null;
+          event_type?: string;
+          target_type?: string;
+          target_id?: string | null;
+          idempotency_key?: string | null;
+          safe_summary?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_events_actor_user_id_fkey";
+            columns: ["actor_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      admin_catalog_operations: {
+        Row: {
+          id: string;
+          operation_type: string;
+          upload_id: string;
+          created_by: string;
+          idempotency_key: string;
+          status: string;
+          claimed_by: string | null;
+          claimed_at: string | null;
+          completed_at: string | null;
+          result_summary: Json;
+          error_code: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          operation_type: string;
+          upload_id: string;
+          created_by: string;
+          idempotency_key: string;
+          status?: string;
+          claimed_by?: string | null;
+          claimed_at?: string | null;
+          completed_at?: string | null;
+          result_summary?: Json;
+          error_code?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          operation_type?: string;
+          upload_id?: string;
+          created_by?: string;
+          idempotency_key?: string;
+          status?: string;
+          claimed_by?: string | null;
+          claimed_at?: string | null;
+          completed_at?: string | null;
+          result_summary?: Json;
+          error_code?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_catalog_operations_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_catalog_operations_upload_id_fkey";
+            columns: ["upload_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_catalog_uploads";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      admin_catalog_uploads: {
+        Row: {
+          id: string;
+          created_by: string;
+          source_id: string | null;
+          original_filename: string;
+          object_path: string;
+          size_bytes: number;
+          package_sha256: string;
+          status: string;
+          validation_summary: Json;
+          staged_version_id: string | null;
+          idempotency_key: string;
+          created_at: string;
+          uploaded_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          created_by: string;
+          source_id?: string | null;
+          original_filename: string;
+          object_path: string;
+          size_bytes: number;
+          package_sha256: string;
+          status?: string;
+          validation_summary?: Json;
+          staged_version_id?: string | null;
+          idempotency_key: string;
+          created_at?: string;
+          uploaded_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          created_by?: string;
+          source_id?: string | null;
+          original_filename?: string;
+          object_path?: string;
+          size_bytes?: number;
+          package_sha256?: string;
+          status?: string;
+          validation_summary?: Json;
+          staged_version_id?: string | null;
+          idempotency_key?: string;
+          created_at?: string;
+          uploaded_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_catalog_uploads_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_catalog_uploads_source_id_fkey";
+            columns: ["source_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_sources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_catalog_uploads_staged_version_id_fkey";
+            columns: ["staged_version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agent_command_results: {
+        Row: {
+          command_id: string;
+          status: Database["public"]["Enums"]["agent_command_status"];
+          worker_id: string;
+          error_code: string | null;
+          safe_summary: Json;
+          started_at: string;
+          completed_at: string;
+        };
+        Insert: {
+          command_id: string;
+          status: Database["public"]["Enums"]["agent_command_status"];
+          worker_id: string;
+          error_code?: string | null;
+          safe_summary?: Json;
+          started_at: string;
+          completed_at: string;
+        };
+        Update: {
+          command_id?: string;
+          status?: Database["public"]["Enums"]["agent_command_status"];
+          worker_id?: string;
+          error_code?: string | null;
+          safe_summary?: Json;
+          started_at?: string;
+          completed_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agent_command_results_command_id_fkey";
+            columns: ["command_id"];
+            isOneToOne: false;
+            referencedRelation: "agent_commands";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agent_commands: {
+        Row: {
+          id: string;
+          command_type: string;
+          payload: Json;
+          idempotency_key: string;
+          created_by: string;
+          expires_at: string;
+          status: Database["public"]["Enums"]["agent_command_status"];
+          claimed_by: string | null;
+          claimed_at: string | null;
+          completed_at: string | null;
+          error_code: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          command_type: string;
+          payload?: Json;
+          idempotency_key: string;
+          created_by: string;
+          expires_at: string;
+          status?: Database["public"]["Enums"]["agent_command_status"];
+          claimed_by?: string | null;
+          claimed_at?: string | null;
+          completed_at?: string | null;
+          error_code?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          command_type?: string;
+          payload?: Json;
+          idempotency_key?: string;
+          created_by?: string;
+          expires_at?: string;
+          status?: Database["public"]["Enums"]["agent_command_status"];
+          claimed_by?: string | null;
+          claimed_at?: string | null;
+          completed_at?: string | null;
+          error_code?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agent_commands_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agent_worker_heartbeats: {
+        Row: {
+          worker_kind: string;
+          worker_id: string;
+          deployment_version: string;
+          safe_metadata: Json;
+          heartbeat_at: string;
+        };
+        Insert: {
+          worker_kind: string;
+          worker_id: string;
+          deployment_version: string;
+          safe_metadata?: Json;
+          heartbeat_at: string;
+        };
+        Update: {
+          worker_kind?: string;
+          worker_id?: string;
+          deployment_version?: string;
+          safe_metadata?: Json;
+          heartbeat_at?: string;
+        };
+        Relationships: [];
+      };
       breeding_data_sources: {
         Row: {
           id: string;
@@ -832,6 +1124,36 @@ export type Database = {
           },
         ];
       };
+      deployment_records: {
+        Row: {
+          id: string;
+          git_sha: string;
+          agent_image: string | null;
+          vercel_deployment_id: string | null;
+          status: string;
+          safe_summary: Json;
+          recorded_at: string;
+        };
+        Insert: {
+          id?: string;
+          git_sha: string;
+          agent_image?: string | null;
+          vercel_deployment_id?: string | null;
+          status: string;
+          safe_summary?: Json;
+          recorded_at?: string;
+        };
+        Update: {
+          id?: string;
+          git_sha?: string;
+          agent_image?: string | null;
+          vercel_deployment_id?: string | null;
+          status?: string;
+          safe_summary?: Json;
+          recorded_at?: string;
+        };
+        Relationships: [];
+      };
       execution_candidate_detection_runs: {
         Row: {
           step_id: string;
@@ -1471,6 +1793,61 @@ export type Database = {
           },
         ];
       };
+      player_binding_events: {
+        Row: {
+          id: string;
+          event_type: string;
+          user_id: string;
+          player_id: string | null;
+          actor_user_id: string;
+          binding_version: number | null;
+          idempotency_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_type: string;
+          user_id: string;
+          player_id?: string | null;
+          actor_user_id: string;
+          binding_version?: number | null;
+          idempotency_key: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_type?: string;
+          user_id?: string;
+          player_id?: string | null;
+          actor_user_id?: string;
+          binding_version?: number | null;
+          idempotency_key?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_binding_events_actor_user_id_fkey";
+            columns: ["actor_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_binding_events_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_binding_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       player_bindings: {
         Row: {
           user_id: string;
@@ -1478,6 +1855,7 @@ export type Database = {
           bound_by: string;
           bound_at: string;
           claim_code_hash: string | null;
+          concurrency_version: number;
         };
         Insert: {
           user_id: string;
@@ -1485,6 +1863,7 @@ export type Database = {
           bound_by: string;
           bound_at?: string;
           claim_code_hash?: string | null;
+          concurrency_version?: number;
         };
         Update: {
           user_id?: string;
@@ -1492,6 +1871,7 @@ export type Database = {
           bound_by?: string;
           bound_at?: string;
           claim_code_hash?: string | null;
+          concurrency_version?: number;
         };
         Relationships: [
           {
@@ -1591,6 +1971,44 @@ export type Database = {
           {
             foreignKeyName: "profiles_id_fkey";
             columns: ["id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      runtime_settings_versions: {
+        Row: {
+          id: string;
+          version: number;
+          settings: Json;
+          created_by: string | null;
+          rolled_back_from_version: number | null;
+          idempotency_key: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          version: number;
+          settings: Json;
+          created_by?: string | null;
+          rolled_back_from_version?: number | null;
+          idempotency_key?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          version?: number;
+          settings?: Json;
+          created_by?: string | null;
+          rolled_back_from_version?: number | null;
+          idempotency_key?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "runtime_settings_versions_created_by_fkey";
+            columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
@@ -1802,6 +2220,16 @@ export type Database = {
         };
         Returns: string;
       };
+      admin_catalog_version_action: {
+        Args: {
+          p_action: string;
+          p_world_id?: string | null;
+          p_version_id?: string | null;
+          p_confirmation?: string | null;
+          p_idempotency_key?: string | null;
+        };
+        Returns: Json;
+      };
       admin_publish_breeding_version: {
         Args: {
           p_world_id: string;
@@ -1885,6 +2313,33 @@ export type Database = {
         };
         Returns: Json;
       };
+      create_admin_catalog_operation: {
+        Args: {
+          p_operation_type: string;
+          p_upload_id: string;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      create_admin_catalog_upload: {
+        Args: {
+          p_filename: string;
+          p_size_bytes: number;
+          p_package_sha256: string;
+          p_source_id: string;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      create_agent_command: {
+        Args: {
+          p_command_type: string;
+          p_payload: Json;
+          p_idempotency_key: string;
+          p_ttl_seconds?: number;
+        };
+        Returns: Json;
+      };
       create_breeding_job: {
         Args: {
           p_target_pal_id: string;
@@ -1904,6 +2359,14 @@ export type Database = {
         };
         Returns: { job_id: string; reused: boolean }[];
       };
+      create_player_binding: {
+        Args: {
+          p_user_id: string;
+          p_player_id: string;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
       current_guild_id: {
         Args: Record<string, never>;
         Returns: string;
@@ -1911,6 +2374,14 @@ export type Database = {
       current_player_id: {
         Args: Record<string, never>;
         Returns: string;
+      };
+      delete_player_binding: {
+        Args: {
+          p_user_id: string;
+          p_expected_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
       };
       fail_breeding_job: {
         Args: {
@@ -1931,6 +2402,18 @@ export type Database = {
           algorithm_version: string;
           weights: Json;
         }[];
+      };
+      get_admin_overview: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_admin_save_parser_status: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_admin_secret_statuses: {
+        Args: Record<string, never>;
+        Returns: Json;
       };
       get_breeder_form_context: {
         Args: {
@@ -2005,6 +2488,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      get_runtime_settings: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
       heartbeat_breeding_job: {
         Args: {
           p_job_id: string;
@@ -2022,6 +2509,52 @@ export type Database = {
       is_admin: {
         Args: Record<string, never>;
         Returns: boolean;
+      };
+      list_admin_audit_events: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: Json;
+      };
+      list_admin_binding_candidates: {
+        Args: {
+          p_search?: string | null;
+          p_limit?: number;
+        };
+        Returns: Json;
+      };
+      list_admin_catalog_sources: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      list_admin_catalog_uploads: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: Json;
+      };
+      list_admin_catalog_versions: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: Json;
+      };
+      list_admin_catalog_worlds: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      list_admin_game_players: {
+        Args: {
+          p_search?: string | null;
+          p_limit?: number;
+        };
+        Returns: Json;
+      };
+      list_admin_jobs: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: Json;
       };
       list_available_pals: {
         Args: {
@@ -2069,6 +2602,20 @@ export type Database = {
           p_cursor_created_at?: string | null;
           p_cursor_id?: string | null;
           p_query_boundary?: string | null;
+        };
+        Returns: Json;
+      };
+      list_player_binding_events: {
+        Args: {
+          p_user_id?: string | null;
+          p_limit?: number;
+        };
+        Returns: Json;
+      };
+      mark_admin_catalog_upload_ready: {
+        Args: {
+          p_upload_id: string;
+          p_idempotency_key: string;
         };
         Returns: Json;
       };
@@ -2133,6 +2680,14 @@ export type Database = {
         };
         Returns: string;
       };
+      reject_admin_catalog_upload: {
+        Args: {
+          p_upload_id: string;
+          p_confirmation: string;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
       reject_offspring_candidate: {
         Args: {
           p_candidate_key: string;
@@ -2161,6 +2716,13 @@ export type Database = {
         Args: {
           p_plan_id: string;
           p_expected_concurrency_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      rollback_runtime_settings: {
+        Args: {
+          p_expected_version: number;
           p_idempotency_key: string;
         };
         Returns: Json;
@@ -2213,8 +2775,32 @@ export type Database = {
         };
         Returns: Database["public"]["Enums"]["breeding_step_status"];
       };
+      update_player_binding: {
+        Args: {
+          p_user_id: string;
+          p_player_id: string;
+          p_expected_version: number;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
+      update_runtime_settings: {
+        Args: {
+          p_expected_version: number;
+          p_settings: Json;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
+      agent_command_status:
+        | "pending"
+        | "processing"
+        | "succeeded"
+        | "failed"
+        | "rejected"
+        | "expired";
       breeding_data_status: "staging" | "validated" | "published" | "rejected";
       breeding_job_status:
         | "pending"

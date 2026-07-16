@@ -21,6 +21,18 @@ class AIProvider(Protocol):
     async def explain(self, request: AIExplanationRequest) -> AIExplanationResult: ...
 
 
+class ConcurrencyLimitedAIProvider:
+    def __init__(self, provider: AIProvider, maximum_concurrency: int) -> None:
+        if maximum_concurrency < 1:
+            raise ValueError("AI concurrency must be positive")
+        self._provider = provider
+        self._semaphore = asyncio.Semaphore(maximum_concurrency)
+
+    async def explain(self, request: AIExplanationRequest) -> AIExplanationResult:
+        async with self._semaphore:
+            return await self._provider.explain(request)
+
+
 class TemplateProvider:
     async def explain(self, request: AIExplanationRequest) -> AIExplanationResult:
         if request.routes:
