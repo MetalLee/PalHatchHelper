@@ -222,7 +222,7 @@ flows without hover-only interaction.
 | Runtime                          | Node `22.23.1`; Python `3.12.13`                                                                       |
 | `pnpm check`                     | passed: format, lint, strict TS, unit tests/build, Agent, structure, forbidden assets, and secret scan |
 | Contracts                        | 23 passed; generation and generated drift passed                                                       |
-| Web unit/component               | 37 passed; final Web lint, typecheck, format, and production build passed                              |
+| Web unit/component               | 38 passed; final Web lint, typecheck, format, and production build passed                              |
 | Agent                            | 186 passed; 4 environment-gated tests skipped in the aggregate run                                     |
 | Agent local Supabase lifecycle   | 1 passed separately with loopback-only credentials                                                     |
 | Agent Phase 7                    | delta, ranking, idempotency, publish hook, and CLI detector tests passed within the 186-test suite     |
@@ -237,10 +237,13 @@ tests and the loopback Supabase lifecycle test; the latter was then run explicit
 and passed. Parser sandbox tests ran successfully on this host, so no Landlock
 `ENOSYS` result was treated as success.
 
-At review creation, Draft PR CI had not started. The repository CI will independently
-run Web/workspace, local Supabase database and Agent lifecycle, full browser
-acceptance, Python Agent (including fail-closed sandbox tests), and repository safety
-jobs. Its reported result remains authoritative for the pushed commit.
+The first Draft PR CI run passed Web/workspace, local Supabase database and Agent
+lifecycle, Python Agent, and repository safety. Its browser job exposed a real cold-
+hydration race in the Phase 6 breeder form: the SSR submit button could perform a
+native GET before React attached the submit handler. The follow-up fix disables the
+button until hydration and adds both an SSR regression assertion and an explicit E2E
+readiness assertion. Final rerun status is recorded on Draft PR #7 and remains
+authoritative for the pushed commit.
 
 ## Known limits
 

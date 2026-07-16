@@ -7,6 +7,7 @@ import type {
   RouteScoreComponent,
 } from "@palhatch/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BreederForm } from "../features/breeder/breeder-form";
@@ -210,6 +211,14 @@ function completedJob(): BreedingJobDetailRpcSuccess {
 }
 
 describe("Phase 6 breeder form", () => {
+  it("keeps native submission disabled until the client has hydrated", () => {
+    const markup = renderToString(<BreederForm context={context} />);
+
+    expect(markup).toMatch(
+      /<button[^>]*disabled=""[^>]*>创建配种任务<\/button>/,
+    );
+  });
+
   it("searches stable catalog options, enforces four passives and creates a fixed request", async () => {
     const createJob = vi.fn(async (request: CreateBreedingJobRequest) => {
       void request;
