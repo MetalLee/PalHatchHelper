@@ -1,6 +1,6 @@
 # PalHatchHelper
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。Phase 4 的实现、自动化门禁、Build `24181105` 真实目录验收及本地测试 world 发布/回滚演练均已完成；这不是生产发布，生产 Supabase 与 Vercel 部署仍为 `not_started`，属于 Phase 8。Phase 5 Web 基础和 Phase 6 配种器、异步任务、路线比较均已完成本地实现、自动化门禁与本地集成，但仓库仍不连接生产 Supabase、不读取真实 Palworld 存档，也不部署生产服务。
+PalHatchHelper 第一版是“帕鲁配种协作工作台”。Phase 4 的实现、自动化门禁、Build `24181105` 真实目录验收及本地测试 world 发布/回滚演练均已完成；Phase 5 Web 基础、Phase 6 配种器与异步路线、Phase 7 执行计划，以及 Phase 8 第一轮管理员工作台、受控命令队列和生产部署文件也已完成本地实现与自动化门禁。当前仍是 `MODE=DEVELOP_ADMIN`：生产 Supabase、Vercel 和腾讯云 Agent 部署均为 `not_started`，仓库不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
 
 ## 前置工具
 
@@ -44,7 +44,7 @@ cd apps/agent
 uv run pal-hatch-helper api
 ```
 
-同一镜像还提供 `job-worker`、`save-worker` 和 `catalog` 命令边界。Job Worker 在本地数据库与 Service Role 配置齐全时组装 Phase 6 确定性 Handler，也支持 `--once` 完成单任务验收；Save Worker 仅在数据库、世界、明确确认的只读路径和 Parser 配置齐全时运行；catalog 只接收结构化目录，不实现游戏包提取。
+同一镜像还提供 `job-worker`、`save-worker`、`command-worker` 和 `catalog` 命令边界。Job Worker 在本地数据库与 Service Role 配置齐全时组装 Phase 6 确定性 Handler，也支持 `--once` 完成单任务验收；Save Worker 仅在数据库、世界、明确确认的只读路径和 Parser 配置齐全时运行；Command Worker 只领取共享契约允许的白名单命令；catalog 只接收结构化目录，不实现游戏包提取。
 
 访问 `http://localhost:3000`、`http://127.0.0.1:18765/healthz` 和 `http://127.0.0.1:18765/readyz`。
 

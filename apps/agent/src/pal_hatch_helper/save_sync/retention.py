@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.save_sync.snapshot import _safe_rmtree
@@ -14,6 +15,9 @@ class SnapshotRecord:
     path: Path
     status: SnapshotStatus
     captured_at: datetime
+    snapshot_id: UUID | None = None
+    content_hash: str | None = None
+    source_modified_at: datetime | None = None
 
 
 class SnapshotRetention:

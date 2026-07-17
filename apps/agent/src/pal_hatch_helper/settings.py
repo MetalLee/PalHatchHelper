@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     )
 
     app_env: AppEnvironment = "development"
+    app_version: str = Field(default="development", min_length=1, max_length=120)
     supabase_url: str | None = None
     supabase_service_role_key: SecretStr | None = None
     worker_id: str = Field(
@@ -36,6 +37,8 @@ class Settings(BaseSettings):
     job_lease_safety_margin_seconds: float = Field(default=5, gt=0, le=300)
     job_stale_reap_interval_seconds: float = Field(default=15, gt=0, le=3600)
     job_shutdown_grace_seconds: float = Field(default=30, ge=0, le=3600)
+    command_poll_interval_seconds: float = Field(default=2, gt=0, le=300)
+    command_stale_after_seconds: float = Field(default=120, ge=30, le=3600)
     database_request_timeout_seconds: float = Field(default=10, gt=0, le=300)
     palhatch_data_dir: Path = Field(default=Path("./data"))
     game_catalog_bucket: str = Field(default="game-catalog-artifacts", min_length=1, max_length=120)
@@ -55,6 +58,7 @@ class Settings(BaseSettings):
     ai_maximum_response_bytes: int = Field(default=32_000, ge=1024, le=1_000_000)
     palworld_compose_dir: Path | None = None
     palworld_save_root: Path | None = None
+    palworld_save_mount_read_only_verified: bool = False
     palworld_world_id: UUID | None = None
     palworld_world_uid: str | None = Field(default=None, min_length=1, max_length=128)
     parser_name: str | None = Field(default=None, min_length=1, max_length=100)

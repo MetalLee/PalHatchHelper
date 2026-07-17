@@ -1,19 +1,17 @@
-# Agent Compose 骨架
+# Agent production Compose
 
-本目录只描述未来 Agent 服务，不执行生产部署。Compose：
+`docker-compose.production.yml` 只管理 PalHatchHelper 的 `api`、`job-worker`、`save-worker` 和 `command-worker`。它不连接 Palworld Docker 网络、不挂载 Docker socket、不使用 host network，并且只把健康端口映射到 `127.0.0.1:18765`。
 
-- 只把容器端口映射到宿主机 `127.0.0.1:18765`。
-- 使用镜像内 UID/GID 10001 的非 root 用户。
-- 不声明或连接 Palworld Docker 网络。
-- API service 不挂载存档；独立、无端口的 `save-worker` profile 只接受部署人员明确配置的 Compose 目录和存档目录只读 bind mount，且从不挂载 Docker socket。
-- 丢弃 capabilities、禁止提权、使用只读根文件系统并限制 CPU、内存和 PID；Save Worker 的 Parser 临时输出另受 64 MB tmpfs 限制。
-- 只从环境变量获取密钥；示例文件全部为虚假值。
+四个容器固定使用 UID/GID 10001、只读根文件系统、`cap_drop: ALL`、`no-new-privileges`、资源/PID 限额和日志轮转。Agent 数据目录可写；Palworld Compose、源存档和 Parser bundle 均只读。镜像变量必须是 `repository:git-tag@sha256:digest`，拒绝 `latest`。
 
-本地仅验证配置或构建：
+`.env.production.example` 只有假值。真实文件位于部署目录、权限必须为 `0600`，不得提交。开发阶段只执行静态配置检查：
 
 ```bash
-docker compose --env-file infra/agent/.env.example -f infra/agent/docker-compose.yml config
-docker build -f apps/agent/Dockerfile -t palhatch-agent:phase3 apps/agent
+docker compose \
+  --env-file infra/agent/.env.production.example \
+  -f infra/agent/docker-compose.production.yml \
+  config --quiet
+bash -n infra/agent/scripts/*.sh
 ```
 
-同一镜像保留 `api`、`job-worker`、`save-worker` 三种命令。Compose 默认只启动 API；`docker compose --profile save-worker ...` 才会纳入独立 Save Worker，且缺少明确宿主机路径时 `create_host_path: false` 会拒绝创建或猜测目录。Phase 3 仍无真实配种 Handler，`job-worker` 默认拒绝领取。不要把本模板复制到 `/opt/services/palworld-manager`，也不要执行生产部署。
+生产部署、验证、备份、回滚和首次管理员脚本都支持 `--dry-run`。它们只显式操作上述四个服务，绝不在 `/opt/palworld` 运行 Compose；完整步骤见 [`docs/operations/production-deployment.md`](../../docs/operations/production-deployment.md)。
