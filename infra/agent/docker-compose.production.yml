@@ -125,6 +125,8 @@ services:
   job-worker:
     <<: *agent-service
     command: ["pal-hatch-helper", "job-worker"]
+    healthcheck:
+      disable: true
     environment:
       <<: *agent-environment
       WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-job
@@ -134,6 +136,8 @@ services:
   save-worker:
     <<: *agent-service
     command: ["pal-hatch-helper", "save-worker"]
+    healthcheck:
+      disable: true
     environment:
       <<: [*agent-environment, *save-environment]
       WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-save
@@ -148,6 +152,8 @@ services:
   command-worker:
     <<: *agent-service
     command: ["pal-hatch-helper", "command-worker"]
+    healthcheck:
+      disable: true
     environment:
       <<: [*agent-environment, *save-environment]
       WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-command

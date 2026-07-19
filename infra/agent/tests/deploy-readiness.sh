@@ -58,6 +58,13 @@ if [[ "${1:-}" == "inspect" ]]; then
     '{{.HostConfig.Memory}}') printf '%s\n' 536870912 ;;
     '{{.HostConfig.PidsLimit}}') printf '%s\n' 128 ;;
     '{{.RestartCount}}') printf '%s\n' 0 ;;
+    '{{if .State.Health}}{{.State.Health.Status}}{{else}}disabled{{end}}')
+      if [[ "$container_id" == "api-id" ]]; then
+        printf '%s\n' healthy
+      else
+        printf '%s\n' "${MOCK_WORKER_HEALTHCHECK:-disabled}"
+      fi
+      ;;
     '{{json .HostConfig.PortBindings}}')
       printf '%s\n' '{"18765/tcp":[{"HostIp":"127.0.0.1","HostPort":"18765"}]}'
       ;;
@@ -125,6 +132,17 @@ MOCK_REPO_ROOT="$REPO_ROOT" MOCK_STATE="$MOCK_STATE" MOCK_CURL_FAILURES=2 \
   PATH="$MOCK_BIN:$PATH" ENV_FILE="$ENV_FILE" \
   "$REPO_ROOT/infra/agent/scripts/verify-production.sh" >/dev/null
 test "$(cat "$MOCK_STATE/curl-count")" = 10
+
+rm -f -- "$MOCK_STATE/curl-count"
+set +e
+worker_health_output=$(MOCK_REPO_ROOT="$REPO_ROOT" MOCK_STATE="$MOCK_STATE" \
+  MOCK_CURL_FAILURES=0 MOCK_WORKER_HEALTHCHECK=unhealthy \
+  PATH="$MOCK_BIN:$PATH" ENV_FILE="$ENV_FILE" \
+  "$REPO_ROOT/infra/agent/scripts/verify-production.sh" 2>&1)
+worker_health_status=$?
+set -e
+test "$worker_health_status" = 73
+grep -Fq AGENT_WORKER_HEALTHCHECK_ENABLED:job-worker <<<"$worker_health_output"
 
 rm -f -- "$MOCK_STATE/deployed" "$MOCK_STATE/rolled-back" "$MOCK_STATE/curl-count"
 set +e

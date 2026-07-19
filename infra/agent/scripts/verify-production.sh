@@ -32,6 +32,10 @@ for service in "${SERVICES[@]}"; do
   [[ "$(docker inspect --format '{{.HostConfig.NetworkMode}}' "$container_id")" != "host" ]] || { echo "AGENT_HOST_NETWORK_FORBIDDEN:$service" >&2; exit 72; }
   [[ "$(docker inspect --format '{{.HostConfig.Memory}}' "$container_id")" -gt 0 ]] || { echo "AGENT_MEMORY_LIMIT_MISSING:$service" >&2; exit 72; }
   [[ "$(docker inspect --format '{{.HostConfig.PidsLimit}}' "$container_id")" -gt 0 ]] || { echo "AGENT_PIDS_LIMIT_MISSING:$service" >&2; exit 72; }
+  if [[ "$service" != "api" ]]; then
+    health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}disabled{{end}}' "$container_id")"
+    [[ "$health_status" == "disabled" ]] || { echo "AGENT_WORKER_HEALTHCHECK_ENABLED:$service" >&2; exit 73; }
+  fi
 done
 
 api_id="$("${compose[@]}" ps -q api)"
