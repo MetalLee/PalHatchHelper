@@ -63,6 +63,11 @@ ENV_FILE=/opt/services/palworld-manager/.env.production \
 
 备份保存到 `/opt/services/palworld-manager/data/backups/<UTC timestamp>/`，目录权限 `0700`。内容包括 Supabase public schema/数据 dump、migration list、世界 active catalog pointer、当前 Agent image、production Compose、权限受控的环境副本、Git SHA 和 Vercel deployment reference。任何项目失败停止并报告 `PRODUCTION_BACKUP_FAILED`。
 
+首次部署且 schema dump 明确不存在 `public.worlds` 时，REST 的 404 会被记录为
+`not_present_before_first_deploy` 空目录指针基线。只有这一已由 schema dump 证明的空库场景允许继续；
+若 dump 中已有 `worlds` 或出现其他 HTTP 状态，备份仍失败并停止部署。仓库内的
+`data/backups/` 始终被 Git 忽略，生产 dump 不得进入提交。
+
 ## Supabase migration
 
 使用 `.env.production` 中的明确 ref：

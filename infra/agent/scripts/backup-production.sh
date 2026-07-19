@@ -32,11 +32,28 @@ trap failure ERR
 supabase db dump --linked --schema public --file "$backup_dir/supabase-schema.sql" >/dev/null
 supabase db dump --linked --data-only --schema public --file "$backup_dir/supabase-public-data.sql" >/dev/null
 supabase migration list --linked >"$backup_dir/supabase-migrations.txt"
-curl --fail --silent --show-error --max-time 15 \
+catalog_pointer_file="$backup_dir/active-catalog-versions.json"
+catalog_status="$(curl --silent --show-error --max-time 15 \
   -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  --output "$catalog_pointer_file" \
+  --write-out '%{http_code}' \
   "$SUPABASE_URL/rest/v1/worlds?select=id,active_game_data_version_id" \
-  >"$backup_dir/active-catalog-versions.json"
+  )"
+case "$catalog_status" in
+  200) ;;
+  404)
+    if grep -Eq '^CREATE TABLE public\.worlds([[:space:](]|$)' "$backup_dir/supabase-schema.sql"; then
+      echo "PRODUCTION_CATALOG_POINTER_BACKUP_FAILED" >&2
+      false
+    fi
+    printf '%s\n' '{"status":"not_present_before_first_deploy","worlds":[]}' >"$catalog_pointer_file"
+    ;;
+  *)
+    echo "PRODUCTION_CATALOG_POINTER_BACKUP_FAILED" >&2
+    false
+    ;;
+esac
 
 compose=(docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 api_id="$("${compose[@]}" ps -q api 2>/dev/null || true)"
