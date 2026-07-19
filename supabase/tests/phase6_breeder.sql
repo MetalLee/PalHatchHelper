@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(33);
+select plan(35);
 
 -- The acceptance database may keep the real local-test binding active. This
 -- transaction-local fixture binding makes pgTAP deterministic and rolls back.
@@ -147,6 +147,49 @@ select ok(
     )
   ),
   'repeated active input returns the same job'
+);
+
+reset role;
+update public.breeding_jobs
+   set status = 'failed',
+       error_code = 'HANDLER_FAILED',
+       error_summary = 'terminal fixture',
+       completed_at = now(),
+       updated_at = now()
+ where requester_user_id = '00000000-0000-4000-8000-000000000002'
+   and target_pal_id = 'test_child_pal'
+   and desired_passive_ids = array['test_passive_a', 'test_passive_b']::text[]
+   and allow_guild_shared
+   and max_generations = 4
+   and status not in ('completed', 'failed', 'cancelled');
+set local role authenticated;
+
+select is(
+  (
+    select reused from public.create_breeding_job_v2(
+      'test_child_pal',
+      array['test_passive_a', 'test_passive_b'],
+      'balanced',
+      true,
+      4
+    )
+  ),
+  false,
+  'terminal input creates a fresh job instead of reusing a failed job'
+);
+
+select is(
+  (
+    select count(*)::integer
+      from public.breeding_jobs
+     where requester_user_id = '00000000-0000-4000-8000-000000000002'
+       and target_pal_id = 'test_child_pal'
+       and desired_passive_ids = array['test_passive_a', 'test_passive_b']::text[]
+       and allow_guild_shared
+       and max_generations = 4
+  ),
+  2,
+  'terminal and fresh jobs keep separate immutable history'
 );
 
 select isnt(
