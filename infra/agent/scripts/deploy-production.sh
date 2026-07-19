@@ -50,8 +50,8 @@ if ! docker image inspect "$AGENT_IMAGE" --format '{{json .RepoDigests}}' | grep
 fi
 "${compose[@]}" config --quiet
 
+"$SCRIPT_DIR/prepare-production-data.sh" "$PALHATCH_DATA_DIR"
 runtime_dir="$PALHATCH_DATA_DIR/runtime"
-install -d -m 0700 "$runtime_dir"
 previous_image=""
 api_id="$("${compose[@]}" ps -q api 2>/dev/null || true)"
 if [[ -n "$api_id" ]]; then previous_image="$(docker inspect --format '{{.Config.Image}}' "$api_id")"; fi
