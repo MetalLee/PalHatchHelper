@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import cast
 from uuid import UUID
 
@@ -17,6 +18,8 @@ from pal_hatch_helper.generated import BreedingEngineInventoryPal, OptimizationM
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.models.jobs import JobClaim
 from pal_hatch_helper.repositories.database import DatabaseClient
+
+logger = logging.getLogger(__name__)
 
 
 class SupabaseBreedingRuntimeRepository:
@@ -87,13 +90,14 @@ class SupabaseBreedingRuntimeRepository:
                 summary="The claimed job content hash does not match catalog metadata.",
                 retryable=False,
             )
-        inventory = _inventory_snapshot(inventory_payload)
+        catalog_pal_ids = frozenset(item.pal_id for item in catalog.pals)
+        inventory = _inventory_snapshot(inventory_payload, catalog_pal_ids)
         return BreedingRuntimeFacts(
             catalog=VersionedBreedingCatalog(
                 version_id=metadata.id,
                 content_hash=metadata.content_hash,
                 status=cast(CatalogRuntimeStatus, metadata.status),
-                pal_ids=frozenset(item.pal_id for item in catalog.pals),
+                pal_ids=catalog_pal_ids,
                 passive_skill_ids=frozenset(
                     item.passive_skill_id for item in catalog.passive_skills
                 ),
@@ -103,16 +107,46 @@ class SupabaseBreedingRuntimeRepository:
         )
 
 
-def _inventory_snapshot(payload: object) -> FixedInventorySnapshot:
+def _inventory_snapshot(
+    payload: object,
+    catalog_pal_ids: frozenset[str],
+) -> FixedInventorySnapshot:
     if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
         raise _invalid_response()
     try:
+        items: list[BreedingEngineInventoryPal] = []
+        normalized_count = 0
+        filtered_count = 0
+        for value in payload["items"]:
+            item = BreedingEngineInventoryPal.model_validate(value)
+            if item.pal_id in catalog_pal_ids:
+                items.append(item)
+                continue
+            if item.pal_id.startswith("boss_") and item.pal_id[5:] in catalog_pal_ids:
+                items.append(item.model_copy(update={"pal_id": item.pal_id[5:]}))
+                normalized_count += 1
+                continue
+            filtered_count += 1
+        if normalized_count:
+            logger.warning(
+                "breeding_inventory_species_normalized",
+                extra={
+                    "event": "breeding_inventory_species_normalized",
+                    "normalized_count": normalized_count,
+                },
+            )
+        if filtered_count:
+            logger.warning(
+                "breeding_inventory_species_filtered",
+                extra={
+                    "event": "breeding_inventory_species_filtered",
+                    "filtered_count": filtered_count,
+                },
+            )
         return FixedInventorySnapshot(
             snapshot_id=UUID(str(payload["snapshot_id"])),
             world_id=UUID(str(payload["world_id"])),
-            items=tuple(
-                BreedingEngineInventoryPal.model_validate(item) for item in payload["items"]
-            ),
+            items=tuple(items),
         )
     except (KeyError, ValueError, ValidationError) as error:
         raise _invalid_response() from error
