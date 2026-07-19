@@ -16,7 +16,7 @@
 
 将 [`infra/agent/.env.production.example`](../../infra/agent/.env.production.example) 复制到部署目录的 `.env.production`，通过受控渠道填值后执行 `chmod 0600`。不得在终端、日志、文档或 Git diff 打印值。部署工具只读取这一个文件。
 
-必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.0.0`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；不得继续配置旧 `palworld-save-tools` CLI。
+必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.0.1`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；不得继续配置旧 `palworld-save-tools` CLI。
 
 Oodle 库不属于发布制品。经授权的运维人员从已确认且有权使用的来源人工取得
 `liboo2corelinux64.so.9`，把来源产品/版本、取得日期和 SHA-256 记入受控变更单，然后放到

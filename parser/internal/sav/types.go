@@ -171,3 +171,21 @@ func (s *ParseStats) recordSkip(path, typ string) {
 }
 
 func newStats() ParseStats { return ParseStats{DecodeFailures: make(map[string]int)} }
+
+func (s *ParseStats) mergeDiagnostics(other ParseStats) {
+	s.SkippedProperties += other.SkippedProperties
+	s.SkippedStructs += other.SkippedStructs
+	if s.DecodeFailures == nil {
+		s.DecodeFailures = make(map[string]int)
+	}
+	for code, count := range other.DecodeFailures {
+		s.DecodeFailures[code] += count
+	}
+	remaining := maxSkippedDetails - len(s.SkippedDetails)
+	if remaining > len(other.SkippedDetails) {
+		remaining = len(other.SkippedDetails)
+	}
+	if remaining > 0 {
+		s.SkippedDetails = append(s.SkippedDetails, other.SkippedDetails[:remaining]...)
+	}
+}

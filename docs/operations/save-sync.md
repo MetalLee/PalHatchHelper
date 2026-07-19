@@ -19,7 +19,7 @@ docker compose config --format json
 
 ```dotenv
 PARSER_NAME=palhatch-plm-save-parser
-PARSER_VERSION=1.0.0
+PARSER_VERSION=1.0.1
 PARSER_COMMAND_JSON=["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]
 PALHATCH_OODLE_LIB=/app/parser/lib/liboo2corelinux64.so.9
 PALHATCH_OODLE_SHA256=<64 位小写十六进制 SHA-256>

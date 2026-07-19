@@ -356,7 +356,7 @@ func loadPlayerDirectory(w *World, levelPath string, opts Options) error {
 		if e != nil {
 			return fmt.Errorf("sav: decode declared player file")
 		}
-		g, e := parseGVAS(raw, &w.Stats)
+		g, e := parsePlayerGVAS(raw, &w.Stats)
 		if e != nil {
 			return fmt.Errorf("sav: parse declared player GVAS")
 		}
@@ -383,6 +383,16 @@ func loadPlayerDirectory(w *World, levelPath string, opts Options) error {
 		mergePlayer(w, p)
 	}
 	return nil
+}
+
+func parsePlayerGVAS(raw []byte, aggregate *ParseStats) (*gvasFile, error) {
+	stats := newStats()
+	parsed, err := parseGVAS(raw, &stats)
+	if err != nil {
+		return nil, err
+	}
+	aggregate.mergeDiagnostics(stats)
+	return parsed, nil
 }
 
 func mergePlayer(w *World, p Player) {

@@ -16,7 +16,7 @@ import (
 
 const (
 	parserName     = "palhatch-plm-save-parser"
-	parserVersion  = "1.0.0"
+	parserVersion  = "1.0.1"
 	maxOutputBytes = 64 * 1024 * 1024
 )
 

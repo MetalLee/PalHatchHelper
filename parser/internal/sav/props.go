@@ -256,6 +256,28 @@ func readProperty(r *reader, typ string, size uint64, path string, stats *ParseS
 		p.Value, err = readArray(r, size, path, stats)
 	case "MapProperty":
 		p.Value, err = readMap(r, path, stats)
+	case "SetProperty":
+		_, err = r.fstring()
+		if err == nil {
+			_, err = readOptionalGUID(r)
+		}
+		if err == nil && size > maxByteCollectionBytes {
+			err = &parseLimitError{
+				Kind:  "set bytes",
+				Value: size,
+				Limit: maxByteCollectionBytes,
+			}
+		}
+		if err == nil && size > uint64(r.remaining()) {
+			err = fmt.Errorf("set declares %d bytes with %d remaining", size, r.remaining())
+		}
+		if err == nil {
+			err = consumeDecoded(stats, "set", 1, size)
+		}
+		if err == nil {
+			p.Value, err = r.read(int(size))
+			stats.recordSkip(path, typ)
+		}
 	default:
 		// Unreal property types may add type-specific tag metadata. For an
 		// unknown tag the only safe recovery available is its declared payload.
