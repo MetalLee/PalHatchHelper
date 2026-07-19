@@ -3,7 +3,15 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 TEST_ROOT="$(mktemp -d)"
-trap 'rm -rf "$TEST_ROOT"' EXIT
+
+cleanup() {
+  if [[ "$EUID" -eq 0 ]]; then
+    rm -rf -- "$TEST_ROOT"
+    return
+  fi
+  sudo -n rm -rf -- "$TEST_ROOT"
+}
+trap cleanup EXIT
 
 DATA_DIR="$TEST_ROOT/data"
 mkdir -p "$DATA_DIR/game-catalog/cache"
@@ -25,14 +33,14 @@ for attempt in 1 2; do
 done
 
 test "$(stat -c '%u:%g:%a' "$DATA_DIR")" = "$base_metadata"
-test "$(cat "$DATA_DIR/game-catalog/cache/existing-artifact")" = preserved
-test "$(stat -c '%u:%g:%a' "$DATA_DIR/game-catalog/cache/existing-artifact")" = \
+test "$(run_as_root cat "$DATA_DIR/game-catalog/cache/existing-artifact")" = preserved
+test "$(run_as_root stat -c '%u:%g:%a' "$DATA_DIR/game-catalog/cache/existing-artifact")" = \
   "$artifact_metadata"
 
 for relative_path in runtime snapshots game-catalog/cache game-catalog/runtime; do
   directory="$DATA_DIR/$relative_path"
-  test -d "$directory"
-  test "$(stat -c '%u:%g:%a' "$directory")" = '10001:10001:700'
+  run_as_root test -d "$directory"
+  test "$(run_as_root stat -c '%u:%g:%a' "$directory")" = '10001:10001:700'
 done
 
 set +e
