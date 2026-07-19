@@ -85,6 +85,12 @@ def test_remote_breeding_sources_are_disabled_by_default_and_bounded_when_enable
     assert settings.breeding_source_maximum_bytes == 10 * 1024 * 1024
 
 
+def test_parser_default_virtual_memory_budget_supports_go_runtime() -> None:
+    settings = Settings()
+
+    assert settings.parser_memory_limit_bytes == 2 * 1024 * 1024 * 1024
+
+
 def test_save_worker_never_guesses_missing_path_or_parser_configuration() -> None:
     settings = Settings(
         app_env="test",

@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     save_stability_delay_seconds: float = Field(default=10, ge=0, le=300)
     parser_timeout_seconds: float = Field(default=180, gt=0, le=1800)
     parser_memory_limit_bytes: int = Field(
-        default=1536 * 1024 * 1024,
+        default=2 * 1024 * 1024 * 1024,
         ge=64 * 1024 * 1024,
         le=8 * 1024 * 1024 * 1024,
     )

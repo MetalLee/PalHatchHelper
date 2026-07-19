@@ -109,7 +109,7 @@ class SubprocessParserAdapter:
         command: Sequence[str],
         declared_files: Sequence[PurePosixPath],
         timeout_seconds: float = 180,
-        memory_limit_bytes: int = 1536 * 1024 * 1024,
+        memory_limit_bytes: int = 2 * 1024 * 1024 * 1024,
         cpu_limit_seconds: int = 180,
         max_output_bytes: int = 64 * 1024 * 1024,
         disable_network: bool = True,
