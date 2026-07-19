@@ -61,7 +61,7 @@ for relative_path in \
   test "$(run_as_root stat -c '%u:%g:%a' "$directory")" = '10001:10001:700'
 done
 
-ln -s "$TEST_ROOT" "$DATA_DIR/game-catalog/normalized/escape"
+run_as_root ln -s "$TEST_ROOT" "$DATA_DIR/game-catalog/normalized/escape"
 set +e
 symlink_output=$(run_as_root \
   "$REPO_ROOT/infra/agent/scripts/prepare-production-data.sh" "$DATA_DIR" 2>&1)
