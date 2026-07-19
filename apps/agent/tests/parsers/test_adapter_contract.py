@@ -186,6 +186,39 @@ def test_parser_has_no_network_secret_environment_or_write_access_outside_output
     assert not forbidden.exists()
 
 
+def test_parser_receives_only_explicit_non_secret_runtime_environment(tmp_path: Path) -> None:
+    script = (
+        "import json,os,sys; "
+        "json.dump({'world':os.environ.get('PALHATCH_WORLD_UID'),"
+        "'oodle':os.environ.get('PALHATCH_OODLE_LIB'),"
+        "'secret_absent':'SUPABASE_SERVICE_ROLE_KEY' not in os.environ},"
+        "open(sys.argv[1],'w'))"
+    )
+    adapter = _adapter(
+        (sys.executable, "-c", script, "{output_path}"),
+        environment={
+            "PALHATCH_WORLD_UID": "fixture-world-001",
+            "PALHATCH_OODLE_LIB": "/app/parser/lib/liboo2corelinux64.so.9",
+        },
+    )
+
+    result = adapter.parse(_snapshot(tmp_path), tmp_path / "result.json")
+
+    assert result.payload == {
+        "world": "fixture-world-001",
+        "oodle": "/app/parser/lib/liboo2corelinux64.so.9",
+        "secret_absent": True,
+    }
+
+
+def test_parser_environment_rejects_non_allowlisted_keys() -> None:
+    with pytest.raises(ValueError, match="allowlisted"):
+        _adapter(
+            (sys.executable, "-c", "pass"),
+            environment={"SUPABASE_SERVICE_ROLE_KEY": "must-never-pass"},
+        )
+
+
 def test_parser_cannot_create_descendant_processes(tmp_path: Path) -> None:
     script = (
         "import json,os,sys; denied=False; "

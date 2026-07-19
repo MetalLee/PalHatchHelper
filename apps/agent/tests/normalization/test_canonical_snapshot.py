@@ -141,6 +141,25 @@ def test_unknown_pal_and_passive_are_retained_with_warnings() -> None:
     }
 
 
+def test_unknown_optional_pal_fields_are_retained_with_safe_warnings() -> None:
+    payload = canonical_payload()
+    pals = payload["pals"]
+    assert isinstance(pals, list) and isinstance(pals[0], dict)
+    pals[0]["gender"] = "unknown"
+    pals[0]["level"] = None
+    pals[0]["location_type"] = "unknown"
+    pals[0]["location_name"] = None
+
+    validated = _validator().validate(CanonicalSnapshot.model_validate(payload))
+
+    assert len(validated.pals) == 1
+    assert {warning.code for warning in validated.warnings} == {
+        "UNKNOWN_GENDER",
+        "UNKNOWN_LEVEL",
+        "UNKNOWN_LOCATION",
+    }
+
+
 @pytest.mark.parametrize(
     ("owner_uid", "guild_uid", "expected_codes"),
     [

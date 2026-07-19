@@ -9,9 +9,9 @@ import signal
 import subprocess
 import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
-from typing import TypeGuard, cast
+from typing import ClassVar, TypeGuard, cast
 
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.parsers.adapter import (
@@ -22,6 +22,8 @@ from pal_hatch_helper.repositories.database import JSONValue
 
 _SCMP_ACT_ALLOW = 0x7FFF0000
 _SCMP_ACT_ERRNO = 0x00050000
+_SCMP_CMP_MASKED_EQ = 7
+_CLONE_THREAD = 0x00010000
 _PR_SET_NO_NEW_PRIVS = 38
 _LANDLOCK_CREATE_RULESET_VERSION = 1
 _LANDLOCK_RULE_PATH_BENEATH = 1
@@ -60,8 +62,6 @@ _LANDLOCK_WRITE_ACCESS = (
 _DENIED_PROCESS_SYSCALLS = (
     "fork",
     "vfork",
-    "clone",
-    "clone3",
 )
 _DENIED_NETWORK_SYSCALLS = (
     "socket",
@@ -82,6 +82,22 @@ _DENIED_MUTATION_SYSCALLS = (
     "fchmodat",
     "fchmodat2",
 )
+_ALLOWED_PARSER_ENVIRONMENT = frozenset(
+    {
+        "PALHATCH_OODLE_LIB",
+        "PALHATCH_OODLE_SHA256",
+        "PALHATCH_WORLD_UID",
+    }
+)
+
+
+class _ScmpArgCmp(ctypes.Structure):
+    _fields_: ClassVar = [
+        ("arg", ctypes.c_uint),
+        ("op", ctypes.c_int),
+        ("datum_a", ctypes.c_uint64),
+        ("datum_b", ctypes.c_uint64),
+    ]
 
 
 class SubprocessParserAdapter:
@@ -98,6 +114,7 @@ class SubprocessParserAdapter:
         max_output_bytes: int = 64 * 1024 * 1024,
         disable_network: bool = True,
         runtime_read_paths: Sequence[Path] = (),
+        environment: Mapping[str, str] | None = None,
     ) -> None:
         if not name or not version or not command or not declared_files:
             raise ValueError("Parser identity, command, and declared files are required")
@@ -111,6 +128,12 @@ class SubprocessParserAdapter:
         self._max_output_bytes = max_output_bytes
         self._disable_network = disable_network
         self._runtime_read_paths = tuple(runtime_read_paths)
+        parser_environment = dict(environment or {})
+        if any(key not in _ALLOWED_PARSER_ENVIRONMENT for key in parser_environment):
+            raise ValueError("Parser environment keys must be explicitly allowlisted")
+        if any("\0" in value or len(value) > 4096 for value in parser_environment.values()):
+            raise ValueError("Parser environment values must be bounded strings")
+        self._environment = parser_environment
 
     def required_files(self) -> tuple[PurePosixPath, ...]:
         return self._declared_files
@@ -166,6 +189,7 @@ class SubprocessParserAdapter:
                         "PYTHONDONTWRITEBYTECODE": "1",
                         "PYTHONUTF8": "1",
                         "TMPDIR": str(sandbox_output_parent),
+                        **self._environment,
                     },
                     close_fds=True,
                     start_new_session=True,
@@ -267,6 +291,14 @@ def _install_seccomp_filter(*, disable_network: bool) -> None:
         ctypes.c_uint,
     ]
     seccomp.seccomp_rule_add.restype = ctypes.c_int
+    seccomp.seccomp_rule_add_array.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.c_int,
+        ctypes.c_uint,
+        ctypes.POINTER(_ScmpArgCmp),
+    ]
+    seccomp.seccomp_rule_add_array.restype = ctypes.c_int
     seccomp.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
     seccomp.seccomp_syscall_resolve_name.restype = ctypes.c_int
     seccomp.seccomp_load.argtypes = [ctypes.c_void_p]
@@ -286,6 +318,30 @@ def _install_seccomp_filter(*, disable_network: bool) -> None:
                 continue
             if seccomp.seccomp_rule_add(context, action, syscall, 0) != 0:
                 raise OSError(f"unable to restrict syscall {name}")
+        clone3_syscall = seccomp.seccomp_syscall_resolve_name(b"clone3")
+        if clone3_syscall >= 0:
+            unsupported_action = _SCMP_ACT_ERRNO | errno.ENOSYS
+            if seccomp.seccomp_rule_add(context, unsupported_action, clone3_syscall, 0) != 0:
+                raise OSError("unable to restrict syscall clone3")
+        clone_syscall = seccomp.seccomp_syscall_resolve_name(b"clone")
+        if clone_syscall >= 0:
+            process_clone = _ScmpArgCmp(
+                arg=0,
+                op=_SCMP_CMP_MASKED_EQ,
+                datum_a=_CLONE_THREAD,
+                datum_b=0,
+            )
+            if (
+                seccomp.seccomp_rule_add_array(
+                    context,
+                    action,
+                    clone_syscall,
+                    1,
+                    ctypes.byref(process_clone),
+                )
+                != 0
+            ):
+                raise OSError("unable to restrict process-form clone")
         if seccomp.seccomp_load(context) != 0:
             raise OSError(ctypes.get_errno(), "unable to load seccomp filter")
     finally:

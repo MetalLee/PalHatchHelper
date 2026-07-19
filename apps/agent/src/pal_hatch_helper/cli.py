@@ -766,6 +766,22 @@ async def _build_inventory_sync_service(
         timeout_seconds=runtime.parser_timeout_seconds,
         memory_limit_bytes=settings.parser_memory_limit_bytes,
         cpu_limit_seconds=settings.parser_cpu_limit_seconds,
+        runtime_read_paths=(
+            (settings.palhatch_oodle_lib,) if settings.palhatch_oodle_lib is not None else ()
+        ),
+        environment={
+            "PALHATCH_WORLD_UID": settings.palworld_world_uid,
+            **(
+                {"PALHATCH_OODLE_LIB": str(settings.palhatch_oodle_lib)}
+                if settings.palhatch_oodle_lib is not None
+                else {}
+            ),
+            **(
+                {"PALHATCH_OODLE_SHA256": settings.palhatch_oodle_sha256}
+                if settings.palhatch_oodle_sha256 is not None
+                else {}
+            ),
+        },
     )
     return InventorySyncService(
         world_id=settings.palworld_world_id,

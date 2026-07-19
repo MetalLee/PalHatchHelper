@@ -31,6 +31,9 @@ data/runtime/
 data/parser-cache/
 data/game-catalog/
 
+# Proprietary Oodle runtime is supplied and pinned by operators, never committed.
+parser/lib/
+
 # Local .NET extractor build products.
 tools/palworld-catalog-extractor/**/bin/
 tools/palworld-catalog-extractor/**/obj/

@@ -16,7 +16,13 @@
 
 将 [`infra/agent/.env.production.example`](../../infra/agent/.env.production.example) 复制到部署目录的 `.env.production`，通过受控渠道填值后执行 `chmod 0600`。不得在终端、日志、文档或 Git diff 打印值。部署工具只读取这一个文件。
 
-必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。
+必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.0.0`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；不得继续配置旧 `palworld-save-tools` CLI。
+
+Oodle 库不属于发布制品。经授权的运维人员从已确认且有权使用的来源人工取得
+`liboo2corelinux64.so.9`，把来源产品/版本、取得日期和 SHA-256 记入受控变更单，然后放到
+`${PARSER_BUNDLE_DIR}/lib/`。库和真实摘要都不提交 Git，库不进入 Agent 镜像，任何部署脚本
+都不得联网获取它。将人工计算的摘要通过秘密配置渠道固定为 `PALHATCH_OODLE_SHA256`，库的
+容器路径固定为 `PALHATCH_OODLE_LIB=/app/parser/lib/liboo2corelinux64.so.9`。
 
 Vercel Production 只允许：
 
@@ -34,6 +40,17 @@ Vercel Production 只允许：
 4. 只读确认服务器仍为 Build `24181105`、`v1.0.1.100619`，appmanifest SHA-256 为 `98ef29829ebfde6d71528f5a83883e6bfda96fa77ce363e52630205353c1a189`。不一致时停止并报告 `TARGET_SERVER_VERSION_CHANGED`。
 5. 记录 `/opt/palworld/docker-compose.yml` 和源存档的只读校验值，部署后比较；不写这些文件。
 6. 对所有脚本先运行 `--dry-run`。脚本会检查仓库根、Git SHA、镜像 digest、磁盘、端口和 Compose 配置，并且不打印秘密。
+7. 只读核对 Parser bundle：可执行文件存在且可执行、Oodle 文件是普通文件而非 symlink，
+   并在不打印配置摘要的前提下比较人工 pin：
+
+```bash
+test -x "${PARSER_BUNDLE_DIR}/palworld-save-parser"
+test -f "${PARSER_BUNDLE_DIR}/lib/liboo2corelinux64.so.9"
+test ! -L "${PARSER_BUNDLE_DIR}/lib/liboo2corelinux64.so.9"
+oodle_actual="$(sha256sum "${PARSER_BUNDLE_DIR}/lib/liboo2corelinux64.so.9" | cut -d ' ' -f1)"
+test "${oodle_actual}" = "${PALHATCH_OODLE_SHA256}"
+unset oodle_actual
+```
 
 ## 备份
 
@@ -82,6 +99,13 @@ ENV_FILE=/opt/services/palworld-manager/.env.production \
 部署脚本只对 `api job-worker save-worker command-worker` 执行 `up -d --no-deps`。失败时使用 Agent 数据目录记录的 previous immutable image 自动切回并再次只操作四个 PalHatchHelper 服务。
 
 [`verify-production.sh`](../../infra/agent/scripts/verify-production.sh) 检查四容器运行、UID 10001、cap drop、禁止提权、非 host network、资源/PID 限额、源存档只读挂载、API loopback PortBinding、健康响应和日志秘密泄漏。首次同步仍遵循只读复制、异常下降待审核、Parser 失败保留上一有效库存。
+
+首次同步前先用 Agent 创建的脱敏/只读快照执行容器内 smoke；输入只读挂载，输出只写 Agent
+runtime tmpfs，容器禁网并以 UID 10001 运行。确认输出小于 64 MiB、通过
+`canonical-snapshot.schema.json`，且 smoke 前后 fixture SHA-256 一致。真实存档验收只能由
+Agent 先创建只读副本，再对该副本运行相同命令；严禁让 Parser 参数指向
+`PALWORLD_SAVE_ROOT`，也严禁修改 magic、重编码或写回 `.sav`。任何缺库、hash mismatch、
+non-GVAS、world UID mismatch 或截断错误都必须保留上一份有效库存。
 
 ## Vercel
 
