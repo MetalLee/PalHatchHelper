@@ -8,6 +8,7 @@ from uuid import UUID
 from pal_hatch_helper.breeding.assignment import AssignedRoute, iter_inventory_instances
 from pal_hatch_helper.generated import (
     BreedingEngineInventoryPal,
+    BreedingMissingRequirement,
     BreedingParentSource,
     BreedingRouteStep,
 )
@@ -30,6 +31,9 @@ class SerializedPlan:
     steps: tuple[BreedingRouteStep, ...]
     existing_target_instance_uid: str | None
     unique_instances: tuple[BreedingEngineInventoryPal, ...]
+    missing_requirements: tuple[BreedingMissingRequirement, ...]
+    starting_requirement_count: int
+    inventory_requirement_count: int
     signature: str
 
 
@@ -84,7 +88,7 @@ def plan_passive_retention(
         cached = memo.get(key)
         if cached is not None:
             return cached
-        if node.instance is not None:
+        if node.route.recipe is None:
             if required_mask & node.coverage_mask != required_mask:
                 raise ValueError("assigned inventory leaf cannot carry required passives")
             result = PlannedRoute(
@@ -110,8 +114,10 @@ def plan_passive_retention(
         for left_mask, right_mask in partitions:
             left = solve(node.parent_a, left_mask)
             right = solve(node.parent_b, right_mask)
-            left_checkpoint = left_mask.bit_count() if left.assigned.instance is None else 0
-            right_checkpoint = right_mask.bit_count() if right.assigned.instance is None else 0
+            left_checkpoint = left_mask.bit_count() if left.assigned.route.recipe is not None else 0
+            right_checkpoint = (
+                right_mask.bit_count() if right.assigned.route.recipe is not None else 0
+            )
             checkpoint_count = (
                 left.checkpoint_passive_count
                 + right.checkpoint_passive_count
@@ -190,6 +196,24 @@ def serialize_plan(
                 location_name=instance.location_name,
             )
 
+        if assigned.route.recipe is None:
+            if assigned.output_gender is None:
+                raise ValueError("missing starting parent must have a required gender")
+            return BreedingParentSource(
+                source_type="missing",
+                pal_id=assigned.route.pal_id,
+                instance_uid=None,
+                owner_player_id=None,
+                guild_id=None,
+                gender=assigned.output_gender,
+                passive_skill_ids=[],
+                required_passive_ids=passive_ids(node.required_mask),
+                borrowed=False,
+                produced_by_step_index=None,
+                location_type=None,
+                location_name=None,
+            )
+
         assert node.parent_a is not None and node.parent_b is not None
         assert assigned.route.recipe is not None
         parent_a = emit(node.parent_a)
@@ -227,12 +251,51 @@ def serialize_plan(
     instances = {
         instance.instance_uid: instance for instance in iter_inventory_instances(plan.assigned)
     }
+    requirement_groups: dict[tuple[str, str, tuple[str, ...]], dict[int, int]] = {}
+    inventory_instance_uids: set[str] = set()
+    for step in steps:
+        for source in (step.parent_a, step.parent_b):
+            if source.source_type.value == "intermediate":
+                continue
+            if source.source_type.value == "inventory":
+                if source.instance_uid is None:
+                    raise ValueError("inventory starting parent must have an instance UID")
+                inventory_instance_uids.add(source.instance_uid)
+                continue
+            if source.gender is None:
+                raise ValueError("missing starting parent must have a required gender")
+            key = (
+                source.pal_id,
+                source.gender.value,
+                tuple(sorted(source.required_passive_ids)),
+            )
+            occurrences_by_step = requirement_groups.setdefault(key, {})
+            occurrences_by_step[step.step_index] = occurrences_by_step.get(step.step_index, 0) + 1
+    missing_requirements = tuple(
+        BreedingMissingRequirement(
+            pal_id=pal_id,
+            gender=gender,
+            required_passive_ids=list(required_passive_ids),
+            quantity=max(occurrences_by_step.values()),
+            step_indexes=sorted(occurrences_by_step),
+        )
+        for (pal_id, gender, required_passive_ids), occurrences_by_step in sorted(
+            requirement_groups.items()
+        )
+    )
+    inventory_requirement_count = len(inventory_instance_uids)
+    starting_requirement_count = inventory_requirement_count + sum(
+        requirement.quantity for requirement in missing_requirements
+    )
     return SerializedPlan(
         steps=tuple(steps),
         existing_target_instance_uid=(
             root_source.instance_uid if plan.assigned.instance is not None else None
         ),
         unique_instances=tuple(instances[uid] for uid in sorted(instances)),
+        missing_requirements=missing_requirements,
+        starting_requirement_count=starting_requirement_count,
+        inventory_requirement_count=inventory_requirement_count,
         signature=plan.signature,
     )
 

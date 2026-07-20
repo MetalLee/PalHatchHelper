@@ -28,8 +28,8 @@ def _score() -> RouteScoreBreakdown:
             component=name,
             raw_value=1,
             normalized_score=80,
-            weight=1 / 7,
-            weighted_score=80 / 7,
+            weight=1 / 8,
+            weighted_score=10,
         )
         for name in (
             "route_length",
@@ -39,24 +39,28 @@ def _score() -> RouteScoreBreakdown:
             "intermediate_cost",
             "attempt_cost",
             "stability",
+            "acquisition_cost",
         )
     ]
     modes = [
         RouteModeScore(
             optimization_mode=mode,
-            scoring_profile_version=f"{mode}-v2",
+            scoring_profile_version=f"{mode}-v3",
             total_score=80,
             components=components,
         )
         for mode in ("balanced", "fastest", "highest_success", "least_borrowing")
     ]
     return RouteScoreBreakdown(
-        scoring_profile_version="balanced-v2",
+        scoring_profile_version="balanced-v3",
         estimate_basis="strategy_heuristic_no_verified_probability",
         raw_metrics=RouteRawScoreMetrics(
             generation_count=1,
             step_count=1,
             unique_starting_instance_count=2,
+            starting_requirement_count=2,
+            missing_pal_count=0,
+            missing_passive_requirement_count=0,
             borrowed_pal_count=0,
             inventory_coverage=1,
             passive_carrier_count=1,
@@ -80,8 +84,8 @@ def _request() -> AIExplanationRequest:
         optimization_mode="balanced",
         version_summary={
             "game_data_content_hash": "a" * 64,
-            "algorithm_version": "phase4b-deterministic-v1",
-            "scoring_profile_version": "balanced-v2",
+            "algorithm_version": "inventory-aware-deterministic-v2",
+            "scoring_profile_version": "balanced-v3",
         },
         routes=[
             AIExplanationRouteSummary(

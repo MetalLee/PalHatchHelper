@@ -475,6 +475,38 @@ from (values
   ('test_other_guild_pal'::text, 8)
 ) as value(pal_id, encyclopedia_no);
 
+insert into public.catalog_breeding_recipes (
+  version_id,
+  parent_a_pal_id,
+  parent_a_gender,
+  parent_b_pal_id,
+  parent_b_gender,
+  child_pal_id,
+  recipe_type,
+  metadata
+)
+values
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'test_parent_a',
+    'any',
+    'test_parent_b',
+    'any',
+    'test_child_pal',
+    'normal',
+    '{"fixture":true}'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'test_special_a',
+    'any',
+    'test_special_b',
+    'any',
+    'test_special_child',
+    'special',
+    '{"fixture":true}'
+  );
+
 insert into public.catalog_passive_skills (
   version_id, passive_skill_id, name_key, description_key, rank, is_negative, metadata
 )
@@ -672,8 +704,8 @@ values
     'balanced',
     '40000000-0000-4000-8000-000000000002',
     '51000000-0000-4000-8000-000000000001',
-    'phase4b-deterministic-v1',
-    'balanced-v2',
+    'inventory-aware-deterministic-v2',
+    'balanced-v3',
     'pending',
     repeat('1', 64),
     'fixture-pending-job',
@@ -698,8 +730,8 @@ values
     'balanced',
     '40000000-0000-4000-8000-000000000002',
     '51000000-0000-4000-8000-000000000001',
-    'phase4b-deterministic-v1',
-    'balanced-v2',
+    'inventory-aware-deterministic-v2',
+    'balanced-v3',
     'processing',
     repeat('2', 64),
     'fixture-processing-job',

@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(46);
+select plan(53);
 
 create temporary table phase7_ids (
   name text primary key,
@@ -72,8 +72,8 @@ select lives_ok(
         'inventory_snapshot_id', '40000000-0000-4000-8000-000000000002',
         'game_data_version_id', '51000000-0000-4000-8000-000000000001',
         'game_data_content_hash', repeat('c', 64),
-        'algorithm_version', 'phase4b-deterministic-v1',
-        'scoring_profile_version', 'balanced-v2',
+        'algorithm_version', 'inventory-aware-deterministic-v2',
+        'scoring_profile_version', 'balanced-v3',
         'optimization_mode', 'balanced',
         'routes', jsonb_build_array(
           jsonb_build_object(
@@ -234,6 +234,63 @@ join public.breeding_plans plan on plan.id = route.plan_id
 where plan.job_id = (select id from phase7_ids where name = 'job')
   and route.route_key = repeat('9', 64);
 
+insert into public.breeding_routes (
+  plan_id, route_key, rank, optimization_mode, total_score,
+  generation_count, estimated_attempts_min, estimated_attempts_max,
+  difficulty, borrowed_pal_count, inventory_coverage, inheritance_score,
+  score_breakdown, route_payload
+)
+select
+  plan.id, repeat('a', 64), 4, 'balanced', 60,
+  1, 1, 3, 'medium', 0, 0.5, 0.8, '{}'::jsonb,
+  jsonb_build_object(
+    'route_key', repeat('a', 64), 'rank', 4,
+    'optimization_mode', 'balanced', 'total_score', 60,
+    'generation_count', 1, 'step_count', 1,
+    'estimated_attempts_min', 1, 'estimated_attempts_max', 3,
+    'difficulty', 'medium', 'borrowed_pal_count', 0,
+    'inventory_coverage', 0.5, 'inheritance_score', 0.8,
+    'feasibility_status', 'needs_inventory', 'adoptable', false,
+    'missing_pal_count', 1,
+    'missing_requirements', jsonb_build_array(jsonb_build_object(
+      'pal_id', 'test_child_pal', 'gender', 'female',
+      'required_passive_ids', jsonb_build_array('test_passive_b'),
+      'quantity', 1, 'step_indexes', jsonb_build_array(0)
+    )),
+    'score_breakdown', '{}'::jsonb,
+    'steps', jsonb_build_array(jsonb_build_object(
+      'step_index', 0, 'generation', 1, 'recipe_type', 'normal',
+      'parent_a', jsonb_build_object(
+        'source_type', 'inventory', 'pal_id', 'test_parent_a',
+        'instance_uid', 'fixture-pal-a-owned-001',
+        'owner_display_name', 'Fixture Player A', 'gender', 'male',
+        'passive_skill_ids', jsonb_build_array('test_passive_a'),
+        'required_passive_ids', jsonb_build_array('test_passive_a'),
+        'borrowed', false, 'produced_by_step_index', null,
+        'location_type', 'player_storage', 'location_name', 'Fixture Storage A'
+      ),
+      'parent_b', jsonb_build_object(
+        'source_type', 'missing', 'pal_id', 'test_child_pal',
+        'instance_uid', null, 'owner_display_name', 'untrusted value',
+        'gender', 'female', 'passive_skill_ids', '[]'::jsonb,
+        'required_passive_ids', jsonb_build_array('test_passive_b'),
+        'borrowed', false, 'produced_by_step_index', null,
+        'location_type', null, 'location_name', null
+      ),
+      'child_pal_id', 'test_child_pal', 'child_required_gender', null,
+      'required_passive_ids', jsonb_build_array('test_passive_a', 'test_passive_b')
+    ))
+  )
+from public.breeding_plans as plan
+where plan.job_id = (select id from phase7_ids where name = 'job');
+
+insert into phase7_ids(name, id)
+select 'route-missing', route.id
+from public.breeding_routes route
+join public.breeding_plans plan on plan.id = route.plan_id
+where plan.job_id = (select id from phase7_ids where name = 'job')
+  and route.route_key = repeat('a', 64);
+
 reset role;
 select set_config(
   'request.jwt.claims',
@@ -241,6 +298,63 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select results_eq(
+  $$
+    select feasibility_status, adoptable, missing_pal_count
+      from public.breeding_routes
+     where id = (select id from phase7_ids where name = 'route-missing')
+  $$,
+  $$ values ('needs_inventory'::text, false, 1) $$,
+  'missing inventory feasibility is persisted as queryable route state'
+);
+
+select is(
+  public.get_breeding_job_detail((select id from phase7_ids where name = 'job'))
+    #>> '{data,plan,routes,3,steps,0,parent_b,owner_display_name}',
+  '缺少：需补充库存',
+  'the route view labels a missing parent without trusting worker display text'
+);
+
+select is(
+  public.get_breeding_job_detail((select id from phase7_ids where name = 'job'))
+    #>> '{data,plan,routes,0,feasibility_status}',
+  'ready',
+  'the route view projects historical routes as inventory-ready'
+);
+
+select is(
+  public.get_breeding_job_detail((select id from phase7_ids where name = 'job'))
+    #>> '{data,plan,routes,0,adoptable}',
+  'true',
+  'the route view keeps historical inventory-backed routes adoptable'
+);
+
+select is(
+  jsonb_array_length(
+    public.get_breeding_job_detail((select id from phase7_ids where name = 'job'))
+      #> '{data,plan,routes,0,missing_requirements}'
+  ),
+  0,
+  'the route view projects an empty missing-inventory summary for historical routes'
+);
+
+select isnt(
+  (select route_payload from public.breeding_routes
+    where id = (select id from phase7_ids where name = 'route-main')),
+  (select route_payload from public.breeding_routes
+    where id = (select id from phase7_ids where name = 'route-main'))
+    || jsonb_build_object('feasibility_status', 'ready'),
+  'historical route payloads remain immutable while their browser view is normalized'
+);
+
+select throws_ok(
+  $$ select * from public.adopt_breeding_route(
+    (select id from phase7_ids where name = 'route-missing'), 'phase7:adopt:missing'
+  ) $$,
+  'P0001', 'ROUTE_NOT_ADOPTABLE',
+  'a route with missing starting parents cannot become an execution plan'
+);
 
 select lives_ok(
   $$ select * from public.adopt_breeding_route(
@@ -282,8 +396,8 @@ select results_eq(
     '40000000-0000-4000-8000-000000000002'::uuid,
     '51000000-0000-4000-8000-000000000001'::uuid,
     repeat('c', 64)::text,
-    'phase4b-deterministic-v1'::text,
-    'balanced-v2'::text
+    'inventory-aware-deterministic-v2'::text,
+    'balanced-v3'::text
   ) $$,
   'adoption preserves every Phase 6 version pin'
 );

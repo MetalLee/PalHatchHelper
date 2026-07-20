@@ -378,6 +378,7 @@
 - 已完成受审计来源入口、精确基础目录/provenance 绑定、六类非配种事实发布门禁、确定性两层搜索、实例分配、候选物理去重、四模式全候选池排名和完整评分明细。
 - 数据库已启用与引擎一致的四套 v2 评分配置；真实本地 Claim 必须经精确 published 目录、content hash、world 和固定库存快照校验后才能进入引擎。
 - Build `24181105` 的真实七类目录已完成人工批准、本地测试 world 发布、回滚与恢复演练；Phase 4 的 `real_data_acceptance` 和 `local_test_publish` 已完成。生产 Supabase/Vercel 发布仍为 `not_started`，属于 Phase 8，不能把本地测试发布描述为生产发布。
+- 2026-07-20 追加库存感知修订：目标路线必须支持 `ready/needs_inventory` 分层、缺失父母需求、真实库存覆盖率、禁止目标零步完成、增量保留有界搜索候选，并升级算法与评分版本；历史固定结果保持不变。
 
 ### 阶段目标
 
@@ -392,7 +393,7 @@
 
 - GitHub/URL/Upload DataSource Adapter、staging 校验、发布/回滚。
 - 父母无序归一化、特殊配方优先、最大代数/节点/时间限制。
-- 种类路线搜索、实例分配、性别/共享/被动约束、四种版本化评分模式。
+- 种类路线搜索、实例/缺口分配、性别/共享/被动约束、可行性分层和四种版本化评分模式。
 
 ### 明确不实现的内容
 
@@ -410,12 +411,12 @@
 
 ### API 和契约
 
-- 统一配方、校验报告、算法输入、候选路线、score_breakdown Schema。
+- 统一配方、校验报告、算法输入、候选路线、缺失父母、可采用状态和 score_breakdown Schema。
 - Algorithm Protocol 以固定快照、数据、算法和评分版本为必填输入。
 
 ### 测试要求
 
-- 导入/冲突/回滚、特殊配方、多代、性别替代、被动、共享排除、资源上限、排序稳定性和历史复现。
+- 导入/冲突/回滚、特殊配方、多代、性别替代、被动、共享排除、缺失父母、禁止零步、资源上限、部分候选保留、排序稳定性和历史复现。
 - 属性测试验证父母交换不改变结果、相同输入序列化结果一致。
 
 ### 验收标准
@@ -423,6 +424,7 @@
 - 算法只使用发布版本中的配方；相同固定输入结果一致。
 - 至少三条合法路线时返回三条以上，不足时返回全部并给稳定原因码。
 - 每条路线含版本、约束和完整评分明细，AI 无权改分。
+- 完整库存路线优先；缺库存路线精确显示父本/母本需求且不可采用；已有目标实例不产生零步完成路线。
 
 ### 风险
 
@@ -443,7 +445,9 @@
    - 验证：`cd apps/agent && uv run pytest tests/breeding/test_route_search.py`
 4. 实现实例分配与评分。
    - 验证：`cd apps/agent && uv run pytest tests/breeding/test_assignment.py tests/breeding/test_scoring.py`
-5. 运行确定性回归。
+5. 实现缺失父母路线、增量候选与硬/软预算语义。
+   - 验证：`cd apps/agent && uv run pytest tests/breeding/test_missing_inventory.py tests/breeding/test_limits.py`
+6. 运行确定性回归。
    - 验证：`cd apps/agent && uv run pytest tests/breeding -q && uv run python scripts/verify_reproducibility.py`
 
 ## Phase 5：登录、概览和帕鲁列表
@@ -572,6 +576,7 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 - 同一幂等输入只有一个活跃任务；刷新后可恢复状态。
 - AI 全部不可用时算法结果仍完成并显示模板说明。
 - UI 展示固定版本、真实实例、合法步骤和 score_breakdown。
+- UI 按性别展示父本/母本并汇总缺失需求；缺库存路线不可采用，完整路线始终优先推荐。
 
 ### 风险
 

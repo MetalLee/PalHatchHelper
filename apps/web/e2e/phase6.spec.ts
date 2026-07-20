@@ -51,13 +51,6 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   await login(page);
   await page.getByRole("link", { name: "配种器" }).last().click();
   await expect(page.getByRole("heading", { name: "配种器" })).toBeVisible();
-
-  await page.getByLabel("目标 Pal（名称、编号或 Stable ID）").fill("幻色幼崽");
-  await page.getByRole("checkbox", { name: /认真/ }).check();
-  await page.getByLabel("优化模式").selectOption("balanced");
-  await page.getByLabel("最大代数").fill("5");
-  const createButton = page.getByRole("button", { name: "创建配种任务" });
-  await expect(createButton).toBeEnabled();
   await page.waitForFunction(
     () => {
       const button = [...document.querySelectorAll("button")].find(
@@ -71,6 +64,13 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
     undefined,
     { timeout: 30_000 },
   );
+
+  await page.getByLabel("目标 Pal（名称、编号或 Stable ID）").fill("幻色幼崽");
+  await page.getByRole("checkbox", { name: /认真/ }).check();
+  await page.getByLabel("优化模式").selectOption("balanced");
+  await page.getByLabel("最大代数").fill("5");
+  const createButton = page.getByRole("button", { name: "创建配种任务" });
+  await expect(createButton).toBeEnabled();
   await createButton.click();
   await expect(page).toHaveURL(/\/breeder\/jobs\/[0-9a-f-]{36}$/, {
     timeout: 30_000,
@@ -101,7 +101,9 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   await routeTabs.first().click();
   await expect(page.getByText("完整评分明细")).toBeVisible();
   await expect(page.getByText("解释已降级")).toBeVisible();
-  await expect(page.getByText("phase4b-deterministic-v1")).toBeVisible();
+  await expect(
+    page.getByText("inventory-aware-deterministic-v2"),
+  ).toBeVisible();
 
   const response = await page.request.get(`/api/breeder/jobs/${jobId}`);
   const responseText = await response.text();

@@ -15,7 +15,7 @@ export type BreedingInventoryExclusionReason =
   | "shared_inventory_disabled"
   | "different_guild"
   | "share_disabled";
-export type BreedingSourceType = "inventory" | "intermediate";
+export type BreedingSourceType = "inventory" | "intermediate" | "missing";
 export type BreedingRequiredGender = "male" | "female";
 export type BreedingDifficulty = "low" | "medium" | "high";
 export type BreedingScoreComponentName =
@@ -25,7 +25,9 @@ export type BreedingScoreComponentName =
   | "borrowing"
   | "intermediate_cost"
   | "attempt_cost"
-  | "stability";
+  | "stability"
+  | "acquisition_cost";
+export type BreedingFeasibilityStatus = "ready" | "needs_inventory";
 export type BreedingSearchLimit =
   | "max_expanded_nodes"
   | "timeout"
@@ -40,6 +42,7 @@ export interface BreedingEngineRequestContracts {
   BreedingInventoryExclusion: BreedingInventoryExclusion;
   BreedingParentSource: BreedingParentSource;
   BreedingRouteStep: BreedingRouteStep;
+  BreedingMissingRequirement: BreedingMissingRequirement;
   BreedingRawScoreMetrics: BreedingRawScoreMetrics;
   BreedingScoreComponent: BreedingScoreComponent;
   BreedingModeScore: BreedingModeScore;
@@ -153,10 +156,31 @@ export interface BreedingRouteStep {
     | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId]
     | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId];
 }
+export interface BreedingMissingRequirement {
+  pal_id: BreedingEngineStableId;
+  gender: BreedingRequiredGender;
+  /**
+   * @maxItems 4
+   */
+  required_passive_ids:
+    | []
+    | [BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId];
+  quantity: number;
+  /**
+   * @minItems 1
+   */
+  step_indexes: [number, ...number[]];
+}
 export interface BreedingRawScoreMetrics {
   generation_count: number;
   step_count: number;
   unique_starting_instance_count: number;
+  starting_requirement_count: number;
+  missing_pal_count: number;
+  missing_passive_requirement_count: number;
   borrowed_pal_count: number;
   inventory_coverage: number;
   passive_carrier_count: number;
@@ -181,10 +205,11 @@ export interface BreedingModeScore {
   scoring_profile_version: BreedingEngineVersion;
   total_score: number;
   /**
-   * @minItems 7
-   * @maxItems 7
+   * @minItems 8
+   * @maxItems 8
    */
   components: [
+    BreedingScoreComponent,
     BreedingScoreComponent,
     BreedingScoreComponent,
     BreedingScoreComponent,
@@ -217,6 +242,10 @@ export interface BreedingRouteCandidate {
   borrowed_pal_count: number;
   inventory_coverage: number;
   inheritance_score: number;
+  feasibility_status: BreedingFeasibilityStatus;
+  adoptable: boolean;
+  missing_pal_count: number;
+  missing_requirements: BreedingMissingRequirement[];
   existing_target_instance_uid: BreedingEngineInstanceUid | null;
   score_breakdown: BreedingScoreBreakdown;
   steps: BreedingRouteStep[];

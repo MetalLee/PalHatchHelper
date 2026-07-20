@@ -203,6 +203,7 @@
       }
     },
     "RouteRawScoreMetrics": {
+      "description": "Browser projection for immutable v2 history and current v3 routes; acquisition fields are absent from v2 payloads.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -224,7 +225,22 @@
       "properties": {
         "generation_count": { "type": "integer", "minimum": 0 },
         "step_count": { "type": "integer", "minimum": 0 },
-        "unique_starting_instance_count": { "type": "integer", "minimum": 1 },
+        "unique_starting_instance_count": { "type": "integer", "minimum": 0 },
+        "starting_requirement_count": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "missing_pal_count": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "missing_passive_requirement_count": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
         "borrowed_pal_count": { "type": "integer", "minimum": 0 },
         "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
         "passive_carrier_count": { "type": "integer", "minimum": 0 },
@@ -265,7 +281,8 @@
             "borrowing",
             "intermediate_cost",
             "attempt_cost",
-            "stability"
+            "stability",
+            "acquisition_cost"
           ]
         },
         "raw_value": { "type": "number", "minimum": 0 },
@@ -275,6 +292,7 @@
       }
     },
     "RouteModeScore": {
+      "description": "Browser projection accepts the seven v2 components and the eight v3 components; the engine contract remains version-strict.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -294,7 +312,7 @@
         "components": {
           "type": "array",
           "minItems": 7,
-          "maxItems": 7,
+          "maxItems": 8,
           "items": { "$ref": "#/$defs/RouteScoreComponent" }
         }
       }
@@ -346,7 +364,7 @@
       "properties": {
         "source_type": {
           "type": "string",
-          "enum": ["inventory", "intermediate"]
+          "enum": ["inventory", "intermediate", "missing"]
         },
         "pal_id": { "$ref": "#/$defs/BreederStableId" },
         "instance_uid": { "type": ["string", "null"], "maxLength": 160 },
@@ -427,6 +445,34 @@
           "maxItems": 4,
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/BreederStableId" }
+        }
+      }
+    },
+    "BreedingMissingRequirementView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pal_id",
+        "gender",
+        "required_passive_ids",
+        "quantity",
+        "step_indexes"
+      ],
+      "properties": {
+        "pal_id": { "$ref": "#/$defs/BreederStableId" },
+        "gender": { "type": "string", "enum": ["male", "female"] },
+        "required_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreederStableId" }
+        },
+        "quantity": { "type": "integer", "minimum": 1 },
+        "step_indexes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 0 }
         }
       }
     },
@@ -574,6 +620,10 @@
         "borrowed_pal_count",
         "inventory_coverage",
         "inheritance_score",
+        "feasibility_status",
+        "adoptable",
+        "missing_pal_count",
+        "missing_requirements",
         "existing_target_instance_uid",
         "score_breakdown",
         "steps",
@@ -595,6 +645,16 @@
         "borrowed_pal_count": { "type": "integer", "minimum": 0 },
         "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
         "inheritance_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "feasibility_status": {
+          "type": "string",
+          "enum": ["ready", "needs_inventory"]
+        },
+        "adoptable": { "type": "boolean" },
+        "missing_pal_count": { "type": "integer", "minimum": 0 },
+        "missing_requirements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreedingMissingRequirementView" }
+        },
         "existing_target_instance_uid": {
           "type": ["string", "null"],
           "maxLength": 160

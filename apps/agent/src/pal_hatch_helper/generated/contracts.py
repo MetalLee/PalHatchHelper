@@ -459,6 +459,12 @@ class BreedingDifficulty(StrEnum):
 class BreedingSourceType(StrEnum):
     INVENTORY = "inventory"
     INTERMEDIATE = "intermediate"
+    MISSING = "missing"
+
+
+class BreedingFeasibilityStatus(StrEnum):
+    READY = "ready"
+    NEEDS_INVENTORY = "needs_inventory"
 
 
 class BreedingSearchLimit(StrEnum):
@@ -487,12 +493,13 @@ class BreedingScoreComponentName(StrEnum):
     INTERMEDIATE_COST = "intermediate_cost"
     ATTEMPT_COST = "attempt_cost"
     STABILITY = "stability"
+    ACQUISITION_COST = "acquisition_cost"
 
 
 class BreedingSearchLimits(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    max_generations: Annotated[int, Field(ge=0), Field(le=8)]
+    max_generations: Annotated[int, Field(ge=1), Field(le=8)]
     max_expanded_nodes: Annotated[int, Field(ge=1), Field(le=10000000)]
     timeout_ms: Annotated[int, Field(ge=1), Field(le=300000)]
     max_species_routes_per_pal: Annotated[int, Field(ge=3), Field(le=100000)]
@@ -573,12 +580,33 @@ class BreedingRouteStep(BaseModel):
     ]
 
 
+class BreedingMissingRequirement(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pal_id: BreedingEngineStableId
+    gender: BreedingRequiredGender
+    required_passive_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    quantity: Annotated[int, Field(ge=1)]
+    step_indexes: Annotated[
+        list[Annotated[int, Field(ge=0)]],
+        Field(min_length=1),
+        AfterValidator(_ensure_unique),
+    ]
+
+
 class BreedingRawScoreMetrics(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     generation_count: Annotated[int, Field(ge=0)]
     step_count: Annotated[int, Field(ge=0)]
-    unique_starting_instance_count: Annotated[int, Field(ge=1)]
+    unique_starting_instance_count: Annotated[int, Field(ge=0)]
+    starting_requirement_count: Annotated[int, Field(ge=1)]
+    missing_pal_count: Annotated[int, Field(ge=0)]
+    missing_passive_requirement_count: Annotated[int, Field(ge=0)]
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
     passive_carrier_count: Annotated[int, Field(ge=0)]
@@ -608,7 +636,7 @@ class BreedingModeScore(BaseModel):
     optimization_mode: OptimizationMode
     scoring_profile_version: BreedingEngineVersion
     total_score: Annotated[float, Field(ge=0), Field(le=100)]
-    components: Annotated[list[BreedingScoreComponent], Field(min_length=7), Field(max_length=7)]
+    components: Annotated[list[BreedingScoreComponent], Field(min_length=8), Field(max_length=8)]
 
 
 class BreedingScoreBreakdown(BaseModel):
@@ -635,6 +663,10 @@ class BreedingRouteCandidate(BaseModel):
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
     inheritance_score: Annotated[float, Field(ge=0), Field(le=1)]
+    feasibility_status: BreedingFeasibilityStatus
+    adoptable: bool
+    missing_pal_count: Annotated[int, Field(ge=0)]
+    missing_requirements: list[BreedingMissingRequirement]
     existing_target_instance_uid: BreedingEngineInstanceUid | None
     score_breakdown: BreedingScoreBreakdown
     steps: list[BreedingRouteStep]
@@ -937,7 +969,10 @@ class RouteRawScoreMetrics(BaseModel):
 
     generation_count: Annotated[int, Field(ge=0)]
     step_count: Annotated[int, Field(ge=0)]
-    unique_starting_instance_count: Annotated[int, Field(ge=1)]
+    unique_starting_instance_count: Annotated[int, Field(ge=0)]
+    starting_requirement_count: Annotated[int, Field(ge=1)] = 1
+    missing_pal_count: Annotated[int, Field(ge=0)] = 0
+    missing_passive_requirement_count: Annotated[int, Field(ge=0)] = 0
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
     passive_carrier_count: Annotated[int, Field(ge=0)]
@@ -962,6 +997,7 @@ class RouteScoreComponent(BaseModel):
         "intermediate_cost",
         "attempt_cost",
         "stability",
+        "acquisition_cost",
     ]
     raw_value: Annotated[float, Field(ge=0)]
     normalized_score: Annotated[float, Field(ge=0), Field(le=100)]
@@ -975,7 +1011,7 @@ class RouteModeScore(BaseModel):
     optimization_mode: BreederOptimizationMode
     scoring_profile_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
     total_score: Annotated[float, Field(ge=0), Field(le=100)]
-    components: Annotated[list[RouteScoreComponent], Field(min_length=7), Field(max_length=7)]
+    components: Annotated[list[RouteScoreComponent], Field(min_length=7), Field(max_length=8)]
 
 
 class RouteScoreBreakdown(BaseModel):
@@ -990,7 +1026,7 @@ class RouteScoreBreakdown(BaseModel):
 class BreedingRouteViewParent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    source_type: Literal["inventory", "intermediate"]
+    source_type: Literal["inventory", "intermediate", "missing"]
     pal_id: BreederStableId
     instance_uid: Annotated[str, Field(max_length=160)] | None
     owner_display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
@@ -1033,6 +1069,24 @@ class BreedingRouteViewStep(BaseModel):
     required_passive_ids: Annotated[
         list[BreederStableId],
         Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+
+
+class BreedingMissingRequirementView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pal_id: BreederStableId
+    gender: Literal["male", "female"]
+    required_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
+    quantity: Annotated[int, Field(ge=1)]
+    step_indexes: Annotated[
+        list[Annotated[int, Field(ge=0)]],
+        Field(min_length=1),
         AfterValidator(_ensure_unique),
     ]
 
@@ -1116,6 +1170,10 @@ class BreedingRoute(BaseModel):
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
     inheritance_score: Annotated[float, Field(ge=0), Field(le=1)]
+    feasibility_status: Literal["ready", "needs_inventory"]
+    adoptable: bool
+    missing_pal_count: Annotated[int, Field(ge=0)]
+    missing_requirements: list[BreedingMissingRequirementView]
     existing_target_instance_uid: Annotated[str, Field(max_length=160)] | None
     score_breakdown: RouteScoreBreakdown
     steps: list[BreedingRouteViewStep]

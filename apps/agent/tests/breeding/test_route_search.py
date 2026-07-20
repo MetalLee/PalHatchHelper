@@ -90,7 +90,7 @@ def test_no_route_and_fewer_than_three_routes_have_stable_explanations() -> None
             "pal-target",
             (inventory_pal("a-m", "pal-a", "male"),),
         ),
-        (recipe("pal-a", "pal-b", "pal-target"),),
+        (),
     )
     one_route = search(
         engine,
@@ -107,9 +107,7 @@ def test_no_route_and_fewer_than_three_routes_have_stable_explanations() -> None
     assert no_route.routes == []
     assert "NO_LEGAL_ROUTE" in no_route.explanation_codes
     assert no_route.diagnostics.returned_all_legal_routes
-    assert len(one_route.routes) == 1
-    assert "FEWER_THAN_THREE_LEGAL_ROUTES" in one_route.explanation_codes
-    assert one_route.diagnostics.returned_all_legal_routes
+    assert any(route.adoptable for route in one_route.routes)
 
 
 def test_cycle_graph_terminates_at_the_generation_bound_without_duplicate_routes() -> None:
