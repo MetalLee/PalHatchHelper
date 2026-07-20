@@ -60,7 +60,7 @@ export default async function PalsPage({
           description="尝试清空部分筛选，或切换库存范围。"
         />
       ) : (
-        <PalInventory page={page} />
+        <PalInventory key={rawParams.toString()} page={page} />
       )}
       {page.next_cursor !== null ? (
         <div className="flex justify-center">

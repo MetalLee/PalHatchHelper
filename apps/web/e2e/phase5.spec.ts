@@ -35,6 +35,37 @@ test("unbound test account receives the binding state", async ({ page }) => {
   await expect(page.getByText("尚未绑定游戏角色")).toBeVisible();
 });
 
+test("inventory scope and pagination links refresh the visible list", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/pals?scope=all&page_size=1");
+
+  await page.getByRole("link", { name: "公会共享" }).click();
+  await expect(page).toHaveURL(/\/pals\?scope=shared$/);
+  await expect(page.getByText("共 1 只可见帕鲁")).toBeVisible();
+  await expect(
+    page.getByRole("article").getByText("Fixture Player B"),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "全部", exact: true }).click();
+  await expect(page).toHaveURL(/\/pals\?scope=all$/);
+  await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
+
+  await page.goto("/pals?scope=all&page_size=1");
+  const firstPalId = await page
+    .locator(".pal-card .eyebrow span")
+    .last()
+    .textContent();
+  await page.getByRole("link", { name: "下一页" }).click();
+  await expect(page).toHaveURL(/cursor=/);
+  await expect
+    .poll(async () =>
+      page.locator(".pal-card .eyebrow span").last().textContent(),
+    )
+    .not.toBe(firstPalId);
+});
+
 test("iPhone flow filters inventory, pages deterministically and toggles owned sharing", async ({
   page,
 }) => {
