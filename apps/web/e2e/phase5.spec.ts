@@ -177,5 +177,7 @@ test("stale data status stays explicit on iPhone width", async ({ page }) => {
     page.getByRole("status").filter({ hasText: "数据已过期" }),
   ).toBeVisible();
   await expect(page.getByText("确定性算法版本")).toBeVisible();
-  await expect(page.getByText("phase4b-deterministic-v1")).toBeVisible();
+  await expect(
+    page.getByText("inventory-aware-deterministic-v2"),
+  ).toBeVisible();
 });
