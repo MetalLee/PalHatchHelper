@@ -1,0 +1,272 @@
+package canonical
+
+import (
+	"fmt"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/MetalLee/PalHatchHelper/parser/internal/sav"
+	"golang.org/x/text/unicode/norm"
+)
+
+const StableIDSpecification = "palworld-stable-id-v1"
+
+var stableIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
+
+type Snapshot struct {
+	Server  Server   `json:"server"`
+	Guilds  []Guild  `json:"guilds"`
+	Players []Player `json:"players"`
+	Pals    []Pal    `json:"pals"`
+}
+
+type Server struct {
+	WorldUID    string  `json:"world_uid"`
+	SaveVersion *string `json:"save_version"`
+	CapturedAt  string  `json:"captured_at"`
+}
+
+type Guild struct {
+	GuildUID string `json:"guild_uid"`
+	Name     string `json:"name"`
+}
+
+type Player struct {
+	PlayerUID string  `json:"player_uid"`
+	Nickname  string  `json:"nickname"`
+	Level     *int    `json:"level"`
+	GuildUID  *string `json:"guild_uid"`
+}
+
+type SourceMetadata struct {
+	SourceInternalName              string   `json:"source_internal_name"`
+	SourcePassiveSkillInternalNames []string `json:"source_passive_skill_internal_names"`
+}
+
+type Pal struct {
+	InstanceUID     string         `json:"instance_uid"`
+	OwnerPlayerUID  *string        `json:"owner_player_uid"`
+	GuildUID        *string        `json:"guild_uid"`
+	PalID           string         `json:"pal_id"`
+	Gender          string         `json:"gender"`
+	Level           *int           `json:"level"`
+	PassiveSkillIDs []string       `json:"passive_skill_ids"`
+	LocationType    string         `json:"location_type"`
+	LocationName    *string        `json:"location_name"`
+	Metadata        SourceMetadata `json:"metadata"`
+}
+
+type Warning struct {
+	Code  string
+	Count int
+}
+
+type warningSet map[string]int
+
+func (w warningSet) add(code string) { w[code]++ }
+
+// NormalizeStableID applies the shared palworld-stable-id-v1 mapping. It never
+// slugs or invents an identifier for invalid input.
+func NormalizeStableID(source string) (string, error) {
+	normalized := strings.ToLower(norm.NFKC.String(source))
+	if len(normalized) == 0 || len(normalized) > 120 || !stableIDPattern.MatchString(normalized) {
+		return "", fmt.Errorf("GAME_ID_INVALID")
+	}
+	return normalized, nil
+}
+
+func Build(
+	world *sav.World,
+	worldUID string,
+	format sav.ContainerFormat,
+	captured time.Time,
+) (Snapshot, []Warning, error) {
+	warnings := warningSet{}
+	version := fmt.Sprintf("%s/0x%02x", format.Magic, format.SaveType)
+	result := Snapshot{
+		Server: Server{WorldUID: worldUID, SaveVersion: &version, CapturedAt: captured.UTC().Format(time.RFC3339Nano)},
+		Guilds: []Guild{}, Players: []Player{}, Pals: []Pal{},
+	}
+
+	guildNames := make(map[string]string, len(world.Guilds))
+	for _, source := range world.Guilds {
+		uid := strings.TrimSpace(source.ID)
+		if uid == "" {
+			warnings.add("GUILD_UID_UNKNOWN")
+			continue
+		}
+		name := strings.TrimSpace(source.Name)
+		if name == "" {
+			name = "Unknown guild"
+			warnings.add("GUILD_NAME_UNKNOWN")
+		}
+		if previous, exists := guildNames[uid]; exists {
+			if previous != name {
+				warnings.add("GUILD_UID_CONFLICT")
+			}
+			continue
+		}
+		guildNames[uid] = name
+		result.Guilds = append(result.Guilds, Guild{GuildUID: uid, Name: name})
+	}
+
+	players := make(map[string]sav.Player, len(world.Players))
+	for _, source := range world.Players {
+		uid := strings.TrimSpace(source.UID)
+		if uid == "" {
+			warnings.add("PLAYER_UID_UNKNOWN")
+			continue
+		}
+		players[strings.ToLower(uid)] = source
+		name := strings.TrimSpace(source.Nickname)
+		if name == "" {
+			name = "Unknown player"
+			warnings.add("PLAYER_NICKNAME_UNKNOWN")
+		}
+		result.Players = append(result.Players, Player{
+			PlayerUID: uid,
+			Nickname:  name,
+			Level:     boundedLevel(source.Level, warnings),
+			GuildUID:  optionalString(source.GuildID),
+		})
+	}
+
+	bases := make(map[string]sav.BaseCamp, len(world.Bases))
+	for _, base := range world.Bases {
+		bases[strings.ToLower(base.ID)] = base
+	}
+	palIDs := newStableIDMap()
+	passiveIDs := newStableIDMap()
+	for index, source := range world.Pals {
+		instanceUID := strings.TrimSpace(source.InstanceID)
+		if instanceUID == "" {
+			instanceUID = fmt.Sprintf("unresolved-instance-%06d", index+1)
+			warnings.add("PAL_INSTANCE_UID_UNKNOWN")
+		}
+		sourcePalID := strings.TrimSpace(source.CharacterID)
+		palID, err := palIDs.mapID(sourcePalID)
+		if err != nil {
+			if err.Error() == "GAME_ID_NORMALIZATION_COLLISION" {
+				return Snapshot{}, nil, err
+			}
+			palID, sourcePalID = "unknown", "unknown"
+			warnings.add("PAL_ID_UNKNOWN")
+		}
+		sourcePassives := uniqueStrings(source.PassiveSkillIDs)
+		passives := make([]string, 0, len(sourcePassives))
+		metadataPassives := make([]string, 0, len(sourcePassives))
+		for _, raw := range sourcePassives {
+			mapped, mapErr := passiveIDs.mapID(raw)
+			if mapErr != nil {
+				if mapErr.Error() == "GAME_ID_NORMALIZATION_COLLISION" {
+					return Snapshot{}, nil, mapErr
+				}
+				warnings.add("PASSIVE_SKILL_ID_UNKNOWN")
+				continue
+			}
+			passives = append(passives, mapped)
+			metadataPassives = append(metadataPassives, raw)
+		}
+		passives = uniqueStrings(passives)
+		owner := optionalString(source.OwnerUID)
+		guild := (*string)(nil)
+		locationType := "unknown"
+		locationName := (*string)(nil)
+		if base, ok := bases[strings.ToLower(source.BaseID)]; ok && source.BaseID != "" {
+			guild = optionalString(base.GuildID)
+			locationType = "base"
+			locationName = optionalString(base.Name)
+		} else if owner != nil {
+			if player, ok := players[strings.ToLower(*owner)]; ok {
+				guild = optionalString(player.GuildID)
+				switch {
+				case source.ContainerID != "" && strings.EqualFold(source.ContainerID, player.OtomoContainerID):
+					locationType = "player_party"
+					locationName = optionalString(player.Nickname)
+				case source.ContainerID != "" && strings.EqualFold(source.ContainerID, player.PalStorageContainerID):
+					locationType = "player_storage"
+					locationName = optionalString(player.Nickname)
+				}
+			}
+		}
+		gender := source.Gender
+		if gender != "male" && gender != "female" && gender != "genderless" {
+			gender = "unknown"
+			warnings.add("PAL_GENDER_UNKNOWN")
+		}
+		result.Pals = append(result.Pals, Pal{
+			InstanceUID: instanceUID, OwnerPlayerUID: owner, GuildUID: guild,
+			PalID: palID, Gender: gender, Level: boundedLevel(source.Level, warnings),
+			PassiveSkillIDs: passives, LocationType: locationType, LocationName: locationName,
+			Metadata: SourceMetadata{SourceInternalName: sourcePalID, SourcePassiveSkillInternalNames: metadataPassives},
+		})
+	}
+
+	sort.Slice(result.Guilds, func(i, j int) bool { return result.Guilds[i].GuildUID < result.Guilds[j].GuildUID })
+	sort.Slice(result.Players, func(i, j int) bool { return result.Players[i].PlayerUID < result.Players[j].PlayerUID })
+	sort.Slice(result.Pals, func(i, j int) bool { return result.Pals[i].InstanceUID < result.Pals[j].InstanceUID })
+	return result, sortedWarnings(warnings), nil
+}
+
+type stableIDMap struct{ sourceByID map[string]string }
+
+func newStableIDMap() *stableIDMap { return &stableIDMap{sourceByID: map[string]string{}} }
+
+func (m *stableIDMap) mapID(source string) (string, error) {
+	stable, err := NormalizeStableID(source)
+	if err != nil {
+		return "", err
+	}
+	if previous, exists := m.sourceByID[stable]; exists && previous != source {
+		return "", fmt.Errorf("GAME_ID_NORMALIZATION_COLLISION")
+	}
+	m.sourceByID[stable] = source
+	return stable, nil
+}
+
+func boundedLevel(value int32, warnings warningSet) *int {
+	if value < 1 || value > 100 {
+		if value != 0 {
+			warnings.add("LEVEL_OUT_OF_RANGE")
+		}
+		return nil
+	}
+	result := int(value)
+	return &result
+}
+
+func optionalString(value string) *string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
+func uniqueStrings(values []string) []string {
+	seen := map[string]struct{}{}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
+}
+
+func sortedWarnings(values warningSet) []Warning {
+	result := make([]Warning, 0, len(values))
+	for code, count := range values {
+		result = append(result, Warning{Code: code, Count: count})
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Code < result[j].Code })
+	return result
+}

@@ -61,10 +61,12 @@ x-save-environment: &save-environment
   PARSER_VERSION: ${PARSER_VERSION:?PARSER_VERSION is required}
   PARSER_COMMAND_JSON: ${PARSER_COMMAND_JSON:?PARSER_COMMAND_JSON is required}
   PARSER_REQUIRED_FILES_JSON: ${PARSER_REQUIRED_FILES_JSON:?PARSER_REQUIRED_FILES_JSON is required}
+  PALHATCH_OODLE_LIB: ${PALHATCH_OODLE_LIB:?PALHATCH_OODLE_LIB is required}
+  PALHATCH_OODLE_SHA256: ${PALHATCH_OODLE_SHA256:?PALHATCH_OODLE_SHA256 is required}
   SAVE_POLL_INTERVAL_SECONDS: ${SAVE_POLL_INTERVAL_SECONDS:-300}
   SAVE_STABILITY_DELAY_SECONDS: ${SAVE_STABILITY_DELAY_SECONDS:-10}
   PARSER_TIMEOUT_SECONDS: ${PARSER_TIMEOUT_SECONDS:-180}
-  PARSER_MEMORY_LIMIT_BYTES: ${PARSER_MEMORY_LIMIT_BYTES:-1610612736}
+  PARSER_MEMORY_LIMIT_BYTES: ${PARSER_MEMORY_LIMIT_BYTES:-2147483648}
   PARSER_CPU_LIMIT_SECONDS: ${PARSER_CPU_LIMIT_SECONDS:-180}
 
 x-save-volumes: &save-volumes
@@ -123,6 +125,8 @@ services:
   job-worker:
     <<: *agent-service
     command: ["pal-hatch-helper", "job-worker"]
+    healthcheck:
+      disable: true
     environment:
       <<: *agent-environment
       WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-job
@@ -132,6 +136,8 @@ services:
   save-worker:
     <<: *agent-service
     command: ["pal-hatch-helper", "save-worker"]
+    healthcheck:
+      disable: true
     environment:
       <<: [*agent-environment, *save-environment]
       WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-save
@@ -146,6 +152,8 @@ services:
   command-worker:
     <<: *agent-service
     command: ["pal-hatch-helper", "command-worker"]
+    healthcheck:
+      disable: true
     environment:
       <<: [*agent-environment, *save-environment]
       WORKER_ID: ${WORKER_ID_PREFIX:?WORKER_ID_PREFIX is required}-command

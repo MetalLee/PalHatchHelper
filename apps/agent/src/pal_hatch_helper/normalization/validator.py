@@ -96,6 +96,24 @@ class CanonicalSnapshotValidator:
                         )
                     )
 
+            if pal.gender == "unknown":
+                pal_warnings.append("UNKNOWN_GENDER")
+                warnings.append(
+                    ValidationWarning("UNKNOWN_GENDER", f"pals[{index}].gender", "unknown")
+                )
+            if pal.level is None:
+                pal_warnings.append("UNKNOWN_LEVEL")
+                warnings.append(ValidationWarning("UNKNOWN_LEVEL", f"pals[{index}].level", ""))
+            if pal.location_type == "unknown":
+                pal_warnings.append("UNKNOWN_LOCATION")
+                warnings.append(
+                    ValidationWarning(
+                        "UNKNOWN_LOCATION",
+                        f"pals[{index}].location_type",
+                        "unknown",
+                    )
+                )
+
             owner = players.get(pal.owner_player_uid) if pal.owner_player_uid is not None else None
             owner_resolved = owner is not None
             if not owner_resolved:

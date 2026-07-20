@@ -16,7 +16,9 @@ Phase 8 第一轮管理员功能、受控 Agent 命令队列、共享契约和�
 phase_8:
   admin_implementation: completed
   automated_gates: passed
-  production_deploy: not_started
+  production_deploy: completed
+  end_to_end_acceptance: completed
+  first_release: completed
 ```
 
 ## 管理员功能

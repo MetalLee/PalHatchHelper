@@ -67,10 +67,12 @@ services:
       PARSER_VERSION: ${PARSER_VERSION:-}
       PARSER_COMMAND_JSON: ${PARSER_COMMAND_JSON:-[]}
       PARSER_REQUIRED_FILES_JSON: ${PARSER_REQUIRED_FILES_JSON:-[]}
+      PALHATCH_OODLE_LIB: ${PALHATCH_OODLE_LIB:-}
+      PALHATCH_OODLE_SHA256: ${PALHATCH_OODLE_SHA256:-}
       SAVE_POLL_INTERVAL_SECONDS: ${SAVE_POLL_INTERVAL_SECONDS:-300}
       SAVE_STABILITY_DELAY_SECONDS: ${SAVE_STABILITY_DELAY_SECONDS:-10}
       PARSER_TIMEOUT_SECONDS: ${PARSER_TIMEOUT_SECONDS:-180}
-      PARSER_MEMORY_LIMIT_BYTES: ${PARSER_MEMORY_LIMIT_BYTES:-1610612736}
+      PARSER_MEMORY_LIMIT_BYTES: ${PARSER_MEMORY_LIMIT_BYTES:-2147483648}
       PARSER_CPU_LIMIT_SECONDS: ${PARSER_CPU_LIMIT_SECONDS:-180}
     volumes:
       - type: bind
@@ -82,6 +84,12 @@ services:
       - type: bind
         source: ${PALWORLD_SAVE_ROOT:-/palhatch-unconfigured-save}
         target: /palworld-save
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PARSER_BUNDLE_DIR:-../../parser}
+        target: /app/parser
         read_only: true
         bind:
           create_host_path: false

@@ -50,8 +50,8 @@ if ! docker image inspect "$AGENT_IMAGE" --format '{{json .RepoDigests}}' | grep
 fi
 "${compose[@]}" config --quiet
 
+"$SCRIPT_DIR/prepare-production-data.sh" "$PALHATCH_DATA_DIR"
 runtime_dir="$PALHATCH_DATA_DIR/runtime"
-install -d -m 0700 "$runtime_dir"
 previous_image=""
 api_id="$("${compose[@]}" ps -q api 2>/dev/null || true)"
 if [[ -n "$api_id" ]]; then previous_image="$(docker inspect --format '{{.Config.Image}}' "$api_id")"; fi
@@ -62,12 +62,20 @@ fi
 
 rollback_on_error() {
   local exit_code=$?
+  local rollback_failed=false
   trap - ERR
   echo "AGENT_DEPLOY_FAILED_ROLLBACK_STARTED" >&2
   if [[ -n "$previous_image" && "$previous_image" =~ @sha256:[0-9a-f]{64}$ ]]; then
-    AGENT_IMAGE="$previous_image" "${compose[@]}" up -d --no-deps "${SERVICES[@]}" >/dev/null || true
+    AGENT_IMAGE="$previous_image" "${compose[@]}" up -d --no-deps "${SERVICES[@]}" >/dev/null \
+      || rollback_failed=true
+  else
+    "${compose[@]}" down --remove-orphans >/dev/null || rollback_failed=true
   fi
-  echo "AGENT_DEPLOY_FAILED_ROLLBACK_FINISHED" >&2
+  if $rollback_failed; then
+    echo "AGENT_DEPLOY_FAILED_ROLLBACK_FAILED" >&2
+  else
+    echo "AGENT_DEPLOY_FAILED_ROLLBACK_FINISHED" >&2
+  fi
   exit "$exit_code"
 }
 trap rollback_on_error ERR

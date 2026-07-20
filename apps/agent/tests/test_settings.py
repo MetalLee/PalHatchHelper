@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from pydantic import SecretStr, ValidationError
 
@@ -83,6 +85,12 @@ def test_remote_breeding_sources_are_disabled_by_default_and_bounded_when_enable
     assert settings.breeding_source_maximum_bytes == 10 * 1024 * 1024
 
 
+def test_parser_default_virtual_memory_budget_supports_go_runtime() -> None:
+    settings = Settings()
+
+    assert settings.parser_memory_limit_bytes == 2 * 1024 * 1024 * 1024
+
+
 def test_save_worker_never_guesses_missing_path_or_parser_configuration() -> None:
     settings = Settings(
         app_env="test",
@@ -124,3 +132,35 @@ def test_save_worker_accepts_only_explicit_confirmed_configuration() -> None:
         "--output",
         "{output_path}",
     )
+
+
+def test_plm_parser_requires_explicit_oodle_path_and_sha256_pin() -> None:
+    settings = Settings(
+        app_env="test",
+        supabase_url="http://127.0.0.1:54321",
+        supabase_service_role_key="fixture-local-service-role",
+        palworld_compose_dir="/confirmed/compose",
+        palworld_save_root="/confirmed/save",
+        palworld_world_id="10000000-0000-4000-8000-000000000001",
+        palworld_world_uid="fixture-world-001",
+        parser_name="palhatch-plm-save-parser",
+        parser_version="1.0.0",
+        parser_command_json=(
+            '["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}",'
+            '"--output","{output_path}"]'
+        ),
+        parser_required_files_json='["Level.sav"]',
+    )
+
+    assert settings.save_worker_configuration_errors()[-2:] == (
+        "palhatch_oodle_lib_missing",
+        "palhatch_oodle_sha256_missing",
+    )
+
+    configured = settings.model_copy(
+        update={
+            "palhatch_oodle_lib": Path("/app/parser/lib/liboo2corelinux64.so.9"),
+            "palhatch_oodle_sha256": "a" * 64,
+        }
+    )
+    assert configured.save_worker_configuration_errors() == ()

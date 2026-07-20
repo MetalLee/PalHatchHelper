@@ -32,6 +32,10 @@ for service in "${SERVICES[@]}"; do
   [[ "$(docker inspect --format '{{.HostConfig.NetworkMode}}' "$container_id")" != "host" ]] || { echo "AGENT_HOST_NETWORK_FORBIDDEN:$service" >&2; exit 72; }
   [[ "$(docker inspect --format '{{.HostConfig.Memory}}' "$container_id")" -gt 0 ]] || { echo "AGENT_MEMORY_LIMIT_MISSING:$service" >&2; exit 72; }
   [[ "$(docker inspect --format '{{.HostConfig.PidsLimit}}' "$container_id")" -gt 0 ]] || { echo "AGENT_PIDS_LIMIT_MISSING:$service" >&2; exit 72; }
+  if [[ "$service" != "api" ]]; then
+    health_status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}disabled{{end}}' "$container_id")"
+    [[ "$health_status" == "disabled" ]] || { echo "AGENT_WORKER_HEALTHCHECK_ENABLED:$service" >&2; exit 73; }
+  fi
 done
 
 api_id="$("${compose[@]}" ps -q api)"
@@ -41,7 +45,34 @@ for service in save-worker command-worker; do
   container_id="$("${compose[@]}" ps -q "$service")"
   docker inspect --format '{{range .Mounts}}{{if eq .Destination "/palworld-save"}}{{.RW}}{{end}}{{end}}' "$container_id" | grep -Fxq 'false' || { echo "PALWORLD_SAVE_MOUNT_NOT_READ_ONLY:$service" >&2; exit 73; }
 done
-curl --fail --silent --show-error --max-time 5 http://127.0.0.1:18765/healthz >/dev/null
+
+services_stable() {
+  local service container_id
+  for service in "${SERVICES[@]}"; do
+    container_id="$("${compose[@]}" ps -q "$service")"
+    [[ -n "$container_id" ]] || return 1
+    [[ "$(docker inspect --format '{{.State.Running}}' "$container_id")" == "true" ]] || return 1
+    [[ "$(docker inspect --format '{{.RestartCount}}' "$container_id")" == "0" ]] || return 1
+  done
+}
+
+readiness_max_attempts=30
+readiness_required_successes=8
+readiness_successes=0
+for ((attempt = 1; attempt <= readiness_max_attempts; attempt++)); do
+  if curl --fail --silent --max-time 5 http://127.0.0.1:18765/healthz >/dev/null \
+    && services_stable; then
+    readiness_successes=$((readiness_successes + 1))
+    if (( readiness_successes >= readiness_required_successes )); then break; fi
+  else
+    readiness_successes=0
+  fi
+  if (( attempt < readiness_max_attempts )); then sleep 2; fi
+done
+if (( readiness_successes < readiness_required_successes )); then
+  echo "AGENT_HEALTH_NOT_READY" >&2
+  exit 73
+fi
 
 logs_file="$(mktemp)"
 trap 'rm -f "$logs_file"' EXIT

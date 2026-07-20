@@ -1,17 +1,64 @@
 "use client";
 
-import {
-  parseAdoptRouteResponse,
-  parseBreedingJobDetailRpcResult,
-  type BreedingJobDetailRpcSuccess,
-  type BreedingRoute,
-  type BreedingRouteViewParent,
+import type {
+  AdoptRouteResponse,
+  BreedingJobDetailRpcResult,
+  BreedingJobDetailRpcSuccess,
+  BreedingRoute,
+  BreedingRouteViewParent,
 } from "@palhatch/contracts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 const terminal = new Set(["completed", "failed", "cancelled"]);
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function parsePolledJob(value: unknown): BreedingJobDetailRpcResult {
+  if (typeof value !== "object" || value === null || !("ok" in value)) {
+    throw new Error("DATA_UNAVAILABLE");
+  }
+  if (value.ok === false) {
+    if (!("error_code" in value) || typeof value.error_code !== "string") {
+      throw new Error("DATA_UNAVAILABLE");
+    }
+    return value as BreedingJobDetailRpcResult;
+  }
+  if (
+    value.ok !== true ||
+    !("data" in value) ||
+    typeof value.data !== "object" ||
+    value.data === null ||
+    !("job_id" in value.data) ||
+    typeof value.data.job_id !== "string" ||
+    !uuidPattern.test(value.data.job_id)
+  ) {
+    throw new Error("DATA_UNAVAILABLE");
+  }
+  return value as BreedingJobDetailRpcResult;
+}
+
+function parseAdoption(value: unknown): AdoptRouteResponse {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("plan_id" in value) ||
+    typeof value.plan_id !== "string" ||
+    !uuidPattern.test(value.plan_id) ||
+    !("reused" in value) ||
+    typeof value.reused !== "boolean" ||
+    !("status" in value) ||
+    typeof value.status !== "string" ||
+    !("concurrency_version" in value) ||
+    !Number.isInteger(value.concurrency_version) ||
+    Number(value.concurrency_version) < 1
+  ) {
+    throw new Error("ROUTE_NOT_ADOPTABLE");
+  }
+  return value as AdoptRouteResponse;
+}
+
 const stageLabels: Record<string, string> = {
   pending: "等待 Worker 领取",
   processing: "正在运行确定性算法",
@@ -50,7 +97,7 @@ export function BreedingJobView({
       })
         .then((response) => response.json())
         .then((payload: unknown) => {
-          const next = parseBreedingJobDetailRpcResult(payload);
+          const next = parsePolledJob(payload);
           if (next.ok) {
             setResult(next);
             setSelectedKey((current) =>
@@ -103,7 +150,7 @@ export function BreedingJobView({
             : "ROUTE_NOT_ADOPTABLE";
         throw new Error(code);
       }
-      const adopted = parseAdoptRouteResponse(payload);
+      const adopted = parseAdoption(payload);
       router.push(`/plans/${adopted.plan_id}`);
     } catch (error) {
       setAdoptionError(

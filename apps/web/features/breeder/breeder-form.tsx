@@ -1,12 +1,10 @@
 "use client";
 
-import {
-  parseCreateBreedingJobRequest,
-  parseCreateBreedingJobResponse,
-  type BreederCatalogPalOption,
-  type BreederFormContext,
-  type CreateBreedingJobRequest,
-  type CreateBreedingJobResponse,
+import type {
+  BreederCatalogPalOption,
+  BreederFormContext,
+  CreateBreedingJobRequest,
+  CreateBreedingJobResponse,
 } from "@palhatch/contracts";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -14,6 +12,57 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 type CreateJob = (
   request: CreateBreedingJobRequest,
 ) => Promise<CreateBreedingJobResponse>;
+type CreateJobInput = Omit<CreateBreedingJobRequest, "desired_passive_ids"> & {
+  desired_passive_ids: string[];
+};
+
+const stableIdPattern = /^[a-z0-9][a-z0-9._-]{0,119}$/;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const jobStatuses = new Set<CreateBreedingJobResponse["status"]>([
+  "pending",
+  "processing",
+  "algorithm_completed",
+  "ai_enriching",
+  "retry_pending",
+  "completed",
+  "failed",
+  "cancelled",
+]);
+
+function buildCreateRequest(value: CreateJobInput): CreateBreedingJobRequest {
+  const passives = value.desired_passive_ids;
+  if (
+    !stableIdPattern.test(value.target_pal_id) ||
+    passives.length > 4 ||
+    new Set(passives).size !== passives.length ||
+    passives.some((id) => !stableIdPattern.test(id)) ||
+    !Number.isInteger(value.max_generations) ||
+    value.max_generations < 1 ||
+    value.max_generations > 8
+  ) {
+    throw new Error("INVALID_BREEDING_REQUEST");
+  }
+  return value as CreateBreedingJobRequest;
+}
+
+function parseCreateResponse(value: unknown): CreateBreedingJobResponse {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("job_id" in value) ||
+    typeof value.job_id !== "string" ||
+    !uuidPattern.test(value.job_id) ||
+    !("reused" in value) ||
+    typeof value.reused !== "boolean" ||
+    !("status" in value) ||
+    typeof value.status !== "string" ||
+    !jobStatuses.has(value.status as CreateBreedingJobResponse["status"])
+  ) {
+    throw new Error("DATA_UNAVAILABLE");
+  }
+  return value as CreateBreedingJobResponse;
+}
 
 function resolveTargetPal(
   pals: BreederCatalogPalOption[],
@@ -52,7 +101,7 @@ async function createThroughApi(
         : "DATA_UNAVAILABLE";
     throw new Error(code);
   }
-  return parseCreateBreedingJobResponse(payload);
+  return parseCreateResponse(payload);
 }
 
 export function BreederForm({
@@ -103,7 +152,7 @@ export function BreederForm({
     }
     let request: CreateBreedingJobRequest;
     try {
-      request = parseCreateBreedingJobRequest({
+      request = buildCreateRequest({
         target_pal_id: selectedPal.pal_id,
         desired_passive_ids: [...passives].sort(),
         optimization_mode: mode,

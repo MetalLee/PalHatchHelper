@@ -150,6 +150,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prettier --check .
+      - run: pnpm test:production-backup
+      - run: pnpm test:production-data
+      - run: pnpm test:production-deploy
       - run: pnpm check:structure
       - run: pnpm check:forbidden-assets
       - run: pnpm scan:secrets

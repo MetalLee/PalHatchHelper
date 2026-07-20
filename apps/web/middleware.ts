@@ -14,6 +14,12 @@ const protectedPrefixes = [
   "/admin",
 ];
 
+export function withPrivateCacheHeaders(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  response.headers.set("Vary", "Cookie");
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { url, anonKey } = getPublicSupabaseConfig();
@@ -41,14 +47,15 @@ export async function middleware(request: NextRequest) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    return withPrivateCacheHeaders(NextResponse.redirect(loginUrl));
   }
   if (user !== null && pathname === "/login") {
-    return NextResponse.redirect(new URL("/overview", request.url));
+    return withPrivateCacheHeaders(
+      NextResponse.redirect(new URL("/overview", request.url)),
+    );
   }
   if (protectedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
-    response.headers.set("Cache-Control", "private, no-store, max-age=0");
-    response.headers.set("Vary", "Cookie");
+    return withPrivateCacheHeaders(response);
   }
   return response;
 }

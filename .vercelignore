@@ -1,0 +1,36 @@
+# Vercel's monorepo upload root is the repository root even though the linked
+# application lives in apps/web. Keep production data, server-only code, local
+# tooling, and repository metadata outside the web deployment boundary.
+/.git/
+/.github/
+/.vercel/
+/.mypy_cache/
+/.pytest_cache/
+/.ruff_cache/
+/node_modules/
+/data/
+/docs/
+/infra/
+/parser/
+/scripts/
+/supabase/
+/tools/
+/apps/agent/
+/packages/pal-catalog/
+/AGENTS.md
+/README.md
+
+# Local/generated outputs and environment files are never deployment inputs.
+**/.next/
+**/.vercel/
+**/node_modules/
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/dist/
+**/*.tsbuildinfo
+**/*.log
+.env
+.env.*
+**/.env
+**/.env.*

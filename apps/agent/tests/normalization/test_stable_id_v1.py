@@ -85,3 +85,40 @@ def test_parser_boundary_normalizes_ids_and_preserves_filtered_source_metadata()
         "Artisan",
         "Swift.Runner",
     ]
+
+
+def test_parser_boundary_preserves_verified_pre_normalized_source_metadata() -> None:
+    payload: dict[str, JSONValue] = {
+        "server": {
+            "world_uid": "fixture-world-001",
+            "save_version": "PlM/0x31",
+            "captured_at": "2026-07-18T16:00:00Z",
+        },
+        "guilds": [],
+        "players": [],
+        "pals": [
+            {
+                "instance_uid": "fixture-pal-instance-001",
+                "owner_player_uid": None,
+                "guild_uid": None,
+                "pal_id": "plantslime_flower",
+                "gender": "unknown",
+                "level": None,
+                "passive_skill_ids": ["artisan"],
+                "location_type": "unknown",
+                "location_name": None,
+                "metadata": {
+                    "source_internal_name": "PlantSlime_Flower",
+                    "source_passive_skill_internal_names": ["Artisan"],
+                },
+            }
+        ],
+    }
+
+    normalized = normalize_parser_snapshot_payload(payload)
+
+    assert normalized.pals[0].pal_id == "plantslime_flower"
+    assert normalized.pals[0].passive_skill_ids == ["artisan"]
+    assert normalized.pals[0].metadata is not None
+    assert normalized.pals[0].metadata.source_internal_name == "PlantSlime_Flower"
+    assert normalized.pals[0].metadata.source_passive_skill_internal_names == ["Artisan"]
