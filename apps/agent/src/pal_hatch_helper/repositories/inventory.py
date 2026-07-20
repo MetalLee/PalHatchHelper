@@ -17,6 +17,8 @@ class LatestInventorySnapshot:
     snapshot_id: UUID
     source_save_hash: str
     pal_count: int
+    parser_name: str
+    parser_version: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,15 +76,27 @@ class SupabaseInventoryRepository:
             snapshot_id = payload["snapshot_id"]
             source_hash = payload["source_save_hash"]
             pal_count = payload["pal_count"]
+            parser_name = payload["parser_name"]
+            parser_version = payload["parser_version"]
             if (
                 not isinstance(snapshot_id, str)
                 or not isinstance(source_hash, str)
                 or not isinstance(pal_count, int)
                 or isinstance(pal_count, bool)
                 or pal_count < 0
+                or not isinstance(parser_name, str)
+                or not parser_name
+                or not isinstance(parser_version, str)
+                or not parser_version
             ):
                 raise ValueError("invalid latest snapshot fields")
-            return LatestInventorySnapshot(UUID(snapshot_id), source_hash, pal_count)
+            return LatestInventorySnapshot(
+                snapshot_id=UUID(snapshot_id),
+                source_save_hash=source_hash,
+                pal_count=pal_count,
+                parser_name=parser_name,
+                parser_version=parser_version,
+            )
         except (KeyError, ValueError) as error:
             raise _invalid_response() from error
 

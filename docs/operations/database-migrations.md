@@ -40,6 +40,8 @@ git diff --stat
 
 Phase 5 的不透明分页游标固定 `snapshot_id + game_data_version_id + pal_id + pal_instance_uid`。评审发现原先仅扫描排序键的本地 `Index Only Scan` 不能代表包含权限候选集、目录/本地化连接、筛选、总数和分页的完整 RPC，因此已撤回 `pal_snapshot_items_page_order_idx`，不把小型 seed 的局部计划当作性能证据。`scripts/check-structure.mjs` 会拒绝该阻塞式普通索引重新混入 Phase 5 事务迁移。
 
+成功库存快照的幂等身份固定为 `world_id + source_save_hash + parser_name + parser_version`。同一解析器重复提交相同源字节必须复用原不可变快照；Parser 升级允许为相同源字节发布新的不可变投影并原子切换 `latest_snapshot_id`，不得修改旧 `pal_snapshot_items`。
+
 若目标规模的完整 RPC 基准证明需要新索引，必须先保存可复现 SQL、合成数据规模、`EXPLAIN (ANALYZE, BUFFERS)` 与端到端延迟，再使用单独获批的 `CREATE INDEX CONCURRENTLY` 非事务迁移流程，并在库存发布并发执行时验证写入阻塞处于可接受范围。
 
 Phase 2.5 迁移保留并镜像旧 `breeding_data_*`，优先复用 UUID，回填 world/job 新指针。空库 reset 时 seed 发生在迁移之后，因此兼容触发器也必须覆盖 seed 和旧代码的后续写入。验证升级时同时断言回填行数和历史任务版本不变。

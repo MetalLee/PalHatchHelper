@@ -86,7 +86,7 @@ def _snapshot(tmp_path: Path, level: bytes, *, player: bytes | None = None) -> P
     level_path.write_bytes(level)
     os.utime(level_path, (FIXED_MTIME, FIXED_MTIME))
     if player is not None:
-        player_path = snapshot / "Players" / "11111111-1111-1111-1111-111111111111.sav"
+        player_path = snapshot / "Players" / "11111111111111111111111111111111.sav"
         player_path.write_bytes(player)
         os.utime(player_path, (FIXED_MTIME, FIXED_MTIME))
     return snapshot
@@ -199,7 +199,9 @@ def test_oodle_library_missing_fails_without_network_or_output(
     snapshot = _snapshot(tmp_path, _container(gvas_body, magic=b"PlM", save_type=0x31))
     output = tmp_path / "canonical.json"
 
-    result = _run(parser_binary, snapshot, output, environment=_environment())
+    environment = _environment()
+    environment["PALHATCH_OODLE_LIB"] = str(tmp_path / "missing-oodle-library")
+    result = _run(parser_binary, snapshot, output, environment=environment)
 
     assert result.returncode == 1
     assert result.stderr == b"PALHATCH_PARSER_ERROR code=OODLE_LIBRARY_MISSING\n"

@@ -2,6 +2,7 @@
 package sav
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -349,7 +350,11 @@ func loadPlayerDirectory(w *World, levelPath string, opts Options) error {
 		return fmt.Errorf("sav: read declared Players directory")
 	}
 	for _, de := range entries {
-		if de.IsDir() || !strings.HasSuffix(strings.ToLower(de.Name()), ".sav") {
+		if de.IsDir() {
+			continue
+		}
+		uid, ok := playerUIDFromSaveFilename(de.Name())
+		if !ok {
 			continue
 		}
 		raw, e := readSave(filepath.Join(dir, de.Name()))
@@ -364,7 +369,6 @@ func loadPlayerDirectory(w *World, levelPath string, opts Options) error {
 		if nested, ok := propertyProperties(data, "SaveData"); ok {
 			data = nested
 		}
-		uid := strings.TrimSuffix(de.Name(), filepath.Ext(de.Name()))
 		p := Player{
 			UID:      uid,
 			WorldUID: firstStringRecursive(data, "WorldUID", "WorldUid", "WorldGuid", "WorldGUID"),
@@ -385,6 +389,25 @@ func loadPlayerDirectory(w *World, levelPath string, opts Options) error {
 	return nil
 }
 
+func playerUIDFromSaveFilename(name string) (string, bool) {
+	extension := filepath.Ext(name)
+	if !strings.EqualFold(extension, ".sav") {
+		return "", false
+	}
+	compact := strings.TrimSuffix(name, extension)
+	if len(compact) != 32 {
+		return "", false
+	}
+	if _, err := hex.DecodeString(compact); err != nil {
+		return "", false
+	}
+	compact = strings.ToLower(compact)
+	return fmt.Sprintf(
+		"%s-%s-%s-%s-%s",
+		compact[:8], compact[8:12], compact[12:16], compact[16:20], compact[20:],
+	), true
+}
+
 func parsePlayerGVAS(raw []byte, aggregate *ParseStats) (*gvasFile, error) {
 	stats := newStats()
 	parsed, err := parseGVAS(raw, &stats)
@@ -397,7 +420,7 @@ func parsePlayerGVAS(raw []byte, aggregate *ParseStats) (*gvasFile, error) {
 
 func mergePlayer(w *World, p Player) {
 	for i := range w.Players {
-		if strings.EqualFold(w.Players[i].UID, p.UID) {
+		if guidIdentityKey(w.Players[i].UID) == guidIdentityKey(p.UID) {
 			if p.WorldUID != "" {
 				w.Players[i].WorldUID = p.WorldUID
 			}
@@ -437,6 +460,10 @@ func mergePlayer(w *World, p Player) {
 		}
 	}
 	w.Players = append(w.Players, p)
+}
+
+func guidIdentityKey(value string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(value), "-", ""))
 }
 
 // decodePlayerProgress reads only documented, typed fields from the per-player

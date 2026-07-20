@@ -64,6 +64,8 @@ class StubDatabase:
                 "snapshot_id": str(SNAPSHOT_ID),
                 "source_save_hash": "a" * 64,
                 "pal_count": 1,
+                "parser_name": "fixture-parser",
+                "parser_version": "1.0.0",
             }
         if function_name == "get_inventory_catalog_ids_for_agent":
             return {"pal_ids": ["lamball"], "passive_skill_ids": ["artisan"]}
@@ -212,7 +214,13 @@ def _service(
 
 def test_parser_failure_never_replaces_previous_valid_inventory(tmp_path: Path) -> None:
     async def scenario() -> None:
-        previous = LatestInventorySnapshot(SNAPSHOT_ID, "a" * 64, 1)
+        previous = LatestInventorySnapshot(
+            snapshot_id=SNAPSHOT_ID,
+            source_save_hash="a" * 64,
+            pal_count=1,
+            parser_name="fixture-parser",
+            parser_version="1.0.0",
+        )
         repository = FakeInventoryRepository(previous)
         parser = FakeParser(
             error=StructuredError(
@@ -271,7 +279,13 @@ def test_candidate_processing_runs_after_publish_and_duplicate_recovery(
         service = _service(tmp_path, FakeParser(), repository, processor)
 
         published = await service.sync_once()
-        repository.latest_value = LatestInventorySnapshot(SNAPSHOT_ID, published.content_hash, 1)
+        repository.latest_value = LatestInventorySnapshot(
+            snapshot_id=SNAPSHOT_ID,
+            source_save_hash=published.content_hash,
+            pal_count=1,
+            parser_name="fixture-parser",
+            parser_version="1.0.0",
+        )
         duplicate = await service.sync_once()
 
         assert duplicate.status == "duplicate"
@@ -282,9 +296,42 @@ def test_candidate_processing_runs_after_publish_and_duplicate_recovery(
     asyncio.run(scenario())
 
 
+def test_parser_upgrade_republishes_an_unchanged_source_snapshot(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        repository = FakeInventoryRepository()
+        parser = FakeParser()
+        service = _service(tmp_path, parser, repository)
+
+        published = await service.sync_once()
+        repository.latest_value = LatestInventorySnapshot(
+            snapshot_id=SNAPSHOT_ID,
+            source_save_hash=published.content_hash,
+            pal_count=1,
+            parser_name="fixture-parser",
+            parser_version="0.9.0",
+        )
+
+        reparsed = await service.sync_once()
+
+        assert reparsed.status == "published"
+        assert parser.parse_calls == 2
+        assert len(repository.publish_requests) == 2
+        assert repository.publish_requests[-1].source_save_hash == published.content_hash
+
+    import asyncio
+
+    asyncio.run(scenario())
+
+
 def test_inventory_guard_rejects_before_repository_publish(tmp_path: Path) -> None:
     async def scenario() -> None:
-        previous = LatestInventorySnapshot(SNAPSHOT_ID, "a" * 64, 120)
+        previous = LatestInventorySnapshot(
+            snapshot_id=SNAPSHOT_ID,
+            source_save_hash="a" * 64,
+            pal_count=120,
+            parser_name="fixture-parser",
+            parser_version="1.0.0",
+        )
         repository = FakeInventoryRepository(previous)
         payload = canonical_payload()
         pals = payload["pals"]
