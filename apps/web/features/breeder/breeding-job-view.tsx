@@ -238,6 +238,11 @@ export function BreedingJobView({
         </section>
       ) : (
         <>
+          {searchIncomplete ? (
+            <p className="notice-banner" role="status">
+              已返回当前最优候选；搜索受到安全预算限制，未穷举全部路线。
+            </p>
+          ) : null}
           <section className="content-panel min-w-0">
             <div className="route-tabs" aria-label="路线比较">
               {plan.routes.map((route) => (
@@ -260,7 +265,14 @@ export function BreedingJobView({
                 <RouteFacts route={selected} />
                 {result.data.status !== "completed" ? null : (
                   <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
-                    {selected.execution_plan_id === null ? (
+                    {selected.execution_plan_id !== null ? (
+                      <Link
+                        className="primary-button"
+                        href={`/plans/${selected.execution_plan_id}`}
+                      >
+                        查看执行计划
+                      </Link>
+                    ) : selected.adoptable ? (
                       <button
                         className="primary-button"
                         disabled={adoptingRouteId !== null}
@@ -271,12 +283,9 @@ export function BreedingJobView({
                           : "采用此方案"}
                       </button>
                     ) : (
-                      <Link
-                        className="primary-button"
-                        href={`/plans/${selected.execution_plan_id}`}
-                      >
-                        查看执行计划
-                      </Link>
+                      <p className="notice-banner" role="status">
+                        补齐库存后才可采用此方案
+                      </p>
                     )}
                     {adoptionError === null ? null : (
                       <p className="text-sm text-rose-200" role="alert">
@@ -333,24 +342,56 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
           value={`${route.estimated_attempts_min}–${route.estimated_attempts_max}`}
         />
       </div>
+      {route.missing_requirements.length === 0 ? null : (
+        <section className="notice-banner" aria-label="仍缺少的 Pal">
+          <h3 className="font-semibold text-white">
+            仍需准备 {route.missing_pal_count} 只 Pal
+          </h3>
+          <ul className="mt-3 grid gap-2 text-sm text-slate-200">
+            {route.missing_requirements.map((requirement) => (
+              <li
+                key={`${requirement.pal_id}:${requirement.gender}:${requirement.required_passive_ids.join(",")}`}
+              >
+                {requirement.quantity}× {requirement.pal_id} ·{" "}
+                {genderRequirementLabel(requirement.gender)}
+                {requirement.required_passive_ids.length === 0
+                  ? ""
+                  : ` · 被动 ${requirement.required_passive_ids.join(", ")}`}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="grid gap-4">
-        {route.steps.map((step) => (
-          <article className="route-step" key={step.step_index}>
-            <p className="eyebrow">
-              第 {step.generation} 代 · {step.recipe_type}
-            </p>
-            <div className="parent-grid mt-4">
-              <ParentCard label="父母 A" parent={step.parent_a} />
-              <ParentCard label="父母 B" parent={step.parent_b} />
-            </div>
-            <p className="mt-4 text-sm text-slate-300">
-              子代：<strong className="text-white">{step.child_pal_id}</strong>
-              {step.required_passive_ids.length
-                ? ` · 被动 ${step.required_passive_ids.join(", ")}`
-                : ""}
-            </p>
-          </article>
-        ))}
+        {route.steps.map((step) => {
+          const parents = [step.parent_a, step.parent_b].toSorted(
+            (left, right) =>
+              genderOrder(left.gender) - genderOrder(right.gender),
+          );
+          return (
+            <article className="route-step" key={step.step_index}>
+              <p className="eyebrow">
+                第 {step.generation} 代 · {step.recipe_type}
+              </p>
+              <div className="parent-grid mt-4">
+                {parents.map((parent, index) => (
+                  <ParentCard
+                    key={`${parent.source_type}:${parent.instance_uid ?? parent.pal_id}:${index}`}
+                    label={parentRoleLabel(parent.gender, index)}
+                    parent={parent}
+                  />
+                ))}
+              </div>
+              <p className="mt-4 text-sm text-slate-300">
+                子代：
+                <strong className="text-white">{step.child_pal_id}</strong>
+                {step.required_passive_ids.length
+                  ? ` · 被动 ${step.required_passive_ids.join(", ")}`
+                  : ""}
+              </p>
+            </article>
+          );
+        })}
       </div>
       <section className="score-panel">
         <h3 className="text-lg font-semibold text-white">完整评分明细</h3>
@@ -390,19 +431,50 @@ function ParentCard({
       <p className="detail-label">{label}</p>
       <h3 className="mt-2 font-semibold text-white">{parent.pal_id}</h3>
       <p className="mt-2 break-all text-xs text-teal-100">
-        {parent.instance_uid ?? "中间产物"}
+        {parent.instance_uid ??
+          (parent.source_type === "missing" ? "尚未入库" : "中间产物")}
       </p>
       <p className="mt-3 text-sm text-slate-300">
-        <span>{parent.owner_display_name}</span> · {parent.gender ?? "待定"}
+        <span>{parent.owner_display_name}</span> ·{" "}
+        {genderRequirementLabel(parent.gender)}
       </p>
       <p className="mt-1 text-xs text-slate-400">
-        {parent.location_name ?? parent.location_type ?? "中间步骤"}
+        {parent.location_name ??
+          parent.location_type ??
+          (parent.source_type === "missing" ? "需补充库存" : "中间步骤")}
       </p>
       <p className="mt-3 text-xs text-slate-300">
-        被动：{parent.passive_skill_ids.join(", ") || "无"}
+        被动：
+        {(parent.source_type === "missing"
+          ? parent.required_passive_ids
+          : parent.passive_skill_ids
+        ).join(", ") || "无要求"}
       </p>
     </div>
   );
+}
+
+function genderOrder(gender: BreedingRouteViewParent["gender"]): number {
+  if (gender === "male") return 0;
+  if (gender === "female") return 1;
+  return 2;
+}
+
+function parentRoleLabel(
+  gender: BreedingRouteViewParent["gender"],
+  index: number,
+): string {
+  if (gender === "male") return "父本";
+  if (gender === "female") return "母本";
+  return `亲本 ${index + 1}`;
+}
+
+function genderRequirementLabel(
+  gender: BreedingRouteViewParent["gender"],
+): string {
+  if (gender === "male") return "雄性";
+  if (gender === "female") return "雌性";
+  return "性别待定";
 }
 
 function Metric({ label, value }: Readonly<{ label: string; value: string }>) {

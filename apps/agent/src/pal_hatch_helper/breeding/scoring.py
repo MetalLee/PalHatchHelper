@@ -22,20 +22,21 @@ COMPONENT_ORDER: Final = (
     BreedingScoreComponentName.INTERMEDIATE_COST,
     BreedingScoreComponentName.ATTEMPT_COST,
     BreedingScoreComponentName.STABILITY,
+    BreedingScoreComponentName.ACQUISITION_COST,
 )
 
 PROFILE_VERSIONS: Final = {
-    OptimizationMode.BALANCED: "balanced-v2",
-    OptimizationMode.FASTEST: "fastest-v2",
-    OptimizationMode.HIGHEST_SUCCESS: "highest-success-v2",
-    OptimizationMode.LEAST_BORROWING: "least-borrowing-v2",
+    OptimizationMode.BALANCED: "balanced-v3",
+    OptimizationMode.FASTEST: "fastest-v3",
+    OptimizationMode.HIGHEST_SUCCESS: "highest-success-v3",
+    OptimizationMode.LEAST_BORROWING: "least-borrowing-v3",
 }
 
 PROFILE_WEIGHTS_BASIS_POINTS: Final = {
-    OptimizationMode.BALANCED: (2000, 1500, 1800, 1000, 1000, 1700, 1000),
-    OptimizationMode.FASTEST: (4500, 1000, 500, 200, 1200, 2200, 400),
-    OptimizationMode.HIGHEST_SUCCESS: (500, 800, 3000, 200, 1500, 3000, 1000),
-    OptimizationMode.LEAST_BORROWING: (500, 500, 800, 6000, 700, 800, 700),
+    OptimizationMode.BALANCED: (1400, 1400, 1200, 700, 800, 1200, 800, 2500),
+    OptimizationMode.FASTEST: (4000, 800, 400, 200, 1000, 2000, 600, 1000),
+    OptimizationMode.HIGHEST_SUCCESS: (400, 700, 2500, 200, 1200, 2600, 900, 1500),
+    OptimizationMode.LEAST_BORROWING: (400, 500, 600, 5500, 600, 700, 500, 1200),
 }
 
 
@@ -133,12 +134,13 @@ def _raw_metrics(
     extra_passives = sum(
         len(set(instance.passive_skill_ids) - desired) for instance in serialized.unique_instances
     )
-    inventory_parent_occurrences = sum(
-        source.source_type.value == "inventory"
-        for step in steps
-        for source in (step.parent_a, step.parent_b)
+    missing_pal_count = sum(item.quantity for item in serialized.missing_requirements)
+    missing_passive_requirement_count = sum(
+        item.quantity * len(item.required_passive_ids) for item in serialized.missing_requirements
     )
-    inventory_coverage = 1.0 if not steps else inventory_parent_occurrences / (2 * len(steps))
+    inventory_coverage = (
+        serialized.inventory_requirement_count / serialized.starting_requirement_count
+    )
     desired_count = len(desired_passive_ids)
     carrier_count = plan.carrier_count
     if desired_count == 0 or carrier_count <= 1:
@@ -176,6 +178,9 @@ def _raw_metrics(
         generation_count=plan.assigned.route.generation_count,
         step_count=len(steps),
         unique_starting_instance_count=len(serialized.unique_instances),
+        starting_requirement_count=serialized.starting_requirement_count,
+        missing_pal_count=missing_pal_count,
+        missing_passive_requirement_count=missing_passive_requirement_count,
         borrowed_pal_count=len(borrowed),
         inventory_coverage=round(inventory_coverage, 6),
         passive_carrier_count=carrier_count,
@@ -220,8 +225,14 @@ def _normalized_components(
         + metrics.intermediate_passive_checkpoint_count * 500
         + metrics.required_gender_checkpoint_count * 500
         + metrics.borrowed_pal_count * 500
+        + metrics.missing_pal_count * 1500
+        + metrics.missing_passive_requirement_count * 500
     )
     stability = max(0, 10_000 - stability_penalty)
+    acquisition_penalty = (
+        metrics.missing_pal_count * 3000 + metrics.missing_passive_requirement_count * 800
+    )
+    acquisition_cost = max(0, 10_000 - acquisition_penalty)
     normalized = {
         BreedingScoreComponentName.ROUTE_LENGTH: route_length,
         BreedingScoreComponentName.INVENTORY_COVERAGE: inventory_coverage,
@@ -230,6 +241,7 @@ def _normalized_components(
         BreedingScoreComponentName.INTERMEDIATE_COST: intermediate_cost,
         BreedingScoreComponentName.ATTEMPT_COST: attempt_cost,
         BreedingScoreComponentName.STABILITY: stability,
+        BreedingScoreComponentName.ACQUISITION_COST: acquisition_cost,
     }
     raw_values = {
         BreedingScoreComponentName.ROUTE_LENGTH: (
@@ -245,5 +257,6 @@ def _normalized_components(
         ),
         BreedingScoreComponentName.ATTEMPT_COST: float(metrics.estimated_attempts_max),
         BreedingScoreComponentName.STABILITY: float(stability_penalty),
+        BreedingScoreComponentName.ACQUISITION_COST: float(acquisition_penalty),
     }
     return normalized, raw_values

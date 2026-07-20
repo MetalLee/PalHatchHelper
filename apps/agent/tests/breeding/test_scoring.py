@@ -10,6 +10,7 @@ from pal_hatch_helper.generated import (
 from .factories import OTHER_PLAYER_ID, inventory_pal, limits, recipe, request, search
 
 EXPECTED_COMPONENTS = {
+    "acquisition_cost",
     "attempt_cost",
     "borrowing",
     "intermediate_cost",

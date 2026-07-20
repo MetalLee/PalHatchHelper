@@ -33,6 +33,7 @@ export interface CreateBreedingJobRequestContracts {
   RouteScoreBreakdown: RouteScoreBreakdown;
   BreedingRouteViewParent: BreedingRouteViewParent;
   BreedingRouteViewStep: BreedingRouteViewStep;
+  BreedingMissingRequirementView: BreedingMissingRequirementView;
   AIExplanation: AIExplanation;
   AIExplanationRouteSummary: AIExplanationRouteSummary;
   AIExplanationRequest: AIExplanationRequest;
@@ -115,10 +116,16 @@ export interface JobProgress {
   attempt_count: number;
   error_code: string | null;
 }
+/**
+ * Browser projection for immutable v2 history and current v3 routes; acquisition fields are absent from v2 payloads.
+ */
 export interface RouteRawScoreMetrics {
   generation_count: number;
   step_count: number;
   unique_starting_instance_count: number;
+  starting_requirement_count?: number;
+  missing_pal_count?: number;
+  missing_passive_requirement_count?: number;
   borrowed_pal_count: number;
   inventory_coverage: number;
   passive_carrier_count: number;
@@ -139,29 +146,44 @@ export interface RouteScoreComponent {
     | "borrowing"
     | "intermediate_cost"
     | "attempt_cost"
-    | "stability";
+    | "stability"
+    | "acquisition_cost";
   raw_value: number;
   normalized_score: number;
   weight: number;
   weighted_score: number;
 }
+/**
+ * Browser projection accepts the seven v2 components and the eight v3 components; the engine contract remains version-strict.
+ */
 export interface RouteModeScore {
   optimization_mode: BreederOptimizationMode;
   scoring_profile_version: string;
   total_score: number;
   /**
    * @minItems 7
-   * @maxItems 7
+   * @maxItems 8
    */
-  components: [
-    RouteScoreComponent,
-    RouteScoreComponent,
-    RouteScoreComponent,
-    RouteScoreComponent,
-    RouteScoreComponent,
-    RouteScoreComponent,
-    RouteScoreComponent
-  ];
+  components:
+    | [
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent
+      ]
+    | [
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent,
+        RouteScoreComponent
+      ];
 }
 export interface RouteScoreBreakdown {
   scoring_profile_version: string;
@@ -174,7 +196,7 @@ export interface RouteScoreBreakdown {
   mode_scores: [RouteModeScore, RouteModeScore, RouteModeScore, RouteModeScore];
 }
 export interface BreedingRouteViewParent {
-  source_type: "inventory" | "intermediate";
+  source_type: "inventory" | "intermediate" | "missing";
   pal_id: BreederStableId;
   instance_uid: string | null;
   owner_display_name: string;
@@ -214,6 +236,24 @@ export interface BreedingRouteViewStep {
     | [BreederStableId, BreederStableId]
     | [BreederStableId, BreederStableId, BreederStableId]
     | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+}
+export interface BreedingMissingRequirementView {
+  pal_id: BreederStableId;
+  gender: "male" | "female";
+  /**
+   * @maxItems 4
+   */
+  required_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
+  quantity: number;
+  /**
+   * @minItems 1
+   */
+  step_indexes: [number, ...number[]];
 }
 export interface AIExplanation {
   provider: AIProviderName;
@@ -305,6 +345,10 @@ export interface BreedingRoute {
   borrowed_pal_count: number;
   inventory_coverage: number;
   inheritance_score: number;
+  feasibility_status: "ready" | "needs_inventory";
+  adoptable: boolean;
+  missing_pal_count: number;
+  missing_requirements: BreedingMissingRequirementView[];
   existing_target_instance_uid: string | null;
   score_breakdown: RouteScoreBreakdown;
   steps: BreedingRouteViewStep[];

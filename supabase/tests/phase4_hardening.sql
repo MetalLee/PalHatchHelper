@@ -74,17 +74,17 @@ select set_config('app.game_data_rollback', 'false', true);
 
 select is(
   (select count(*)::integer from public.scoring_profiles
-    where is_active and algorithm_version = 'phase4b-deterministic-v1'),
+    where is_active and algorithm_version = 'inventory-aware-deterministic-v2'),
   4,
-  'all four active profiles use the executable Phase 4B algorithm'
+  'all four active profiles use the inventory-aware deterministic algorithm'
 );
 
 select is(
   (select count(*)::integer from public.scoring_profiles
     where is_active
-      and (select count(*) from jsonb_object_keys(scoring_profiles.weights)) = 7),
+      and (select count(*) from jsonb_object_keys(scoring_profiles.weights)) = 8),
   4,
-  'all four active profiles persist the same seven scoring components as the engine'
+  'all four active profiles persist the same eight scoring components as the engine'
 );
 
 select set_config(
@@ -115,10 +115,10 @@ select results_eq(
      order by optimization_mode
   $$,
   $$ values
-    ('balanced', 'phase4b-deterministic-v1', 'balanced-v2'),
-    ('fastest', 'phase4b-deterministic-v1', 'fastest-v2'),
-    ('highest_success', 'phase4b-deterministic-v1', 'highest-success-v2'),
-    ('least_borrowing', 'phase4b-deterministic-v1', 'least-borrowing-v2')
+    ('balanced', 'inventory-aware-deterministic-v2', 'balanced-v3'),
+    ('fastest', 'inventory-aware-deterministic-v2', 'fastest-v3'),
+    ('highest_success', 'inventory-aware-deterministic-v2', 'highest-success-v3'),
+    ('least_borrowing', 'inventory-aware-deterministic-v2', 'least-borrowing-v3')
   $$,
   'each optimization mode fixes an engine-supported algorithm and scoring version'
 );
@@ -214,7 +214,7 @@ select is(
        (select weights from public.get_active_scoring_profiles_for_agent()
          where optimization_mode = 'balanced')
      )),
-  7,
+  8,
   'Agent startup receives every persisted balanced weight'
 );
 select is(

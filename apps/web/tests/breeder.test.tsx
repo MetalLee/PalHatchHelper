@@ -72,12 +72,13 @@ const components: RouteScoreComponent[] = [
   "intermediate_cost",
   "attempt_cost",
   "stability",
+  "acquisition_cost",
 ].map((component) => ({
   component: component as RouteScoreComponent["component"],
   raw_value: 1,
   normalized_score: 80,
-  weight: 1 / 7,
-  weighted_score: 80 / 7,
+  weight: 1 / 8,
+  weighted_score: 10,
 }));
 
 const modeScores: RouteModeScore[] = [
@@ -109,6 +110,10 @@ function route(rank: number): BreedingRoute {
     inventory_coverage: 1,
     inheritance_score: 0.9,
     existing_target_instance_uid: null,
+    feasibility_status: "ready",
+    adoptable: true,
+    missing_pal_count: 0,
+    missing_requirements: [],
     score_breakdown: {
       scoring_profile_version: "balanced-v2",
       estimate_basis: "strategy_heuristic_no_verified_probability",
@@ -116,6 +121,9 @@ function route(rank: number): BreedingRoute {
         generation_count: 1,
         step_count: 1,
         unique_starting_instance_count: 2,
+        starting_requirement_count: 2,
+        missing_pal_count: 0,
+        missing_passive_requirement_count: 0,
         borrowed_pal_count: rank - 1,
         inventory_coverage: 1,
         passive_carrier_count: 1,
@@ -402,6 +410,49 @@ describe("Phase 6 job comparison", () => {
     expect(
       screen.getByRole("link", { name: "查看执行计划" }).getAttribute("href"),
     ).toBe("/plans/71000000-0000-4000-8000-000000000001");
+    expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
+  });
+
+  it("shows missing father and mother requirements and prevents adoption", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    const missing = route(1);
+    missing.feasibility_status = "needs_inventory";
+    missing.adoptable = false;
+    missing.missing_pal_count = 1;
+    missing.inventory_coverage = 0.5;
+    missing.missing_requirements = [
+      {
+        pal_id: "test_parent_b",
+        gender: "female",
+        required_passive_ids: ["test_passive_a"],
+        quantity: 1,
+        step_indexes: [0],
+      },
+    ];
+    missing.steps[0]!.parent_b = {
+      source_type: "missing",
+      pal_id: "test_parent_b",
+      instance_uid: null,
+      owner_display_name: "缺少：需补充库存",
+      gender: "female",
+      passive_skill_ids: [],
+      required_passive_ids: ["test_passive_a"],
+      borrowed: false,
+      produced_by_step_index: null,
+      location_type: null,
+      location_name: null,
+    };
+    value.data.plan.routes = [missing];
+    value.data.plan.route_count = 1;
+
+    render(<BreedingJobView initialResult={value} poll={false} />);
+
+    expect(screen.getByText("仍需准备 1 只 Pal")).toBeTruthy();
+    expect(screen.getByText(/test_parent_b · 雌性/)).toBeTruthy();
+    expect(screen.getByText("父本")).toBeTruthy();
+    expect(screen.getByText("母本")).toBeTruthy();
+    expect(screen.getByText("补齐库存后才可采用此方案")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
   });
 });

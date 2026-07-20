@@ -686,6 +686,9 @@ export type Database = {
           route_payload: Json;
           ai_explanation: string | null;
           ai_labels: string[];
+          feasibility_status: string | null;
+          adoptable: boolean | null;
+          missing_pal_count: number | null;
         };
         Insert: {
           id?: string;

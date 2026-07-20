@@ -33,15 +33,17 @@ def test_combination_explosion_stops_at_the_global_node_limit() -> None:
         request(
             "pal-target",
             inventory,
-            search_limits=limits(max_expanded_nodes=12),
+            search_limits=limits(max_expanded_nodes=20),
         ),
         tuple(recipes),
     )
 
     assert "max_expanded_nodes" in {item.value for item in result.diagnostics.hit_limits}
     assert not result.diagnostics.search_complete
-    assert result.diagnostics.expanded_nodes <= 12
+    assert result.diagnostics.expanded_nodes <= 20
     assert "SEARCH_LIMIT_REACHED" in result.explanation_codes
+    assert result.routes
+    assert all(route.generation_count > 0 for route in result.routes)
 
 
 def test_timeout_returns_promptly_with_an_explicit_incomplete_result() -> None:

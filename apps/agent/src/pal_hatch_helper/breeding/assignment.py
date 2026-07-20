@@ -7,10 +7,7 @@ from uuid import UUID
 
 from pal_hatch_helper.breeding.limits import SearchBudget
 from pal_hatch_helper.breeding.search import SpeciesRoute
-from pal_hatch_helper.generated import (
-    BreedingEngineInventoryPal,
-    BreedingSearchLimit,
-)
+from pal_hatch_helper.generated import BreedingEngineInventoryPal
 
 RequiredGender = Literal["male", "female"]
 
@@ -25,11 +22,12 @@ class AssignedRoute:
     coverage_mask: int
     used_instance_uids: frozenset[str]
     borrowed_instance_uids: frozenset[str]
+    missing_leaf_count: int
     signature: str
 
     @property
     def is_leaf(self) -> bool:
-        return self.instance is not None
+        return self.route.recipe is None
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,7 +65,6 @@ def assign_species_route(
             dropped = max(0, len(ordered) - max_states_per_mask)
             if dropped:
                 pruned_states += dropped
-                budget.mark_limit(BreedingSearchLimit.ASSIGNMENT_STATE_CAP)
         return tuple(sorted(retained, key=lambda state: (state.coverage_mask, state.signature)))
 
     def solve(
@@ -100,12 +97,28 @@ def assign_species_route(
                         borrowed_instance_uids=(
                             frozenset((instance.instance_uid,)) if borrowed else frozenset()
                         ),
+                        missing_leaf_count=0,
                         signature=(
                             f"inventory:{node.pal_id}:{instance.instance_uid}:"
                             f"{output_gender or 'unused'}"
                         ),
                     )
                 )
+            budget.consume_assignment()
+            states.append(
+                AssignedRoute(
+                    route=node,
+                    output_gender=output_gender,
+                    instance=None,
+                    parent_a=None,
+                    parent_b=None,
+                    coverage_mask=full_mask,
+                    used_instance_uids=frozenset(),
+                    borrowed_instance_uids=frozenset(),
+                    missing_leaf_count=1,
+                    signature=(f"missing:{node.pal_id}:{output_gender or 'unspecified'}"),
+                )
+            )
             result = retain(states)
             memo[key] = result
             return result
@@ -149,6 +162,7 @@ def assign_species_route(
                             borrowed_instance_uids=(
                                 left.borrowed_instance_uids | right.borrowed_instance_uids
                             ),
+                            missing_leaf_count=(left.missing_leaf_count + right.missing_leaf_count),
                             signature=(
                                 f"assigned:{node.recipe.signature}:"
                                 f"{output_gender or 'final'}[{left.signature}][{right.signature}]"
@@ -173,6 +187,8 @@ def assign_species_route(
 def iter_inventory_instances(route: AssignedRoute) -> tuple[BreedingEngineInventoryPal, ...]:
     if route.instance is not None:
         return (route.instance,)
+    if route.route.recipe is None:
+        return ()
     assert route.parent_a is not None and route.parent_b is not None
     return (*iter_inventory_instances(route.parent_a), *iter_inventory_instances(route.parent_b))
 
@@ -180,7 +196,7 @@ def iter_inventory_instances(route: AssignedRoute) -> tuple[BreedingEngineInvent
 def _assignment_rank(
     state: AssignedRoute,
     desired_passive_ids: tuple[str, ...],
-) -> tuple[int, int, int, str]:
+) -> tuple[int, int, int, int, str]:
     desired = frozenset(desired_passive_ids)
     unique_instances = {
         instance.instance_uid: instance for instance in iter_inventory_instances(state)
@@ -189,6 +205,7 @@ def _assignment_rank(
         len(set(instance.passive_skill_ids) - desired) for instance in unique_instances.values()
     )
     return (
+        state.missing_leaf_count,
         len(state.borrowed_instance_uids),
         extra_passives,
         len(state.used_instance_uids),

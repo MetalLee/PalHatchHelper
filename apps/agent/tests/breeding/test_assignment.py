@@ -155,8 +155,9 @@ def test_inventory_filtering_keeps_owned_and_enabled_guild_shared_instances_only
         request("pal-target", inventory, allow_shared_inventory=False),
         (recipe("pal-own", "pal-shared", "pal-target"),),
     )
-    assert not shared_disabled.routes
-    assert "NO_LEGAL_ROUTE" in shared_disabled.explanation_codes
+    assert shared_disabled.routes
+    assert all(not route.adoptable for route in shared_disabled.routes)
+    assert shared_disabled.routes[0].missing_pal_count == 1
 
 
 def test_same_species_pair_uses_distinct_opposite_gender_instances() -> None:
@@ -172,9 +173,9 @@ def test_same_species_pair_uses_distinct_opposite_gender_instances() -> None:
         (recipe("pal-same", "pal-same", "pal-target"),),
     )
 
-    assert len(result.routes) == 1
-    assert "FEWER_THAN_THREE_LEGAL_ROUTES" in result.explanation_codes
-    step = result.routes[0].steps[0]
+    ready = [route for route in result.routes if route.adoptable]
+    assert len(ready) == 1
+    step = ready[0].steps[0]
     assert {step.parent_a.instance_uid, step.parent_b.instance_uid} == {"same-m", "same-f"}
     assert {step.parent_a.gender, step.parent_b.gender} == {"male", "female"}
 
@@ -194,8 +195,9 @@ def test_same_species_candidates_equal_unique_unordered_instance_pairs() -> None
         (recipe("pal-same", "pal-same", "pal-target"),),
     )
 
-    assert len(result.routes) == 4
-    assert len({route.route_key for route in result.routes}) == 4
+    ready = [route for route in result.routes if route.adoptable]
+    assert len(ready) == 4
+    assert len({route.route_key for route in ready}) == 4
 
 
 def test_gender_specific_recipe_rejects_the_opposite_parent_orientation() -> None:
@@ -242,7 +244,9 @@ def test_gender_specific_recipe_rejects_the_opposite_parent_orientation() -> Non
 
     assert matching.routes
     assert matching.routes[0].steps[0].child_pal_id == "pal-target-a"
-    assert opposite.routes == []
+    assert opposite.routes
+    assert all(not route.adoptable for route in opposite.routes)
+    assert opposite.routes[0].missing_pal_count == 2
 
 
 def test_requester_inventory_does_not_require_a_share_flag() -> None:
