@@ -208,6 +208,17 @@ function completedJob(): BreedingJobDetailRpcSuccess {
       game_data_content_hash: context.game_data_content_hash,
       algorithm_version: context.algorithm_version,
       scoring_profile_version: "balanced-v2",
+      localization: {
+        locale: "zh-CN",
+        pals: [
+          { pal_id: "test_parent_a", display_name: "棉悠悠" },
+          { pal_id: "test_parent_b", display_name: "捣蛋猫" },
+          { pal_id: "test_child_pal", display_name: "幻色幼崽" },
+        ],
+        passive_skills: [
+          { passive_skill_id: "test_passive_a", display_name: "认真" },
+        ],
+      },
       attempt_count: 1,
       error_code: null,
       created_at: "2026-07-16T06:00:00Z",
@@ -287,6 +298,21 @@ describe("Phase 6 breeder form", () => {
     expect(screen.getByText("phase4b-deterministic-v1")).toBeTruthy();
   });
 
+  it("keeps selected passives visible above the long list and removes them directly", () => {
+    render(<BreederForm context={context} />);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /被动 A/ }));
+    fireEvent.change(screen.getByPlaceholderText("筛选被动"), {
+      target: { value: "被动 E" },
+    });
+
+    const selected = screen.getByRole("region", { name: "已选择的被动" });
+    expect(selected.textContent).toContain("被动 A");
+    fireEvent.click(screen.getByRole("button", { name: "移除被动 A" }));
+    expect(selected.textContent).toContain("尚未选择被动");
+    expect(screen.getByText("已选择 0 / 4")).toBeTruthy();
+  });
+
   it.each(["幻色幼崽", "3", "#3"])(
     "resolves the target from the published name or encyclopedia number: %s",
     async (targetQuery) => {
@@ -313,6 +339,23 @@ describe("Phase 6 breeder form", () => {
 });
 
 describe("Phase 6 job comparison", () => {
+  it("localizes every Pal, passive and score label with the pinned catalog", () => {
+    const value = completedJob();
+
+    render(<BreedingJobView initialResult={value} poll={false} />);
+
+    expect(screen.getAllByText("幻色幼崽").length).toBeGreaterThan(0);
+    expect(screen.getByText("棉悠悠")).toBeTruthy();
+    expect(screen.getByText("捣蛋猫")).toBeTruthy();
+    expect(screen.getAllByText("认真").length).toBeGreaterThan(0);
+    expect(screen.getByText("路线长度")).toBeTruthy();
+    expect(screen.getByText(/综合推荐：80\.00/)).toBeTruthy();
+    expect(screen.queryByText("test_parent_a")).toBeNull();
+    expect(screen.queryByText(/被动 test_passive_a/)).toBeNull();
+    expect(screen.queryByText("route_length")).toBeNull();
+    expect(screen.queryByText(/balanced: 80\.00/)).toBeNull();
+  });
+
   it("switches among three mobile-safe routes and separates facts from degraded AI", () => {
     render(<BreedingJobView initialResult={completedJob()} poll={false} />);
 
@@ -377,7 +420,9 @@ describe("Phase 6 job comparison", () => {
     expect(
       screen.getAllByText("库存缺少以下目标被动来源：").length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText("test_passive_b").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("未翻译被动（test_passive_b）").length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
   });
 
@@ -530,7 +575,7 @@ describe("Phase 6 job comparison", () => {
     render(<BreedingJobView initialResult={value} poll={false} />);
 
     expect(screen.getByText("仍需准备 1 只 Pal")).toBeTruthy();
-    expect(screen.getByText(/test_parent_b · 雌性/)).toBeTruthy();
+    expect(screen.getByText(/捣蛋猫 · 雌性/)).toBeTruthy();
     expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
     expect(screen.getByText("父本")).toBeTruthy();
     expect(screen.getByText("母本")).toBeTruthy();

@@ -96,6 +96,42 @@
         "is_owned_by_requester": { "type": "boolean" }
       }
     },
+    "PalFilterOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    },
+    "PalInventoryFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owners", "genders", "passives", "locations"],
+      "properties": {
+        "owners": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": { "$ref": "#/$defs/PalFilterOption" }
+        },
+        "genders": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/PalGender" }
+        },
+        "passives": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": { "$ref": "#/$defs/PalFilterOption" }
+        },
+        "locations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/PalLocationType" }
+        }
+      }
+    },
     "PalInventoryPage": {
       "type": "object",
       "additionalProperties": false,
@@ -105,7 +141,9 @@
         "catalog_state",
         "items",
         "total_count",
-        "next_cursor"
+        "page_number",
+        "total_pages",
+        "filter_options"
       ],
       "properties": {
         "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
@@ -123,7 +161,9 @@
           "items": { "$ref": "#/$defs/PalInventoryItem" }
         },
         "total_count": { "type": "integer", "minimum": 0 },
-        "next_cursor": { "type": ["string", "null"], "maxLength": 640 }
+        "page_number": { "type": "integer", "minimum": 1 },
+        "total_pages": { "type": "integer", "minimum": 1 },
+        "filter_options": { "$ref": "#/$defs/PalInventoryFilterOptions" }
       }
     },
     "PalInventoryRpcItem": {
@@ -207,7 +247,9 @@
         "catalog_state",
         "items",
         "total_count",
-        "has_more"
+        "page_number",
+        "total_pages",
+        "filter_options"
       ],
       "properties": {
         "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
@@ -225,7 +267,9 @@
           "items": { "$ref": "#/$defs/PalInventoryRpcItem" }
         },
         "total_count": { "type": "integer", "minimum": 0 },
-        "has_more": { "type": "boolean" }
+        "page_number": { "type": "integer", "minimum": 1 },
+        "total_pages": { "type": "integer", "minimum": 1 },
+        "filter_options": { "$ref": "#/$defs/PalInventoryFilterOptions" }
       }
     },
     "PlayerBindingSummary": {

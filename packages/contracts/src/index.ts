@@ -140,6 +140,8 @@ export type {
   InventoryDataStatus,
   InventoryScope,
   OverviewSummary,
+  PalFilterOption,
+  PalInventoryFilterOptions,
   PalInventoryItem,
   PalInventoryPage,
   PalInventoryRpcData,

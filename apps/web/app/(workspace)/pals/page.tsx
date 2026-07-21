@@ -1,9 +1,8 @@
-import Link from "next/link";
-
 import { EmptyState, ErrorState } from "@/components/page-state";
 import { requireUserContext } from "@/features/auth/server";
 import { PalFilters } from "@/features/pals/pal-filters";
 import { PalInventory } from "@/features/pals/pal-inventory";
+import { PalPagination } from "@/features/pals/pal-pagination";
 import { parsePalListQuery } from "@/features/pals/query";
 import { listPals, Phase5DataError } from "@/features/pals/server";
 
@@ -42,8 +41,6 @@ export default async function PalsPage({
       />
     );
   }
-  const nextParams = new URLSearchParams(rawParams);
-  if (page.next_cursor !== null) nextParams.set("cursor", page.next_cursor);
   return (
     <div className="page-stack">
       <header className="page-header">
@@ -60,18 +57,11 @@ export default async function PalsPage({
           description="尝试清空部分筛选，或切换库存范围。"
         />
       ) : (
-        <PalInventory key={rawParams.toString()} page={page} />
+        <>
+          <PalInventory key={rawParams.toString()} page={page} />
+          <PalPagination query={query} page={page} />
+        </>
       )}
-      {page.next_cursor !== null ? (
-        <div className="flex justify-center">
-          <Link
-            className="secondary-button"
-            href={`/pals?${nextParams.toString()}`}
-          >
-            下一页
-          </Link>
-        </div>
-      ) : null}
     </div>
   );
 }

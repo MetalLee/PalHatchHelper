@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(36);
+select plan(44);
 
 select has_function(
   'public',
@@ -11,6 +11,15 @@ select has_function(
     'boolean', 'uuid', 'uuid', 'text', 'text', 'integer'
   ],
   'Phase 5 exposes a snapshot-bound browser-safe inventory projection'
+);
+select has_function(
+  'public',
+  'list_available_pals_page_v2',
+  array[
+    'text', 'text', 'text', 'pal_gender', 'text', 'pal_location_type',
+    'boolean', 'uuid', 'uuid', 'integer', 'integer'
+  ],
+  'Phase 5 exposes random-access pages with full-pool filter facets'
 );
 select has_function(
   'public',
@@ -138,6 +147,50 @@ select results_eq(
   ) $$,
   'inventory responses identify the published catalog version used for display and search'
 );
+select is(
+  public.list_available_pals_page_v2(
+    p_scope => 'all', p_page_number => 2, p_page_size => 1
+  ) #>> '{data,page_number}',
+  '2',
+  'the V2 inventory projection supports random-access page numbers'
+);
+select is(
+  public.list_available_pals_page_v2(
+    p_scope => 'all', p_page_number => 2, p_page_size => 1
+  ) #>> '{data,total_pages}',
+  '3',
+  'the V2 inventory projection reports the total page count'
+);
+select is(
+  jsonb_array_length(
+    public.list_available_pals_page_v2(
+      p_scope => 'all', p_page_number => 1, p_page_size => 1
+    ) #> '{data,filter_options,owners}'
+  ),
+  2,
+  'owner options come from the complete visible pool instead of page one'
+);
+select ok(
+  public.list_available_pals_page_v2(
+    p_scope => 'all', p_page_number => 1, p_page_size => 1
+  ) #> '{data,filter_options,passives}'
+    @> '[{"value":"test_passive_b","label":"工匠精神"}]'::jsonb,
+  'recognized passive options include values absent from page one'
+);
+select ok(
+  public.list_available_pals_page_v2(
+    p_scope => 'all', p_page_number => 1, p_page_size => 1
+  ) #> '{data,filter_options,genders}'
+    @> '["male","female"]'::jsonb,
+  'gender options contain every effective known value in the visible pool'
+);
+select ok(
+  public.list_available_pals_page_v2(
+    p_scope => 'all', p_page_number => 1, p_page_size => 1
+  ) #> '{data,filter_options,locations}'
+    @> '["player_storage","base"]'::jsonb,
+  'location options contain every effective known type in the visible pool'
+);
 
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
@@ -192,6 +245,24 @@ select is(
     #>> '{data,items,0,encyclopedia_no}',
   null,
   'unknown catalog IDs never receive a fabricated encyclopedia number'
+);
+select ok(
+  not (
+    public.list_available_pals_page_v2(p_scope => 'mine')
+      #> '{data,filter_options,passives}'
+      @> '[{"value":"unknown_passive","label":"unknown_passive"}]'::jsonb
+  )
+  and not (
+    public.list_available_pals_page_v2(p_scope => 'mine')
+      #> '{data,filter_options,genders}'
+      @> '["unknown"]'::jsonb
+  )
+  and not (
+    public.list_available_pals_page_v2(p_scope => 'mine')
+      #> '{data,filter_options,locations}'
+      @> '["unknown"]'::jsonb
+  ),
+  'unresolved passive, gender and location values are omitted from filters'
 );
 select is(
   public.list_available_pals_page(p_scope => 'all', p_page_size => 1)

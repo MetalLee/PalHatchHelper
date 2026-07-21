@@ -2601,6 +2601,24 @@ export type Database = {
         };
         Returns: Json;
       };
+      list_available_pals_page_v2: {
+        Args: {
+          p_scope?: string;
+          p_query?: string | null;
+          p_owner_filter_key?: string | null;
+          p_gender?: Database["public"]["Enums"]["pal_gender"] | null;
+          p_passive_skill_id?: string | null;
+          p_location_type?:
+            | Database["public"]["Enums"]["pal_location_type"]
+            | null;
+          p_share_enabled?: boolean | null;
+          p_snapshot_id?: string | null;
+          p_game_data_version_id?: string | null;
+          p_page_number?: number;
+          p_page_size?: number;
+        };
+        Returns: Json;
+      };
       list_execution_plans: {
         Args: {
           p_status?: string;

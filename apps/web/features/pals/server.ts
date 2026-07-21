@@ -17,7 +17,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { databaseFailureCode, Phase5DataError } from "@/features/phase5-errors";
 
 import type { PalListQuery } from "./query";
-import { decodeCursorValue, encodeCursor } from "./query";
+import { decodePageContext } from "./query";
 
 export { Phase5DataError } from "@/features/phase5-errors";
 
@@ -50,8 +50,8 @@ export async function listPals(
 ): Promise<PalInventoryPage> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
-  const cursor = decodeCursorValue(query.cursor);
-  const { data, error } = await supabase.rpc("list_available_pals_page", {
+  const context = decodePageContext(query.context);
+  const { data, error } = await supabase.rpc("list_available_pals_page_v2", {
     p_scope: query.scope,
     p_query: query.query || null,
     p_owner_filter_key: query.owner || null,
@@ -59,34 +59,32 @@ export async function listPals(
     p_passive_skill_id: query.passive || null,
     p_location_type: query.location || null,
     p_share_enabled: query.shared,
-    p_snapshot_id: cursor?.snapshot_id ?? null,
-    p_game_data_version_id: cursor?.game_data_version_id ?? null,
-    p_after_pal_id: cursor?.pal_id ?? null,
-    p_after_instance_uid: cursor?.pal_instance_uid ?? null,
+    p_snapshot_id: context?.snapshot_id ?? null,
+    p_game_data_version_id: context?.game_data_version_id ?? null,
+    p_page_number: query.page,
     p_page_size: query.page_size,
   });
   if (error !== null) throw new Phase5DataError(databaseFailureCode(error));
   const result = parsePalInventoryRpcResult(data);
   if (!result.ok) throw new Phase5DataError(result.error_code);
-  const rows = result.data.items;
-  const last = rows.at(-1);
   return {
     snapshot_id: result.data.snapshot_id,
     game_data_version_id: result.data.game_data_version_id,
     catalog_state: result.data.catalog_state,
-    items: rows.map(toSafeInventoryItem),
+    items: result.data.items.map(toSafeInventoryItem),
     total_count: result.data.total_count,
-    next_cursor:
-      result.data.has_more &&
-      last !== undefined &&
-      result.data.snapshot_id !== null
-        ? encodeCursor({
-            snapshot_id: result.data.snapshot_id,
-            game_data_version_id: result.data.game_data_version_id,
-            pal_id: last.pal_id,
-            pal_instance_uid: last.pal_instance_uid,
-          })
-        : null,
+    page_number: result.data.page_number,
+    total_pages: result.data.total_pages,
+    filter_options: {
+      owners: result.data.filter_options.owners.map((option) => ({
+        ...option,
+      })),
+      genders: [...result.data.filter_options.genders],
+      passives: result.data.filter_options.passives.map((option) => ({
+        ...option,
+      })),
+      locations: [...result.data.filter_options.locations],
+    },
   };
 }
 
@@ -111,7 +109,8 @@ const emptyQuery: PalListQuery = {
   location: "",
   shared: null,
   page_size: 1,
-  cursor: null,
+  page: 1,
+  context: null,
 };
 
 export async function getOverviewSummary(): Promise<OverviewSummary> {

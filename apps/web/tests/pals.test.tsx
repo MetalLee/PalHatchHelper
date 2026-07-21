@@ -1,14 +1,13 @@
+import type { PalInventoryPage } from "@palhatch/contracts";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PalInventory } from "../features/pals/pal-inventory";
-import {
-  decodeCursorValue,
-  encodeCursor,
-  parsePalListQuery,
-} from "../features/pals/query";
+import { PalFilters } from "../features/pals/pal-filters";
+import { PalPagination } from "../features/pals/pal-pagination";
+import { parsePalListQuery } from "../features/pals/query";
 
-const page = {
+const page: PalInventoryPage = {
   snapshot_id: "40000000-0000-4000-8000-000000000002",
   items: [
     {
@@ -49,19 +48,28 @@ const page = {
     },
   ],
   total_count: 2,
-  next_cursor: null,
+  page_number: 1,
+  total_pages: 1,
+  filter_options: {
+    owners: [
+      { value: "a".repeat(64), label: "Fixture Player A" },
+      { value: "b".repeat(64), label: "Fixture Player B" },
+      { value: "c".repeat(64), label: "Fixture Player C" },
+    ],
+    genders: ["male", "female"],
+    passives: [
+      { value: "test_passive_a", label: "认真" },
+      { value: "test_passive_b", label: "工匠精神" },
+      { value: "test_passive_c", label: "稀有被动" },
+    ],
+    locations: ["player_storage", "base", "viewing_cage"],
+  },
   catalog_state: "published" as const,
   game_data_version_id: "51000000-0000-4000-8000-000000000001",
 };
 
 describe("pal inventory", () => {
   it("supports all three inventory scopes and all Phase 5 filters", () => {
-    const cursor = encodeCursor({
-      snapshot_id: "40000000-0000-4000-8000-000000000002",
-      game_data_version_id: "51000000-0000-4000-8000-000000000001",
-      pal_id: "test_parent_b",
-      pal_instance_uid: "fixture-shared",
-    });
     const query = parsePalListQuery(
       new URLSearchParams({
         scope: "shared",
@@ -72,7 +80,7 @@ describe("pal inventory", () => {
         location: "base",
         shared: "true",
         page_size: "12",
-        cursor,
+        page: "3",
       }),
     );
 
@@ -85,20 +93,52 @@ describe("pal inventory", () => {
       location: "base",
       shared: true,
       page_size: 12,
-      cursor,
+      page: 3,
+      context: null,
     });
-    expect(decodeCursorValue(query.cursor)).toEqual({
-      snapshot_id: "40000000-0000-4000-8000-000000000002",
-      game_data_version_id: "51000000-0000-4000-8000-000000000001",
-      pal_id: "test_parent_b",
-      pal_instance_uid: "fixture-shared",
-    });
-    expect(cursor).not.toContain("test_parent_b|");
     expect(
       ["all", "mine", "shared"].map(
         (scope) => parsePalListQuery(new URLSearchParams({ scope })).scope,
       ),
     ).toEqual(["all", "mine", "shared"]);
+  });
+
+  it("uses full-pool valid filter options instead of only the current page", () => {
+    const query = parsePalListQuery(new URLSearchParams());
+    render(<PalFilters query={query} page={page} />);
+
+    expect(
+      screen.getByRole("option", { name: "Fixture Player C" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("option", { name: "稀有被动" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "观赏笼" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "未知" })).toBeNull();
+  });
+
+  it("provides previous, next, total pages and a bounded page jump", () => {
+    const query = parsePalListQuery(
+      new URLSearchParams({ scope: "mine", query: "棉", page: "2" }),
+    );
+    render(
+      <PalPagination
+        query={query}
+        page={{ ...page, page_number: 2, total_pages: 4, total_count: 80 }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("navigation", { name: "帕鲁列表分页" }),
+    ).toBeTruthy();
+    expect(screen.getByText("第 2 / 4 页")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "上一页" }).getAttribute("href"),
+    ).toContain("page=1");
+    expect(
+      screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
+    ).toContain("page=3");
+    const jump = screen.getByRole("spinbutton", { name: "跳转页码" });
+    expect(jump.getAttribute("min")).toBe("1");
+    expect(jump.getAttribute("max")).toBe("4");
   });
 
   it("offers sharing controls only for the requester's own pals", () => {
@@ -111,6 +151,8 @@ describe("pal inventory", () => {
     expect(screen.getByText("Fixture Player B")).toBeTruthy();
     expect(screen.getByText("棉绒兽")).toBeTruthy();
     expect(screen.getByText("#002")).toBeTruthy();
+    expect(screen.getByText("终端")).toBeTruthy();
+    expect(screen.queryByText("Fixture Storage A")).toBeNull();
   });
 
   it("makes missing catalog data and unknown IDs explicit", () => {

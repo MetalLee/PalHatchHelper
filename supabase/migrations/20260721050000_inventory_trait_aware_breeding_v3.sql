@@ -335,6 +335,7 @@ as $$
 declare
   v_job public.breeding_jobs%rowtype;
   v_plan jsonb;
+  v_localization jsonb;
 begin
   if auth.uid() is null then
     return jsonb_build_object('ok', false, 'error_code', 'AUTH_REQUIRED');
@@ -345,6 +346,35 @@ begin
   if v_job.id is null then
     return jsonb_build_object('ok', false, 'error_code', 'JOB_NOT_FOUND');
   end if;
+
+  select jsonb_build_object(
+    'locale', 'zh-CN',
+    'pals', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'pal_id', pal.pal_id,
+        'display_name', coalesce(localization.text, pal.pal_id)
+      ) order by pal.encyclopedia_no nulls last, pal.pal_id)
+      from public.catalog_pals as pal
+      left join public.catalog_localizations as localization
+        on localization.version_id = pal.version_id
+       and localization.locale = 'zh-CN'
+       and localization.text_key = pal.name_key
+      where pal.version_id = v_job.game_data_version_id
+    ), '[]'::jsonb),
+    'passive_skills', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'passive_skill_id', skill.passive_skill_id,
+        'display_name', coalesce(localization.text, skill.passive_skill_id)
+      ) order by skill.rank desc, skill.passive_skill_id)
+      from public.catalog_passive_skills as skill
+      left join public.catalog_localizations as localization
+        on localization.version_id = skill.version_id
+       and localization.locale = 'zh-CN'
+       and localization.text_key = skill.name_key
+      where skill.version_id = v_job.game_data_version_id
+    ), '[]'::jsonb)
+  ) into v_localization;
+
   select jsonb_build_object(
     'plan_id', plan.id,
     'result_digest', plan.result_digest,
@@ -388,6 +418,7 @@ begin
       'game_data_content_hash', v_job.game_data_content_hash,
       'algorithm_version', v_job.algorithm_version,
       'scoring_profile_version', v_job.scoring_profile_version,
+      'localization', v_localization,
       'attempt_count', v_job.attempt_count,
       'error_code', v_job.error_code,
       'created_at', v_job.created_at,

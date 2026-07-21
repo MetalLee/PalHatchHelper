@@ -129,10 +129,23 @@ export function BreederForm({
         skill.display_name.toLocaleLowerCase("zh-CN").includes(query),
     );
   }, [context.passive_skills, passiveQuery]);
+  const selectedPassives = useMemo(
+    () =>
+      passives.flatMap((id) => {
+        const skill = context.passive_skills.find(
+          (candidate) => candidate.passive_skill_id === id,
+        );
+        return skill === undefined ? [] : [skill];
+      }),
+    [context.passive_skills, passives],
+  );
 
   function togglePassive(id: string): void {
     setPassives((current) => {
-      if (current.includes(id)) return current.filter((value) => value !== id);
+      if (current.includes(id)) {
+        setErrorCode(null);
+        return current.filter((value) => value !== id);
+      }
       if (current.length >= 4) {
         setErrorCode("最多选择四个被动");
         return current;
@@ -211,6 +224,40 @@ export function BreederForm({
 
         <fieldset className="grid min-w-0 gap-3">
           <legend className="detail-label">期望被动（0 至 4 个）</legend>
+          <section className="selected-passives" aria-label="已选择的被动">
+            <div className="selected-passives-header">
+              <strong>已选择 {passives.length} / 4</strong>
+              {passives.length === 0 ? null : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPassives([]);
+                    setErrorCode(null);
+                  }}
+                >
+                  清空
+                </button>
+              )}
+            </div>
+            {selectedPassives.length === 0 ? (
+              <p>尚未选择被动</p>
+            ) : (
+              <div className="selected-passive-list">
+                {selectedPassives.map((skill) => (
+                  <button
+                    className="selected-passive-chip"
+                    type="button"
+                    key={skill.passive_skill_id}
+                    aria-label={`移除${skill.display_name}`}
+                    onClick={() => togglePassive(skill.passive_skill_id)}
+                  >
+                    <span>{skill.display_name}</span>
+                    <span aria-hidden="true">×</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
           <label className="filter-field">
             <span>搜索被动名称或 Stable ID</span>
             <input
@@ -221,21 +268,24 @@ export function BreederForm({
             />
           </label>
           <div className="passive-picker" aria-label="被动技能选择">
-            {visiblePassives.map((skill) => (
-              <label className="passive-option" key={skill.passive_skill_id}>
-                <input
-                  type="checkbox"
-                  checked={passives.includes(skill.passive_skill_id)}
-                  onChange={() => togglePassive(skill.passive_skill_id)}
-                />
-                <span>
-                  <strong>{skill.display_name}</strong>
-                  <small>{skill.passive_skill_id}</small>
-                </span>
-              </label>
-            ))}
+            {visiblePassives.length === 0 ? (
+              <p className="passive-picker-empty">没有匹配的被动</p>
+            ) : (
+              visiblePassives.map((skill) => (
+                <label className="passive-option" key={skill.passive_skill_id}>
+                  <input
+                    type="checkbox"
+                    checked={passives.includes(skill.passive_skill_id)}
+                    onChange={() => togglePassive(skill.passive_skill_id)}
+                  />
+                  <span>
+                    <strong>{skill.display_name}</strong>
+                    <small>{skill.passive_skill_id}</small>
+                  </span>
+                </label>
+              ))
+            )}
           </div>
-          <p className="text-xs text-slate-400">已选择 {passives.length} / 4</p>
         </fieldset>
 
         <div className="breeder-controls">

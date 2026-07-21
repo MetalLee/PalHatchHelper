@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(35);
+select plan(37);
 
 -- The acceptance database may keep the real local-test binding active. This
 -- transaction-local fixture binding makes pgTAP deterministic and rolls back.
@@ -239,6 +239,28 @@ select is(
   ),
   repeat('c', 64),
   'the refresh projection exposes the fixed content hash'
+);
+
+select is(
+  (
+    public.get_breeding_job_detail(
+      (select id from public.breeding_jobs where max_generations = 4
+       order by created_at desc limit 1)
+    ) #>> '{data,localization,pals,2,display_name}'
+  ),
+  '幻色幼崽',
+  'the job detail localizes Pals from its pinned catalog version'
+);
+
+select is(
+  (
+    public.get_breeding_job_detail(
+      (select id from public.breeding_jobs where max_generations = 4
+       order by created_at desc limit 1)
+    ) #>> '{data,localization,passive_skills,0,display_name}'
+  ),
+  '认真',
+  'the job detail localizes passives from its pinned catalog version'
 );
 
 reset role;

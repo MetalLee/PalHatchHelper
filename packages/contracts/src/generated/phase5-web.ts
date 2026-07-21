@@ -79,7 +79,25 @@ export interface PalInventoryPage {
    */
   items: PalInventoryItem[];
   total_count: number;
-  next_cursor: string | null;
+  page_number: number;
+  total_pages: number;
+  filter_options: PalInventoryFilterOptions;
+}
+export interface PalInventoryFilterOptions {
+  /**
+   * @maxItems 1000
+   */
+  owners: PalFilterOption[];
+  genders: PalGender[];
+  /**
+   * @maxItems 1000
+   */
+  passives: PalFilterOption[];
+  locations: PalLocationType[];
+}
+export interface PalFilterOption {
+  value: string;
+  label: string;
 }
 export interface PalInventoryRpcItem {
   pal_instance_uid: string;
@@ -117,7 +135,9 @@ export interface PalInventoryRpcData {
    */
   items: PalInventoryRpcItem[];
   total_count: number;
-  has_more: boolean;
+  page_number: number;
+  total_pages: number;
+  filter_options: PalInventoryFilterOptions;
 }
 export interface PlayerBindingSummary {
   player_id: string;

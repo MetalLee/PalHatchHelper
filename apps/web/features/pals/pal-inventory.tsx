@@ -134,7 +134,7 @@ export function PalInventory({
               <div>
                 <dt className="detail-label">位置</dt>
                 <dd className="mt-1 text-slate-200">
-                  {pal.location_name ?? locationLabels[pal.location_type]}
+                  {locationLabels[pal.location_type]}
                 </dd>
               </div>
               <div>
