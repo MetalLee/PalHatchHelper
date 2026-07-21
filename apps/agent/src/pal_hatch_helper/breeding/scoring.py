@@ -26,10 +26,10 @@ COMPONENT_ORDER: Final = (
 )
 
 PROFILE_VERSIONS: Final = {
-    OptimizationMode.BALANCED: "balanced-v3",
-    OptimizationMode.FASTEST: "fastest-v3",
-    OptimizationMode.HIGHEST_SUCCESS: "highest-success-v3",
-    OptimizationMode.LEAST_BORROWING: "least-borrowing-v3",
+    OptimizationMode.BALANCED: "balanced-v4",
+    OptimizationMode.FASTEST: "fastest-v4",
+    OptimizationMode.HIGHEST_SUCCESS: "highest-success-v4",
+    OptimizationMode.LEAST_BORROWING: "least-borrowing-v4",
 }
 
 PROFILE_WEIGHTS_BASIS_POINTS: Final = {
@@ -57,8 +57,16 @@ def score_plan(
     *,
     desired_passive_ids: tuple[str, ...],
     requested_scoring_profile_version: str,
+    inventory_passive_coverage: float,
+    missing_passive_count: int,
 ) -> ScoredPlan:
-    metrics = _raw_metrics(plan, serialized, desired_passive_ids)
+    metrics = _raw_metrics(
+        plan,
+        serialized,
+        desired_passive_ids,
+        inventory_passive_coverage=inventory_passive_coverage,
+        missing_passive_count=missing_passive_count,
+    )
     normalized, raw_values = _normalized_components(metrics)
     mode_scores: list[BreedingModeScore] = []
     for mode in OptimizationMode:
@@ -115,6 +123,9 @@ def _raw_metrics(
     plan: PlannedRoute,
     serialized: SerializedPlan,
     desired_passive_ids: tuple[str, ...],
+    *,
+    inventory_passive_coverage: float,
+    missing_passive_count: int,
 ) -> BreedingRawScoreMetrics:
     steps = serialized.steps
     desired = frozenset(desired_passive_ids)
@@ -181,8 +192,10 @@ def _raw_metrics(
         starting_requirement_count=serialized.starting_requirement_count,
         missing_pal_count=missing_pal_count,
         missing_passive_requirement_count=missing_passive_requirement_count,
+        missing_passive_count=missing_passive_count,
         borrowed_pal_count=len(borrowed),
         inventory_coverage=round(inventory_coverage, 6),
+        inventory_passive_coverage=round(inventory_passive_coverage, 6),
         passive_carrier_count=carrier_count,
         passive_concentration=round(passive_concentration, 6),
         extra_passive_count=extra_passives,
@@ -207,7 +220,9 @@ def _normalized_components(
         0,
         10_000 - metrics.generation_count * 1000 - max(0, metrics.step_count - 1) * 700,
     )
-    inventory_coverage = round(metrics.inventory_coverage * 10_000)
+    inventory_coverage = round(
+        min(metrics.inventory_coverage, metrics.inventory_passive_coverage) * 10_000
+    )
     passive_concentration = round(metrics.passive_concentration * 10_000)
     borrowing = round(
         10_000 * (1 - metrics.borrowed_pal_count / max(1, metrics.unique_starting_instance_count))
@@ -227,10 +242,13 @@ def _normalized_components(
         + metrics.borrowed_pal_count * 500
         + metrics.missing_pal_count * 1500
         + metrics.missing_passive_requirement_count * 500
+        + metrics.missing_passive_count * 2500
     )
     stability = max(0, 10_000 - stability_penalty)
     acquisition_penalty = (
-        metrics.missing_pal_count * 3000 + metrics.missing_passive_requirement_count * 800
+        metrics.missing_pal_count * 3000
+        + metrics.missing_passive_requirement_count * 800
+        + metrics.missing_passive_count * 4000
     )
     acquisition_cost = max(0, 10_000 - acquisition_penalty)
     normalized = {

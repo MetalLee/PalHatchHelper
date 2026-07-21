@@ -113,7 +113,11 @@ export function BreedingJobView({
   const router = useRouter();
   const [result, setResult] = useState(initialResult);
   const [selectedKey, setSelectedKey] = useState(
-    initialResult.data.plan?.routes[0]?.route_key ?? null,
+    initialResult.data.plan?.routes.find(
+      (route) => route.feasibility_status === "ready",
+    )?.route_key ??
+      initialResult.data.plan?.routes[0]?.route_key ??
+      null,
   );
   const [pollPaused, setPollPaused] = useState(false);
   const [adoptingRouteId, setAdoptingRouteId] = useState<string | null>(null);
@@ -141,7 +145,11 @@ export function BreedingJobView({
                 (route) => route.route_key === current,
               )
                 ? current
-                : (next.data.plan?.routes[0]?.route_key ?? null),
+                : (next.data.plan?.routes.find(
+                    (route) => route.feasibility_status === "ready",
+                  )?.route_key ??
+                  next.data.plan?.routes[0]?.route_key ??
+                  null),
             );
             if (terminal.has(next.data.status)) window.clearInterval(timer);
           }
@@ -151,6 +159,19 @@ export function BreedingJobView({
     return () => window.clearInterval(timer);
   }, [poll, result.data.job_id, result.data.status]);
   const plan = result.data.plan;
+  const readyRoutes = useMemo(
+    () =>
+      plan?.routes.filter((route) => route.feasibility_status === "ready") ??
+      [],
+    [plan],
+  );
+  const fallbackRoutes = useMemo(
+    () =>
+      plan?.routes.filter(
+        (route) => route.feasibility_status === "needs_inventory",
+      ) ?? [],
+    [plan],
+  );
   const searchIncomplete =
     plan?.explanation_codes.includes("SEARCH_INCOMPLETE") === true ||
     plan?.explanation_codes.includes("SEARCH_LIMIT_REACHED") === true ||
@@ -260,6 +281,21 @@ export function BreedingJobView({
         </div>
       </section>
 
+      {plan?.missing_passive_ids.length ? (
+        <section className="notice-banner min-w-0" role="alert">
+          <h2 className="font-semibold text-white">
+            库存缺少以下目标被动来源：
+          </h2>
+          <ul className="mt-2 grid gap-1 text-sm text-amber-100">
+            {plan.missing_passive_ids.map((passiveId) => (
+              <li className="break-all" key={passiveId}>
+                {localizedName(passiveNames, passiveId, "被动")}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="content-panel min-w-0">
         <p className="eyebrow">PINNED VERSIONS</p>
         <dl className="fixed-inputs mt-4 md:grid-cols-2">
@@ -317,27 +353,72 @@ export function BreedingJobView({
               已返回当前最优候选；搜索受到安全预算限制，未穷举全部路线。
             </p>
           ) : null}
-          <section className="content-panel min-w-0">
-            <div className="route-tabs" aria-label="路线比较">
-              {plan.routes.map((route) => (
-                <button
-                  type="button"
-                  key={route.route_key}
-                  className={
-                    route.route_key === selected?.route_key
-                      ? "route-tab-active"
-                      : "route-tab"
-                  }
-                  onClick={() => setSelectedKey(route.route_key)}
-                >
-                  路线 {route.rank}
-                </button>
-              ))}
-            </div>
+          <section
+            className="content-panel min-w-0"
+            aria-label="库存可执行方案"
+          >
+            <p className="eyebrow">READY ROUTES</p>
+            <h2 className="mt-3 text-xl font-semibold text-white">
+              库存可执行方案
+            </h2>
+            {readyRoutes.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-400">
+                当前库存还没有可直接采用的路线。
+              </p>
+            ) : (
+              <div className="route-tabs mt-4" aria-label="可执行路线比较">
+                {readyRoutes.map((route) => (
+                  <button
+                    type="button"
+                    key={route.route_key}
+                    className={
+                      route.route_key === selected?.route_key
+                        ? "route-tab-active"
+                        : "route-tab"
+                    }
+                    onClick={() => setSelectedKey(route.route_key)}
+                  >
+                    可执行路线 {route.rank}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+          {fallbackRoutes.length === 0 ? null : (
+            <details className="content-panel min-w-0 opacity-80">
+              <summary className="cursor-pointer text-lg font-semibold text-slate-200">
+                需补充库存的备选方案（{fallbackRoutes.length}）
+              </summary>
+              <p className="mt-2 text-sm text-slate-400">
+                这些路线不能采用，补齐种类、性别或目标被动来源后请重新计算。
+              </p>
+              <div className="route-tabs mt-4" aria-label="缺库存备选路线">
+                {fallbackRoutes.map((route) => (
+                  <button
+                    type="button"
+                    key={route.route_key}
+                    className={
+                      route.route_key === selected?.route_key
+                        ? "route-tab-active"
+                        : "route-tab"
+                    }
+                    onClick={() => setSelectedKey(route.route_key)}
+                  >
+                    备选路线 {route.rank}
+                  </button>
+                ))}
+              </div>
+            </details>
+          )}
+          <section className="content-panel min-w-0" aria-label="路线详情">
             {selected === undefined ? null : (
               <>
                 <RouteFacts
                   route={selected}
+                  historical={
+                    result.data.algorithm_version !==
+                    "inventory-trait-aware-deterministic-v3"
+                  }
                   palNames={palNames}
                   passiveNames={passiveNames}
                 />
@@ -402,10 +483,12 @@ export function BreedingJobView({
 
 function RouteFacts({
   route,
+  historical,
   palNames,
   passiveNames,
 }: Readonly<{
   route: BreedingRoute;
+  historical: boolean;
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
 }>) {
@@ -421,6 +504,10 @@ function RouteFacts({
         <Metric
           label="库存覆盖率"
           value={`${Math.round(route.inventory_coverage * 100)}%`}
+        />
+        <Metric
+          label="词条来源覆盖率"
+          value={`${Math.round(route.inventory_passive_coverage * 100)}%`}
         />
         <Metric label="难度" value={difficultyLabels[route.difficulty]} />
         <Metric
@@ -441,14 +528,53 @@ function RouteFacts({
                 {requirement.quantity}×{" "}
                 {localizedName(palNames, requirement.pal_id, "Pal")} ·{" "}
                 {genderRequirementLabel(requirement.gender)}
-                {requirement.required_passive_ids.length === 0
-                  ? ""
-                  : ` · 被动 ${localizedNames(passiveNames, requirement.required_passive_ids, "被动").join("、")}`}
+                {" · 被动无要求"}
               </li>
             ))}
           </ul>
         </section>
       )}
+      {route.missing_passive_ids.length === 0 ? null : (
+        <section className="notice-banner" aria-label="缺少目标被动来源">
+          <h3 className="font-semibold text-white">
+            库存缺少以下目标被动来源：
+          </h3>
+          <ul className="mt-2 grid gap-1 text-sm text-amber-100">
+            {route.missing_passive_ids.map((passiveId) => (
+              <li className="break-all" key={passiveId}>
+                {localizedName(passiveNames, passiveId, "被动")}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <section className="score-panel min-w-0" aria-label="词条来源">
+        <h3 className="text-lg font-semibold text-white">词条来源</h3>
+        {route.passive_sources.length ? (
+          <dl className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2">
+            {route.passive_sources.map((source) => (
+              <div className="min-w-0" key={source.passive_id}>
+                <dt className="font-medium text-teal-100">
+                  {localizedName(passiveNames, source.passive_id, "被动")}
+                </dt>
+                <dd className="mt-1 break-all text-xs leading-5 text-slate-300">
+                  ← 库存 {localizedName(palNames, source.source_pal_id, "Pal")}{" "}
+                  · {source.source_instance_uid}
+                </dd>
+                <dd className="text-xs text-slate-500">
+                  首次保留于步骤 {source.first_required_step_index + 1}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="mt-3 text-sm text-slate-400">
+            {historical
+              ? "历史结果未记录词条来源；兼容投影不会改写原路线或摘要。"
+              : "此路线没有已追踪的目标被动来源。"}
+          </p>
+        )}
+      </section>
       <div className="grid gap-4">
         {route.steps.map((step) => {
           const parents = [step.parent_a, step.parent_b].toSorted(
@@ -530,10 +656,6 @@ function ParentCard({
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
 }>) {
-  const passives =
-    parent.source_type === "missing"
-      ? parent.required_passive_ids
-      : parent.passive_skill_ids;
   return (
     <div className="parent-card">
       <p className="detail-label">{label}</p>
@@ -554,8 +676,9 @@ function ParentCard({
           (parent.source_type === "missing" ? "需补充库存" : "中间步骤")}
       </p>
       <p className="mt-3 text-xs text-slate-300">
-        被动：
-        {localizedNames(passiveNames, passives, "被动").join("、") || "无要求"}
+        {parent.source_type === "missing"
+          ? "被动无要求"
+          : `被动：${localizedNames(passiveNames, parent.passive_skill_ids, "被动").join("、") || "无要求"}`}
       </p>
     </div>
   );

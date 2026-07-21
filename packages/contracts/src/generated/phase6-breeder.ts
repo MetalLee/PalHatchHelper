@@ -34,6 +34,7 @@ export interface CreateBreedingJobRequestContracts {
   BreedingRouteViewParent: BreedingRouteViewParent;
   BreedingRouteViewStep: BreedingRouteViewStep;
   BreedingMissingRequirementView: BreedingMissingRequirementView;
+  BreedingPassiveSourceView: BreedingPassiveSourceView;
   AIExplanation: AIExplanation;
   AIExplanationRouteSummary: AIExplanationRouteSummary;
   AIExplanationRequest: AIExplanationRequest;
@@ -126,8 +127,10 @@ export interface RouteRawScoreMetrics {
   starting_requirement_count?: number;
   missing_pal_count?: number;
   missing_passive_requirement_count?: number;
+  missing_passive_count?: number;
   borrowed_pal_count: number;
   inventory_coverage: number;
+  inventory_passive_coverage?: number;
   passive_carrier_count: number;
   passive_concentration: number;
   extra_passive_count: number;
@@ -255,6 +258,12 @@ export interface BreedingMissingRequirementView {
    */
   step_indexes: [number, ...number[]];
 }
+export interface BreedingPassiveSourceView {
+  passive_id: BreederStableId;
+  source_instance_uid: string;
+  source_pal_id: BreederStableId;
+  first_required_step_index: number;
+}
 export interface AIExplanation {
   provider: AIProviderName;
   model: string | null;
@@ -344,11 +353,30 @@ export interface BreedingRoute {
   difficulty: BreederDifficulty;
   borrowed_pal_count: number;
   inventory_coverage: number;
+  inventory_passive_coverage: number;
   inheritance_score: number;
   feasibility_status: "ready" | "needs_inventory";
   adoptable: boolean;
   missing_pal_count: number;
+  /**
+   * @maxItems 4
+   */
+  missing_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
   missing_requirements: BreedingMissingRequirementView[];
+  /**
+   * @maxItems 4
+   */
+  passive_sources:
+    | []
+    | [BreedingPassiveSourceView]
+    | [BreedingPassiveSourceView, BreedingPassiveSourceView]
+    | [BreedingPassiveSourceView, BreedingPassiveSourceView, BreedingPassiveSourceView]
+    | [BreedingPassiveSourceView, BreedingPassiveSourceView, BreedingPassiveSourceView, BreedingPassiveSourceView];
   existing_target_instance_uid: string | null;
   score_breakdown: RouteScoreBreakdown;
   steps: BreedingRouteViewStep[];
@@ -369,6 +397,15 @@ export interface BreedingPlan {
   plan_id: string;
   result_digest: BreederSha256;
   route_count: number;
+  /**
+   * @maxItems 4
+   */
+  missing_passive_ids:
+    | []
+    | [BreederStableId]
+    | [BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId]
+    | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
   explanation_codes: string[];
   diagnostics: {
     [k: string]: unknown;

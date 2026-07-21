@@ -58,7 +58,8 @@ test("inventory scope and pagination links refresh the visible list", async ({
     .last()
     .textContent();
   await page.getByRole("link", { name: "下一页" }).click();
-  await expect(page).toHaveURL(/cursor=/);
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page).toHaveURL(/context=/);
   await expect
     .poll(async () =>
       page.locator(".pal-card .eyebrow span").last().textContent(),
@@ -113,9 +114,11 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   const nextHref = await page
     .getByRole("link", { name: "下一页" })
     .getAttribute("href");
-  expect(nextHref).toContain("cursor=");
+  expect(nextHref).toContain("page=2");
+  expect(nextHref).toContain("context=");
   await page.goto(nextHref!);
-  await expect(page).toHaveURL(/cursor=/);
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page).toHaveURL(/context=/);
   await expect(
     page.getByText("test_parent_a", { exact: true }).first(),
   ).toBeVisible({
@@ -178,6 +181,6 @@ test("stale data status stays explicit on iPhone width", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText("确定性算法版本")).toBeVisible();
   await expect(
-    page.getByText("inventory-aware-deterministic-v2"),
+    page.getByText("inventory-trait-aware-deterministic-v3"),
   ).toBeVisible();
 });

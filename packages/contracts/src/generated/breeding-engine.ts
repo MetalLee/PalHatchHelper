@@ -27,6 +27,48 @@ export type BreedingScoreComponentName =
   | "attempt_cost"
   | "stability"
   | "acquisition_cost";
+export type BreedingRouteCandidate = {
+  [k: string]: unknown;
+} & {
+  route_key: string;
+  rank: number;
+  optimization_mode: OptimizationMode;
+  total_score: number;
+  generation_count: number;
+  step_count: number;
+  estimated_attempts_min: number;
+  estimated_attempts_max: number;
+  difficulty: BreedingDifficulty;
+  borrowed_pal_count: number;
+  inventory_coverage: number;
+  inventory_passive_coverage: number;
+  inheritance_score: number;
+  feasibility_status: BreedingFeasibilityStatus;
+  adoptable: boolean;
+  missing_pal_count: number;
+  /**
+   * @maxItems 4
+   */
+  missing_passive_ids:
+    | []
+    | [BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId];
+  missing_requirements: BreedingMissingRequirement[];
+  /**
+   * @maxItems 4
+   */
+  passive_sources:
+    | []
+    | [BreedingPassiveSource]
+    | [BreedingPassiveSource, BreedingPassiveSource]
+    | [BreedingPassiveSource, BreedingPassiveSource, BreedingPassiveSource]
+    | [BreedingPassiveSource, BreedingPassiveSource, BreedingPassiveSource, BreedingPassiveSource];
+  existing_target_instance_uid: BreedingEngineInstanceUid | null;
+  score_breakdown: BreedingScoreBreakdown;
+  steps: BreedingRouteStep[];
+};
 export type BreedingFeasibilityStatus = "ready" | "needs_inventory";
 export type BreedingSearchLimit =
   | "max_expanded_nodes"
@@ -43,6 +85,7 @@ export interface BreedingEngineRequestContracts {
   BreedingParentSource: BreedingParentSource;
   BreedingRouteStep: BreedingRouteStep;
   BreedingMissingRequirement: BreedingMissingRequirement;
+  BreedingPassiveSource: BreedingPassiveSource;
   BreedingRawScoreMetrics: BreedingRawScoreMetrics;
   BreedingScoreComponent: BreedingScoreComponent;
   BreedingModeScore: BreedingModeScore;
@@ -160,19 +203,20 @@ export interface BreedingMissingRequirement {
   pal_id: BreedingEngineStableId;
   gender: BreedingRequiredGender;
   /**
-   * @maxItems 4
+   * @maxItems 0
    */
-  required_passive_ids:
-    | []
-    | [BreedingEngineStableId]
-    | [BreedingEngineStableId, BreedingEngineStableId]
-    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId]
-    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId];
+  required_passive_ids: [];
   quantity: number;
   /**
    * @minItems 1
    */
   step_indexes: [number, ...number[]];
+}
+export interface BreedingPassiveSource {
+  passive_id: BreedingEngineStableId;
+  source_instance_uid: BreedingEngineInstanceUid;
+  source_pal_id: BreedingEngineStableId;
+  first_required_step_index: number;
 }
 export interface BreedingRawScoreMetrics {
   generation_count: number;
@@ -181,8 +225,10 @@ export interface BreedingRawScoreMetrics {
   starting_requirement_count: number;
   missing_pal_count: number;
   missing_passive_requirement_count: number;
+  missing_passive_count: number;
   borrowed_pal_count: number;
   inventory_coverage: number;
+  inventory_passive_coverage: number;
   passive_carrier_count: number;
   passive_concentration: number;
   extra_passive_count: number;
@@ -229,27 +275,6 @@ export interface BreedingScoreBreakdown {
    */
   mode_scores: [BreedingModeScore, BreedingModeScore, BreedingModeScore, BreedingModeScore];
 }
-export interface BreedingRouteCandidate {
-  route_key: string;
-  rank: number;
-  optimization_mode: OptimizationMode;
-  total_score: number;
-  generation_count: number;
-  step_count: number;
-  estimated_attempts_min: number;
-  estimated_attempts_max: number;
-  difficulty: BreedingDifficulty;
-  borrowed_pal_count: number;
-  inventory_coverage: number;
-  inheritance_score: number;
-  feasibility_status: BreedingFeasibilityStatus;
-  adoptable: boolean;
-  missing_pal_count: number;
-  missing_requirements: BreedingMissingRequirement[];
-  existing_target_instance_uid: BreedingEngineInstanceUid | null;
-  score_breakdown: BreedingScoreBreakdown;
-  steps: BreedingRouteStep[];
-}
 export interface BreedingModeRanking {
   optimization_mode: OptimizationMode;
   scoring_profile_version: BreedingEngineVersion;
@@ -290,6 +315,15 @@ export interface BreedingEngineResult {
   algorithm_version: BreedingEngineVersion;
   scoring_profile_version: BreedingEngineVersion;
   optimization_mode: OptimizationMode;
+  /**
+   * @maxItems 4
+   */
+  missing_passive_ids:
+    | []
+    | [BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId]
+    | [BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId, BreedingEngineStableId];
   routes: BreedingRouteCandidate[];
   /**
    * @minItems 4

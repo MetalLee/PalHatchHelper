@@ -10,6 +10,7 @@ from pal_hatch_helper.generated import (
     BreedingEngineInventoryPal,
     BreedingMissingRequirement,
     BreedingParentSource,
+    BreedingPassiveSource,
     BreedingRouteStep,
 )
 
@@ -79,6 +80,8 @@ def physical_plan_signature(plan: SerializedPlan) -> str:
 def plan_passive_retention(
     assigned: AssignedRoute,
     desired_passive_ids: tuple[str, ...],
+    *,
+    required_mask: int | None = None,
 ) -> PlannedRoute:
     full_mask = (1 << len(desired_passive_ids)) - 1
     memo: dict[tuple[str, int], PlannedRoute] = {}
@@ -109,6 +112,8 @@ def plan_passive_retention(
             required_mask,
             node.parent_a.coverage_mask,
             node.parent_b.coverage_mask,
+            left_generation=node.parent_a.route.generation_count,
+            right_generation=node.parent_b.route.generation_count,
         )
         candidates: list[PlannedRoute] = []
         for left_mask, right_mask in partitions:
@@ -159,7 +164,7 @@ def plan_passive_retention(
         memo[key] = result
         return result
 
-    return solve(assigned, full_mask)
+    return solve(assigned, full_mask if required_mask is None else required_mask)
 
 
 def serialize_plan(
@@ -199,6 +204,8 @@ def serialize_plan(
         if assigned.route.recipe is None:
             if assigned.output_gender is None:
                 raise ValueError("missing starting parent must have a required gender")
+            if node.required_mask:
+                raise ValueError("missing starting parent cannot provide target passives")
             return BreedingParentSource(
                 source_type="missing",
                 pal_id=assigned.route.pal_id,
@@ -207,7 +214,7 @@ def serialize_plan(
                 guild_id=None,
                 gender=assigned.output_gender,
                 passive_skill_ids=[],
-                required_passive_ids=passive_ids(node.required_mask),
+                required_passive_ids=[],
                 borrowed=False,
                 produced_by_step_index=None,
                 location_type=None,
@@ -300,10 +307,44 @@ def serialize_plan(
     )
 
 
+def trace_passive_sources(
+    serialized: SerializedPlan,
+    desired_passive_ids: tuple[str, ...],
+) -> tuple[BreedingPassiveSource, ...]:
+    sources_by_passive: dict[str, BreedingPassiveSource] = {}
+    desired = frozenset(desired_passive_ids)
+    for step in serialized.steps:
+        for parent in (step.parent_a, step.parent_b):
+            if parent.source_type.value != "inventory":
+                continue
+            if parent.instance_uid is None:
+                raise ValueError("inventory passive source must have an instance UID")
+            for passive_id in sorted(set(parent.required_passive_ids) & desired):
+                candidate = BreedingPassiveSource(
+                    passive_id=passive_id,
+                    source_instance_uid=parent.instance_uid,
+                    source_pal_id=parent.pal_id,
+                    first_required_step_index=step.step_index,
+                )
+                existing = sources_by_passive.get(passive_id)
+                if existing is None or (
+                    candidate.first_required_step_index,
+                    candidate.source_instance_uid,
+                ) < (
+                    existing.first_required_step_index,
+                    existing.source_instance_uid,
+                ):
+                    sources_by_passive[passive_id] = candidate
+    return tuple(sources_by_passive[passive_id] for passive_id in sorted(sources_by_passive))
+
+
 def _passive_partitions(
     required_mask: int,
     left_coverage: int,
     right_coverage: int,
+    *,
+    left_generation: int,
+    right_generation: int,
 ) -> tuple[tuple[int, int], ...]:
     bits = [
         1 << index for index in range(required_mask.bit_length()) if required_mask & (1 << index)
@@ -317,6 +358,8 @@ def _passive_partitions(
             available.append("right")
         if not available:
             return ()
+        if len(available) == 2 and left_generation != right_generation:
+            available = ["left" if left_generation > right_generation else "right"]
         choices.append(tuple(available))
     partitions: set[tuple[int, int]] = set()
     for allocation in product(*choices):
