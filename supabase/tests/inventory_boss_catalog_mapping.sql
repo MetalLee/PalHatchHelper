@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(1);
+select plan(2);
 
 insert into public.pal_snapshot_items (
   id,
@@ -61,6 +61,29 @@ select results_eq(
     'resolved'::text
   ) $$,
   'boss-prefixed inventory IDs resolve through their base catalog Pal ID'
+);
+
+select results_eq(
+  $$
+    select
+      item->>'pal_id',
+      item->>'pal_display_name',
+      item->>'encyclopedia_no',
+      item->>'catalog_entry_state'
+    from jsonb_array_elements(
+      public.list_available_pals_page_v2(
+        p_scope => 'mine',
+        p_query => 'boss_test_parent_a'
+      )->'data'->'items'
+    ) as item
+  $$,
+  $$ values (
+    'boss_test_parent_a'::text,
+    '棉悠悠'::text,
+    '1'::text,
+    'resolved'::text
+  ) $$,
+  'V2 inventory pages preserve boss-prefixed catalog mapping'
 );
 
 select * from finish();
