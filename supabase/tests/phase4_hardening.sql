@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(20);
+select plan(21);
 
 insert into public.game_data_versions (
   id, package_hash, content_hash, schema_version, extractor_name, extractor_version,
@@ -74,9 +74,9 @@ select set_config('app.game_data_rollback', 'false', true);
 
 select is(
   (select count(*)::integer from public.scoring_profiles
-    where is_active and algorithm_version = 'inventory-aware-deterministic-v2'),
+    where is_active and algorithm_version = 'inventory-trait-aware-deterministic-v3'),
   4,
-  'all four active profiles use the inventory-aware deterministic algorithm'
+  'all four active profiles use the inventory trait-aware deterministic algorithm'
 );
 
 select is(
@@ -85,6 +85,17 @@ select is(
       and (select count(*) from jsonb_object_keys(scoring_profiles.weights)) = 8),
   4,
   'all four active profiles persist the same eight scoring components as the engine'
+);
+
+select results_eq(
+  $$ select version from public.scoring_profiles where is_active order by version $$,
+  $$ values
+    ('balanced-v4'::text),
+    ('fastest-v4'::text),
+    ('highest-success-v4'::text),
+    ('least-borrowing-v4'::text)
+  $$,
+  'only the four v4 scoring profiles are active'
 );
 
 select set_config(
@@ -115,10 +126,10 @@ select results_eq(
      order by optimization_mode
   $$,
   $$ values
-    ('balanced', 'inventory-aware-deterministic-v2', 'balanced-v3'),
-    ('fastest', 'inventory-aware-deterministic-v2', 'fastest-v3'),
-    ('highest_success', 'inventory-aware-deterministic-v2', 'highest-success-v3'),
-    ('least_borrowing', 'inventory-aware-deterministic-v2', 'least-borrowing-v3')
+    ('balanced', 'inventory-trait-aware-deterministic-v3', 'balanced-v4'),
+    ('fastest', 'inventory-trait-aware-deterministic-v3', 'fastest-v4'),
+    ('highest_success', 'inventory-trait-aware-deterministic-v3', 'highest-success-v4'),
+    ('least_borrowing', 'inventory-trait-aware-deterministic-v3', 'least-borrowing-v4')
   $$,
   'each optimization mode fixes an engine-supported algorithm and scoring version'
 );

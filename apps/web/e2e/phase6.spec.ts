@@ -94,7 +94,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
 
   await page.reload();
   await expect(page.getByTestId("job-stage")).toContainText("completed");
-  const routeTabs = page.getByRole("button", { name: /^路线 \d+$/ });
+  const routeTabs = page.getByRole("button", { name: /^可执行路线 \d+$/ });
   const routeCount = await routeTabs.count();
   expect(routeCount).toBeGreaterThan(0);
   expect(routeCount).toBeLessThanOrEqual(3);
@@ -102,7 +102,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   await expect(page.getByText("完整评分明细")).toBeVisible();
   await expect(page.getByText("解释已降级")).toBeVisible();
   await expect(
-    page.getByText("inventory-aware-deterministic-v2"),
+    page.getByText("inventory-trait-aware-deterministic-v3"),
   ).toBeVisible();
 
   const response = await page.request.get(`/api/breeder/jobs/${jobId}`);

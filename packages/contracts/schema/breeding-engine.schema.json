@@ -329,7 +329,7 @@
         "gender": { "$ref": "#/$defs/BreedingRequiredGender" },
         "required_passive_ids": {
           "type": "array",
-          "maxItems": 4,
+          "maxItems": 0,
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/BreedingEngineStableId" }
         },
@@ -342,6 +342,24 @@
         }
       }
     },
+    "BreedingPassiveSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "passive_id",
+        "source_instance_uid",
+        "source_pal_id",
+        "first_required_step_index"
+      ],
+      "properties": {
+        "passive_id": { "$ref": "#/$defs/BreedingEngineStableId" },
+        "source_instance_uid": {
+          "$ref": "#/$defs/BreedingEngineInstanceUid"
+        },
+        "source_pal_id": { "$ref": "#/$defs/BreedingEngineStableId" },
+        "first_required_step_index": { "type": "integer", "minimum": 0 }
+      }
+    },
     "BreedingRawScoreMetrics": {
       "type": "object",
       "additionalProperties": false,
@@ -352,8 +370,10 @@
         "starting_requirement_count",
         "missing_pal_count",
         "missing_passive_requirement_count",
+        "missing_passive_count",
         "borrowed_pal_count",
         "inventory_coverage",
+        "inventory_passive_coverage",
         "passive_carrier_count",
         "passive_concentration",
         "extra_passive_count",
@@ -374,8 +394,14 @@
           "type": "integer",
           "minimum": 0
         },
+        "missing_passive_count": { "type": "integer", "minimum": 0 },
         "borrowed_pal_count": { "type": "integer", "minimum": 0 },
         "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "inventory_passive_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "passive_carrier_count": { "type": "integer", "minimum": 0 },
         "passive_concentration": {
           "type": "number",
@@ -472,11 +498,14 @@
         "difficulty",
         "borrowed_pal_count",
         "inventory_coverage",
+        "inventory_passive_coverage",
         "inheritance_score",
         "feasibility_status",
         "adoptable",
         "missing_pal_count",
+        "missing_passive_ids",
         "missing_requirements",
+        "passive_sources",
         "existing_target_instance_uid",
         "score_breakdown",
         "steps"
@@ -493,13 +522,29 @@
         "difficulty": { "$ref": "#/$defs/BreedingDifficulty" },
         "borrowed_pal_count": { "type": "integer", "minimum": 0 },
         "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "inventory_passive_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "inheritance_score": { "type": "number", "minimum": 0, "maximum": 1 },
         "feasibility_status": { "$ref": "#/$defs/BreedingFeasibilityStatus" },
         "adoptable": { "type": "boolean" },
         "missing_pal_count": { "type": "integer", "minimum": 0 },
+        "missing_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+        },
         "missing_requirements": {
           "type": "array",
           "items": { "$ref": "#/$defs/BreedingMissingRequirement" }
+        },
+        "passive_sources": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/BreedingPassiveSource" }
         },
         "existing_target_instance_uid": {
           "anyOf": [
@@ -512,7 +557,23 @@
           "type": "array",
           "items": { "$ref": "#/$defs/BreedingRouteStep" }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "feasibility_status": { "const": "ready" } },
+            "required": ["feasibility_status"]
+          },
+          "then": {
+            "properties": {
+              "adoptable": { "type": "boolean", "const": true },
+              "missing_pal_count": { "type": "integer", "const": 0 },
+              "missing_passive_ids": { "type": "array", "maxItems": 0 },
+              "inventory_passive_coverage": { "type": "number", "const": 1 }
+            }
+          }
+        }
+      ]
     },
     "BreedingModeRanking": {
       "type": "object",
@@ -591,6 +652,7 @@
         "algorithm_version",
         "scoring_profile_version",
         "optimization_mode",
+        "missing_passive_ids",
         "routes",
         "mode_rankings",
         "explanation_codes",
@@ -611,6 +673,12 @@
         "algorithm_version": { "$ref": "#/$defs/BreedingEngineVersion" },
         "scoring_profile_version": { "$ref": "#/$defs/BreedingEngineVersion" },
         "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+        "missing_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreedingEngineStableId" }
+        },
         "routes": {
           "type": "array",
           "items": { "$ref": "#/$defs/BreedingRouteCandidate" }

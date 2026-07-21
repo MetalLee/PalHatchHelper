@@ -108,12 +108,22 @@ function route(rank: number): BreedingRoute {
     difficulty: "low",
     borrowed_pal_count: rank - 1,
     inventory_coverage: 1,
+    inventory_passive_coverage: 1,
     inheritance_score: 0.9,
     existing_target_instance_uid: null,
     feasibility_status: "ready",
     adoptable: true,
     missing_pal_count: 0,
+    missing_passive_ids: [],
     missing_requirements: [],
+    passive_sources: [
+      {
+        passive_id: "test_passive_a",
+        source_instance_uid: `fixture-parent-a-${rank}`,
+        source_pal_id: "test_parent_a",
+        first_required_step_index: 0,
+      },
+    ],
     score_breakdown: {
       scoring_profile_version: "balanced-v2",
       estimate_basis: "strategy_heuristic_no_verified_probability",
@@ -124,8 +134,10 @@ function route(rank: number): BreedingRoute {
         starting_requirement_count: 2,
         missing_pal_count: 0,
         missing_passive_requirement_count: 0,
+        missing_passive_count: 0,
         borrowed_pal_count: rank - 1,
         inventory_coverage: 1,
+        inventory_passive_coverage: 1,
         passive_carrier_count: 1,
         passive_concentration: 1,
         extra_passive_count: 0,
@@ -204,6 +216,7 @@ function completedJob(): BreedingJobDetailRpcSuccess {
         plan_id: "61000000-0000-4000-8000-000000000066",
         result_digest: "d".repeat(64),
         route_count: 3,
+        missing_passive_ids: [],
         explanation_codes: [],
         diagnostics: { search_complete: true },
         ai: {
@@ -305,12 +318,80 @@ describe("Phase 6 job comparison", () => {
 
     expect(screen.getByText("解释已降级")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /路线/ })).toHaveLength(3);
-    fireEvent.click(screen.getByRole("button", { name: "路线 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "可执行路线 2" }));
     expect(screen.getByText("fixture-parent-a-2")).toBeTruthy();
     expect(screen.getByText("Fixture Player B")).toBeTruthy();
     expect(screen.getByText("路线 2 模板解释")).toBeTruthy();
     expect(screen.getByText("完整评分明细")).toBeTruthy();
+    expect(screen.getByText("词条来源")).toBeTruthy();
+    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
     expect(screen.getByText(context.game_data_version_id)).toBeTruthy();
+  });
+
+  it("separates ready and fallback routes and selects the first ready route", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    const fallback = route(1);
+    fallback.feasibility_status = "needs_inventory";
+    fallback.adoptable = false;
+    fallback.missing_pal_count = 1;
+    fallback.missing_requirements = [
+      {
+        pal_id: "test_parent_b",
+        gender: "female",
+        required_passive_ids: [],
+        quantity: 1,
+        step_indexes: [0],
+      },
+    ];
+    value.data.plan.routes = [fallback, route(2)];
+    value.data.plan.route_count = 2;
+
+    const { container } = render(
+      <BreedingJobView initialResult={value} poll={false} />,
+    );
+
+    expect(screen.getByText("库存可执行方案")).toBeTruthy();
+    expect(screen.getByText(/需补充库存的备选方案/)).toBeTruthy();
+    expect(screen.getByText("fixture-parent-a-2")).toBeTruthy();
+    expect(container.querySelector("details")?.hasAttribute("open")).toBe(
+      false,
+    );
+    expect(screen.getByRole("button", { name: "采用此方案" })).toBeTruthy();
+  });
+
+  it("shows inventory-wide missing passive sources independently", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    const fallback = route(1);
+    fallback.feasibility_status = "needs_inventory";
+    fallback.adoptable = false;
+    fallback.inventory_passive_coverage = 0.5;
+    fallback.missing_passive_ids = ["test_passive_b"];
+    value.data.plan.missing_passive_ids = ["test_passive_b"];
+    value.data.plan.routes = [fallback];
+    value.data.plan.route_count = 1;
+
+    render(<BreedingJobView initialResult={value} poll={false} />);
+
+    expect(
+      screen.getAllByText("库存缺少以下目标被动来源：").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("test_passive_b").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
+  });
+
+  it("keeps route details shrinkable at a phone viewport", () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 375,
+    });
+    const { container } = render(
+      <BreedingJobView initialResult={completedJob()} poll={false} />,
+    );
+
+    expect(container.firstElementChild?.className).toContain("min-w-0");
+    expect(container.querySelectorAll(".break-all").length).toBeGreaterThan(0);
   });
 
   it.each([
@@ -425,7 +506,7 @@ describe("Phase 6 job comparison", () => {
       {
         pal_id: "test_parent_b",
         gender: "female",
-        required_passive_ids: ["test_passive_a"],
+        required_passive_ids: [],
         quantity: 1,
         step_indexes: [0],
       },
@@ -437,7 +518,7 @@ describe("Phase 6 job comparison", () => {
       owner_display_name: "缺少：需补充库存",
       gender: "female",
       passive_skill_ids: [],
-      required_passive_ids: ["test_passive_a"],
+      required_passive_ids: [],
       borrowed: false,
       produced_by_step_index: null,
       location_type: null,
@@ -450,6 +531,7 @@ describe("Phase 6 job comparison", () => {
 
     expect(screen.getByText("仍需准备 1 只 Pal")).toBeTruthy();
     expect(screen.getByText(/test_parent_b · 雌性/)).toBeTruthy();
+    expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
     expect(screen.getByText("父本")).toBeTruthy();
     expect(screen.getByText("母本")).toBeTruthy();
     expect(screen.getByText("补齐库存后才可采用此方案")).toBeTruthy();

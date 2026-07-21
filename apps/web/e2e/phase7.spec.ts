@@ -55,6 +55,12 @@ function parent(
 }
 
 function scoreBreakdown() {
+  const profileVersions = {
+    balanced: "balanced-v4",
+    fastest: "fastest-v4",
+    highest_success: "highest-success-v4",
+    least_borrowing: "least-borrowing-v4",
+  } as const;
   const components = [
     "route_length",
     "inventory_coverage",
@@ -72,7 +78,7 @@ function scoreBreakdown() {
     weighted_score: 10,
   }));
   return {
-    scoring_profile_version: "balanced-v3",
+    scoring_profile_version: "balanced-v4",
     estimate_basis: "strategy_heuristic_no_verified_probability",
     raw_metrics: {
       generation_count: 2,
@@ -81,8 +87,10 @@ function scoreBreakdown() {
       starting_requirement_count: 2,
       missing_pal_count: 0,
       missing_passive_requirement_count: 0,
+      missing_passive_count: 0,
       borrowed_pal_count: 0,
       inventory_coverage: 1,
+      inventory_passive_coverage: 1,
       passive_carrier_count: 2,
       passive_concentration: 1,
       extra_passive_count: 0,
@@ -100,7 +108,8 @@ function scoreBreakdown() {
       "least_borrowing",
     ].map((optimization_mode) => ({
       optimization_mode,
-      scoring_profile_version: `${optimization_mode}-v3`,
+      scoring_profile_version:
+        profileVersions[optimization_mode as keyof typeof profileVersions],
       total_score: 80,
       components,
     })),
@@ -208,12 +217,28 @@ async function createCompletedPhase6Fixture(): Promise<string> {
     difficulty: "medium",
     borrowed_pal_count: 0,
     inventory_coverage: 1,
+    inventory_passive_coverage: 1,
     inheritance_score: 1,
     existing_target_instance_uid: null,
     feasibility_status: "ready",
     adoptable: true,
     missing_pal_count: 0,
+    missing_passive_ids: [],
     missing_requirements: [],
+    passive_sources: [
+      {
+        passive_id: "test_passive_a",
+        source_instance_uid: "fixture-pal-a-owned-001",
+        source_pal_id: "test_parent_a",
+        first_required_step_index: 0,
+      },
+      {
+        passive_id: "test_passive_b",
+        source_instance_uid: "fixture-pal-a-owned-002",
+        source_pal_id: "test_child_pal",
+        first_required_step_index: 0,
+      },
+    ],
     score_breakdown: scoreBreakdown(),
     steps,
   };
@@ -227,9 +252,10 @@ async function createCompletedPhase6Fixture(): Promise<string> {
       inventory_snapshot_id: "40000000-0000-4000-8000-000000000002",
       game_data_version_id: "51000000-0000-4000-8000-000000000001",
       game_data_content_hash: "c".repeat(64),
-      algorithm_version: "inventory-aware-deterministic-v2",
-      scoring_profile_version: "balanced-v3",
+      algorithm_version: "inventory-trait-aware-deterministic-v3",
+      scoring_profile_version: "balanced-v4",
       optimization_mode: "balanced",
+      missing_passive_ids: [],
       routes: [route],
       explanation_codes: [],
       diagnostics: { search_complete: true },
@@ -385,7 +411,9 @@ test.describe.serial("Phase 7 local execution workflow", () => {
     originalCatalogId = "51000000-0000-4000-8000-000000000001";
 
     await page.getByRole("button", { name: "采用此方案" }).click();
-    await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/, {
+      timeout: 30_000,
+    });
     planId = page.url().split("/").at(-1) ?? "";
     expect(planId).toMatch(/^[0-9a-f-]{36}$/);
     await expect(

@@ -5,26 +5,23 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Final, cast
 
-from pal_hatch_helper.breeding.assignment import assign_species_route
+from pal_hatch_helper.breeding.assignment import AssignedRoute
 from pal_hatch_helper.breeding.facts import BreedingRuntimeFacts
 from pal_hatch_helper.breeding.index import BreedingRecipeIndex, ConcreteGender
 from pal_hatch_helper.breeding.inventory import select_eligible_inventory
-from pal_hatch_helper.breeding.limits import SearchBudget, SearchStopped
+from pal_hatch_helper.breeding.limits import SearchBudget
 from pal_hatch_helper.breeding.planning import (
     physical_plan_signature,
     plan_passive_retention,
     serialize_plan,
+    trace_passive_sources,
 )
 from pal_hatch_helper.breeding.scoring import (
     PROFILE_VERSIONS,
     mode_score,
     score_plan,
 )
-from pal_hatch_helper.breeding.search import (
-    SpeciesRoute,
-    direct_target_routes,
-    search_species_routes,
-)
+from pal_hatch_helper.breeding.trait_search import TraitSearchResult, search_trait_routes
 from pal_hatch_helper.generated import (
     BreedingEngineInventoryPal,
     BreedingEngineRequest,
@@ -40,7 +37,7 @@ from pal_hatch_helper.generated import (
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
-ALGORITHM_VERSION: Final = "inventory-aware-deterministic-v2"
+ALGORITHM_VERSION: Final = "inventory-trait-aware-deterministic-v3"
 
 
 class DeterministicBreedingEngine:
@@ -64,94 +61,106 @@ class DeterministicBreedingEngine:
             pal_id: tuple(sorted(instances, key=lambda item: item.instance_uid))
             for pal_id, instances in inventory_by_species_lists.items()
         }
-        species_node_budget = max(1, request.limits.max_expanded_nodes // 2)
-        assignment_node_budget = max(1, request.limits.max_expanded_nodes - species_node_budget)
-        species_time_budget = max(1, request.limits.timeout_ms // 2)
-        assignment_time_budget = max(1, request.limits.timeout_ms - species_time_budget)
-        species_budget = SearchBudget(
-            max_expanded_nodes=species_node_budget,
-            timeout_ms=species_time_budget,
+        passive_bits = {
+            passive_id: 1 << index for index, passive_id in enumerate(desired_passive_ids)
+        }
+        full_mask = (1 << len(desired_passive_ids)) - 1
+        available_passives = {
+            passive_id
+            for instance in inventory_selection.eligible
+            for passive_id in instance.passive_skill_ids
+            if passive_id in passive_bits
+        }
+        missing_passive_ids = tuple(
+            passive_id for passive_id in desired_passive_ids if passive_id not in available_passives
+        )
+        available_mask = full_mask
+        for passive_id in missing_passive_ids:
+            available_mask &= ~passive_bits[passive_id]
+
+        budget = SearchBudget(
+            max_expanded_nodes=request.limits.max_expanded_nodes,
+            timeout_ms=request.limits.timeout_ms,
             clock=self._clock,
         )
-        species_result = search_species_routes(
-            index,
-            starting_species=frozenset(inventory_by_species),
-            target_pal_id=request.target_pal_id,
-            max_generations=request.limits.max_generations,
-            max_routes_per_pal=request.limits.max_species_routes_per_pal,
-            budget=species_budget,
+        ready_result = (
+            search_trait_routes(
+                index,
+                inventory_by_species=inventory_by_species,
+                desired_passive_ids=desired_passive_ids,
+                requester_player_id=request.requester_player_id,
+                target_pal_id=request.target_pal_id,
+                required_mask=full_mask,
+                max_generations=request.limits.max_generations,
+                max_states_per_state=request.limits.max_assignment_states_per_mask,
+                max_frontier_expansions=max(32, request.limits.max_species_routes_per_pal * 32),
+                include_missing_leaves=False,
+                budget=budget,
+            )
+            if not missing_passive_ids
+            else TraitSearchResult((), 0, 0, None)
         )
-        fallback_result = direct_target_routes(
-            index,
-            inventory_species=frozenset(inventory_by_species),
-            target_pal_id=request.target_pal_id,
-            max_routes=request.limits.max_species_routes_per_pal,
-        )
-        species_routes_by_key: dict[str, SpeciesRoute] = {}
-        fallback_head = fallback_result.routes[:1]
-        fallback_seed_signature = fallback_head[0].signature if fallback_head else None
-        for route in (
-            *fallback_head,
-            *species_result.routes,
-            *fallback_result.routes[1:],
-        ):
-            species_routes_by_key.setdefault(route.signature, route)
-        species_routes = tuple(species_routes_by_key.values())
-        assignment_budget = SearchBudget(
-            max_expanded_nodes=assignment_node_budget,
-            timeout_ms=assignment_time_budget,
-            clock=self._clock,
-        )
-        pruned_assignment_states = 0
-        candidates_by_key: dict[str, BreedingRouteCandidate] = {}
+
         physical_plan_keys: set[str] = set()
         pruned_physical_duplicates = 0
-        stopped_by = species_result.stopped_by
 
-        for species_route in species_routes:
-            try:
-                assignment_result = assign_species_route(
-                    species_route,
-                    inventory_by_species=inventory_by_species,
-                    desired_passive_ids=desired_passive_ids,
-                    requester_player_id=request.requester_player_id,
-                    max_states_per_mask=request.limits.max_assignment_states_per_mask,
-                    budget=assignment_budget,
+        def collect_candidates(
+            assignments: tuple[AssignedRoute, ...],
+            *,
+            required_mask: int,
+            fallback: bool,
+        ) -> dict[str, BreedingRouteCandidate]:
+            nonlocal pruned_physical_duplicates
+            candidates: dict[str, BreedingRouteCandidate] = {}
+            for assignment in assignments:
+                is_fallback = bool(assignment.missing_leaf_count or missing_passive_ids)
+                if is_fallback != fallback:
+                    continue
+                planned = plan_passive_retention(
+                    assignment,
+                    desired_passive_ids,
+                    required_mask=required_mask,
                 )
-            except SearchStopped as stopped:
-                stopped_by = stopped.limit
-                break
-            pruned_assignment_states += assignment_result.pruned_states
-            for assignment in assignment_result.assignments:
-                planned = plan_passive_retention(assignment, desired_passive_ids)
                 serialized = serialize_plan(
                     planned,
                     desired_passive_ids=desired_passive_ids,
                     requester_player_id=request.requester_player_id,
                 )
+                if any(
+                    requirement.required_passive_ids
+                    for requirement in serialized.missing_requirements
+                ):
+                    raise RuntimeError("missing inventory requirements cannot provide passives")
                 physical_key = physical_plan_signature(serialized)
                 if physical_key in physical_plan_keys:
                     pruned_physical_duplicates += 1
                     continue
-                if len(candidates_by_key) >= request.limits.max_candidate_routes:
+                if len(candidates) >= request.limits.max_candidate_routes:
                     break
                 _validate_serialized_relations(index, serialized.steps)
+                passive_sources = trace_passive_sources(serialized, desired_passive_ids)
+                inventory_passive_coverage = (
+                    1.0
+                    if not desired_passive_ids
+                    else len(passive_sources) / len(desired_passive_ids)
+                )
+                if not fallback and inventory_passive_coverage != 1:
+                    raise RuntimeError("ready route passives must all trace to inventory")
                 scored = score_plan(
                     planned,
                     serialized,
                     desired_passive_ids=desired_passive_ids,
                     requested_scoring_profile_version=request.scoring_profile_version,
+                    inventory_passive_coverage=inventory_passive_coverage,
+                    missing_passive_count=len(missing_passive_ids),
                 )
                 route_key = _route_key(request, physical_key)
                 physical_plan_keys.add(physical_key)
-                candidates_by_key[route_key] = BreedingRouteCandidate(
+                candidates[route_key] = BreedingRouteCandidate(
                     route_key=route_key,
                     rank=1,
                     optimization_mode=request.optimization_mode,
-                    total_score=mode_score(
-                        scored.breakdown,
-                        request.optimization_mode,
-                    ),
+                    total_score=mode_score(scored.breakdown, request.optimization_mode),
                     generation_count=scored.metrics.generation_count,
                     step_count=scored.metrics.step_count,
                     estimated_attempts_min=scored.metrics.estimated_attempts_min,
@@ -159,30 +168,56 @@ class DeterministicBreedingEngine:
                     difficulty=scored.metrics.difficulty,
                     borrowed_pal_count=scored.metrics.borrowed_pal_count,
                     inventory_coverage=scored.metrics.inventory_coverage,
+                    inventory_passive_coverage=inventory_passive_coverage,
                     inheritance_score=scored.inheritance_score,
                     feasibility_status=(
-                        BreedingFeasibilityStatus.READY
-                        if not serialized.missing_requirements
-                        else BreedingFeasibilityStatus.NEEDS_INVENTORY
+                        BreedingFeasibilityStatus.NEEDS_INVENTORY
+                        if fallback
+                        else BreedingFeasibilityStatus.READY
                     ),
-                    adoptable=not serialized.missing_requirements,
+                    adoptable=not fallback,
                     missing_pal_count=sum(
                         item.quantity for item in serialized.missing_requirements
                     ),
+                    missing_passive_ids=list(missing_passive_ids),
                     missing_requirements=list(serialized.missing_requirements),
-                    existing_target_instance_uid=(serialized.existing_target_instance_uid),
+                    passive_sources=list(passive_sources),
+                    existing_target_instance_uid=serialized.existing_target_instance_uid,
                     score_breakdown=scored.breakdown,
                     steps=list(serialized.steps),
                 )
-                if (
-                    species_route.signature == fallback_seed_signature
-                    and serialized.missing_requirements
-                ):
-                    break
-            if len(candidates_by_key) >= request.limits.max_candidate_routes:
-                break
+            return candidates
 
+        ready_candidates = collect_candidates(
+            ready_result.assignments,
+            required_mask=full_mask,
+            fallback=False,
+        )
+        fallback_result = TraitSearchResult((), 0, 0, None)
+        fallback_candidates: dict[str, BreedingRouteCandidate] = {}
+        if len(ready_candidates) < request.limits.max_results and ready_result.stopped_by is None:
+            fallback_result = search_trait_routes(
+                index,
+                inventory_by_species=inventory_by_species,
+                desired_passive_ids=desired_passive_ids,
+                requester_player_id=request.requester_player_id,
+                target_pal_id=request.target_pal_id,
+                required_mask=available_mask,
+                max_generations=request.limits.max_generations,
+                max_states_per_state=request.limits.max_assignment_states_per_mask,
+                max_frontier_expansions=max(32, request.limits.max_species_routes_per_pal * 32),
+                include_missing_leaves=True,
+                budget=budget,
+            )
+            fallback_candidates = collect_candidates(
+                fallback_result.assignments,
+                required_mask=available_mask,
+                fallback=True,
+            )
+
+        candidates_by_key = {**ready_candidates, **fallback_candidates}
         all_candidates = tuple(candidates_by_key.values())
+        stopped_by = ready_result.stopped_by or fallback_result.stopped_by
         requested_order = sorted(
             all_candidates,
             key=lambda candidate: _candidate_rank(candidate, request.optimization_mode),
@@ -211,18 +246,13 @@ class DeterministicBreedingEngine:
                 start=1,
             )
         ]
-        hit_limits = tuple(
-            sorted(
-                {*species_budget.hit_limits, *assignment_budget.hit_limits},
-                key=lambda item: item.value,
-            )
-        )
+        hit_limits = budget.hit_limits
         search_complete = not hit_limits and stopped_by is None
+        pruned_trait_states = ready_result.pruned_states + fallback_result.pruned_states
         soft_pruned = bool(
-            species_result.pruned_routes
-            or fallback_result.pruned_routes
-            or pruned_assignment_states
-            or len(all_candidates) >= request.limits.max_candidate_routes
+            pruned_trait_states
+            or len(ready_candidates) >= request.limits.max_candidate_routes
+            or len(fallback_candidates) >= request.limits.max_candidate_routes
         )
         returned_all = (
             search_complete
@@ -239,14 +269,14 @@ class DeterministicBreedingEngine:
                 BreedingInventoryExclusion(reason=reason, count=count)
                 for reason, count in inventory_selection.exclusions
             ],
-            expanded_species_nodes=species_budget.expanded_species_nodes,
-            expanded_assignment_nodes=assignment_budget.expanded_assignment_nodes,
-            expanded_nodes=(species_budget.expanded_nodes + assignment_budget.expanded_nodes),
-            pruned_species_routes=(species_result.pruned_routes + fallback_result.pruned_routes),
-            pruned_assignment_states=pruned_assignment_states,
+            expanded_species_nodes=budget.expanded_species_nodes,
+            expanded_assignment_nodes=budget.expanded_assignment_nodes,
+            expanded_nodes=budget.expanded_nodes,
+            pruned_species_routes=0,
+            pruned_assignment_states=pruned_trait_states,
             pruned_duplicate_routes=(
-                species_result.duplicate_routes
-                + fallback_result.duplicate_routes
+                ready_result.duplicate_states
+                + fallback_result.duplicate_states
                 + pruned_physical_duplicates
             ),
             candidate_routes_evaluated=len(all_candidates),
@@ -263,6 +293,7 @@ class DeterministicBreedingEngine:
             algorithm_version=request.algorithm_version,
             scoring_profile_version=request.scoring_profile_version,
             optimization_mode=request.optimization_mode,
+            missing_passive_ids=list(missing_passive_ids),
             routes=returned,
             mode_rankings=_mode_rankings(returned),
             explanation_codes=_explanation_codes(
@@ -270,6 +301,7 @@ class DeterministicBreedingEngine:
                 returned_all=returned_all,
                 hit_limits=hit_limits,
                 soft_pruned=soft_pruned,
+                missing_passive_ids=missing_passive_ids,
             ),
             diagnostics=diagnostics,
             result_digest="0" * 64,
@@ -381,9 +413,10 @@ def _route_key(request: BreedingEngineRequest, plan_signature: str) -> str:
 def _candidate_rank(
     candidate: BreedingRouteCandidate,
     mode: OptimizationMode,
-) -> tuple[int, float, int, int, int, str]:
+) -> tuple[int, int, float, int, int, int, str]:
     score = mode_score(candidate.score_breakdown, mode)
     return (
+        0 if candidate.feasibility_status is BreedingFeasibilityStatus.READY else 1,
         candidate.missing_pal_count,
         -score,
         candidate.generation_count,
@@ -418,8 +451,11 @@ def _explanation_codes(
     returned_all: bool,
     hit_limits: tuple[BreedingSearchLimit, ...],
     soft_pruned: bool,
+    missing_passive_ids: tuple[str, ...],
 ) -> list[str]:
     codes: list[str] = []
+    if missing_passive_ids:
+        codes.append("MISSING_PASSIVE_SOURCES")
     if BreedingSearchLimit.TIMEOUT in hit_limits:
         codes.append("SEARCH_TIMEOUT")
     if any(limit != BreedingSearchLimit.TIMEOUT for limit in hit_limits):

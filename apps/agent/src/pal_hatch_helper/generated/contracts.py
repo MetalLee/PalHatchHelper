@@ -587,7 +587,7 @@ class BreedingMissingRequirement(BaseModel):
     gender: BreedingRequiredGender
     required_passive_ids: Annotated[
         list[BreedingEngineStableId],
-        Field(max_length=4),
+        Field(max_length=0),
         AfterValidator(_ensure_unique),
     ]
     quantity: Annotated[int, Field(ge=1)]
@@ -596,6 +596,15 @@ class BreedingMissingRequirement(BaseModel):
         Field(min_length=1),
         AfterValidator(_ensure_unique),
     ]
+
+
+class BreedingPassiveSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    passive_id: BreedingEngineStableId
+    source_instance_uid: BreedingEngineInstanceUid
+    source_pal_id: BreedingEngineStableId
+    first_required_step_index: Annotated[int, Field(ge=0)]
 
 
 class BreedingRawScoreMetrics(BaseModel):
@@ -607,8 +616,10 @@ class BreedingRawScoreMetrics(BaseModel):
     starting_requirement_count: Annotated[int, Field(ge=1)]
     missing_pal_count: Annotated[int, Field(ge=0)]
     missing_passive_requirement_count: Annotated[int, Field(ge=0)]
+    missing_passive_count: Annotated[int, Field(ge=0)]
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    inventory_passive_coverage: Annotated[float, Field(ge=0), Field(le=1)]
     passive_carrier_count: Annotated[int, Field(ge=0)]
     passive_concentration: Annotated[float, Field(ge=0), Field(le=1)]
     extra_passive_count: Annotated[int, Field(ge=0)]
@@ -662,11 +673,18 @@ class BreedingRouteCandidate(BaseModel):
     difficulty: BreedingDifficulty
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    inventory_passive_coverage: Annotated[float, Field(ge=0), Field(le=1)]
     inheritance_score: Annotated[float, Field(ge=0), Field(le=1)]
     feasibility_status: BreedingFeasibilityStatus
     adoptable: bool
     missing_pal_count: Annotated[int, Field(ge=0)]
+    missing_passive_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
     missing_requirements: list[BreedingMissingRequirement]
+    passive_sources: Annotated[list[BreedingPassiveSource], Field(max_length=4)]
     existing_target_instance_uid: BreedingEngineInstanceUid | None
     score_breakdown: BreedingScoreBreakdown
     steps: list[BreedingRouteStep]
@@ -719,6 +737,11 @@ class BreedingEngineResult(BaseModel):
     algorithm_version: BreedingEngineVersion
     scoring_profile_version: BreedingEngineVersion
     optimization_mode: OptimizationMode
+    missing_passive_ids: Annotated[
+        list[BreedingEngineStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
     routes: list[BreedingRouteCandidate]
     mode_rankings: Annotated[list[BreedingModeRanking], Field(min_length=4), Field(max_length=4)]
     explanation_codes: Annotated[
@@ -973,8 +996,10 @@ class RouteRawScoreMetrics(BaseModel):
     starting_requirement_count: Annotated[int, Field(ge=1)] = 1
     missing_pal_count: Annotated[int, Field(ge=0)] = 0
     missing_passive_requirement_count: Annotated[int, Field(ge=0)] = 0
+    missing_passive_count: Annotated[int, Field(ge=0)] = 0
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    inventory_passive_coverage: Annotated[float, Field(ge=0), Field(le=1)] = 1
     passive_carrier_count: Annotated[int, Field(ge=0)]
     passive_concentration: Annotated[float, Field(ge=0), Field(le=1)]
     extra_passive_count: Annotated[int, Field(ge=0)]
@@ -1091,6 +1116,15 @@ class BreedingMissingRequirementView(BaseModel):
     ]
 
 
+class BreedingPassiveSourceView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    passive_id: BreederStableId
+    source_instance_uid: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    source_pal_id: BreederStableId
+    first_required_step_index: Annotated[int, Field(ge=0)]
+
+
 class AIExplanation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1169,11 +1203,18 @@ class BreedingRoute(BaseModel):
     difficulty: BreederDifficulty
     borrowed_pal_count: Annotated[int, Field(ge=0)]
     inventory_coverage: Annotated[float, Field(ge=0), Field(le=1)]
+    inventory_passive_coverage: Annotated[float, Field(ge=0), Field(le=1)]
     inheritance_score: Annotated[float, Field(ge=0), Field(le=1)]
     feasibility_status: Literal["ready", "needs_inventory"]
     adoptable: bool
     missing_pal_count: Annotated[int, Field(ge=0)]
+    missing_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
     missing_requirements: list[BreedingMissingRequirementView]
+    passive_sources: Annotated[list[BreedingPassiveSourceView], Field(max_length=4)]
     existing_target_instance_uid: Annotated[str, Field(max_length=160)] | None
     score_breakdown: RouteScoreBreakdown
     steps: list[BreedingRouteViewStep]
@@ -1187,6 +1228,11 @@ class BreedingPlan(BaseModel):
     plan_id: UUID
     result_digest: BreederSha256
     route_count: Annotated[int, Field(ge=0), Field(le=3)]
+    missing_passive_ids: Annotated[
+        list[BreederStableId],
+        Field(max_length=4),
+        AfterValidator(_ensure_unique),
+    ]
     explanation_codes: Annotated[
         list[Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]],
         AfterValidator(_ensure_unique),

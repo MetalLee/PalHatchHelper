@@ -32,11 +32,14 @@ const legacyRoute = {
   difficulty: "low",
   borrowed_pal_count: 0,
   inventory_coverage: 1,
+  inventory_passive_coverage: 1,
   inheritance_score: 1,
   feasibility_status: "ready",
   adoptable: true,
   missing_pal_count: 0,
+  missing_passive_ids: [],
   missing_requirements: [],
+  passive_sources: [],
   existing_target_instance_uid: null,
   score_breakdown: {
     scoring_profile_version: "balanced-v2",
@@ -134,6 +137,7 @@ describe("Phase 6 historical route compatibility", () => {
           plan_id: "61000000-0000-4000-8000-000000000001",
           result_digest: "d".repeat(64),
           route_count: 1,
+          missing_passive_ids: [],
           explanation_codes: [],
           diagnostics: { search_complete: true },
           ai: {

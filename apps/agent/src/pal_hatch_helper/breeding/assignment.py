@@ -112,7 +112,7 @@ def assign_species_route(
                     instance=None,
                     parent_a=None,
                     parent_b=None,
-                    coverage_mask=full_mask,
+                    coverage_mask=0,
                     used_instance_uids=frozenset(),
                     borrowed_instance_uids=frozenset(),
                     missing_leaf_count=1,

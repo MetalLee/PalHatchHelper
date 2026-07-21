@@ -241,8 +241,19 @@
           "minimum": 0,
           "default": 0
         },
+        "missing_passive_count": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
         "borrowed_pal_count": { "type": "integer", "minimum": 0 },
         "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "inventory_passive_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        },
         "passive_carrier_count": { "type": "integer", "minimum": 0 },
         "passive_concentration": {
           "type": "number",
@@ -476,6 +487,26 @@
         }
       }
     },
+    "BreedingPassiveSourceView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "passive_id",
+        "source_instance_uid",
+        "source_pal_id",
+        "first_required_step_index"
+      ],
+      "properties": {
+        "passive_id": { "$ref": "#/$defs/BreederStableId" },
+        "source_instance_uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "source_pal_id": { "$ref": "#/$defs/BreederStableId" },
+        "first_required_step_index": { "type": "integer", "minimum": 0 }
+      }
+    },
     "AIExplanation": {
       "type": "object",
       "additionalProperties": false,
@@ -619,11 +650,14 @@
         "difficulty",
         "borrowed_pal_count",
         "inventory_coverage",
+        "inventory_passive_coverage",
         "inheritance_score",
         "feasibility_status",
         "adoptable",
         "missing_pal_count",
+        "missing_passive_ids",
         "missing_requirements",
+        "passive_sources",
         "existing_target_instance_uid",
         "score_breakdown",
         "steps",
@@ -644,6 +678,11 @@
         "difficulty": { "$ref": "#/$defs/BreederDifficulty" },
         "borrowed_pal_count": { "type": "integer", "minimum": 0 },
         "inventory_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "inventory_passive_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "inheritance_score": { "type": "number", "minimum": 0, "maximum": 1 },
         "feasibility_status": {
           "type": "string",
@@ -651,9 +690,20 @@
         },
         "adoptable": { "type": "boolean" },
         "missing_pal_count": { "type": "integer", "minimum": 0 },
+        "missing_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreederStableId" }
+        },
         "missing_requirements": {
           "type": "array",
           "items": { "$ref": "#/$defs/BreedingMissingRequirementView" }
+        },
+        "passive_sources": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/BreedingPassiveSourceView" }
         },
         "existing_target_instance_uid": {
           "type": ["string", "null"],
@@ -679,6 +729,7 @@
         "plan_id",
         "result_digest",
         "route_count",
+        "missing_passive_ids",
         "explanation_codes",
         "diagnostics",
         "ai",
@@ -688,6 +739,12 @@
         "plan_id": { "type": "string", "format": "uuid" },
         "result_digest": { "$ref": "#/$defs/BreederSha256" },
         "route_count": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "missing_passive_ids": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/BreederStableId" }
+        },
         "explanation_codes": {
           "type": "array",
           "uniqueItems": true,

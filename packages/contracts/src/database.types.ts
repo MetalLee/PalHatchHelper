@@ -569,6 +569,7 @@ export type Database = {
           explanation_codes: string[];
           diagnostics: Json;
           ai_degraded: boolean;
+          missing_passive_ids: string[];
         };
         Insert: {
           id?: string;
@@ -583,6 +584,7 @@ export type Database = {
           explanation_codes?: string[];
           diagnostics?: Json;
           ai_degraded?: boolean;
+          missing_passive_ids?: string[];
         };
         Update: {
           id?: string;
@@ -597,6 +599,7 @@ export type Database = {
           explanation_codes?: string[];
           diagnostics?: Json;
           ai_degraded?: boolean;
+          missing_passive_ids?: string[];
         };
         Relationships: [
           {

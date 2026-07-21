@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from pal_hatch_helper.generated import (
     BreedingEngineInventoryPal,
     BreedingEngineRequest,
+    BreedingPassiveSource,
     BreedingSearchLimits,
 )
 
@@ -88,3 +89,15 @@ def test_engine_contract_has_no_ai_score_or_legality_override() -> None:
 
     with pytest.raises(ValidationError):
         BreedingEngineRequest.model_validate(data)
+
+
+def test_passive_source_requires_a_real_inventory_instance_uid() -> None:
+    with pytest.raises(ValidationError):
+        BreedingPassiveSource.model_validate(
+            {
+                "passive_id": "passive-a",
+                "source_instance_uid": "",
+                "source_pal_id": "pal-a",
+                "first_required_step_index": 0,
+            }
+        )
