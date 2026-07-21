@@ -477,6 +477,11 @@ select:focus-visible {
   background: rgba(45, 212, 191, 0.06);
 }
 
+.secondary-button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -605,6 +610,43 @@ select:focus-visible {
   grid-template-columns: 1fr;
   gap: 0.75rem;
   padding-top: 0.85rem;
+}
+
+.pal-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.pal-page-summary {
+  min-width: 7rem;
+  color: #a9bdc2;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pal-page-jump {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #91a5ad;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pal-page-jump input[type="number"] {
+  width: 4.75rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: #08141c;
+  padding: 0 0.65rem;
+  color: #e7f3f1;
 }
 
 .filter-field,

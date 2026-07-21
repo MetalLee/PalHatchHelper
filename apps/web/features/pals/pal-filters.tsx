@@ -9,6 +9,21 @@ const scopes = [
   ["shared", "公会共享"],
 ] as const;
 
+const genderLabels = {
+  male: "雄性",
+  female: "雌性",
+  genderless: "无性别",
+  unknown: "未知",
+} as const;
+
+const locationLabels = {
+  player_party: "队伍",
+  player_storage: "终端",
+  base: "据点",
+  viewing_cage: "观赏笼",
+  unknown: "未知",
+} as const;
+
 function scopeHref(scope: string): string {
   return `/pals?scope=${scope}`;
 }
@@ -17,25 +32,6 @@ export function PalFilters({
   query,
   page,
 }: Readonly<{ query: PalListQuery; page: PalInventoryPage }>) {
-  const owners = Array.from(
-    new Map(
-      page.items.map((item) => [
-        item.owner_filter_key,
-        item.owner_display_name,
-      ]),
-    ),
-  );
-  const passives = Array.from(
-    new Map(
-      page.items.flatMap((item) =>
-        item.passive_skill_ids.map((id, index) => [
-          id,
-          item.passive_display_names[index] ?? id,
-        ]),
-      ),
-    ),
-  );
-
   return (
     <section className="filter-panel" aria-label="库存筛选">
       <div className="scope-tabs" aria-label="库存范围">
@@ -65,9 +61,9 @@ export function PalFilters({
           <span>所有者</span>
           <select name="owner" defaultValue={query.owner}>
             <option value="">全部所有者</option>
-            {owners.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
+            {page.filter_options.owners.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -76,19 +72,20 @@ export function PalFilters({
           <span>性别</span>
           <select name="gender" defaultValue={query.gender}>
             <option value="">全部性别</option>
-            <option value="male">雄性</option>
-            <option value="female">雌性</option>
-            <option value="genderless">无性别</option>
-            <option value="unknown">未知</option>
+            {page.filter_options.genders.map((gender) => (
+              <option key={gender} value={gender}>
+                {genderLabels[gender]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="filter-field">
           <span>被动</span>
           <select name="passive" defaultValue={query.passive}>
             <option value="">全部被动</option>
-            {passives.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
+            {page.filter_options.passives.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -97,11 +94,11 @@ export function PalFilters({
           <span>位置</span>
           <select name="location" defaultValue={query.location}>
             <option value="">全部位置</option>
-            <option value="player_party">队伍</option>
-            <option value="player_storage">终端</option>
-            <option value="base">据点</option>
-            <option value="viewing_cage">观赏笼</option>
-            <option value="unknown">未知</option>
+            {page.filter_options.locations.map((location) => (
+              <option key={location} value={location}>
+                {locationLabels[location]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="filter-field">

@@ -133,6 +133,7 @@ const functions = await sql`
       'invalidate_execution_plan_dependencies',
       'list_available_pals',
       'list_available_pals_page',
+      'list_available_pals_page_v2',
       'list_admin_audit_events',
       'list_admin_binding_candidates',
       'list_admin_catalog_versions',

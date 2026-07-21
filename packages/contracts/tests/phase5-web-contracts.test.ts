@@ -41,7 +41,14 @@ describe("Phase 5 web contracts", () => {
         },
       ],
       total_count: 1,
-      next_cursor: null,
+      page_number: 1,
+      total_pages: 1,
+      filter_options: {
+        owners: [{ value: "a".repeat(64), label: "Fixture Player A" }],
+        genders: ["male"],
+        passives: [{ value: "test_passive_a", label: "认真" }],
+        locations: ["player_storage"],
+      },
       catalog_state: "published",
       game_data_version_id: "51000000-0000-4000-8000-000000000001",
     };

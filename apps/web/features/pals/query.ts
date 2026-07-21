@@ -12,14 +12,13 @@ export interface PalListQuery {
   location: PalLocationType | "";
   shared: boolean | null;
   page_size: number;
-  cursor: string | null;
+  page: number;
+  context: string | null;
 }
 
-export interface InventoryCursor {
+export interface InventoryPageContext {
   snapshot_id: string;
   game_data_version_id: string | null;
-  pal_id: string;
-  pal_instance_uid: string;
 }
 
 const scopes = new Set<InventoryScope>(["all", "mine", "shared"]);
@@ -44,8 +43,9 @@ export function parsePalListQuery(params: URLSearchParams): PalListQuery {
     params.get("page_size") ?? "24",
     10,
   );
+  const requestedPage = Number.parseInt(params.get("page") ?? "1", 10);
   const shared = params.get("shared");
-  const cursor = shortValue(params.get("cursor"), 640);
+  const context = shortValue(params.get("context"), 320);
 
   return {
     scope:
@@ -68,34 +68,32 @@ export function parsePalListQuery(params: URLSearchParams): PalListQuery {
       Number.isFinite(requestedPageSize) && requestedPageSize >= 1
         ? Math.min(requestedPageSize, 50)
         : 24,
-    cursor: decodeCursor(cursor),
+    page:
+      Number.isFinite(requestedPage) && requestedPage >= 1
+        ? Math.min(requestedPage, 1_000_000)
+        : 1,
+    context: decodePageContext(context) === null ? null : context,
   };
 }
 
-export function encodeCursor(cursor: InventoryCursor): string {
-  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+export function encodePageContext(context: InventoryPageContext): string {
+  return Buffer.from(JSON.stringify(context), "utf8").toString("base64url");
 }
 
-export function decodeCursorValue(
-  cursor: string | null,
-): InventoryCursor | null {
-  if (cursor === null || cursor.length === 0 || cursor.length > 640)
+export function decodePageContext(
+  context: string | null,
+): InventoryPageContext | null {
+  if (context === null || context.length === 0 || context.length > 320)
     return null;
   try {
     const value = JSON.parse(
-      Buffer.from(cursor, "base64url").toString("utf8"),
-    ) as Partial<InventoryCursor>;
+      Buffer.from(context, "base64url").toString("utf8"),
+    ) as Partial<InventoryPageContext>;
     if (
       typeof value.snapshot_id !== "string" ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
         value.snapshot_id,
-      ) ||
-      typeof value.pal_id !== "string" ||
-      value.pal_id.length < 1 ||
-      value.pal_id.length > 120 ||
-      typeof value.pal_instance_uid !== "string" ||
-      value.pal_instance_uid.length < 1 ||
-      value.pal_instance_uid.length > 160
+      )
     ) {
       return null;
     }
@@ -111,14 +109,8 @@ export function decodeCursorValue(
     return {
       snapshot_id: value.snapshot_id,
       game_data_version_id: value.game_data_version_id,
-      pal_id: value.pal_id,
-      pal_instance_uid: value.pal_instance_uid,
     };
   } catch {
     return null;
   }
-}
-
-function decodeCursor(cursor: string): string | null {
-  return decodeCursorValue(cursor) === null ? null : cursor;
 }
