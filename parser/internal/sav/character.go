@@ -70,7 +70,7 @@ func characterFromEntry(e mapEntry, stats *ParseStats) (*Player, *Pal, error) {
 		}
 		return p, nil, nil
 	}
-	pal := &Pal{InstanceID: instance, CharacterID: firstString(sp, "CharacterID", "CharacterId", "character_id"), Level: int32(firstInt(sp, "Level")), Exp: firstInt(sp, "Exp"), HP: fixedPointDisplay(firstNumber(sp, "HP", "Hp")), OwnerUID: firstString(sp, "OwnerPlayerUId", "OwnerPlayerUID"), IsLucky: firstBool(sp, "IsRarePal", "IsLucky"), IsBoss: firstBool(sp, "IsBoss"), Talents: map[string]int{}, SlotIndex: -1}
+	pal := &Pal{InstanceID: instance, CharacterID: firstString(sp, "CharacterID", "CharacterId", "character_id"), Level: palLevel(sp), Exp: firstInt(sp, "Exp"), HP: fixedPointDisplay(firstNumber(sp, "HP", "Hp")), OwnerUID: firstString(sp, "OwnerPlayerUId", "OwnerPlayerUID"), IsLucky: firstBool(sp, "IsRarePal", "IsLucky"), IsBoss: firstBool(sp, "IsBoss"), Talents: map[string]int{}, SlotIndex: -1}
 	pal.Gender = normalizedGender(firstString(sp, "Gender"))
 	pal.PassiveSkillIDs = propertyStringArray(sp, "PassiveSkillList")
 	pal.EquippedSkillIDs = normalizedEnumArray(propertyStringArray(sp, "EquipWaza"), "EPalWazaID::")
@@ -105,6 +105,20 @@ func characterFromEntry(e mapEntry, stats *ParseStats) (*Player, *Pal, error) {
 		pal.Talents = nil
 	}
 	return nil, pal, nil
+}
+
+// palLevel preserves an explicit serialized value while applying Palworld's
+// default level of 1 when Unreal omits the property. An explicit but
+// undecodable Level stays 0 so canonical validation reports it as unknown.
+func palLevel(parameters propertyMap) int32 {
+	if parameters["Level"] == nil {
+		return 1
+	}
+	level, ok := propertyInt(parameters, "Level")
+	if !ok {
+		return 0
+	}
+	return int32(level)
 }
 
 func fixedPointDisplay(value float64) float64 {

@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(33);
+select plan(38);
 
 select has_function(
   'public',
@@ -223,6 +223,85 @@ select is(
   (select count(*)::integer from public.inventory_snapshots where world_id = '10000000-0000-4000-8000-000000000001' and source_save_hash = repeat('c', 64)),
   1,
   'duplicate publication does not create another snapshot row'
+);
+select is(
+  (
+    select concat_ws('|', parser_name, parser_version)
+    from jsonb_to_record(public.get_latest_inventory_snapshot_for_agent(
+      '10000000-0000-4000-8000-000000000001'
+    )) as latest(
+      snapshot_id uuid,
+      source_save_hash text,
+      pal_count integer,
+      parser_name text,
+      parser_version text
+    )
+  ),
+  'fixture-parser|2.0.0',
+  'latest inventory summary includes the parser identity'
+);
+insert into published_snapshot_ids (name, snapshot_id)
+select
+  'parser-upgrade',
+  public.publish_inventory_snapshot(
+    '10000000-0000-4000-8000-000000000001',
+    jsonb_build_object(
+      'source_save_hash', repeat('c', 64),
+      'source_modified_at', '2026-07-14T03:00:00Z',
+      'save_version', 'fixture-save-v2',
+      'captured_at', '2026-07-14T03:00:00Z',
+      'parser_name', 'fixture-parser',
+      'parser_version', '2.0.1',
+      'server', jsonb_build_object('world_uid', 'fixture-world-local'),
+      'guilds', '[]'::jsonb,
+      'players', '[]'::jsonb,
+      'pals', '[]'::jsonb,
+      'warnings', '[]'::jsonb
+    )
+  );
+select isnt(
+  (select snapshot_id from published_snapshot_ids where name = 'parser-upgrade'),
+  (select snapshot_id from published_snapshot_ids where name = 'first'),
+  'a new parser version can publish the same immutable source bytes as a new snapshot'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.inventory_snapshots
+    where world_id = '10000000-0000-4000-8000-000000000001'
+      and source_save_hash = repeat('c', 64)
+  ),
+  2,
+  'successful snapshot identity includes parser name and version'
+);
+select is(
+  public.publish_inventory_snapshot(
+    '10000000-0000-4000-8000-000000000001',
+    jsonb_build_object(
+      'source_save_hash', repeat('c', 64),
+      'source_modified_at', '2026-07-14T03:00:00Z',
+      'save_version', 'fixture-save-v2',
+      'captured_at', '2026-07-14T03:00:00Z',
+      'parser_name', 'fixture-parser',
+      'parser_version', '2.0.1',
+      'server', jsonb_build_object('world_uid', 'fixture-world-local'),
+      'guilds', '[]'::jsonb,
+      'players', '[]'::jsonb,
+      'pals', '[]'::jsonb,
+      'warnings', '[]'::jsonb
+    )
+  ),
+  (select snapshot_id from published_snapshot_ids where name = 'parser-upgrade'),
+  'the same source and parser identity remains idempotent'
+);
+select is(
+  (
+    select latest_snapshot_id
+    from public.worlds
+    where id = '10000000-0000-4000-8000-000000000001'
+  ),
+  (select snapshot_id from published_snapshot_ids where name = 'parser-upgrade'),
+  'parser-upgrade publication atomically becomes latest'
 );
 select public.publish_inventory_snapshot(
   '10000000-0000-4000-8000-000000000001',

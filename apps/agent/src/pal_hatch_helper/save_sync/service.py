@@ -58,10 +58,17 @@ class InventorySyncService:
 
     async def sync_once(self) -> InventorySyncResult:
         latest = await self._repository.latest(self._world_id)
+        previous_content_hash = None
+        if (
+            latest is not None
+            and latest.parser_name == self._parser.name
+            and latest.parser_version == self._parser.version
+        ):
+            previous_content_hash = latest.source_save_hash
         outcome = self._copier.create(
             self._source_root,
             self._parser.required_files(),
-            previous_content_hash=(latest.source_save_hash if latest is not None else None),
+            previous_content_hash=previous_content_hash,
         )
         if outcome.duplicate:
             if self._published_snapshot_processor is not None and latest is not None:
