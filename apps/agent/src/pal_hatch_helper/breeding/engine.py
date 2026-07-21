@@ -37,7 +37,7 @@ from pal_hatch_helper.generated import (
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
-ALGORITHM_VERSION: Final = "inventory-trait-aware-deterministic-v3"
+ALGORITHM_VERSION: Final = "inventory-trait-aware-deterministic-v4"
 
 
 class DeterministicBreedingEngine:
@@ -94,11 +94,12 @@ class DeterministicBreedingEngine:
                 max_generations=request.limits.max_generations,
                 max_states_per_state=request.limits.max_assignment_states_per_mask,
                 max_frontier_expansions=max(32, request.limits.max_species_routes_per_pal * 32),
+                target_state_goal=8,
                 include_missing_leaves=False,
                 budget=budget,
             )
             if not missing_passive_ids
-            else TraitSearchResult((), 0, 0, None)
+            else TraitSearchResult((), 0, 0, None, False)
         )
 
         physical_plan_keys: set[str] = set()
@@ -193,9 +194,13 @@ class DeterministicBreedingEngine:
             required_mask=full_mask,
             fallback=False,
         )
-        fallback_result = TraitSearchResult((), 0, 0, None)
+        fallback_result = TraitSearchResult((), 0, 0, None, False)
         fallback_candidates: dict[str, BreedingRouteCandidate] = {}
-        if len(ready_candidates) < request.limits.max_results and ready_result.stopped_by is None:
+        if (
+            len(ready_candidates) < request.limits.max_results
+            and ready_result.stopped_by is None
+            and not ready_result.target_goal_reached
+        ):
             fallback_result = search_trait_routes(
                 index,
                 inventory_by_species=inventory_by_species,
@@ -206,6 +211,7 @@ class DeterministicBreedingEngine:
                 max_generations=request.limits.max_generations,
                 max_states_per_state=request.limits.max_assignment_states_per_mask,
                 max_frontier_expansions=max(32, request.limits.max_species_routes_per_pal * 32),
+                target_state_goal=8,
                 include_missing_leaves=True,
                 budget=budget,
             )
@@ -257,6 +263,8 @@ class DeterministicBreedingEngine:
         returned_all = (
             search_complete
             and not soft_pruned
+            and not ready_result.target_goal_reached
+            and not fallback_result.target_goal_reached
             and len(all_candidates) <= request.limits.max_results
         )
         diagnostics = BreedingSearchDiagnostics(

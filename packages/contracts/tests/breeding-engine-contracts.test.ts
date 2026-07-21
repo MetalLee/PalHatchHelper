@@ -103,7 +103,7 @@ function validRoute() {
     ],
     existing_target_instance_uid: null,
     score_breakdown: {
-      scoring_profile_version: "balanced-v4",
+      scoring_profile_version: "balanced-v5",
       estimate_basis: "strategy_heuristic_no_verified_probability",
       raw_metrics: {
         generation_count: 1,

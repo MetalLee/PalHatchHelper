@@ -74,7 +74,7 @@ select set_config('app.game_data_rollback', 'false', true);
 
 select is(
   (select count(*)::integer from public.scoring_profiles
-    where is_active and algorithm_version = 'inventory-trait-aware-deterministic-v3'),
+    where is_active and algorithm_version = 'inventory-trait-aware-deterministic-v4'),
   4,
   'all four active profiles use the inventory trait-aware deterministic algorithm'
 );
@@ -90,10 +90,10 @@ select is(
 select results_eq(
   $$ select version from public.scoring_profiles where is_active order by version $$,
   $$ values
-    ('balanced-v4'::text),
-    ('fastest-v4'::text),
-    ('highest-success-v4'::text),
-    ('least-borrowing-v4'::text)
+    ('balanced-v5'::text),
+    ('fastest-v5'::text),
+    ('highest-success-v5'::text),
+    ('least-borrowing-v5'::text)
   $$,
   'only the four v4 scoring profiles are active'
 );
@@ -126,10 +126,10 @@ select results_eq(
      order by optimization_mode
   $$,
   $$ values
-    ('balanced', 'inventory-trait-aware-deterministic-v3', 'balanced-v4'),
-    ('fastest', 'inventory-trait-aware-deterministic-v3', 'fastest-v4'),
-    ('highest_success', 'inventory-trait-aware-deterministic-v3', 'highest-success-v4'),
-    ('least_borrowing', 'inventory-trait-aware-deterministic-v3', 'least-borrowing-v4')
+    ('balanced', 'inventory-trait-aware-deterministic-v4', 'balanced-v5'),
+    ('fastest', 'inventory-trait-aware-deterministic-v4', 'fastest-v5'),
+    ('highest_success', 'inventory-trait-aware-deterministic-v4', 'highest-success-v5'),
+    ('least_borrowing', 'inventory-trait-aware-deterministic-v4', 'least-borrowing-v5')
   $$,
   'each optimization mode fixes an engine-supported algorithm and scoring version'
 );

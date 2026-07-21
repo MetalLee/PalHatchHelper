@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from time import perf_counter
 
 import pytest
 
@@ -116,6 +117,62 @@ def test_real_inventory_passives_converge_across_three_gendered_generations() ->
         for candidate in result.routes
         for step in candidate.steps
     )
+
+
+def test_four_passives_complete_a_real_five_generation_route_with_214_inventory() -> None:
+    sources = (
+        inventory_pal("source-a-m", "pal-a", "male", passives=("p1",)),
+        inventory_pal("source-b-f", "pal-b", "female", passives=("p2",)),
+        inventory_pal("source-c-m", "pal-c", "male", passives=("p3",)),
+        inventory_pal("source-d-m", "pal-d", "male", passives=("p4",)),
+        inventory_pal("source-e-m", "pal-e", "male"),
+        inventory_pal("source-f-m", "pal-f", "male"),
+    )
+    distractors = tuple(
+        inventory_pal(
+            f"distractor-{index:03d}",
+            f"pal-distractor-{index:03d}",
+            "male" if index % 2 == 0 else "female",
+        )
+        for index in range(208)
+    )
+    inventory = (*sources, *distractors)
+    recipes = (
+        recipe("pal-a", "pal-b", "pal-mid-1"),
+        recipe("pal-c", "pal-mid-1", "pal-mid-2"),
+        recipe("pal-d", "pal-mid-2", "pal-mid-3"),
+        recipe("pal-e", "pal-mid-3", "pal-mid-4"),
+        recipe("pal-f", "pal-mid-4", "pal-target"),
+    )
+
+    started = perf_counter()
+    result = search(
+        DeterministicBreedingEngine(),
+        request(
+            "pal-target",
+            inventory,
+            desired_passive_ids=("p1", "p2", "p3", "p4"),
+            search_limits=limits(
+                max_generations=5,
+                max_expanded_nodes=200_000,
+                timeout_ms=30_000,
+                max_species_routes_per_pal=512,
+                max_assignment_states_per_mask=64,
+                max_candidate_routes=1_000,
+                max_results=24,
+            ),
+        ),
+        recipes,
+    )
+    elapsed = perf_counter() - started
+
+    assert len(inventory) == 214
+    assert result.routes
+    assert result.routes[0].generation_count == 5
+    assert result.routes[0].inventory_passive_coverage == 1
+    assert result.routes[0].feasibility_status.value == "ready"
+    assert not result.diagnostics.hit_limits
+    assert elapsed < 5
 
 
 @pytest.mark.parametrize("mode", list(OptimizationMode))

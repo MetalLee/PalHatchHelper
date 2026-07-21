@@ -52,7 +52,7 @@ def _score() -> RouteScoreBreakdown:
         for mode in ("balanced", "fastest", "highest_success", "least_borrowing")
     ]
     return RouteScoreBreakdown(
-        scoring_profile_version="balanced-v4",
+        scoring_profile_version="balanced-v5",
         estimate_basis="strategy_heuristic_no_verified_probability",
         raw_metrics=RouteRawScoreMetrics(
             generation_count=1,
@@ -84,8 +84,8 @@ def _request() -> AIExplanationRequest:
         optimization_mode="balanced",
         version_summary={
             "game_data_content_hash": "a" * 64,
-            "algorithm_version": "inventory-trait-aware-deterministic-v3",
-            "scoring_profile_version": "balanced-v4",
+            "algorithm_version": "inventory-trait-aware-deterministic-v4",
+            "scoring_profile_version": "balanced-v5",
         },
         routes=[
             AIExplanationRouteSummary(

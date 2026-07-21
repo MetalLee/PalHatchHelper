@@ -72,8 +72,8 @@ select lives_ok(
         'inventory_snapshot_id', '40000000-0000-4000-8000-000000000002',
         'game_data_version_id', '51000000-0000-4000-8000-000000000001',
         'game_data_content_hash', repeat('c', 64),
-        'algorithm_version', 'inventory-trait-aware-deterministic-v3',
-        'scoring_profile_version', 'balanced-v4',
+        'algorithm_version', 'inventory-trait-aware-deterministic-v4',
+        'scoring_profile_version', 'balanced-v5',
         'optimization_mode', 'balanced',
         'routes', jsonb_build_array(
           jsonb_build_object(
@@ -439,8 +439,8 @@ select results_eq(
     '40000000-0000-4000-8000-000000000002'::uuid,
     '51000000-0000-4000-8000-000000000001'::uuid,
     repeat('c', 64)::text,
-    'inventory-trait-aware-deterministic-v3'::text,
-    'balanced-v4'::text
+    'inventory-trait-aware-deterministic-v4'::text,
+    'balanced-v5'::text
   ) $$,
   'adoption preserves every Phase 6 version pin'
 );

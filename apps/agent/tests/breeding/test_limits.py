@@ -119,3 +119,70 @@ def test_formal_catalog_scale_remains_bounded() -> None:
     assert result.routes[0].feasibility_status.value == "ready"
     assert result.diagnostics.expanded_nodes <= 10_000
     assert elapsed < 10
+
+
+def test_four_passives_five_generations_find_routes_before_distractor_frontier() -> None:
+    desired_passives = ("p1", "p2", "p3", "p4")
+    inventory: list[BreedingEngineInventoryPal] = []
+    recipes: list[CatalogBreedingRecipe] = []
+
+    distractor_males = tuple(f"a-male-{index:03d}" for index in range(91))
+    distractor_females = tuple(f"a-female-{index:03d}" for index in range(91))
+    for index, pal_id in enumerate(distractor_males):
+        inventory.append(inventory_pal(f"d-m-{index:03d}", pal_id, "male"))
+    for index, pal_id in enumerate(distractor_females):
+        inventory.append(inventory_pal(f"d-f-{index:03d}", pal_id, "female"))
+    recipes.extend(
+        recipe(male, female, "pal-target")
+        for male in distractor_males
+        for female in distractor_females
+    )
+
+    for index in range(16):
+        male_id = f"z-source-m-{index:02d}"
+        female_id = f"z-source-f-{index:02d}"
+        inventory.extend(
+            (
+                inventory_pal(
+                    f"source-m-{index:02d}",
+                    male_id,
+                    "male",
+                    passives=("p1", "p2"),
+                ),
+                inventory_pal(
+                    f"source-f-{index:02d}",
+                    female_id,
+                    "female",
+                    passives=("p3", "p4"),
+                ),
+            )
+        )
+        recipes.append(recipe(male_id, female_id, "pal-target"))
+
+    assert len(inventory) == 214
+    started = perf_counter()
+    result = search(
+        DeterministicBreedingEngine(),
+        request(
+            "pal-target",
+            inventory,
+            desired_passive_ids=desired_passives,
+            search_limits=limits(
+                max_generations=5,
+                max_expanded_nodes=200_000,
+                timeout_ms=30_000,
+                max_species_routes_per_pal=512,
+                max_assignment_states_per_mask=64,
+                max_candidate_routes=1_000,
+                max_results=24,
+            ),
+        ),
+        recipes,
+    )
+    elapsed = perf_counter() - started
+
+    assert len(result.routes) >= 3
+    assert all(route.feasibility_status.value == "ready" for route in result.routes[:3])
+    assert all(route.inventory_passive_coverage == 1 for route in result.routes[:3])
+    assert not result.diagnostics.hit_limits
+    assert elapsed < 5

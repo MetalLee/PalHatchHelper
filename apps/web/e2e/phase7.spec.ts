@@ -56,10 +56,10 @@ function parent(
 
 function scoreBreakdown() {
   const profileVersions = {
-    balanced: "balanced-v4",
-    fastest: "fastest-v4",
-    highest_success: "highest-success-v4",
-    least_borrowing: "least-borrowing-v4",
+    balanced: "balanced-v5",
+    fastest: "fastest-v5",
+    highest_success: "highest-success-v5",
+    least_borrowing: "least-borrowing-v5",
   } as const;
   const components = [
     "route_length",
@@ -78,7 +78,7 @@ function scoreBreakdown() {
     weighted_score: 10,
   }));
   return {
-    scoring_profile_version: "balanced-v4",
+    scoring_profile_version: "balanced-v5",
     estimate_basis: "strategy_heuristic_no_verified_probability",
     raw_metrics: {
       generation_count: 2,
@@ -252,8 +252,8 @@ async function createCompletedPhase6Fixture(): Promise<string> {
       inventory_snapshot_id: "40000000-0000-4000-8000-000000000002",
       game_data_version_id: "51000000-0000-4000-8000-000000000001",
       game_data_content_hash: "c".repeat(64),
-      algorithm_version: "inventory-trait-aware-deterministic-v3",
-      scoring_profile_version: "balanced-v4",
+      algorithm_version: "inventory-trait-aware-deterministic-v4",
+      scoring_profile_version: "balanced-v5",
       optimization_mode: "balanced",
       missing_passive_ids: [],
       routes: [route],
