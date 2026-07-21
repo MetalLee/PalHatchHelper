@@ -924,6 +924,28 @@ class BreederPassiveOption(BaseModel):
     is_negative: bool
 
 
+class BreederPalLocalization(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pal_id: BreederStableId
+    display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+
+
+class BreederPassiveLocalization(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    passive_skill_id: BreederStableId
+    display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+
+
+class BreederRouteLocalization(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    locale: Annotated[str, Field(min_length=2), Field(max_length=20)]
+    pals: list[BreederPalLocalization]
+    passive_skills: list[BreederPassiveLocalization]
+
+
 class BreederFormContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1215,6 +1237,7 @@ class RouteComparison(BaseModel):
     game_data_content_hash: BreederSha256
     algorithm_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
     scoring_profile_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
+    localization: BreederRouteLocalization
     created_at: AwareDatetime
     completed_at: AwareDatetime | None
     plan: BreedingPlan | None

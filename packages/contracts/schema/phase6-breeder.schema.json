@@ -100,6 +100,40 @@
         "is_negative": { "type": "boolean" }
       }
     },
+    "BreederPalLocalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pal_id", "display_name"],
+      "properties": {
+        "pal_id": { "$ref": "#/$defs/BreederStableId" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    },
+    "BreederPassiveLocalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passive_skill_id", "display_name"],
+      "properties": {
+        "passive_skill_id": { "$ref": "#/$defs/BreederStableId" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    },
+    "BreederRouteLocalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locale", "pals", "passive_skills"],
+      "properties": {
+        "locale": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "pals": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreederPalLocalization" }
+        },
+        "passive_skills": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BreederPassiveLocalization" }
+        }
+      }
+    },
     "BreederFormContext": {
       "type": "object",
       "additionalProperties": false,
@@ -718,6 +752,7 @@
         "game_data_content_hash",
         "algorithm_version",
         "scoring_profile_version",
+        "localization",
         "created_at",
         "completed_at",
         "plan"
@@ -748,6 +783,7 @@
           "minLength": 1,
           "maxLength": 100
         },
+        "localization": { "$ref": "#/$defs/BreederRouteLocalization" },
         "created_at": { "type": "string", "format": "date-time" },
         "completed_at": { "type": ["string", "null"], "format": "date-time" },
         "plan": {
@@ -790,6 +826,7 @@
             "game_data_content_hash",
             "algorithm_version",
             "scoring_profile_version",
+            "localization",
             "attempt_count",
             "error_code",
             "created_at",
@@ -826,6 +863,7 @@
               "minLength": 1,
               "maxLength": 100
             },
+            "localization": { "$ref": "#/$defs/BreederRouteLocalization" },
             "attempt_count": { "type": "integer", "minimum": 0 },
             "error_code": {
               "type": ["string", "null"],

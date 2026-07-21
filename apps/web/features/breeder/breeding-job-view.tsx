@@ -6,6 +6,7 @@ import type {
   BreedingJobDetailRpcSuccess,
   BreedingRoute,
   BreedingRouteViewParent,
+  RouteScoreComponent,
 } from "@palhatch/contracts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -70,6 +71,41 @@ const stageLabels: Record<string, string> = {
   cancelled: "任务已取消",
 };
 
+const optimizationModeLabels: Record<
+  BreedingRoute["optimization_mode"],
+  string
+> = {
+  balanced: "综合推荐",
+  fastest: "最快路线",
+  highest_success: "最高成功率",
+  least_borrowing: "最少借用",
+};
+
+const scoreComponentLabels: Record<RouteScoreComponent["component"], string> = {
+  route_length: "路线长度",
+  inventory_coverage: "库存覆盖",
+  passive_concentration: "被动集中度",
+  borrowing: "公会借用成本",
+  intermediate_cost: "中间帕鲁成本",
+  attempt_cost: "预计尝试成本",
+  stability: "路线稳定性",
+  acquisition_cost: "缺失库存成本",
+};
+
+const difficultyLabels: Record<BreedingRoute["difficulty"], string> = {
+  low: "低",
+  medium: "中",
+  high: "高",
+};
+
+const recipeTypeLabels: Record<
+  BreedingRoute["steps"][number]["recipe_type"],
+  string
+> = {
+  normal: "常规配方",
+  special: "特殊配方",
+};
+
 export function BreedingJobView({
   initialResult,
   poll = true,
@@ -124,6 +160,26 @@ export function BreedingJobView({
       plan?.routes.find((route) => route.route_key === selectedKey) ??
       plan?.routes[0],
     [plan, selectedKey],
+  );
+  const palNames = useMemo(
+    () =>
+      new Map(
+        result.data.localization.pals.map((pal) => [
+          pal.pal_id,
+          pal.display_name,
+        ]),
+      ),
+    [result.data.localization.pals],
+  );
+  const passiveNames = useMemo(
+    () =>
+      new Map(
+        result.data.localization.passive_skills.map((passive) => [
+          passive.passive_skill_id,
+          passive.display_name,
+        ]),
+      ),
+    [result.data.localization.passive_skills],
   );
 
   async function adoptSelectedRoute(route: BreedingRoute): Promise<void> {
@@ -186,6 +242,24 @@ export function BreedingJobView({
         )}
       </section>
 
+      <section className="content-panel min-w-0" aria-label="配种目标摘要">
+        <p className="eyebrow">BREEDING TARGET</p>
+        <h2 className="mt-3 text-xl font-semibold text-white">
+          {localizedName(palNames, result.data.target_pal_id, "Pal")}
+        </h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {result.data.desired_passive_ids.length === 0 ? (
+            <span className="text-sm text-slate-400">未指定期望被动</span>
+          ) : (
+            result.data.desired_passive_ids.map((id) => (
+              <span className="passive-chip" key={id}>
+                {localizedName(passiveNames, id, "被动")}
+              </span>
+            ))
+          )}
+        </div>
+      </section>
+
       <section className="content-panel min-w-0">
         <p className="eyebrow">PINNED VERSIONS</p>
         <dl className="fixed-inputs mt-4 md:grid-cols-2">
@@ -211,7 +285,7 @@ export function BreedingJobView({
           </div>
           <div>
             <dt>优化模式</dt>
-            <dd>{result.data.optimization_mode}</dd>
+            <dd>{optimizationModeLabels[result.data.optimization_mode]}</dd>
           </div>
         </dl>
       </section>
@@ -262,7 +336,11 @@ export function BreedingJobView({
             </div>
             {selected === undefined ? null : (
               <>
-                <RouteFacts route={selected} />
+                <RouteFacts
+                  route={selected}
+                  palNames={palNames}
+                  passiveNames={passiveNames}
+                />
                 {result.data.status !== "completed" ? null : (
                   <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
                     {selected.execution_plan_id !== null ? (
@@ -322,7 +400,15 @@ export function BreedingJobView({
   );
 }
 
-function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
+function RouteFacts({
+  route,
+  palNames,
+  passiveNames,
+}: Readonly<{
+  route: BreedingRoute;
+  palNames: ReadonlyMap<string, string>;
+  passiveNames: ReadonlyMap<string, string>;
+}>) {
   const currentScore = route.score_breakdown.mode_scores.find(
     (score) => score.optimization_mode === route.optimization_mode,
   );
@@ -336,7 +422,7 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
           label="库存覆盖率"
           value={`${Math.round(route.inventory_coverage * 100)}%`}
         />
-        <Metric label="难度" value={route.difficulty} />
+        <Metric label="难度" value={difficultyLabels[route.difficulty]} />
         <Metric
           label="尝试区间"
           value={`${route.estimated_attempts_min}–${route.estimated_attempts_max}`}
@@ -352,11 +438,12 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
               <li
                 key={`${requirement.pal_id}:${requirement.gender}:${requirement.required_passive_ids.join(",")}`}
               >
-                {requirement.quantity}× {requirement.pal_id} ·{" "}
+                {requirement.quantity}×{" "}
+                {localizedName(palNames, requirement.pal_id, "Pal")} ·{" "}
                 {genderRequirementLabel(requirement.gender)}
                 {requirement.required_passive_ids.length === 0
                   ? ""
-                  : ` · 被动 ${requirement.required_passive_ids.join(", ")}`}
+                  : ` · 被动 ${localizedNames(passiveNames, requirement.required_passive_ids, "被动").join("、")}`}
               </li>
             ))}
           </ul>
@@ -371,7 +458,7 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
           return (
             <article className="route-step" key={step.step_index}>
               <p className="eyebrow">
-                第 {step.generation} 代 · {step.recipe_type}
+                第 {step.generation} 代 · {recipeTypeLabels[step.recipe_type]}
               </p>
               <div className="parent-grid mt-4">
                 {parents.map((parent, index) => (
@@ -379,14 +466,18 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
                     key={`${parent.source_type}:${parent.instance_uid ?? parent.pal_id}:${index}`}
                     label={parentRoleLabel(parent.gender, index)}
                     parent={parent}
+                    palNames={palNames}
+                    passiveNames={passiveNames}
                   />
                 ))}
               </div>
               <p className="mt-4 text-sm text-slate-300">
                 子代：
-                <strong className="text-white">{step.child_pal_id}</strong>
+                <strong className="text-white">
+                  {localizedName(palNames, step.child_pal_id, "Pal")}
+                </strong>
                 {step.required_passive_ids.length
-                  ? ` · 被动 ${step.required_passive_ids.join(", ")}`
+                  ? ` · 被动 ${localizedNames(passiveNames, step.required_passive_ids, "被动").join("、")}`
                   : ""}
               </p>
             </article>
@@ -399,9 +490,14 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
           估算依据：策略启发式，不是已验证概率。
         </p>
         <div className="mt-4 grid gap-2">
+          <div className="score-row score-row-heading" aria-hidden="true">
+            <span>评分项</span>
+            <span>标准分 × 权重</span>
+            <strong>加权分</strong>
+          </div>
           {currentScore?.components.map((component) => (
             <div className="score-row" key={component.component}>
-              <span>{component.component}</span>
+              <span>{scoreComponentLabels[component.component]}</span>
               <span>
                 {component.normalized_score.toFixed(1)} ×{" "}
                 {component.weight.toFixed(2)}
@@ -413,7 +509,8 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
         <div className="mt-5 flex flex-wrap gap-2">
           {route.score_breakdown.mode_scores.map((score) => (
             <span className="passive-chip" key={score.optimization_mode}>
-              {score.optimization_mode}: {score.total_score.toFixed(2)}
+              {optimizationModeLabels[score.optimization_mode]}：
+              {score.total_score.toFixed(2)}
             </span>
           ))}
         </div>
@@ -425,11 +522,24 @@ function RouteFacts({ route }: Readonly<{ route: BreedingRoute }>) {
 function ParentCard({
   label,
   parent,
-}: Readonly<{ label: string; parent: BreedingRouteViewParent }>) {
+  palNames,
+  passiveNames,
+}: Readonly<{
+  label: string;
+  parent: BreedingRouteViewParent;
+  palNames: ReadonlyMap<string, string>;
+  passiveNames: ReadonlyMap<string, string>;
+}>) {
+  const passives =
+    parent.source_type === "missing"
+      ? parent.required_passive_ids
+      : parent.passive_skill_ids;
   return (
     <div className="parent-card">
       <p className="detail-label">{label}</p>
-      <h3 className="mt-2 font-semibold text-white">{parent.pal_id}</h3>
+      <h3 className="mt-2 font-semibold text-white">
+        {localizedName(palNames, parent.pal_id, "Pal")}
+      </h3>
       <p className="mt-2 break-all text-xs text-teal-100">
         {parent.instance_uid ??
           (parent.source_type === "missing" ? "尚未入库" : "中间产物")}
@@ -445,13 +555,26 @@ function ParentCard({
       </p>
       <p className="mt-3 text-xs text-slate-300">
         被动：
-        {(parent.source_type === "missing"
-          ? parent.required_passive_ids
-          : parent.passive_skill_ids
-        ).join(", ") || "无要求"}
+        {localizedNames(passiveNames, passives, "被动").join("、") || "无要求"}
       </p>
     </div>
   );
+}
+
+function localizedName(
+  names: ReadonlyMap<string, string>,
+  id: string,
+  entityLabel: string,
+): string {
+  return names.get(id) ?? `未翻译${entityLabel}（${id}）`;
+}
+
+function localizedNames(
+  names: ReadonlyMap<string, string>,
+  ids: readonly string[],
+  entityLabel: string,
+): string[] {
+  return ids.map((id) => localizedName(names, id, entityLabel));
 }
 
 function genderOrder(gender: BreedingRouteViewParent["gender"]): number {

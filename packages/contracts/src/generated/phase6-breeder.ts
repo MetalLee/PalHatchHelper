@@ -400,9 +400,23 @@ export interface RouteComparison {
   game_data_content_hash: BreederSha256;
   algorithm_version: string;
   scoring_profile_version: string;
+  localization: BreederRouteLocalization;
   created_at: string;
   completed_at: string | null;
   plan: BreedingPlan | null;
+}
+export interface BreederRouteLocalization {
+  locale: string;
+  pals: BreederPalLocalization[];
+  passive_skills: BreederPassiveLocalization[];
+}
+export interface BreederPalLocalization {
+  pal_id: BreederStableId;
+  display_name: string;
+}
+export interface BreederPassiveLocalization {
+  passive_skill_id: BreederStableId;
+  display_name: string;
 }
 export interface BreedingError {
   error_code: string;
@@ -430,6 +444,7 @@ export interface BreedingJobDetailRpcSuccess {
     game_data_content_hash: BreederSha256;
     algorithm_version: string;
     scoring_profile_version: string;
+    localization: BreederRouteLocalization;
     attempt_count: number;
     error_code: string | null;
     created_at: string;

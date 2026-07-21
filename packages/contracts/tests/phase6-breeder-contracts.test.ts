@@ -126,6 +126,16 @@ describe("Phase 6 historical route compatibility", () => {
         game_data_content_hash: "c".repeat(64),
         algorithm_version: "phase4b-deterministic-v1",
         scoring_profile_version: "balanced-v2",
+        localization: {
+          locale: "zh-CN",
+          pals: [
+            { pal_id: "test_parent_a", display_name: "棉悠悠" },
+            { pal_id: "test_child_pal", display_name: "幻色幼崽" },
+          ],
+          passive_skills: [
+            { passive_skill_id: "test_passive_a", display_name: "认真" },
+          ],
+        },
         attempt_count: 1,
         error_code: null,
         created_at: "2026-07-16T06:00:00Z",
