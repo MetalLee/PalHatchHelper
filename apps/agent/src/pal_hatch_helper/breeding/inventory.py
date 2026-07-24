@@ -46,16 +46,20 @@ def _exclusion_reason(
         return BreedingInventoryExclusionReason.DISAPPEARED
     if not instance.breeding_enabled:
         return BreedingInventoryExclusionReason.DISABLED
-    if (
-        not instance.owner_resolved
-        or not instance.guild_resolved
-        or instance.owner_player_id is None
-        or instance.guild_id is None
-    ):
+    if not instance.owner_resolved or not instance.guild_resolved:
+        return BreedingInventoryExclusionReason.UNRESOLVED
+    if instance.ownership_scope == "unresolved" or instance.guild_id is None:
+        return BreedingInventoryExclusionReason.UNRESOLVED
+    if instance.ownership_scope == "player" and instance.owner_player_id is None:
+        return BreedingInventoryExclusionReason.UNRESOLVED
+    if instance.ownership_scope == "guild" and instance.owner_player_id is not None:
         return BreedingInventoryExclusionReason.UNRESOLVED
     if instance.plan_locked and not request.allow_locked_reuse:
         return BreedingInventoryExclusionReason.LOCKED
-    if instance.owner_player_id == request.requester_player_id:
+    if (
+        instance.ownership_scope == "player"
+        and instance.owner_player_id == request.requester_player_id
+    ):
         return None
     if not request.allow_shared_inventory:
         return BreedingInventoryExclusionReason.SHARED_INVENTORY_DISABLED

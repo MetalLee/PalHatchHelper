@@ -48,6 +48,7 @@ export interface InventoryPublishPal {
   passive_skill_ids: string[];
   location_type: "player_party" | "player_storage" | "base" | "viewing_cage" | "unknown";
   location_name: string | null;
+  ownership_scope: "player" | "guild" | "unresolved";
   metadata?: CanonicalPalSourceMetadata | null;
   owner_resolved: boolean;
   guild_resolved: boolean;

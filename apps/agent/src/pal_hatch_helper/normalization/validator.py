@@ -1,5 +1,6 @@
 from collections.abc import Set
 from dataclasses import dataclass
+from typing import Literal
 
 from pal_hatch_helper.generated import CanonicalPal, CanonicalPlayer, CanonicalSnapshot
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
@@ -15,6 +16,7 @@ class ValidationWarning:
 @dataclass(frozen=True, slots=True)
 class ValidatedPal:
     canonical: CanonicalPal
+    ownership_scope: Literal["player", "guild", "unresolved"]
     owner_resolved: bool
     guild_resolved: bool
     shared_eligible: bool
@@ -115,7 +117,11 @@ class CanonicalSnapshotValidator:
                 )
 
             owner = players.get(pal.owner_player_uid) if pal.owner_player_uid is not None else None
-            owner_resolved = owner is not None
+            guild_resolved = pal.guild_uid is not None and pal.guild_uid in guilds
+            guild_owned = (
+                pal.owner_player_uid is None and pal.location_type == "base" and guild_resolved
+            )
+            owner_resolved = owner is not None or guild_owned
             if not owner_resolved:
                 pal_warnings.append("OWNER_UNRESOLVED")
                 warnings.append(
@@ -125,7 +131,6 @@ class CanonicalSnapshotValidator:
                         pal.owner_player_uid or "",
                     )
                 )
-            guild_resolved = pal.guild_uid is not None and pal.guild_uid in guilds
             if owner is not None:
                 owner_guild_uid = owner.guild_uid
                 guild_resolved = guild_resolved and owner_guild_uid == pal.guild_uid
@@ -141,6 +146,9 @@ class CanonicalSnapshotValidator:
             validated_pals.append(
                 ValidatedPal(
                     canonical=pal,
+                    ownership_scope=(
+                        "guild" if guild_owned else "player" if owner is not None else "unresolved"
+                    ),
                     owner_resolved=owner_resolved,
                     guild_resolved=guild_resolved,
                     shared_eligible=owner_resolved and guild_resolved,

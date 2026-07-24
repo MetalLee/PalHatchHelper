@@ -1829,6 +1829,7 @@ export type Database = {
           location_name: string | null;
           raw_metadata: Json;
           created_at: string;
+          ownership_scope: string | null;
         };
         Insert: {
           id?: string;

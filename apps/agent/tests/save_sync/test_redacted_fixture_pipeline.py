@@ -127,6 +127,7 @@ def test_redacted_fixture_reaches_repository_through_the_sandboxed_parser(
                 "passive_skill_ids": ["artisan"],
                 "location_type": "base",
                 "location_name": "Fixture Base",
+                "ownership_scope": "player",
                 "owner_resolved": True,
                 "guild_resolved": True,
                 "shared_eligible": True,

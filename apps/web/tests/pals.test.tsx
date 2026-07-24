@@ -25,6 +25,7 @@ const page: PalInventoryPage = {
       unknown_passive_skill_ids: [],
       location_type: "player_storage" as const,
       location_name: "Fixture Storage A",
+      ownership_scope: "player" as const,
       share_enabled: true,
       is_owned_by_requester: true,
     },
@@ -35,7 +36,7 @@ const page: PalInventoryPage = {
       pal_display_name: "棉绒兽",
       catalog_entry_state: "resolved" as const,
       owner_filter_key: "b".repeat(64),
-      owner_display_name: "Fixture Player B",
+      owner_display_name: "Fixture Guild Alpha",
       gender: "female" as const,
       level: 21,
       passive_skill_ids: ["test_passive_b"],
@@ -43,6 +44,7 @@ const page: PalInventoryPage = {
       unknown_passive_skill_ids: [],
       location_type: "base" as const,
       location_name: "Fixture Base Alpha",
+      ownership_scope: "guild" as const,
       share_enabled: true,
       is_owned_by_requester: false,
     },
@@ -148,7 +150,8 @@ describe("pal inventory", () => {
     expect(screen.getAllByRole("switch")).toHaveLength(1);
     fireEvent.click(screen.getByRole("switch", { name: /棉悠悠.*共享/i }));
     expect(onToggleShare).toHaveBeenCalledWith("fixture-owned", false);
-    expect(screen.getByText("Fixture Player B")).toBeTruthy();
+    expect(screen.getByText("Fixture Guild Alpha")).toBeTruthy();
+    expect(screen.getByText("公会所有")).toBeTruthy();
     expect(screen.getByText("棉绒兽")).toBeTruthy();
     expect(screen.getByText("#002")).toBeTruthy();
     expect(screen.getByText("终端")).toBeTruthy();

@@ -214,6 +214,7 @@ def _publish_payload(request: InventoryPublishRequest) -> dict[str, JSONValue]:
         pals.append(
             {
                 **_json_object(pal.model_dump(mode="json")),
+                "ownership_scope": validated.ownership_scope,
                 "owner_resolved": validated.owner_resolved,
                 "guild_resolved": validated.guild_resolved,
                 "shared_eligible": validated.shared_eligible,

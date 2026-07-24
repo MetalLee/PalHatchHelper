@@ -36,6 +36,7 @@ def valid_request_data() -> dict[str, object]:
                 "passive_skill_ids": ["passive-a"],
                 "location_type": "base",
                 "location_name": "Fixture Base",
+                "ownership_scope": "player",
                 "share_enabled": False,
                 "owner_resolved": True,
                 "guild_resolved": True,

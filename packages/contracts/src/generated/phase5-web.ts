@@ -67,6 +67,7 @@ export interface PalInventoryItem {
   unknown_passive_skill_ids: string[];
   location_type: PalLocationType;
   location_name: string | null;
+  ownership_scope: "player" | "guild" | "unresolved";
   share_enabled: boolean;
   is_owned_by_requester: boolean;
 }
@@ -123,6 +124,7 @@ export interface PalInventoryRpcItem {
   unknown_passive_skill_ids: string[];
   location_type: PalLocationType;
   location_name: string | null;
+  ownership_scope: "player" | "guild" | "unresolved";
   share_enabled: boolean;
   is_owned_by_requester: boolean;
 }

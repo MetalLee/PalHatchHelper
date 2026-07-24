@@ -13,6 +13,7 @@ def _item(instance_uid: str, pal_id: str) -> dict[str, object]:
         "passive_skill_ids": [],
         "location_type": "player_storage",
         "location_name": None,
+        "ownership_scope": "unresolved",
         "share_enabled": False,
         "owner_resolved": True,
         "guild_resolved": True,

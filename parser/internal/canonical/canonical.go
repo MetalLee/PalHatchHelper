@@ -77,6 +77,17 @@ func NormalizeStableID(source string) (string, error) {
 	return normalized, nil
 }
 
+func NormalizeInventoryPalID(source string) (string, error) {
+	stableID, err := NormalizeStableID(source)
+	if err != nil {
+		return "", err
+	}
+	if strings.HasPrefix(stableID, "boss_") && len(stableID) > len("boss_") {
+		return stableID[len("boss_"):], nil
+	}
+	return stableID, nil
+}
+
 func Build(
 	world *sav.World,
 	worldUID string,
@@ -153,6 +164,12 @@ func Build(
 			}
 			palID, sourcePalID = "unknown", "unknown"
 			warnings.add("PAL_ID_UNKNOWN")
+		} else {
+			palID, err = NormalizeInventoryPalID(palID)
+			if err != nil {
+				palID, sourcePalID = "unknown", "unknown"
+				warnings.add("PAL_ID_UNKNOWN")
+			}
 		}
 		sourcePassives := uniqueStrings(source.PassiveSkillIDs)
 		passives := make([]string, 0, len(sourcePassives))

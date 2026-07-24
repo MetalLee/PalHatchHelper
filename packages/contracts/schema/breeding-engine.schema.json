@@ -185,6 +185,7 @@
         "passive_skill_ids",
         "location_type",
         "location_name",
+        "ownership_scope",
         "share_enabled",
         "owner_resolved",
         "guild_resolved",
@@ -206,6 +207,10 @@
         },
         "location_type": { "$ref": "#/$defs/BreedingEngineLocationType" },
         "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "ownership_scope": {
+          "type": "string",
+          "enum": ["player", "guild", "unresolved"]
+        },
         "share_enabled": { "type": "boolean" },
         "owner_resolved": { "type": "boolean" },
         "guild_resolved": { "type": "boolean" },

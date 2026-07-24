@@ -39,6 +39,7 @@ export function toSafeInventoryItem(
     unknown_passive_skill_ids: [...row.unknown_passive_skill_ids],
     location_type: row.location_type,
     location_name: row.location_name,
+    ownership_scope: row.ownership_scope,
     share_enabled: row.share_enabled,
     is_owned_by_requester: row.is_owned_by_requester,
   };

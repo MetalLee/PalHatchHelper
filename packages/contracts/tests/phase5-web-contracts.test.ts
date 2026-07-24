@@ -36,6 +36,7 @@ describe("Phase 5 web contracts", () => {
           unknown_passive_skill_ids: [],
           location_type: "player_storage",
           location_name: "Fixture Storage A",
+          ownership_scope: "player",
           share_enabled: true,
           is_owned_by_requester: true,
         },

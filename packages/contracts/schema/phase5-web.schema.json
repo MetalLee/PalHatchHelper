@@ -42,6 +42,7 @@
         "unknown_passive_skill_ids",
         "location_type",
         "location_name",
+        "ownership_scope",
         "share_enabled",
         "is_owned_by_requester"
       ],
@@ -92,6 +93,10 @@
         },
         "location_type": { "$ref": "#/$defs/PalLocationType" },
         "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "ownership_scope": {
+          "type": "string",
+          "enum": ["player", "guild", "unresolved"]
+        },
         "share_enabled": { "type": "boolean" },
         "is_owned_by_requester": { "type": "boolean" }
       }
@@ -184,6 +189,7 @@
         "unknown_passive_skill_ids",
         "location_type",
         "location_name",
+        "ownership_scope",
         "share_enabled",
         "is_owned_by_requester"
       ],
@@ -234,6 +240,10 @@
         },
         "location_type": { "$ref": "#/$defs/PalLocationType" },
         "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "ownership_scope": {
+          "type": "string",
+          "enum": ["player", "guild", "unresolved"]
+        },
         "share_enabled": { "type": "boolean" },
         "is_owned_by_requester": { "type": "boolean" }
       }

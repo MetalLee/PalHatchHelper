@@ -136,6 +136,7 @@ export interface BreedingEngineInventoryPal {
   passive_skill_ids: BreedingEngineStableId[];
   location_type: BreedingEngineLocationType;
   location_name: string | null;
+  ownership_scope: "player" | "guild" | "unresolved";
   share_enabled: boolean;
   owner_resolved: boolean;
   guild_resolved: boolean;

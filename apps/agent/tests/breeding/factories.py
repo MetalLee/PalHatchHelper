@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from typing import Literal
 from uuid import UUID
 
 from pal_hatch_helper.breeding.engine import (
@@ -58,6 +59,7 @@ def inventory_pal(
     passives: Iterable[str] = (),
     owner_player_id: UUID | None = REQUESTER_ID,
     guild_id: UUID | None = GUILD_ID,
+    ownership_scope: Literal["player", "guild", "unresolved"] = "player",
     share_enabled: bool = True,
     owner_resolved: bool = True,
     guild_resolved: bool = True,
@@ -74,6 +76,7 @@ def inventory_pal(
         passive_skill_ids=sorted(passives),
         location_type="base",
         location_name="Fixture Base",
+        ownership_scope=ownership_scope,
         share_enabled=share_enabled,
         owner_resolved=owner_resolved,
         guild_resolved=guild_resolved,

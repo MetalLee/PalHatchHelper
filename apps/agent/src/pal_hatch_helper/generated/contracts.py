@@ -523,6 +523,7 @@ class BreedingEngineInventoryPal(BaseModel):
     ]
     location_type: BreedingEngineLocationType
     location_name: Annotated[str, Field(max_length=160)] | None
+    ownership_scope: Literal["player", "guild", "unresolved"]
     share_enabled: bool
     owner_resolved: bool
     guild_resolved: bool
@@ -830,6 +831,7 @@ class InventoryPublishPal(BaseModel):
     ]
     location_type: Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
     location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    ownership_scope: Literal["player", "guild", "unresolved"]
     metadata: CanonicalPalSourceMetadata | None = None
     owner_resolved: bool
     guild_resolved: bool

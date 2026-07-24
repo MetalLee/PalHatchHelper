@@ -140,7 +140,11 @@ export function PalInventory({
               <div>
                 <dt className="detail-label">共享状态</dt>
                 <dd className="mt-1 text-slate-200">
-                  {pal.share_enabled ? "公会可用" : "仅自己"}
+                  {pal.ownership_scope === "guild"
+                    ? "公会所有"
+                    : pal.share_enabled
+                      ? "公会可用"
+                      : "仅自己"}
                 </dd>
               </div>
             </dl>

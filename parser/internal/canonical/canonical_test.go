@@ -24,6 +24,37 @@ func TestStableIDV1NFKCGoldenVectors(t *testing.T) {
 	}
 }
 
+func TestBossInventoryIDMapsToBasePalAndPreservesSourceName(t *testing.T) {
+	world := &sav.World{Pals: []sav.Pal{{
+		InstanceID:  "pal-boss-1",
+		CharacterID: "BOSS_Anubis",
+		Gender:      "male",
+	}}}
+
+	snapshot, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Pals) != 1 {
+		t.Fatalf("unexpected Pal count: %d", len(snapshot.Pals))
+	}
+	if snapshot.Pals[0].PalID != "anubis" {
+		t.Fatalf("boss Pal ID = %q; want anubis", snapshot.Pals[0].PalID)
+	}
+	if snapshot.Pals[0].Metadata.SourceInternalName != "BOSS_Anubis" {
+		t.Fatalf(
+			"source internal name = %q; want BOSS_Anubis",
+			snapshot.Pals[0].Metadata.SourceInternalName,
+		)
+	}
+}
+
 func TestUnknownFieldsWarnWithoutDroppingPal(t *testing.T) {
 	world := &sav.World{Pals: []sav.Pal{{InstanceID: "pal-1", CharacterID: "FuturePal"}}}
 
