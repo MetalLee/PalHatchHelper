@@ -42,6 +42,12 @@ Phase 5 的不透明分页游标固定 `snapshot_id + game_data_version_id + pal
 
 成功库存快照的幂等身份固定为 `world_id + source_save_hash + parser_name + parser_version`。同一解析器重复提交相同源字节必须复用原不可变快照；Parser 升级允许为相同源字节发布新的不可变投影并原子切换 `latest_snapshot_id`，不得修改旧 `pal_snapshot_items`。
 
+2026-07-24 起，以上幂等范围只覆盖仍保留载荷的成功快照。被更新快照取代且写入超过
+24 小时的 `pal_snapshot_items` 由受控 RPC 分批删除，审计行写入 `payload_purged_at`；
+相同源字节此后再次出现必须创建新的快照发生记录。迁移同时维护
+`pal_instance_lifecycle` 和 `execution_plan_dependencies`，使候选检测与计划失效检查不依赖
+已过期的全量库存。任何直接 `UPDATE/DELETE` 仍由不可变触发器拒绝。
+
 若目标规模的完整 RPC 基准证明需要新索引，必须先保存可复现 SQL、合成数据规模、`EXPLAIN (ANALYZE, BUFFERS)` 与端到端延迟，再使用单独获批的 `CREATE INDEX CONCURRENTLY` 非事务迁移流程，并在库存发布并发执行时验证写入阻塞处于可接受范围。
 
 Phase 2.5 迁移保留并镜像旧 `breeding_data_*`，优先复用 UUID，回填 world/job 新指针。空库 reset 时 seed 发生在迁移之后，因此兼容触发器也必须覆盖 seed 和旧代码的后续写入。验证升级时同时断言回填行数和历史任务版本不变。

@@ -65,7 +65,10 @@ ENV_FILE="$PWD/.env.production" infra/agent/scripts/deploy-production.sh
 
 - 首次或手动同步必须走 `sync_save_once` 命令队列。
 - 数量异常下降时保留待审核快照；Parser 失败时继续使用上一有效库存。
-- 旧快照清理仅作用于 Agent 自有目录，并遵循运行设置保留数量。
+- Agent 原始快照清理仅作用于 Agent 自有目录，并遵循运行设置保留数量。
+- Supabase 标准化库存明细由 Service Role 清理 RPC 按 24 小时、小批次策略处理；
+  最新有效库存、业务历史和共享偏好不得删除。清理积压或失败时先停止新增同步并检查
+  RPC 结果与 autovacuum，不直接执行高锁表维护。
 - 目录 validate、stage、finalize、publish 和 rollback 必须使用现有 Catalog 流程，禁止直接 SQL 绕过。
 
 ## 秘密与日志

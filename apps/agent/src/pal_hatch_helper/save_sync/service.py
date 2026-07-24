@@ -11,6 +11,7 @@ from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import ParserAdapter
 from pal_hatch_helper.plans.processor import PublishedSnapshotProcessor
 from pal_hatch_helper.repositories.inventory import (
+    InventoryCleanupResult,
     InventoryFailureRequest,
     InventoryPublishRequest,
     InventoryRepository,
@@ -55,6 +56,9 @@ class InventorySyncService:
         self._drop_guard = drop_guard or InventoryDropGuard()
         self._registry = registry or SnapshotRegistry(copier.snapshot_root)
         self._published_snapshot_processor = published_snapshot_processor
+
+    async def cleanup_expired_payloads(self) -> InventoryCleanupResult:
+        return await self._repository.cleanup_expired_payloads()
 
     async def sync_once(self) -> InventorySyncResult:
         latest = await self._repository.latest(self._world_id)

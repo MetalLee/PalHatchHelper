@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(54);
+select plan(55);
 
 create temporary table phase7_ids (
   name text primary key,
@@ -409,6 +409,18 @@ select lives_ok(
 insert into phase7_ids(name, id)
 select 'plan-main', id from public.execution_plans
 where adopted_route_id = (select id from phase7_ids where name = 'route-main');
+
+reset role;
+select is(
+  (
+    select count(*)::integer
+    from public.execution_plan_dependencies
+    where plan_id = (select id from phase7_ids where name = 'plan-main')
+  ),
+  2,
+  'route adoption preserves one minimal dependency row per inventory Pal'
+);
+set local role authenticated;
 
 select ok(
   (select reused from public.adopt_breeding_route(
