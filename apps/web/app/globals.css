@@ -61,6 +61,18 @@
   --leaf: #75b95a;
   --glass: rgb(255 255 255 / 0.76);
   --glass-border: rgb(255 255 255 / 0.72);
+  --hero-surface-gradient: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 0.88),
+    rgb(226 247 255 / 0.72),
+    rgb(234 248 224 / 0.76)
+  );
+  --forest-scenery-sky: linear-gradient(
+    180deg,
+    rgb(199 235 251 / 0.92) 0%,
+    rgb(235 249 255 / 0.82) 54%,
+    rgb(234 248 224 / 0.88) 100%
+  );
   --radius: 1rem;
 
   /* Legacy aliases retained until the business page views are migrated. */
@@ -420,13 +432,6 @@ textarea:focus-visible {
   opacity: 0.42;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.8rem;
-}
-
-.stat-card,
 .content-panel,
 .filter-panel,
 .pal-card,
@@ -437,58 +442,9 @@ textarea:focus-visible {
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.08);
 }
 
-.stat-card {
-  min-height: 9rem;
-  border-radius: 1rem;
-  padding: 1.15rem;
-}
-
-.stat-card-accent {
-  border-color: rgba(94, 234, 212, 0.22);
-  background: rgba(29, 116, 105, 0.14);
-}
-
-.stat-card p,
-.stat-card span {
-  margin: 0;
-  color: #7f969f;
-  font-size: 0.75rem;
-}
-
-.stat-card strong {
-  display: block;
-  margin: 1rem 0 0.4rem;
-  color: white;
-  font-size: 2rem;
-  line-height: 1;
-}
-
 .content-panel {
   border-radius: 1rem;
   padding: 1.25rem;
-}
-
-.status-callout {
-  display: flex;
-  min-height: 5rem;
-  align-items: center;
-  gap: 0.8rem;
-  border: 1px solid var(--line);
-  border-radius: 0.9rem;
-  padding: 1rem;
-  color: white;
-  text-decoration: none;
-}
-
-.status-callout span:last-child {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.status-callout small {
-  color: #81969f;
-  font-size: 0.72rem;
-  line-height: 1.45;
 }
 
 .status-dot {
@@ -587,8 +543,7 @@ textarea:focus-visible {
   color: #e7f3f1;
 }
 
-.filter-field,
-.login-field {
+.filter-field {
   display: grid;
   gap: 0.4rem;
   color: #91a5ad;
@@ -598,8 +553,7 @@ textarea:focus-visible {
 }
 
 .filter-field input,
-.filter-field select,
-.login-field input {
+.filter-field select {
   width: 100%;
   min-height: 2.75rem;
   border: 1px solid var(--line);
@@ -842,8 +796,7 @@ textarea:focus-visible {
   }
 }
 
-.filter-field input::placeholder,
-.login-field input::placeholder {
+.filter-field input::placeholder {
   color: #506770;
 }
 
@@ -1013,23 +966,6 @@ textarea:focus-visible {
   font-size: 0.82rem;
 }
 
-.login-page {
-  display: grid;
-  min-height: 100vh;
-  place-items: center;
-  padding: 1.25rem;
-}
-
-.login-card {
-  width: min(100%, 28rem);
-  border: 1px solid var(--line);
-  border-radius: 1.25rem;
-  background: rgba(9, 20, 28, 0.88);
-  padding: 1.5rem;
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(16px);
-}
-
 @media (min-width: 640px) {
   .app-main {
     padding: 1.75rem 1.5rem 7rem;
@@ -1038,9 +974,6 @@ textarea:focus-visible {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-  }
-  .stats-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1053,9 +986,6 @@ textarea:focus-visible {
   }
   .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .login-card {
-    padding: 2rem;
   }
 }
 

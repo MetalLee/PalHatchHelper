@@ -35,6 +35,26 @@ test("unbound test account receives the binding state", async ({ page }) => {
   await expect(page.getByText("尚未绑定游戏角色")).toBeVisible();
 });
 
+test("overview stays within a 390px viewport and uses CSS-only hero scenery", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+
+  await expect(page.getByRole("link", { name: "开始配种" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看库存" })).toBeVisible();
+  const scenery = page.getByTestId("overview-scenery");
+  await expect(scenery).toHaveAttribute("data-visual-source", "css");
+  await expect(scenery.locator("img")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
 test("inventory scope and pagination links refresh the visible list", async ({
   page,
 }) => {

@@ -1,8 +1,16 @@
 "use client";
 
+import { AlertCircle, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
-export function LoginForm() {
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+export function LoginForm({
+  onNavigate = (path) => window.location.assign(path),
+}: Readonly<{ onNavigate?: (path: string) => void }>) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +43,7 @@ export function LoginForm() {
       }
       // A full navigation guarantees the freshly written Supabase session cookie is
       // visible to middleware and the first protected Server Component request.
-      window.location.assign("/overview");
+      onNavigate("/overview");
     } catch {
       setError("登录服务暂不可用，请稍后重试。");
     } finally {
@@ -44,45 +52,74 @@ export function LoginForm() {
   }
 
   return (
-    <form className="mt-8 grid gap-5" onSubmit={(event) => void submit(event)}>
-      <label className="login-field">
-        <span>邮箱</span>
-        <input
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          placeholder="player@example.com"
-        />
-      </label>
-      <label className="login-field">
-        <span>密码</span>
-        <input
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          minLength={6}
-          placeholder="输入测试账号密码"
-        />
-      </label>
+    <form
+      className="mt-8 grid min-w-0 gap-5"
+      onSubmit={(event) => void submit(event)}
+    >
+      <div className="grid gap-2">
+        <Label htmlFor="login-email">邮箱</Label>
+        <div className="relative">
+          <Mail
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            id="login-email"
+            className="h-12 rounded-xl bg-white/76 pl-10"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            required
+            placeholder="player@example.com"
+          />
+        </div>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="login-password">密码</Label>
+        <div className="relative">
+          <LockKeyhole
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            id="login-password"
+            className="h-12 rounded-xl bg-white/76 pl-10"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            minLength={6}
+            placeholder="输入密码"
+          />
+        </div>
+      </div>
       {error !== null ? (
-        <p
-          className="rounded-xl border border-rose-300/20 bg-rose-300/8 px-4 py-3 text-sm text-rose-100"
+        <Alert
+          variant="destructive"
           role="alert"
+          className="rounded-xl border-rose-200 bg-rose-50/90 text-rose-900"
         >
-          {error}
-        </p>
+          <AlertCircle aria-hidden="true" />
+          <AlertDescription className="text-rose-800">
+            {error}
+          </AlertDescription>
+        </Alert>
       ) : null}
-      <button
-        className="primary-button w-full"
+      <Button
+        className="h-12 w-full rounded-xl shadow-[0_12px_30px_rgb(40_122_84_/_0.2)]"
         type="submit"
         disabled={pending}
+        aria-label="登录工作台"
+        aria-busy={pending}
       >
+        {pending ? (
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+        ) : null}
         {pending ? "正在登录…" : "登录工作台"}
-      </button>
-      <p className="text-center text-xs leading-5 text-slate-500">
-        当前阶段仅使用本地或预览 Supabase 的脱敏测试账号。
+      </Button>
+      <p className="text-center text-xs leading-5 text-muted-foreground">
+        仅使用当前系统已提供的账号登录。
       </p>
     </form>
   );

@@ -8,6 +8,7 @@ export function PageHero({
   description,
   actions,
   visual,
+  background,
   className,
 }: Readonly<{
   eyebrow?: string;
@@ -15,15 +16,17 @@ export function PageHero({
   description?: string;
   actions?: ReactNode;
   visual?: ReactNode;
+  background?: ReactNode;
   className?: string;
 }>) {
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[1.75rem] border border-glass-border bg-[linear-gradient(135deg,rgb(255_255_255_/_0.88),rgb(226_247_255_/_0.72),rgb(234_248_224_/_0.76))] p-6 shadow-soft sm:p-8",
+        "relative overflow-hidden rounded-[1.75rem] border border-glass-border bg-[image:var(--hero-surface-gradient)] p-6 shadow-soft sm:p-8",
         className,
       )}
     >
+      {background}
       <div className="relative z-10 max-w-3xl">
         {eyebrow ? (
           <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
