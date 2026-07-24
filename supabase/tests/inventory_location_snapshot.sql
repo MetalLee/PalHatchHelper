@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(13);
+select plan(15);
 
 select ok(
   'dimensional_storage' = any(enum_range(null::public.pal_location_type)::text[]),
@@ -34,6 +34,24 @@ select has_column(
   'pal_snapshot_items',
   'location_access_scope',
   'snapshot rows preserve independently resolved access scope'
+);
+
+select ok(
+  position(
+    'palhatch.source_metadata' in pg_get_functiondef(
+      'public.publish_inventory_snapshot(uuid,jsonb)'::regprocedure
+    )
+  ) = 0,
+  'snapshot publishing does not copy all Pal metadata through a transaction GUC'
+);
+
+select ok(
+  position(
+    'current_setting' in pg_get_functiondef(
+      'private.attach_pal_snapshot_source_metadata()'::regprocedure
+    )
+  ) = 0,
+  'per-row snapshot inserts do not repeatedly decode transaction-wide metadata'
 );
 
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
