@@ -115,7 +115,8 @@ jobs:
 
   agent:
     name: Python Agent
-    runs-on: ubuntu-latest
+    # Match the production Agent host and preserve Landlock + seccomp sandbox coverage.
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     defaults:
       run:
