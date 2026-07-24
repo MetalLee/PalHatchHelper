@@ -6,7 +6,13 @@ import type {
   RouteModeScore,
   RouteScoreComponent,
 } from "@palhatch/contracts";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -60,9 +66,20 @@ const context: BreederFormContext = {
     passive_skill_id: `test_passive_${id}`,
     display_name: `被动 ${id.toUpperCase()}`,
     rank: 5 - index,
-    is_negative: false,
+    is_negative: index === 4,
   })),
 };
+
+function selectTarget(query: string): void {
+  fireEvent.click(
+    screen.getByRole("combobox", {
+      name: "目标 Pal（名称、编号或 Stable ID）",
+    }),
+  );
+  const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
+  fireEvent.change(search, { target: { value: query } });
+  fireEvent.click(screen.getByRole("option", { name: /幻色幼崽/ }));
+}
 
 const components: RouteScoreComponent[] = [
   "route_length",
@@ -247,11 +264,30 @@ describe("Phase 6 breeder form", () => {
     const markup = renderToString(<BreederForm context={context} />);
 
     expect(markup).toMatch(
-      /<button[^>]*disabled=""[^>]*>创建配种任务<\/button>/,
+      /<button[^>]*disabled=""[^>]*>[\s\S]*创建配种任务[\s\S]*<\/button>/,
     );
   });
 
-  it("searches stable catalog options, enforces four passives and creates a fixed request", async () => {
+  it("selects a target from the searchable combobox with the keyboard", () => {
+    render(<BreederForm context={context} />);
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "目标 Pal（名称、编号或 Stable ID）",
+      }),
+    );
+    const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
+    fireEvent.change(search, { target: { value: "test_child_pal" } });
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    const summary = screen.getByRole("region", { name: "目标 Pal 摘要" });
+    expect(summary.textContent).toContain("幻色幼崽");
+    expect(summary.textContent).toContain("#003");
+    expect(summary.textContent).toContain("test_child_pal");
+  });
+
+  it("shows passive ranks, enforces four selections and creates the fixed request", async () => {
     const createJob = vi.fn(async (request: CreateBreedingJobRequest) => {
       void request;
       return {
@@ -262,24 +298,21 @@ describe("Phase 6 breeder form", () => {
     });
     render(<BreederForm context={context} createJob={createJob} />);
 
-    fireEvent.change(
-      screen.getByLabelText("目标 Pal（名称、编号或 Stable ID）"),
-      {
-        target: { value: "test_child_pal" },
-      },
-    );
+    selectTarget("test_child_pal");
+
     for (const id of ["A", "B", "C", "D", "E"]) {
       fireEvent.click(
-        screen.getByRole("checkbox", { name: new RegExp(`被动 ${id}`) }),
+        screen.getByRole("button", { name: new RegExp(`选择被动 ${id}`) }),
       );
     }
     expect(screen.getByRole("alert").textContent).toContain("最多选择四个被动");
-    fireEvent.change(screen.getByLabelText("优化模式"), {
-      target: { value: "least_borrowing" },
-    });
+    expect(screen.getByText("Rank 5")).toBeTruthy();
+    expect(screen.getByText("负面")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "最少借用" }));
     fireEvent.change(screen.getByLabelText("最大代数"), {
       target: { value: "6" },
     });
+    fireEvent.click(screen.getByRole("switch", { name: "允许使用公会共享" }));
     fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
 
     await waitFor(() => expect(createJob).toHaveBeenCalledTimes(1));
@@ -292,30 +325,57 @@ describe("Phase 6 breeder form", () => {
         "test_passive_d",
       ],
       optimization_mode: "least_borrowing",
+      allow_guild_shared: false,
       max_generations: 6,
     });
-    expect(screen.getByText("24181105")).toBeTruthy();
-    expect(screen.getByText("phase4b-deterministic-v1")).toBeTruthy();
+    expect(routerPush).toHaveBeenCalledWith(
+      "/breeder/jobs/60000000-0000-4000-8000-000000000066",
+    );
   });
 
-  it("keeps selected passives visible above the long list and removes them directly", () => {
+  it("keeps selected passives above the scrollable candidates, removes and clears them", () => {
     render(<BreederForm context={context} />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /被动 A/ }));
-    fireEvent.change(screen.getByPlaceholderText("筛选被动"), {
+    fireEvent.click(screen.getByRole("button", { name: /选择被动 A/ }));
+    fireEvent.click(screen.getByRole("button", { name: /选择被动 B/ }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "搜索被动" }), {
       target: { value: "被动 E" },
     });
 
     const selected = screen.getByRole("region", { name: "已选择的被动" });
     expect(selected.textContent).toContain("被动 A");
     fireEvent.click(screen.getByRole("button", { name: "移除被动 A" }));
+    expect(selected.textContent).not.toContain("被动 A");
+    fireEvent.click(within(selected).getByRole("button", { name: "清空" }));
     expect(selected.textContent).toContain("尚未选择被动");
     expect(screen.getByText("已选择 0 / 4")).toBeTruthy();
   });
 
-  it.each(["幻色幼崽", "3", "#3"])(
-    "resolves the target from the published name or encyclopedia number: %s",
-    async (targetQuery) => {
+  it("renders all four optimization modes as selectable cards", () => {
+    render(<BreederForm context={context} />);
+
+    const modes = screen.getByRole("radiogroup", { name: "优化模式" });
+    expect(within(modes).getAllByRole("radio")).toHaveLength(4);
+    expect(
+      (
+        within(modes).getByRole("radio", {
+          name: "综合推荐",
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    fireEvent.click(within(modes).getByRole("radio", { name: "最高成功率" }));
+    expect(
+      (
+        within(modes).getByRole("radio", {
+          name: "最高成功率",
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+  });
+
+  it.each(["幻色幼崽", "3", "#3", "test_child_pal"])(
+    "resolves a published target by name, encyclopedia number or Stable ID: %s",
+    async (query) => {
       const createJob = vi.fn(async (request: CreateBreedingJobRequest) => {
         void request;
         return {
@@ -326,16 +386,132 @@ describe("Phase 6 breeder form", () => {
       });
       render(<BreederForm context={context} createJob={createJob} />);
 
-      fireEvent.change(
-        screen.getByLabelText("目标 Pal（名称、编号或 Stable ID）"),
-        { target: { value: targetQuery } },
-      );
+      selectTarget(query);
       fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
 
       await waitFor(() => expect(createJob).toHaveBeenCalledTimes(1));
       expect(createJob.mock.calls[0]?.[0].target_pal_id).toBe("test_child_pal");
     },
   );
+
+  it("rejects an invalid target Stable ID", async () => {
+    const invalidContext: BreederFormContext = {
+      ...context,
+      pals: [{ ...context.pals[0]!, pal_id: "Invalid Target ID" }],
+    };
+    const createJob = vi.fn(async () => ({
+      job_id: "60000000-0000-4000-8000-000000000066",
+      reused: false,
+      status: "pending" as const,
+    }));
+    render(<BreederForm context={invalidContext} createJob={createJob} />);
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "目标 Pal（名称、编号或 Stable ID）",
+      }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: /幻色幼崽/ }));
+    fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "INVALID_BREEDING_REQUEST",
+      ),
+    );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("requires a target from the fixed published catalog", async () => {
+    const createJob = vi.fn(async () => ({
+      job_id: "60000000-0000-4000-8000-000000000066",
+      reused: false,
+      status: "pending" as const,
+    }));
+    render(<BreederForm context={context} createJob={createJob} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "INVALID_TARGET_PAL",
+      ),
+    );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("rejects an out-of-range maximum generation", async () => {
+    const createJob = vi.fn(async () => ({
+      job_id: "60000000-0000-4000-8000-000000000066",
+      reused: false,
+      status: "pending" as const,
+    }));
+    render(<BreederForm context={context} createJob={createJob} />);
+
+    selectTarget("幻色幼崽");
+    fireEvent.change(screen.getByLabelText("最大代数"), {
+      target: { value: "9" },
+    });
+    fireEvent.submit(screen.getByTestId("breeder-create-form"));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "INVALID_BREEDING_REQUEST",
+      ),
+    );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("shows the stable API error code without navigating", async () => {
+    const createJob = vi.fn(async () => {
+      throw new Error("JOB_CREATE_CONFLICT");
+    });
+    render(<BreederForm context={context} createJob={createJob} />);
+
+    selectTarget("幻色幼崽");
+    fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "JOB_CREATE_CONFLICT",
+      ),
+    );
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("preserves the current data-state warning", () => {
+    render(<BreederForm context={{ ...context, data_state: "parse_error" }} />);
+
+    const status = screen.getByRole("status");
+    expect(status.textContent).toContain("parse_error");
+    expect(status.textContent).toContain("published 快照");
+  });
+
+  it("keeps full pinned versions collapsed behind a readable summary", () => {
+    render(<BreederForm context={context} />);
+
+    expect(screen.getByText("Build 24181105")).toBeTruthy();
+    expect(screen.queryByText(context.inventory_snapshot_id)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "查看固定版本" }));
+    expect(screen.getByText(context.inventory_snapshot_id)).toBeTruthy();
+    expect(screen.getByText(context.game_data_content_hash)).toBeTruthy();
+    expect(screen.getByText("phase4b-deterministic-v1")).toBeTruthy();
+  });
+
+  it("keeps the creation form shrinkable without horizontal overflow at 390px", () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390,
+    });
+    const { container } = render(<BreederForm context={context} />);
+
+    const form = container.querySelector('[data-testid="breeder-create-form"]');
+    expect(form?.className).toContain("min-w-0");
+    expect(form?.className).toContain("max-w-full");
+    expect(form?.className).toContain("overflow-x-clip");
+    expect(container.querySelectorAll('[class*="min-w-["]').length).toBe(0);
+  });
 });
 
 describe("Phase 6 job comparison", () => {

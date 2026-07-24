@@ -65,9 +65,19 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
     { timeout: 30_000 },
   );
 
-  await page.getByLabel("目标 Pal（名称、编号或 Stable ID）").fill("幻色幼崽");
-  await page.getByRole("checkbox", { name: /认真/ }).check();
-  await page.getByLabel("优化模式").selectOption("balanced");
+  await page
+    .getByRole("combobox", {
+      name: "目标 Pal（名称、编号或 Stable ID）",
+    })
+    .click();
+  const targetSearch = page.getByRole("combobox", {
+    name: "搜索目标 Pal",
+  });
+  await targetSearch.fill("幻色幼崽");
+  await targetSearch.press("ArrowDown");
+  await targetSearch.press("Enter");
+  await page.getByRole("button", { name: /选择认真/ }).click();
+  await page.getByRole("radio", { name: "综合推荐" }).check();
   await page.getByLabel("最大代数").fill("5");
   const createButton = page.getByRole("button", { name: "创建配种任务" });
   await expect(createButton).toBeEnabled();
