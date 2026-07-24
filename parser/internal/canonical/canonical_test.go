@@ -55,6 +55,16 @@ func TestBossInventoryIDMapsToBasePalAndPreservesSourceName(t *testing.T) {
 	}
 }
 
+func TestBossCompanionInventoryIDMapsToBasePal(t *testing.T) {
+	actual, err := NormalizeInventoryPalID("BOSS_KingWhale_otomo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actual != "kingwhale" {
+		t.Fatalf("boss companion Pal ID = %q; want kingwhale", actual)
+	}
+}
+
 func TestUnknownFieldsWarnWithoutDroppingPal(t *testing.T) {
 	world := &sav.World{Pals: []sav.Pal{{InstanceID: "pal-1", CharacterID: "FuturePal"}}}
 

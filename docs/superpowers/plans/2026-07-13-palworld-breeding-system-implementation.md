@@ -702,7 +702,9 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 1. 更新正式规格中的库存稳定 ID、所有权类型、共享池和列表展示语义。
 2. 先增加 Parser/Agent/pgTAP/Web 失败测试，覆盖 Boss 前缀、公会基地所有权、跨公会隔离和
    nullable owner 的计划生命周期。
-3. 在 CanonicalSnapshot 标准化边界去除一层 `boss_`，保留原始内部名；新增
+3. 在 CanonicalSnapshot 标准化边界去除一层 `boss_` 及仅用于头目随从角色的 `_otomo`
+   后缀，保留原始内部名；库存校验同时接受当前版本 `catalog_pals` 和受审计
+   `pal_name.PAL_NAME_*` 本地化事实，但配种计算仍只接受 `catalog_pals`。新增
    `player/guild/unresolved` 所有权契约并追加数据库迁移。
 4. 统一库存列表、配种运行事实、路线展示、候选检测和计划失效检查；历史不可变快照不原地修改，
    旧 Boss 映射继续作为兼容保护。

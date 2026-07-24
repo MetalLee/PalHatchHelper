@@ -83,7 +83,10 @@ func NormalizeInventoryPalID(source string) (string, error) {
 		return "", err
 	}
 	if strings.HasPrefix(stableID, "boss_") && len(stableID) > len("boss_") {
-		return stableID[len("boss_"):], nil
+		stableID = stableID[len("boss_"):]
+		if strings.HasSuffix(stableID, "_otomo") && len(stableID) > len("_otomo") {
+			stableID = stableID[:len(stableID)-len("_otomo")]
+		}
 	}
 	return stableID, nil
 }

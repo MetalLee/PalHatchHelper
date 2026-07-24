@@ -31,7 +31,9 @@ def normalize_palworld_stable_id(source: str) -> str:
 def normalize_inventory_pal_id(source: str) -> str:
     stable_id = normalize_palworld_stable_id(source)
     if stable_id.startswith("boss_") and len(stable_id) > len("boss_"):
-        return stable_id[len("boss_") :]
+        stable_id = stable_id[len("boss_") :]
+        if stable_id.endswith("_otomo") and len(stable_id) > len("_otomo"):
+            stable_id = stable_id[: -len("_otomo")]
     return stable_id
 
 

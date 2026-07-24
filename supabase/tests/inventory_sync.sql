@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(38);
+select plan(39);
 
 select has_function(
   'public',
@@ -80,6 +80,13 @@ select ok(
     '10000000-0000-4000-8000-000000000001'
   ) -> 'passive_skill_ids') = 'array',
   'catalog lookup returns only normalized identifier arrays'
+);
+
+select ok(
+  public.get_inventory_catalog_ids_for_agent(
+    '10000000-0000-4000-8000-000000000001'
+  ) -> 'pal_ids' @> '["fixtureinventoryonly"]'::jsonb,
+  'catalog lookup recognizes inventory-only game characters from versioned localization facts'
 );
 
 create temporary table published_snapshot_ids (
