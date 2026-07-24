@@ -24,6 +24,7 @@ describe("Phase 5 web contracts", () => {
         {
           pal_instance_uid: "fixture-pal-a-owned-001",
           pal_id: "test_parent_a",
+          is_boss: false,
           encyclopedia_no: 1,
           pal_display_name: "棉悠悠",
           catalog_entry_state: "resolved",
@@ -36,6 +37,9 @@ describe("Phase 5 web contracts", () => {
           unknown_passive_skill_ids: [],
           location_type: "player_storage",
           location_name: "Fixture Storage A",
+          location_id: null,
+          location_slot_index: 64,
+          location_access_scope: "player",
           ownership_scope: "player",
           share_enabled: true,
           is_owned_by_requester: true,

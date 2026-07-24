@@ -6,7 +6,13 @@ export type BreedingEngineVersion = string;
 export type OptimizationMode = "balanced" | "fastest" | "highest_success" | "least_borrowing";
 export type BreedingEngineInstanceUid = string;
 export type BreedingEngineGender = "male" | "female" | "genderless" | "unknown";
-export type BreedingEngineLocationType = "player_party" | "player_storage" | "base" | "viewing_cage" | "unknown";
+export type BreedingEngineLocationType =
+  | "player_party"
+  | "player_storage"
+  | "base"
+  | "dimensional_storage"
+  | "viewing_cage"
+  | "unknown";
 export type BreedingInventoryExclusionReason =
   | "disappeared"
   | "disabled"

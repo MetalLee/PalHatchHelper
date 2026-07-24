@@ -115,6 +115,18 @@ class CanonicalSnapshotValidator:
                         "unknown",
                     )
                 )
+            dimensional_access_resolved = True
+            if pal.location_type == "dimensional_storage":
+                dimensional_access_resolved = pal.location_access_scope == "guild"
+                if pal.location_access_scope == "unresolved":
+                    pal_warnings.append("LOCATION_ACCESS_UNRESOLVED")
+                    warnings.append(
+                        ValidationWarning(
+                            "LOCATION_ACCESS_UNRESOLVED",
+                            f"pals[{index}].location_access_scope",
+                            "unresolved",
+                        )
+                    )
 
             owner = players.get(pal.owner_player_uid) if pal.owner_player_uid is not None else None
             guild_resolved = pal.guild_uid is not None and pal.guild_uid in guilds
@@ -151,7 +163,9 @@ class CanonicalSnapshotValidator:
                     ),
                     owner_resolved=owner_resolved,
                     guild_resolved=guild_resolved,
-                    shared_eligible=owner_resolved and guild_resolved,
+                    shared_eligible=(
+                        owner_resolved and guild_resolved and dimensional_access_resolved
+                    ),
                     warning_codes=tuple(dict.fromkeys(pal_warnings)),
                 )
             )

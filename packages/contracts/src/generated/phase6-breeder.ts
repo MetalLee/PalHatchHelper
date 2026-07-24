@@ -219,7 +219,9 @@ export interface BreedingRouteViewParent {
     | [BreederStableId, BreederStableId, BreederStableId, BreederStableId];
   borrowed: boolean;
   produced_by_step_index: number | null;
-  location_type: ("player_party" | "player_storage" | "base" | "viewing_cage" | "unknown") | null;
+  location_type:
+    | ("player_party" | "player_storage" | "base" | "dimensional_storage" | "viewing_cage" | "unknown")
+    | null;
   location_name: string | null;
 }
 export interface BreedingRouteViewStep {

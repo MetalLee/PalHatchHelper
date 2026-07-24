@@ -2,7 +2,13 @@
 
 export type InventoryScope = "all" | "mine" | "shared";
 export type PalGender = "male" | "female" | "genderless" | "unknown";
-export type PalLocationType = "player_party" | "player_storage" | "base" | "viewing_cage" | "unknown";
+export type PalLocationType =
+  | "player_party"
+  | "player_storage"
+  | "base"
+  | "dimensional_storage"
+  | "viewing_cage"
+  | "unknown";
 export type Phase5ErrorCode =
   | "AUTH_REQUIRED"
   | "INVALID_CREDENTIALS"
@@ -46,6 +52,7 @@ export interface Phase5WebContractsContracts {
 export interface PalInventoryItem {
   pal_instance_uid: string;
   pal_id: string;
+  is_boss: boolean | null;
   encyclopedia_no: number | null;
   pal_display_name: string;
   catalog_entry_state: "resolved" | "unknown" | "not_configured";
@@ -67,6 +74,9 @@ export interface PalInventoryItem {
   unknown_passive_skill_ids: string[];
   location_type: PalLocationType;
   location_name: string | null;
+  location_id: string | null;
+  location_slot_index: number | null;
+  location_access_scope: "player" | "guild" | "unresolved";
   ownership_scope: "player" | "guild" | "unresolved";
   share_enabled: boolean;
   is_owned_by_requester: boolean;
@@ -103,6 +113,7 @@ export interface PalFilterOption {
 export interface PalInventoryRpcItem {
   pal_instance_uid: string;
   pal_id: string;
+  is_boss: boolean | null;
   encyclopedia_no: number | null;
   pal_display_name: string;
   catalog_entry_state: "resolved" | "unknown" | "not_configured";
@@ -124,6 +135,9 @@ export interface PalInventoryRpcItem {
   unknown_passive_skill_ids: string[];
   location_type: PalLocationType;
   location_name: string | null;
+  location_id: string | null;
+  location_slot_index: number | null;
+  location_access_scope: "player" | "guild" | "unresolved";
   ownership_scope: "player" | "guild" | "unresolved";
   share_enabled: boolean;
   is_owned_by_requester: boolean;

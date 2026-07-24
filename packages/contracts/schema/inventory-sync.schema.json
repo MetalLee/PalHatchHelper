@@ -33,11 +33,15 @@
         "owner_player_uid",
         "guild_uid",
         "pal_id",
+        "is_boss",
         "gender",
         "level",
         "passive_skill_ids",
         "location_type",
         "location_name",
+        "location_id",
+        "location_slot_index",
+        "location_access_scope",
         "ownership_scope",
         "owner_resolved",
         "guild_resolved",
@@ -57,6 +61,7 @@
           "maxLength": 128
         },
         "pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "is_boss": { "type": "boolean" },
         "gender": {
           "type": "string",
           "enum": ["male", "female", "genderless", "unknown"]
@@ -74,6 +79,7 @@
             "player_party",
             "player_storage",
             "base",
+            "dimensional_storage",
             "viewing_cage",
             "unknown"
           ]
@@ -82,6 +88,20 @@
           "type": ["string", "null"],
           "minLength": 1,
           "maxLength": 160
+        },
+        "location_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "location_slot_index": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "location_access_scope": {
+          "type": "string",
+          "enum": ["player", "guild", "unresolved"]
         },
         "ownership_scope": {
           "type": "string",

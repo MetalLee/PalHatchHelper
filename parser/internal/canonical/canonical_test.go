@@ -53,6 +53,9 @@ func TestBossInventoryIDMapsToBasePalAndPreservesSourceName(t *testing.T) {
 			snapshot.Pals[0].Metadata.SourceInternalName,
 		)
 	}
+	if !snapshot.Pals[0].IsBoss {
+		t.Fatal("boss prefix was normalized without preserving is_boss")
+	}
 }
 
 func TestBossCompanionInventoryIDMapsToBasePal(t *testing.T) {
@@ -62,6 +65,93 @@ func TestBossCompanionInventoryIDMapsToBasePal(t *testing.T) {
 	}
 	if actual != "kingwhale" {
 		t.Fatalf("boss companion Pal ID = %q; want kingwhale", actual)
+	}
+}
+
+func TestExplicitBossFlagIsPreservedWithoutBossPrefix(t *testing.T) {
+	world := &sav.World{Pals: []sav.Pal{{
+		InstanceID:  "pal-boss-flag",
+		CharacterID: "Anubis",
+		IsBoss:      true,
+		Gender:      "male",
+	}}}
+
+	snapshot, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !snapshot.Pals[0].IsBoss {
+		t.Fatal("explicit IsBoss flag was lost")
+	}
+}
+
+func TestCanonicalLocationPreservesBaseAndStorageSlots(t *testing.T) {
+	world := &sav.World{
+		Players: []sav.Player{{
+			UID:                   "player-1",
+			Nickname:              "Ada",
+			GuildID:               "guild-1",
+			PalStorageContainerID: "storage-container",
+		}},
+		Bases: []sav.BaseCamp{{
+			ID:      "base-1",
+			GuildID: "guild-1",
+			Name:    "Breeding Base",
+		}},
+		Pals: []sav.Pal{
+			{
+				InstanceID:  "base-pal",
+				CharacterID: "Lamball",
+				Gender:      "female",
+				BaseID:      "base-1",
+				SlotIndex:   7,
+			},
+			{
+				InstanceID:  "storage-pal",
+				CharacterID: "Cattiva",
+				Gender:      "male",
+				OwnerUID:    "player-1",
+				ContainerID: "storage-container",
+				SlotIndex:   64,
+			},
+		},
+	}
+
+	snapshot, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := map[string]Pal{}
+	for _, pal := range snapshot.Pals {
+		byID[pal.InstanceUID] = pal
+	}
+	base := byID["base-pal"]
+	if base.LocationID == nil || *base.LocationID != "base-1" {
+		t.Fatalf("base location ID = %v; want base-1", base.LocationID)
+	}
+	if base.LocationSlotIndex == nil || *base.LocationSlotIndex != 7 {
+		t.Fatalf("base slot = %v; want 7", base.LocationSlotIndex)
+	}
+	if base.LocationAccessScope != "guild" {
+		t.Fatalf("base access scope = %q; want guild", base.LocationAccessScope)
+	}
+	storage := byID["storage-pal"]
+	if storage.LocationSlotIndex == nil || *storage.LocationSlotIndex != 64 {
+		t.Fatalf("storage slot = %v; want 64", storage.LocationSlotIndex)
+	}
+	if storage.LocationAccessScope != "player" {
+		t.Fatalf("storage access scope = %q; want player", storage.LocationAccessScope)
 	}
 }
 

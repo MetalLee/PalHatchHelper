@@ -40,14 +40,18 @@ export interface InventoryPublishPal {
   owner_player_uid: string | null;
   guild_uid: string | null;
   pal_id: string;
+  is_boss: boolean;
   gender: "male" | "female" | "genderless" | "unknown";
   level: number | null;
   /**
    * @maxItems 64
    */
   passive_skill_ids: string[];
-  location_type: "player_party" | "player_storage" | "base" | "viewing_cage" | "unknown";
+  location_type: "player_party" | "player_storage" | "base" | "dimensional_storage" | "viewing_cage" | "unknown";
   location_name: string | null;
+  location_id: string | null;
+  location_slot_index: number | null;
+  location_access_scope: "player" | "guild" | "unresolved";
   ownership_scope: "player" | "guild" | "unresolved";
   metadata?: CanonicalPalSourceMetadata | null;
   owner_resolved: boolean;

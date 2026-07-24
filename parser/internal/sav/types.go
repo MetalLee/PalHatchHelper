@@ -103,6 +103,13 @@ type Pal struct {
 	// BaseID is derived by joining ContainerID to BaseCamp.WorkerContainerID.
 	// It is safe to expose through public APIs; the raw container GUID is not.
 	BaseID string `json:"baseId,omitempty"`
+	// Dimensional-storage files are named for the player whose logical storage
+	// they represent. This identifier is distinct from OwnerUID, which remains
+	// the Pal's actual owner. Access scope stays unresolved unless a future,
+	// independently verified adapter can prove that the storage is guild-shared.
+	StorageOwnerUID      string `json:"storageOwnerUid,omitempty"`
+	InDimensionalStorage bool   `json:"inDimensionalStorage,omitempty"`
+	LocationAccessScope  string `json:"locationAccessScope,omitempty"`
 }
 
 // Guild describes one GroupSaveDataMap entry. GroupType is retained because

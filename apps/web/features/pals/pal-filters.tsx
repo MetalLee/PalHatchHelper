@@ -20,6 +20,7 @@ const locationLabels = {
   player_party: "队伍",
   player_storage: "终端",
   base: "据点",
+  dimensional_storage: "次元仓库",
   viewing_cage: "观赏笼",
   unknown: "未知",
 } as const;
