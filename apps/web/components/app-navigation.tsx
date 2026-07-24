@@ -1,96 +1,86 @@
+import {
+  Boxes,
+  ClipboardList,
+  Database,
+  Dna,
+  House,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 
-const primaryItems = [
-  { href: "/overview", label: "概览", glyph: "◫" },
-  { href: "/pals", label: "帕鲁", glyph: "◇" },
-  { href: "/breeder", label: "配种器", glyph: "△" },
-  { href: "/plans", label: "计划", glyph: "□" },
-] as const;
+import { cn } from "@/lib/utils";
 
-const utilityItems = [
-  { href: "/data-status", label: "数据状态", glyph: "●" },
-  { href: "/account", label: "账号", glyph: "○" },
-] as const;
-
-const mobileItems = [...primaryItems, utilityItems[0]] as const;
-
-function NavigationLink({
-  href,
-  label,
-  glyph,
-  activePath,
-  mobile = false,
-}: Readonly<{
+export interface NavigationItem {
   href: string;
   label: string;
-  glyph: string;
-  activePath: string;
-  mobile?: boolean;
-}>) {
-  const active = activePath === href || activePath.startsWith(`${href}/`);
+  icon: LucideIcon;
+}
+
+export const workspaceNavigationItems: readonly NavigationItem[] = [
+  { href: "/overview", label: "首页", icon: House },
+  { href: "/pals", label: "帕鲁库存", icon: Boxes },
+  { href: "/breeder", label: "配种工作台", icon: Dna },
+  { href: "/plans", label: "我的计划", icon: ClipboardList },
+  { href: "/data-status", label: "数据状态", icon: Database },
+];
+
+const routeTitles = [
+  { href: "/admin/bindings", label: "玩家绑定" },
+  { href: "/admin/save-parser", label: "存档与 Parser" },
+  { href: "/admin/breeding-data", label: "游戏数据" },
+  { href: "/admin/jobs", label: "任务与 AI" },
+  { href: "/admin/settings", label: "系统设置" },
+  { href: "/admin", label: "管理中心" },
+  { href: "/account", label: "账号" },
+  ...workspaceNavigationItems,
+] as const;
+
+export function isNavigationItemActive(
+  activePath: string,
+  href: string,
+): boolean {
+  return activePath === href || activePath.startsWith(`${href}/`);
+}
+
+export function currentPageTitle(activePath: string): string {
   return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={
-        mobile
-          ? `mobile-nav-link ${active ? "mobile-nav-link-active" : ""}`
-          : `side-nav-link ${active ? "side-nav-link-active" : ""}`
-      }
-    >
-      <span aria-hidden="true" className="text-base">
-        {glyph}
-      </span>
-      <span>{label}</span>
-    </Link>
+    routeTitles.find(({ href }) => isNavigationItemActive(activePath, href))
+      ?.label ?? "工作台"
   );
 }
 
 export function AppNavigation({
   activePath,
-  displayName,
-}: Readonly<{ activePath: string; displayName: string }>) {
+  className,
+}: Readonly<{ activePath: string; className?: string }>) {
   return (
-    <>
-      <aside className="desktop-sidebar" aria-label="主导航">
-        <Link
-          href="/overview"
-          className="brand-lockup"
-          aria-label="PalHatch 首页"
-        >
-          <span className="brand-mark" aria-hidden="true">
-            PH
-          </span>
-          <span>
-            <strong>PalHatch</strong>
-            <small>BREEDING DESK</small>
-          </span>
-        </Link>
-        <nav className="mt-10 grid gap-2">
-          {primaryItems.map((item) => (
-            <NavigationLink key={item.href} {...item} activePath={activePath} />
-          ))}
-        </nav>
-        <nav className="mt-auto grid gap-2 border-t border-white/8 pt-5">
-          {utilityItems.map((item) => (
-            <NavigationLink key={item.href} {...item} activePath={activePath} />
-          ))}
-          <p className="mt-3 truncate px-3 text-xs text-slate-500">
-            {displayName}
-          </p>
-        </nav>
-      </aside>
-
-      <nav className="mobile-bottom-nav" aria-label="移动端导航">
-        {mobileItems.map((item) => (
-          <NavigationLink
+    <nav
+      aria-label="主导航"
+      className={cn(
+        "hidden min-w-0 items-center justify-center gap-1 lg:flex",
+        className,
+      )}
+    >
+      {workspaceNavigationItems.map((item) => {
+        const active = isNavigationItemActive(activePath, item.href);
+        const Icon = item.icon;
+        return (
+          <Link
             key={item.href}
-            {...item}
-            activePath={activePath}
-            mobile
-          />
-        ))}
-      </nav>
-    </>
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-muted-foreground no-underline transition-colors duration-200",
+              "hover:bg-white/65 hover:text-forest focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+              active &&
+                "bg-accent text-accent-foreground shadow-[inset_0_0_0_1px_rgb(40_122_84_/_0.08)]",
+            )}
+          >
+            <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

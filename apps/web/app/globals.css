@@ -1,16 +1,73 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @source "../../../packages/ui/src";
 
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sky: var(--sky);
+  --color-forest: var(--forest);
+  --color-leaf: var(--leaf);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --shadow-soft: 0 18px 50px rgb(42 99 79 / 0.1);
+}
+
 :root {
-  color-scheme: dark;
-  --background: #071017;
-  --panel: #0b1720;
-  --panel-raised: #10202a;
-  --foreground: #eef8f7;
-  --muted: #8aa0aa;
-  --line: rgba(183, 220, 219, 0.12);
-  --accent: #5eead4;
-  --accent-strong: #2dd4bf;
+  color-scheme: light;
+  --background: #f4fbf8;
+  --foreground: #183d3a;
+  --card: rgb(255 255 255 / 0.88);
+  --card-foreground: #183d3a;
+  --popover: #ffffff;
+  --popover-foreground: #183d3a;
+  --primary: #287a54;
+  --primary-foreground: #ffffff;
+  --secondary: #dff2ff;
+  --secondary-foreground: #174b64;
+  --muted: #eaf4ef;
+  --muted-foreground: #55706a;
+  --accent: #dff5e7;
+  --accent-foreground: #1e6547;
+  --destructive: #c94f5a;
+  --destructive-foreground: #ffffff;
+  --border: #cfe5dc;
+  --input: #bdd9ce;
+  --ring: #338864;
+  --sky: #78c9ee;
+  --forest: #1f6848;
+  --leaf: #75b95a;
+  --glass: rgb(255 255 255 / 0.76);
+  --glass-border: rgb(255 255 255 / 0.72);
+  --radius: 1rem;
+
+  /* Legacy aliases retained until the business page views are migrated. */
+  --panel: rgb(255 255 255 / 0.82);
+  --panel-raised: #ffffff;
+  --line: var(--border);
+  --accent-strong: var(--primary);
 }
 
 * {
@@ -19,34 +76,47 @@
 
 html {
   background: var(--background);
+  scroll-padding-top: 6rem;
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background:
     radial-gradient(
-      circle at 70% -10%,
-      rgba(45, 212, 191, 0.09),
-      transparent 34rem
+      circle at 12% 4%,
+      rgb(120 201 238 / 0.22),
+      transparent 30rem
     ),
-    linear-gradient(180deg, #071017 0%, #08131a 100%);
+    radial-gradient(
+      circle at 92% 18%,
+      rgb(117 185 90 / 0.2),
+      transparent 28rem
+    ),
+    linear-gradient(150deg, #f2fbff 0%, #f4fbf8 48%, #f8fcf0 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
+    "Source Han Sans SC", sans-serif;
+  line-height: 1.5;
 }
 
 button,
 a,
 input,
-select {
+select,
+textarea {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--accent);
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ring) 56%, transparent);
   outline-offset: 3px;
 }
 
@@ -68,68 +138,6 @@ select:focus-visible {
 
 .app-frame {
   min-height: 100vh;
-}
-
-.admin-frame {
-  min-height: 100vh;
-  padding-bottom: 2rem;
-}
-
-.admin-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid var(--line);
-  padding: 1rem;
-  background: rgba(6, 15, 21, 0.94);
-}
-
-.admin-topbar strong {
-  display: block;
-  margin-top: 0.25rem;
-}
-
-.admin-identity {
-  display: grid;
-  justify-items: end;
-  gap: 0.25rem;
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-.admin-identity a {
-  color: var(--accent);
-}
-
-.admin-navigation {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--line);
-  padding: 0.75rem 1rem;
-  scrollbar-width: thin;
-}
-
-.admin-nav-link {
-  flex: 0 0 auto;
-  min-height: 2.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  padding: 0.7rem 0.9rem;
-  color: #9ab0b8;
-  text-decoration: none;
-}
-
-.admin-nav-link-active {
-  border-color: rgba(94, 234, 212, 0.4);
-  background: rgba(45, 212, 191, 0.1);
-  color: #b8fff4;
-}
-
-.admin-main {
-  width: min(100% - 2rem, 90rem);
-  margin: 1.25rem auto 0;
 }
 
 .admin-access-denied {
@@ -202,7 +210,7 @@ select:focus-visible {
 }
 
 .admin-table th {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-weight: 600;
 }
 
@@ -237,7 +245,7 @@ select:focus-visible {
 .admin-form-grid label {
   display: grid;
   gap: 0.35rem;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 0.8rem;
 }
 
@@ -261,7 +269,7 @@ select:focus-visible {
 }
 
 .admin-kv dt {
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .admin-kv dd {
@@ -271,26 +279,9 @@ select:focus-visible {
 }
 
 @media (min-width: 760px) {
-  .admin-topbar,
-  .admin-navigation {
-    padding-inline: max(2rem, calc((100vw - 90rem) / 2));
-  }
-
   .admin-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-
-.desktop-sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
-  display: none;
-  width: 16rem;
-  flex-direction: column;
-  border-right: 1px solid var(--line);
-  background: rgba(6, 15, 21, 0.92);
-  padding: 1.75rem 1.25rem;
-  backdrop-filter: blur(18px);
 }
 
 .brand-lockup {
@@ -334,64 +325,11 @@ select:focus-visible {
   box-shadow: inset 0 0 20px rgba(45, 212, 191, 0.06);
 }
 
-.side-nav-link {
-  display: flex;
-  min-height: 2.75rem;
-  align-items: center;
-  gap: 0.8rem;
-  border: 1px solid transparent;
-  border-radius: 0.85rem;
-  padding: 0.65rem 0.8rem;
-  color: #8ba1aa;
-  font-size: 0.875rem;
-  text-decoration: none;
-  transition: 150ms ease;
-}
-
-.side-nav-link:hover {
-  background: rgba(255, 255, 255, 0.035);
-  color: #e5f5f3;
-}
-
-.side-nav-link-active {
-  border-color: rgba(94, 234, 212, 0.18);
-  background: rgba(45, 212, 191, 0.09);
-  color: #b8fff4;
-}
-
 .app-main {
-  min-height: 100vh;
-  padding: 1.25rem 1rem 7rem;
-}
-
-.mobile-bottom-nav {
-  position: fixed;
-  z-index: 50;
-  inset: auto 0 0;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
-  background: rgba(6, 15, 21, 0.94);
-  padding: 0.45rem 0.5rem calc(0.45rem + env(safe-area-inset-bottom));
-  backdrop-filter: blur(18px);
-}
-
-.mobile-nav-link {
-  display: flex;
-  min-height: 3.25rem;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 0.2rem;
-  border-radius: 0.75rem;
-  color: #718993;
-  font-size: 0.67rem;
-  text-decoration: none;
-}
-
-.mobile-nav-link-active {
-  background: rgba(45, 212, 191, 0.09);
-  color: #9ef5e8;
+  min-height: calc(100dvh - 5.5rem);
+  width: min(100%, 90rem);
+  margin-inline: auto;
+  padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom));
 }
 
 .page-stack {
@@ -415,7 +353,7 @@ select:focus-visible {
 
 .page-header h1 {
   margin: 0.35rem 0 0;
-  color: white;
+  color: var(--foreground);
   font-size: clamp(1.75rem, 4vw, 2.5rem);
   font-weight: 650;
   letter-spacing: -0.035em;
@@ -423,7 +361,7 @@ select:focus-visible {
 
 .page-header p:last-child {
   margin: 0.55rem 0 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 0.875rem;
 }
 
@@ -1122,14 +1060,8 @@ select:focus-visible {
 }
 
 @media (min-width: 1024px) {
-  .desktop-sidebar {
-    display: flex;
-  }
-  .mobile-bottom-nav {
-    display: none;
-  }
   .app-main {
-    margin-left: 16rem;
+    margin-inline: auto;
     padding: 2rem;
   }
   .filter-grid {

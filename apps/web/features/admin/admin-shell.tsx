@@ -1,32 +1,27 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AdminNavigation } from "./admin-navigation";
 
-export function AdminShell({
-  children,
-  displayName,
-}: Readonly<{ children: ReactNode; displayName: string }>) {
+export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   return (
-    <div className="admin-frame">
-      <header className="admin-topbar">
+    <div className="grid gap-5">
+      <section className="rounded-2xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-5">
         <div>
-          <p className="eyebrow">PALHATCH CONTROL PLANE</p>
-          <strong>管理员工作台</strong>
+          <p className="eyebrow">PALHATCH ADMIN</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
+            管理中心
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            管理子页面沿用同一顶部导航，权限继续由服务端守卫验证。
+          </p>
         </div>
-        <div className="admin-identity">
-          <span>{displayName}</span>
-          <Link href="/overview">返回玩家工作台</Link>
-        </div>
-      </header>
-      <AdminNavigation activePath={pathname} />
-      <main className="admin-main" id="main-content">
-        {children}
-      </main>
+        <AdminNavigation activePath={pathname} />
+      </section>
+      {children}
     </div>
   );
 }

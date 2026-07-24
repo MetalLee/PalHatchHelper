@@ -32,18 +32,24 @@ describe("Phase 5 states and navigation", () => {
     expect(gameDataStatusPresentation("blocked").title).toMatch(/受阻/);
   });
 
-  it("exposes the Phase 7 plan center on desktop and mobile", () => {
-    render(<AppNavigation activePath="/pals" displayName="Fixture Player A" />);
+  it("exposes every workspace destination in top navigation", () => {
+    render(<AppNavigation activePath="/pals" />);
 
     expect(
-      screen.getAllByRole("link", { name: "概览" }).length,
+      screen.getAllByRole("link", { name: "首页" }).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole("link", { name: "帕鲁" }).length,
+      screen.getAllByRole("link", { name: "帕鲁库存" }).length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: "数据状态" })).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: /账号/ })).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "配种器" })).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: "计划" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("link", { name: "配种工作台" }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("link", { name: "我的计划" }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("link", { name: "数据状态" }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole("navigation", { name: "底部导航" })).toBeNull();
   });
 });
