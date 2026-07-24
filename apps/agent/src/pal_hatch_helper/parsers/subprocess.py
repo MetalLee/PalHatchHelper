@@ -257,12 +257,6 @@ class SubprocessParserAdapter:
         executable: Path,
     ) -> None:
         os.umask(0o077)
-        memory = max(self._memory_limit_bytes, 1)
-        resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
-        cpu = max(math.ceil(self._cpu_limit_seconds), 1)
-        resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu + 1))
-        file_size = max(self._max_output_bytes, 1)
-        resource.setrlimit(resource.RLIMIT_FSIZE, (file_size, file_size))
         try:
             affinity = os.sched_getaffinity(0)
             os.sched_setaffinity(0, {min(affinity)})
@@ -275,6 +269,14 @@ class SubprocessParserAdapter:
             runtime_read_paths=self._runtime_read_paths,
         )
         _install_seccomp_filter(disable_network=self._disable_network)
+        # Shared sandbox libraries must be mapped before RLIMIT_AS can be lower
+        # than the virtual address space inherited from the parent test process.
+        memory = max(self._memory_limit_bytes, 1)
+        resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
+        cpu = max(math.ceil(self._cpu_limit_seconds), 1)
+        resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu + 1))
+        file_size = max(self._max_output_bytes, 1)
+        resource.setrlimit(resource.RLIMIT_FSIZE, (file_size, file_size))
 
 
 def _install_seccomp_filter(*, disable_network: bool) -> None:
