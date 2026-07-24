@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import pytest
 
@@ -6,7 +7,7 @@ from pal_hatch_helper.breeding.adapter import (
     BreedingEngineAdapter,
     RuntimeScoringProfile,
 )
-from pal_hatch_helper.breeding.engine import ALGORITHM_VERSION
+from pal_hatch_helper.breeding.engine import ALGORITHM_VERSION, DeterministicBreedingEngine
 from pal_hatch_helper.breeding.facts import (
     BreedingRuntimeFacts,
     FixedInventorySnapshot,
@@ -102,7 +103,7 @@ def test_claim_adapter_validates_registry_before_calling_the_engine() -> None:
 
         assert result.routes
         assert result.algorithm_version == ALGORITHM_VERSION
-        assert result.scoring_profile_version == "balanced-v4"
+        assert result.scoring_profile_version == "balanced-v5"
         assert result.game_data_version_id == claim.job.game_data_version_id
 
     asyncio.run(scenario())
@@ -127,5 +128,39 @@ def test_claim_adapter_rejects_database_weight_drift_at_startup() -> None:
             await BreedingEngineAdapter(repository).initialize()
 
         assert caught.value.code is ErrorCode.BREEDING_RUNTIME_PROFILE_MISMATCH
+
+    asyncio.run(scenario())
+
+
+def test_claim_adapter_keeps_the_event_loop_available_during_cpu_search() -> None:
+    class SlowEngine:
+        def search(self, request, facts):  # type: ignore[no-untyped-def]
+            deadline = time.monotonic() + 0.08
+            value = 0
+            while time.monotonic() < deadline:
+                value = (value * 33 + 17) % 1_000_003
+            assert value >= 0
+            return DeterministicBreedingEngine().search(request, facts)
+
+    async def scenario() -> None:
+        claim = make_job_claim()
+        repository = FakeRuntimeRepository(claim)
+        adapter = BreedingEngineAdapter(repository, engine=SlowEngine())  # type: ignore[arg-type]
+        await adapter.initialize()
+        ticks = 0
+        running = True
+
+        async def ticker() -> None:
+            nonlocal ticks
+            while running:
+                await asyncio.sleep(0.005)
+                ticks += 1
+
+        ticker_task = asyncio.create_task(ticker())
+        await adapter.execute(claim)
+        running = False
+        await ticker_task
+
+        assert ticks >= 3
 
     asyncio.run(scenario())

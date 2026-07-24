@@ -102,7 +102,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   await expect(page.getByText("完整评分明细")).toBeVisible();
   await expect(page.getByText("解释已降级")).toBeVisible();
   await expect(
-    page.getByText("inventory-trait-aware-deterministic-v3"),
+    page.getByText("inventory-trait-aware-deterministic-v4"),
   ).toBeVisible();
 
   const response = await page.request.get(`/api/breeder/jobs/${jobId}`);

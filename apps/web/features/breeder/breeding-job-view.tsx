@@ -172,10 +172,13 @@ export function BreedingJobView({
       ) ?? [],
     [plan],
   );
-  const searchIncomplete =
-    plan?.explanation_codes.includes("SEARCH_INCOMPLETE") === true ||
+  const hardSearchLimit =
     plan?.explanation_codes.includes("SEARCH_LIMIT_REACHED") === true ||
+    plan?.explanation_codes.includes("SEARCH_TIMEOUT") === true ||
     plan?.diagnostics.search_complete === false;
+  const heuristicSearchPruned =
+    !hardSearchLimit &&
+    plan?.explanation_codes.includes("SEARCH_PRUNED") === true;
   const selected = useMemo(
     () =>
       plan?.routes.find((route) => route.route_key === selectedKey) ??
@@ -326,7 +329,7 @@ export function BreedingJobView({
         </dl>
       </section>
 
-      {plan === null ? null : plan.routes.length === 0 && searchIncomplete ? (
+      {plan === null ? null : plan.routes.length === 0 && hardSearchLimit ? (
         <section className="state-card" role="status">
           <p className="eyebrow">BOUNDED SEARCH INCOMPLETE</p>
           <h2 className="mt-3 text-xl font-semibold text-white">
@@ -334,6 +337,16 @@ export function BreedingJobView({
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             当前结果不能证明不存在合法路线。可降低最大代数、减少期望被动，或缩小可借用库存范围后创建新任务。
+          </p>
+        </section>
+      ) : plan.routes.length === 0 && heuristicSearchPruned ? (
+        <section className="state-card" role="status">
+          <p className="eyebrow">HEURISTIC SEARCH PRUNED</p>
+          <h2 className="mt-3 text-xl font-semibold text-white">
+            启发式搜索未找到候选
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            本轮搜索经过状态剪枝，不能据此断言没有合法路线。系统会保留固定输入，便于使用优化后的算法重新计算。
           </p>
         </section>
       ) : plan.routes.length === 0 ? (
@@ -348,9 +361,13 @@ export function BreedingJobView({
         </section>
       ) : (
         <>
-          {searchIncomplete ? (
+          {hardSearchLimit ? (
             <p className="notice-banner" role="status">
               已返回当前最优候选；搜索受到安全预算限制，未穷举全部路线。
+            </p>
+          ) : heuristicSearchPruned ? (
+            <p className="notice-banner" role="status">
+              已返回当前候选；搜索使用了确定性的启发式剪枝。
             </p>
           ) : null}
           <section
@@ -417,7 +434,7 @@ export function BreedingJobView({
                   route={selected}
                   historical={
                     result.data.algorithm_version !==
-                    "inventory-trait-aware-deterministic-v3"
+                    "inventory-trait-aware-deterministic-v4"
                   }
                   palNames={palNames}
                   passiveNames={passiveNames}

@@ -478,6 +478,24 @@ describe("Phase 6 job comparison", () => {
     expect(screen.queryByText("当前没有合法路线")).toBeNull();
   });
 
+  it("does not label heuristic pruning as a hard safety limit", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    value.data.plan.routes = [];
+    value.data.plan.route_count = 0;
+    value.data.plan.explanation_codes = ["SEARCH_PRUNED", "SEARCH_INCOMPLETE"];
+    value.data.plan.diagnostics = {
+      search_complete: true,
+      hit_limits: [],
+      pruned_assignment_states: 128,
+    };
+
+    render(<BreedingJobView initialResult={value} poll={false} />);
+
+    expect(screen.getByText("启发式搜索未找到候选")).toBeTruthy();
+    expect(screen.queryByText("搜索达到安全上限")).toBeNull();
+  });
+
   it("shows actionable advice when a complete search proves there is no legal route", () => {
     const value = completedJob();
     if (value.data.plan === null) throw new Error("fixture plan missing");

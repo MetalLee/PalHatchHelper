@@ -725,6 +725,31 @@ async def run_save_worker(
                         "error_code": error.code.value,
                     },
                 )
+            try:
+                cleanup = await service.cleanup_expired_payloads()
+                if (
+                    cleanup.purged_snapshot_count
+                    or cleanup.deleted_failure_count
+                    or cleanup.deleted_detection_run_count
+                ):
+                    logger.info(
+                        "inventory_retention_cleanup_completed",
+                        extra={
+                            "event": "inventory_retention_cleanup_completed",
+                            "purged_snapshot_count": cleanup.purged_snapshot_count,
+                            "deleted_item_count": cleanup.deleted_item_count,
+                            "deleted_failure_count": cleanup.deleted_failure_count,
+                            "deleted_detection_run_count": (cleanup.deleted_detection_run_count),
+                        },
+                    )
+            except StructuredError as error:
+                logger.warning(
+                    "inventory_retention_cleanup_failed",
+                    extra={
+                        "event": "inventory_retention_cleanup_failed",
+                        "error_code": error.code.value,
+                    },
+                )
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(
                     stopped.wait(),

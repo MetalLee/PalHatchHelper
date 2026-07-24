@@ -80,4 +80,14 @@ Schema、稳定 ID、PlZ 兼容、世界 UID、确定性、损坏输入和 64 Mi
 
 快照状态写在 `snapshots/.state`，不修改只读快照目录。默认保留最近 3 份成功快照和 24 小时内最近 1 份失败/处理中快照。清理前先验证所有候选都是指定 snapshot root 的直接子目录；发现外部路径或 symlink 会整批拒绝，不会部分删除。
 
+数据库采用独立的 24 小时滚动保留策略。Save Worker 每轮同步后通过 Service Role 调用
+`cleanup_expired_inventory_snapshot_payloads(25)`；RPC 使用数据库时间，分批清理已经被更新
+快照取代的 `pal_snapshot_items` 和检测运行记录，并删除过期失败/拒绝记录。每个 world 的
+`latest_snapshot_id` 及其明细始终保留。成功快照清理后只留下带 `payload_purged_at` 的审计
+存根；任务、路线、执行计划、候选和共享偏好不会级联删除。
+
+清理失败只记录稳定错误码，不撤销已经成功的库存发布。普通用户和管理员均无 RPC 执行权限。
+同一内容哈希在旧载荷已清理后再次出现时会创建新的快照发生记录。常规 PostgreSQL 删除只让
+空间可复用，不自动运行 `VACUUM FULL`、`CLUSTER` 或其他高锁维护。
+
 停止 `save-worker` 即可回滚运行行为；数据库继续指向上一份有效库存，清理只允许发生在 Agent 自有 snapshot root。

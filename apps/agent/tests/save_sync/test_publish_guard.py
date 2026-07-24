@@ -13,6 +13,7 @@ from pal_hatch_helper.parsers.adapter import CompatibilityResult, ParserResult
 from pal_hatch_helper.plans.processor import PublishedSnapshotProcessor
 from pal_hatch_helper.repositories.database import JSONValue
 from pal_hatch_helper.repositories.inventory import (
+    InventoryCleanupResult,
     InventoryFailureRequest,
     InventoryPublishRequest,
     LatestInventorySnapshot,
@@ -73,6 +74,13 @@ class StubDatabase:
             return str(SNAPSHOT_ID)
         if function_name == "record_inventory_snapshot_failure":
             return str(SNAPSHOT_ID)
+        if function_name == "cleanup_expired_inventory_snapshot_payloads":
+            return {
+                "purged_snapshot_count": 2,
+                "deleted_item_count": 24,
+                "deleted_failure_count": 1,
+                "deleted_detection_run_count": 3,
+            }
         raise AssertionError(function_name)
 
     async def close(self) -> None:
@@ -131,6 +139,18 @@ def test_repository_writes_only_normalized_payload_via_atomic_rpc() -> None:
         assert failure["error_code"] == "PARSER_OUTPUT_INVALID"
         assert "source_path" not in failure
 
+        cleanup = await repository.cleanup_expired_payloads()
+        assert cleanup == InventoryCleanupResult(
+            purged_snapshot_count=2,
+            deleted_item_count=24,
+            deleted_failure_count=1,
+            deleted_detection_run_count=3,
+        )
+        assert database.calls[-1] == (
+            "cleanup_expired_inventory_snapshot_payloads",
+            {"p_batch_size": 25},
+        )
+
     import asyncio
 
     asyncio.run(scenario())
@@ -167,6 +187,7 @@ class FakeInventoryRepository:
         self.latest_value = latest
         self.publish_requests: list[InventoryPublishRequest] = []
         self.failure_requests: list[InventoryFailureRequest] = []
+        self.cleanup_calls = 0
 
     async def latest(self, world_id: UUID) -> LatestInventorySnapshot | None:
         return self.latest_value
@@ -178,6 +199,28 @@ class FakeInventoryRepository:
     async def record_failure(self, request: InventoryFailureRequest) -> UUID:
         self.failure_requests.append(request)
         return SNAPSHOT_ID
+
+    async def cleanup_expired_payloads(self) -> InventoryCleanupResult:
+        self.cleanup_calls += 1
+        return InventoryCleanupResult(
+            purged_snapshot_count=1,
+            deleted_item_count=4,
+            deleted_failure_count=0,
+            deleted_detection_run_count=0,
+        )
+
+
+def test_inventory_sync_exposes_bounded_database_retention_cleanup(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        repository = FakeInventoryRepository()
+        result = await _service(tmp_path, FakeParser(), repository).cleanup_expired_payloads()
+
+        assert repository.cleanup_calls == 1
+        assert result.deleted_item_count == 4
+
+    import asyncio
+
+    asyncio.run(scenario())
 
 
 def _source(tmp_path: Path) -> Path:

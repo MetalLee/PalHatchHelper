@@ -1196,6 +1196,55 @@ export type Database = {
           },
         ];
       };
+      execution_plan_dependencies: {
+        Row: {
+          plan_id: string;
+          pal_instance_uid: string;
+          owner_player_id_at_adoption: string | null;
+          guild_id_at_adoption: string | null;
+          gender_at_adoption: Database["public"]["Enums"]["pal_gender"];
+          created_at: string;
+        };
+        Insert: {
+          plan_id: string;
+          pal_instance_uid: string;
+          owner_player_id_at_adoption?: string | null;
+          guild_id_at_adoption?: string | null;
+          gender_at_adoption: Database["public"]["Enums"]["pal_gender"];
+          created_at?: string;
+        };
+        Update: {
+          plan_id?: string;
+          pal_instance_uid?: string;
+          owner_player_id_at_adoption?: string | null;
+          guild_id_at_adoption?: string | null;
+          gender_at_adoption?: Database["public"]["Enums"]["pal_gender"];
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "execution_plan_dependencies_guild_id_at_adoption_fkey";
+            columns: ["guild_id_at_adoption"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_plan_dependencies_owner_player_id_at_adoption_fkey";
+            columns: ["owner_player_id_at_adoption"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "execution_plan_dependencies_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "execution_plans";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       execution_plan_events: {
         Row: {
           id: string;
@@ -1636,6 +1685,7 @@ export type Database = {
           error_code: string | null;
           error_summary: string | null;
           created_at: string;
+          payload_purged_at: string | null;
         };
         Insert: {
           id?: string;
@@ -1651,6 +1701,7 @@ export type Database = {
           error_code?: string | null;
           error_summary?: string | null;
           created_at?: string;
+          payload_purged_at?: string | null;
         };
         Update: {
           id?: string;
@@ -1666,10 +1717,46 @@ export type Database = {
           error_code?: string | null;
           error_summary?: string | null;
           created_at?: string;
+          payload_purged_at?: string | null;
         };
         Relationships: [
           {
             foreignKeyName: "inventory_snapshots_world_id_fkey";
+            columns: ["world_id"];
+            isOneToOne: false;
+            referencedRelation: "worlds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pal_instance_lifecycle: {
+        Row: {
+          world_id: string;
+          pal_instance_uid: string;
+          first_seen_at: string;
+          last_seen_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          world_id: string;
+          pal_instance_uid: string;
+          first_seen_at: string;
+          last_seen_at: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          world_id?: string;
+          pal_instance_uid?: string;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pal_instance_lifecycle_world_id_fkey";
             columns: ["world_id"];
             isOneToOne: false;
             referencedRelation: "worlds";
@@ -2129,11 +2216,11 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "step_candidates_snapshot_item_fkey";
-            columns: ["detected_snapshot_id", "pal_instance_uid"];
+            foreignKeyName: "step_candidates_snapshot_fkey";
+            columns: ["detected_snapshot_id"];
             isOneToOne: false;
-            referencedRelation: "pal_snapshot_items";
-            referencedColumns: ["snapshot_id", "pal_instance_uid"];
+            referencedRelation: "inventory_snapshots";
+            referencedColumns: ["id"];
           },
           {
             foreignKeyName: "step_offspring_candidates_confirmed_by_fkey";

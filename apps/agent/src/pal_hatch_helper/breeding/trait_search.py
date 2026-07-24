@@ -20,6 +20,7 @@ class TraitSearchResult:
     pruned_states: int
     duplicate_states: int
     stopped_by: BreedingSearchLimit | None
+    target_goal_reached: bool
 
 
 def search_trait_routes(
@@ -33,46 +34,72 @@ def search_trait_routes(
     max_generations: int,
     max_states_per_state: int,
     max_frontier_expansions: int,
+    target_state_goal: int,
     include_missing_leaves: bool,
     budget: SearchBudget,
 ) -> TraitSearchResult:
     """Search inventory instances, target-passive masks, and output genders together."""
 
     passive_bits = {passive_id: 1 << index for index, passive_id in enumerate(desired_passive_ids)}
-    relevant = _relevant_recipes(index, target_pal_id, max_generations)
+    relevant, distance_to_target = _relevant_recipes(index, target_pal_id, max_generations)
     buckets: dict[StateKey, list[AssignedRoute]] = {}
+    bucket_signatures: dict[StateKey, set[str]] = {}
+    costs_by_signature: dict[str, tuple[int, ...]] = {}
     pruned_states = 0
     duplicate_states = 0
     stopped_by: BreedingSearchLimit | None = None
+    target_goal_reached = False
 
     def retain(state: AssignedRoute) -> None:
         nonlocal pruned_states, duplicate_states
         assert state.output_gender is not None
         key: StateKey = (state.route.pal_id, state.coverage_mask, state.output_gender)
         bucket = buckets.setdefault(key, [])
-        if any(existing.signature == state.signature for existing in bucket):
+        signatures = bucket_signatures.setdefault(key, set())
+        if state.signature in signatures:
             duplicate_states += 1
             return
-        bucket.append(state)
-        if len(bucket) > max_states_per_state:
-            costs = {
-                candidate.signature: _pareto_cost(candidate, desired_passive_ids)
-                for candidate in bucket
-            }
-            bucket.sort(
-                key=lambda candidate: (
-                    sum(
-                        _dominates(costs[other.signature], costs[candidate.signature])
-                        for other in bucket
-                        if other is not candidate
-                    ),
-                    costs[candidate.signature],
-                    candidate.signature,
-                )
+        state_cost = _pareto_cost(state, desired_passive_ids)
+        costs_by_signature[state.signature] = state_cost
+        if len(bucket) < max_states_per_state:
+            bucket.append(state)
+            signatures.add(state.signature)
+            return
+
+        existing_costs = [costs_by_signature[item.signature] for item in bucket]
+        dominated_indexes = [
+            index
+            for index, existing_cost in enumerate(existing_costs)
+            if _dominates(state_cost, existing_cost)
+        ]
+        if not dominated_indexes and any(
+            _dominates(existing_cost, state_cost) for existing_cost in existing_costs
+        ):
+            pruned_states += 1
+            costs_by_signature.pop(state.signature, None)
+            return
+        if dominated_indexes:
+            victim_index = max(
+                dominated_indexes,
+                key=lambda index: (existing_costs[index], bucket[index].signature),
             )
-            dropped = len(bucket) - max_states_per_state
-            pruned_states += dropped
-            del bucket[max_states_per_state:]
+        else:
+            ranked = [*bucket, state]
+            victim = max(
+                ranked,
+                key=lambda item: (costs_by_signature[item.signature], item.signature),
+            )
+            if victim is state:
+                pruned_states += 1
+                costs_by_signature.pop(state.signature, None)
+                return
+            victim_index = bucket.index(victim)
+        victim = bucket[victim_index]
+        signatures.remove(victim.signature)
+        costs_by_signature.pop(victim.signature, None)
+        bucket[victim_index] = state
+        signatures.add(state.signature)
+        pruned_states += 1
 
     for pal_id in sorted(inventory_by_species):
         leaf = SpeciesRoute.leaf(pal_id)
@@ -128,23 +155,48 @@ def search_trait_routes(
     try:
         for generation in range(1, max_generations + 1):
             snapshot = {key: tuple(states) for key, states in buckets.items()}
-            by_species_gender: dict[tuple[str, OutputGender], tuple[AssignedRoute, ...]] = {}
-            for pal_id, _, gender in sorted(snapshot):
-                key = (pal_id, gender)
-                if key in by_species_gender:
-                    continue
-                values = [
-                    state
-                    for (candidate_pal, _, candidate_gender), states in snapshot.items()
-                    if candidate_pal == pal_id and candidate_gender == gender
-                    for state in states
-                    if state.route.generation_count < generation
-                ]
-                by_species_gender[key] = tuple(sorted(values, key=lambda item: item.signature))
+            grouped: dict[tuple[str, OutputGender], list[AssignedRoute]] = {}
+            for (pal_id, _, gender), states in snapshot.items():
+                values = grouped.setdefault((pal_id, gender), [])
+                values.extend(
+                    state for state in states if state.route.generation_count < generation
+                )
+            by_species_gender = {
+                key: tuple(sorted(values, key=lambda item: item.signature))
+                for key, values in grouped.items()
+            }
+
+            recipe_priorities: dict[str, tuple[int, int, str]] = {}
+            for candidate_recipe in relevant:
+                potential_mask = 0
+                for left_gender, right_gender in _recipe_orientations(candidate_recipe):
+                    left_mask = 0
+                    for state in by_species_gender.get(
+                        (candidate_recipe.parent_a_pal_id, left_gender), ()
+                    ):
+                        left_mask |= state.coverage_mask
+                    right_mask = 0
+                    for state in by_species_gender.get(
+                        (candidate_recipe.parent_b_pal_id, right_gender), ()
+                    ):
+                        right_mask |= state.coverage_mask
+                    potential_mask = max(
+                        potential_mask,
+                        left_mask | right_mask,
+                        key=int.bit_count,
+                    )
+                recipe_priorities[candidate_recipe.signature] = (
+                    distance_to_target.get(candidate_recipe.child_pal_id, max_generations + 1),
+                    -potential_mask.bit_count(),
+                    candidate_recipe.signature,
+                )
 
             expanded_this_generation = 0
             generation_capped = False
-            for recipe in relevant:
+            for recipe in sorted(
+                relevant,
+                key=lambda item: recipe_priorities[item.signature],
+            ):
                 for left_gender, right_gender in _recipe_orientations(recipe):
                     left_states = by_species_gender.get((recipe.parent_a_pal_id, left_gender), ())
                     right_states = by_species_gender.get((recipe.parent_b_pal_id, right_gender), ())
@@ -205,12 +257,28 @@ def search_trait_routes(
                                         ),
                                     )
                                 )
+                            if recipe.child_pal_id == target_pal_id and _target_goal_met(
+                                buckets,
+                                target_pal_id=target_pal_id,
+                                required_mask=required_mask,
+                                target_state_goal=target_state_goal,
+                            ):
+                                target_goal_reached = True
+                                break
+                        if target_goal_reached:
+                            break
                         if generation_capped:
                             break
+                    if target_goal_reached:
+                        break
                     if generation_capped:
                         break
+                if target_goal_reached:
+                    break
                 if generation_capped:
                     break
+            if target_goal_reached:
+                break
     except SearchStopped as stopped:
         stopped_by = stopped.limit
 
@@ -233,6 +301,7 @@ def search_trait_routes(
         pruned_states=pruned_states,
         duplicate_states=duplicate_states,
         stopped_by=stopped_by,
+        target_goal_reached=target_goal_reached,
     )
 
 
@@ -240,19 +309,41 @@ def _relevant_recipes(
     index: BreedingRecipeIndex,
     target_pal_id: str,
     max_generations: int,
-) -> tuple[EffectiveBreedingRecipe, ...]:
+) -> tuple[tuple[EffectiveBreedingRecipe, ...], dict[str, int]]:
     frontier = {target_pal_id}
     visited: set[str] = set()
     recipes: dict[str, EffectiveBreedingRecipe] = {}
-    for _ in range(max_generations):
+    distance_to_target = {target_pal_id: 0}
+    for depth in range(max_generations):
         next_frontier: set[str] = set()
         for child_pal_id in sorted(frontier - visited):
             visited.add(child_pal_id)
             for recipe in index.recipes_for_child(child_pal_id):
                 recipes[recipe.signature] = recipe
                 next_frontier.update((recipe.parent_a_pal_id, recipe.parent_b_pal_id))
+                distance_to_target.setdefault(recipe.parent_a_pal_id, depth + 1)
+                distance_to_target.setdefault(recipe.parent_b_pal_id, depth + 1)
         frontier = next_frontier
-    return tuple(sorted(recipes.values(), key=lambda item: item.signature))
+    return tuple(sorted(recipes.values(), key=lambda item: item.signature)), distance_to_target
+
+
+def _target_goal_met(
+    buckets: dict[StateKey, list[AssignedRoute]],
+    *,
+    target_pal_id: str,
+    required_mask: int,
+    target_state_goal: int,
+) -> bool:
+    target_states = [
+        state
+        for (pal_id, mask, _), states in buckets.items()
+        if pal_id == target_pal_id and mask & required_mask == required_mask
+        for state in states
+    ]
+    return len(target_states) >= max(1, target_state_goal) and any(
+        state.missing_leaf_count == 0 and not state.borrowed_instance_uids
+        for state in target_states
+    )
 
 
 def _recipe_orientations(

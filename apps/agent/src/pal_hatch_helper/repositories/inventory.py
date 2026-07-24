@@ -49,12 +49,22 @@ class InventoryCatalogIds:
     passive_skill_ids: frozenset[str]
 
 
+@dataclass(frozen=True, slots=True)
+class InventoryCleanupResult:
+    purged_snapshot_count: int
+    deleted_item_count: int
+    deleted_failure_count: int
+    deleted_detection_run_count: int
+
+
 class InventoryRepository(Protocol):
     async def latest(self, world_id: UUID) -> LatestInventorySnapshot | None: ...
 
     async def publish(self, request: InventoryPublishRequest) -> UUID: ...
 
     async def record_failure(self, request: InventoryFailureRequest) -> UUID: ...
+
+    async def cleanup_expired_payloads(self) -> InventoryCleanupResult: ...
 
 
 class SupabaseInventoryRepository:
@@ -151,6 +161,34 @@ class SupabaseInventoryRepository:
         except ValueError as error:
             raise _invalid_response() from error
 
+    async def cleanup_expired_payloads(self) -> InventoryCleanupResult:
+        payload = await self._database.rpc(
+            "cleanup_expired_inventory_snapshot_payloads",
+            {"p_batch_size": 25},
+        )
+        if not isinstance(payload, dict):
+            raise _invalid_response()
+        try:
+            purged_snapshot_count = payload["purged_snapshot_count"]
+            deleted_item_count = payload["deleted_item_count"]
+            deleted_failure_count = payload["deleted_failure_count"]
+            deleted_detection_run_count = payload["deleted_detection_run_count"]
+            if (
+                not _is_nonnegative_int(purged_snapshot_count)
+                or not _is_nonnegative_int(deleted_item_count)
+                or not _is_nonnegative_int(deleted_failure_count)
+                or not _is_nonnegative_int(deleted_detection_run_count)
+            ):
+                raise ValueError("invalid inventory cleanup counts")
+            return InventoryCleanupResult(
+                purged_snapshot_count=purged_snapshot_count,
+                deleted_item_count=deleted_item_count,
+                deleted_failure_count=deleted_failure_count,
+                deleted_detection_run_count=deleted_detection_run_count,
+            )
+        except (KeyError, ValueError) as error:
+            raise _invalid_response() from error
+
     async def catalog_ids(self, world_id: UUID) -> InventoryCatalogIds:
         payload = await self._database.rpc(
             "get_inventory_catalog_ids_for_agent",
@@ -223,6 +261,10 @@ def _is_json_object(value: object) -> TypeGuard[dict[str, JSONValue]]:
 
 def _is_string_list(value: object) -> TypeGuard[list[str]]:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+def _is_nonnegative_int(value: object) -> TypeGuard[int]:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
 def _invalid_response() -> StructuredError:

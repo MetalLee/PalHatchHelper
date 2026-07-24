@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
+- 状态：2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -317,6 +317,8 @@
 - 路径配置校验、双次稳定性检查、临时复制、复制后复核、原子改名、哈希和保留策略。
 - ParserAdapter、子进程超时/资源边界、CanonicalSnapshot 验证、异常库存下降保护。
 - 成功快照不可变，失败不替换上一有效库存。
+- Supabase 中已被更新快照取代的库存明细保留 24 小时，最新有效库存始终保留；
+  清理保留小型审计存根并维护实例生命周期。
 
 ### 明确不实现的内容
 
@@ -330,7 +332,8 @@
 
 ### 数据库迁移
 
-如 Phase 1 已含所需表则无迁移；否则只新增解析告警和发布审计所需字段，不存原始存档。
+只使用前向迁移增加快照载荷清理状态、实例生命周期、受控分批清理 RPC 和必要索引；
+不修改历史迁移，不存原始存档。
 
 ### API 和契约
 
@@ -339,7 +342,8 @@
 
 ### 测试要求
 
-- 脱敏样例、源文件变化、相同哈希、解析崩溃/超时/非法 JSON、UID 唯一性、未知值、库存骤降和保留清理。
+- 脱敏样例、源文件变化、相同哈希、解析崩溃/超时/非法 JSON、UID 唯一性、未知值、
+  库存骤降、24 小时边界、最新快照保护、同哈希重新发布和分批保留清理。
 - 测试断言源 fixture 的哈希与权限未变化。
 
 ### 验收标准
@@ -347,6 +351,7 @@
 - 只读 fixture 在复制成功与所有失败路径均保持字节不变。
 - 只有完整合法快照能原子成为 latest；异常下降进入审核。
 - Agent 未配置唯一确认路径时 not ready，不猜测目录。
+- 被取代的数据库库存明细在 24 小时后可清理；最新库存、共享偏好和历史方案不被删除。
 
 ### 风险
 
@@ -615,6 +620,7 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 - `/plans`、`/plans/[planId]`，统一状态筛选与当前步骤优先布局。
 - 采用路线、生成步骤、手动状态、候选检测、玩家确认、暂停/跳过/重试、失效与重算。
 - 计划固定快照/配种/算法/评分/AI 版本，历史只读可解释。
+- 采用时固化最小依赖状态；候选检测使用实例生命周期，不扫描已过期的全量快照。
 
 ### 明确不实现的内容
 
@@ -628,7 +634,8 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 ### 数据库迁移
 
-补充受 RLS 保护的步骤状态转换、候选写入/确认 RPC、失效原因和审计约束；禁止客户端直接绕过状态机。
+补充受 RLS 保护的步骤状态转换、候选写入/确认 RPC、失效原因、执行计划依赖和审计约束；
+解除候选历史对待清理快照明细的外键依赖，禁止客户端直接绕过状态机。
 
 ### API 和契约
 
@@ -637,7 +644,8 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 ### 测试要求
 
-- 各合法/非法状态转换、候选匹配、误候选不自动完成、确认后的性别/可行性复核、依赖消失和历史复现。
+- 各合法/非法状态转换、候选匹配、误候选不自动完成、确认后的性别/可行性复核、
+  依赖消失、快照明细清理后候选检测和物化历史读取。
 - 浏览器覆盖采用、推进、确认、暂停和重算。
 
 ### 验收标准
@@ -645,6 +653,7 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 - 新快照只能创建候选；玩家确认前步骤不完成。
 - 确认保存真实 instance UID，下一步不满足时给出明确失效或替代动作。
 - 历史计划保留原版本，不因发布新数据而改变。
+- 原库存明细过期后不支持按旧库存精确重算；重新计算固定最新库存，旧计划物化结果保持可读。
 
 ### 风险
 
@@ -667,6 +676,24 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans`
 5. 运行计划端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "execution plan" && pnpm check`
+
+## 2026-07-24 跨阶段修订：数据库库存快照 24 小时保留
+
+### 交付顺序
+
+1. 更新正式规格、Phase 3 与 Phase 7 计划语义。
+2. 先增加 pgTAP 与 Agent 失败测试，覆盖权限、边界、最新保护、业务历史和调度调用。
+3. 追加前向迁移，实现审计存根、实例生命周期、执行计划依赖和受控分批清理。
+4. Save Worker 每轮同步后调用清理 RPC；清理失败只告警，不回滚已经成功发布的最新库存。
+5. 运行局部数据库/Agent 测试，再以根目录 `pnpm check` 和完整 Supabase 测试覆盖最终状态。
+
+### 回滚与生产约束
+
+- 应用回滚时停止调用清理 RPC；已清理的库存载荷不自动恢复，历史物化方案仍可读。
+- 数据库迁移只前向追加；需要撤销能力时追加补偿迁移，不能编辑已应用迁移。
+- 首次生产启用前记录快照与明细表体积、死元组和 autovacuum 状态。常规清理只释放可复用空间，
+  不自动执行 `VACUUM FULL`、`CLUSTER` 或其他高锁维护。
+- 生产部署仍必须遵守 Phase 8 审批、备份、秘密和端口边界。
 
 ## Phase 8：管理员功能、部署和端到端验收
 

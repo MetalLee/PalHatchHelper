@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
+- 文档状态：已完成设计评审；2026-07-24 库存快照 24 小时保留修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/opt/services/palworld-manager`
@@ -75,6 +75,7 @@
 | 前后端部署 | Vercel 前端 + Supabase 控制面 + 服务器私有 Agent |
 | 服务器通信 | Agent 主动轮询 Supabase，不接受公网入站任务 |
 | 存档同步 | 每 5 分钟检查，稳定后复制副本并解析 |
+| 数据库库存保留 | 已被更新快照取代的标准化库存明细最多保留 24 小时；每个世界的最新有效库存始终保留 |
 | 解析器 | ParserAdapter + 受控独立子进程 |
 | 后端技术栈 | Python 3.12 + FastAPI + Pydantic |
 | 用户绑定 | 第一版由管理员手动绑定 |
@@ -261,6 +262,7 @@ PalHatchHelper/
 - `parsed_at timestamptz nullable`
 - `error_code text nullable`
 - `error_summary text nullable`
+- `payload_purged_at timestamptz nullable`
 
 #### `pal_snapshot_items`
 
@@ -279,7 +281,32 @@ PalHatchHelper/
 - `raw_metadata jsonb`
 - 唯一约束：`snapshot_id + pal_instance_uid`
 
-快照不可修改。`raw_metadata` 只保存经过筛选的扩展字段，不保存完整原始存档。
+快照事实字段不可修改。`payload_purged_at` 是唯一允许由受控清理 RPC 更新的生命周期字段；
+其非空表示对应 `pal_snapshot_items` 已删除，只保留小型审计存根。`raw_metadata`
+只保存经过筛选的扩展字段，不保存完整原始存档。
+
+#### `pal_instance_lifecycle`
+
+- `world_id uuid`
+- `pal_instance_uid text`
+- `first_seen_at timestamptz`
+- `last_seen_at timestamptz`
+- 主键：`world_id + pal_instance_uid`
+
+该表只保存跨快照的实例首次/最近发现时间，不保存所有者、被动、位置或完整库存。
+它用于在历史快照明细清理后继续判断候选子代是否为新实例。
+
+#### `execution_plan_dependencies`
+
+- `plan_id uuid`
+- `pal_instance_uid text`
+- `owner_player_id_at_adoption uuid nullable`
+- `guild_id_at_adoption uuid nullable`
+- `gender_at_adoption text`
+- 主键：`plan_id + pal_instance_uid`
+
+采用路线时只固化执行计划所依赖库存父母的最小状态。计划失效检查以该表和最新库存比较，
+不依赖已经过期的原库存快照明细。
 
 ### 6.4 共享偏好
 
@@ -491,8 +518,18 @@ Save Worker 每五分钟执行一次检查：
 
 - 最近 3 份成功原始快照。
 - 最近 1 份失败快照或失败快照最多保留 24 小时。
-- 标准化元数据长期保存在 Supabase。
+- Supabase 中已被更新快照取代的 `pal_snapshot_items` 从数据库写入时间起最多保留 24 小时。
+- 每个世界的 `latest_snapshot_id` 及其明细始终保留；存档长期不变化时不得清空当前库存。
+- 成功快照清理明细后保留带 `payload_purged_at` 的小型审计存根；失败或拒绝快照元数据
+  在 24 小时后删除。
+- `execution_candidate_detection_runs` 随对应过期快照清理。候选、任务、路线、计划、
+  步骤、事件、玩家、公会和共享偏好是业务历史或跨快照状态，不随快照级联删除。
+- 24 小时以数据库 `created_at` 计算，清理必须按小批次执行并与同一世界的发布、任务创建互斥。
 - 完整存档不上传 Supabase。
+
+Save Worker 每轮检查后调用受 Service Role 保护的清理 RPC。RPC 不接受客户端提供的保留时长，
+永不删除最新有效库存，只允许更新 `payload_purged_at`、删除对应明细及过期失败记录。
+相同内容哈希在旧载荷已清理后再次出现时创建新的快照发生记录，不复用已清理的存根。
 
 ## 9. ParserAdapter 与标准化
 
@@ -825,7 +862,10 @@ requester
 - `skipped`
 - `invalidated`
 
-新快照中发现满足种类、首次出现时间和被动要求的实例时，写入候选表。系统不自动完成步骤，由玩家选择实际使用的子代。
+发布快照时幂等更新 `pal_instance_lifecycle`。新快照中发现满足种类、实例
+`first_seen_at` 晚于当前步骤候选检测起点且符合被动要求的实例时，写入候选表。
+候选保存用于历史展示和确认的脱敏物化字段，不依赖快照明细长期存在。系统不自动完成步骤，
+由玩家选择实际使用的子代。
 
 确认后：
 
@@ -836,7 +876,7 @@ requester
 
 ## 16. 方案可复现与失效
 
-每个方案固定：
+每个方案在计算时固定：
 
 ```text
 库存快照版本
@@ -855,7 +895,9 @@ requester
 5. 玩家确认了与原路线不同的中间子代。
 6. 所需性别不再满足。
 
-历史方案不删除，前端显示失效原因，并提供“基于最新库存重新计算”。
+历史方案不删除，已物化的路线、评分明细、版本和解释保持不变并可查看。库存快照明细过期后，
+不再保证使用原库存重新运行算法；游戏数据、算法和评分版本仍保持精确版本边界。
+前端显示失效原因，并提供“基于最新库存重新计算”。
 
 ## 17. 前端产品设计
 
@@ -1165,7 +1207,9 @@ save-worker
 14. 搜索硬上限保留已验证候选与软剪枝诊断测试。
 15. 任务重复领取与锁超时测试。
 16. AI 三级降级测试。
-17. 历史方案可复现测试。
+17. 历史方案物化结果不可变、过期库存不被重新加载测试。
+18. 24 小时边界、最新快照保护、分批清理、相同哈希重新发布和并发发布互斥测试。
+19. 实例生命周期、执行计划依赖和清理后候选检测/失效检查测试。
 
 ### 20.2 数据库与权限
 
@@ -1175,6 +1219,8 @@ save-worker
 4. 管理员具备全服管理权限。
 5. 任务创建 RPC 固定当前可用快照和游戏数据版本。
 6. 原子领取函数不会重复领取任务。
+7. 普通用户和管理员不能直接执行库存保留清理；只有 Service Role 可调用受控 RPC。
+8. 清理不会删除最新库存、历史方案、共享偏好或候选物化历史。
 
 ### 20.3 前端
 
@@ -1213,6 +1259,8 @@ save-worker
 18. 手机端可以完成登录、创建任务、查看结果、推进步骤和确认子代。
 19. 服务器不新增公网业务端口。
 20. 新系统异常不会自动修改或重启帕鲁服务器。
+21. 已被取代的数据库库存明细在写入 24 小时后可被分批清理，最新有效库存始终可用。
+22. 快照明细清理后，候选子代检测和执行计划依赖失效检查仍基于轻量持久状态正确运行。
 
 ## 22. 后续扩展方向
 
@@ -1239,6 +1287,7 @@ save-worker
 2. Supabase 是身份、数据库和任务控制面，不保存完整原始存档。
 3. 配种算法由版本化规则和确定性搜索保证正确性。
 4. AI 是可降级的解释层，不是事实来源。
-5. 存档、统一游戏数据、算法和评分均版本化，结果可复现。
+5. 库存、统一游戏数据、算法和评分均版本化；库存载荷在 24 小时内支持精确计算，
+   过期后保留不可变的物化结果和版本审计而不保留全量库存。
 6. 公会协作以默认共享为基础，但玩家保留主动关闭权限。
 7. 第一版围绕“配种器”闭环，不提前建设通用监控平台。

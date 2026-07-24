@@ -1,4 +1,5 @@
 import json
+import mmap
 import sys
 from pathlib import Path, PurePosixPath
 
@@ -63,6 +64,22 @@ def test_parser_runs_with_only_the_declared_output_and_returns_json(tmp_path: Pa
 
     assert result.payload == payload
     assert result.output_path == output
+
+
+def test_parser_starts_when_parent_virtual_memory_exceeds_child_limit(tmp_path: Path) -> None:
+    adapter = _adapter(
+        (
+            sys.executable,
+            "-c",
+            "import json,sys; json.dump({'ok': True}, open(sys.argv[1], 'w'))",
+            "{output_path}",
+        )
+    )
+
+    with mmap.mmap(-1, 512 * 1024 * 1024, prot=mmap.PROT_READ):
+        result = adapter.parse(_snapshot(tmp_path), tmp_path / "result.json")
+
+    assert result.payload == {"ok": True}
 
 
 def test_parser_can_read_only_the_runtime_entropy_device(tmp_path: Path) -> None:

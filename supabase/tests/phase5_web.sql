@@ -297,7 +297,7 @@ select is(
 );
 select is(
   public.get_inventory_data_status() #>> '{data,algorithm_version}',
-  'inventory-trait-aware-deterministic-v3',
+  'inventory-trait-aware-deterministic-v4',
   'the safe status includes the configured deterministic algorithm version'
 );
 

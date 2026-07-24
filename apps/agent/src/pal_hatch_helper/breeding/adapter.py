@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -92,7 +93,7 @@ class BreedingEngineAdapter:
             inventory=list(facts.inventory.items),
             limits=limits,
         )
-        return self._engine.search(request, facts)
+        return await asyncio.to_thread(self._engine.search, request, facts)
 
 
 def validate_runtime_scoring_profiles(

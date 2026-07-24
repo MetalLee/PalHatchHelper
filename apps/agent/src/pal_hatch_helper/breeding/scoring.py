@@ -26,10 +26,10 @@ COMPONENT_ORDER: Final = (
 )
 
 PROFILE_VERSIONS: Final = {
-    OptimizationMode.BALANCED: "balanced-v4",
-    OptimizationMode.FASTEST: "fastest-v4",
-    OptimizationMode.HIGHEST_SUCCESS: "highest-success-v4",
-    OptimizationMode.LEAST_BORROWING: "least-borrowing-v4",
+    OptimizationMode.BALANCED: "balanced-v5",
+    OptimizationMode.FASTEST: "fastest-v5",
+    OptimizationMode.HIGHEST_SUCCESS: "highest-success-v5",
+    OptimizationMode.LEAST_BORROWING: "least-borrowing-v5",
 }
 
 PROFILE_WEIGHTS_BASIS_POINTS: Final = {
