@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
+- 状态：2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -694,6 +694,55 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 - 首次生产启用前记录快照与明细表体积、死元组和 autovacuum 状态。常规清理只释放可复用空间，
   不自动执行 `VACUUM FULL`、`CLUSTER` 或其他高锁维护。
 - 生产部署仍必须遵守 Phase 8 审批、备份、秘密和端口边界。
+
+## 2026-07-24 跨阶段修订：Boss ID 与公会所有库存
+
+### 交付顺序
+
+1. 更新正式规格中的库存稳定 ID、所有权类型、共享池和列表展示语义。
+2. 先增加 Parser/Agent/pgTAP/Web 失败测试，覆盖 Boss 前缀、公会基地所有权、跨公会隔离和
+   nullable owner 的计划生命周期。
+3. 在 CanonicalSnapshot 标准化边界去除一层 `boss_` 及仅用于头目随从角色的 `_otomo`
+   后缀，保留原始内部名；库存校验同时接受当前版本 `catalog_pals` 和受审计
+   `pal_name.PAL_NAME_*` 本地化事实，但配种计算仍只接受 `catalog_pals`。新增
+   `player/guild/unresolved` 所有权契约并追加数据库迁移。
+4. 统一库存列表、配种运行事实、路线展示、候选检测和计划失效检查；历史不可变快照不原地修改，
+   旧 Boss 映射继续作为兼容保护。
+5. 升级 Parser 身份并对 Agent 自有只读快照执行 reparse，生成新的不可变 latest 快照。
+6. 局部验证后仅对最终状态运行一次根目录聚合检查、完整 Supabase 测试和部署前检查。
+
+### 回滚与生产约束
+
+- 应用回滚保留新增所有权列和不可变快照；旧版本把未知所有权安全视为 `unresolved`。
+- 数据库只追加迁移，不修改已应用迁移或历史 `pal_snapshot_items`。
+- 生产重解析只读取 Agent 自有快照，不直接解析或修改真实源存档。
+- 生产部署继续遵守 Phase 8 的备份、不可变镜像、回滚和端口约束。
+
+## 2026-07-24 跨阶段修订：头目标志、精确位置与次元帕鲁仓库
+
+### 交付顺序
+
+1. 先更新正式规格，明确 `is_boss`、位置事实、访问范围和次元帕鲁仓库的保守共享规则。
+2. 增加 Parser/Agent/契约/pgTAP/Web 失败测试，覆盖显式 `IsBoss` 与 `boss_` 前缀合并、
+   Base UID/工作位、普通终端页格、DPS 页格、私人/公会/未知访问范围和跨公会隔离。
+3. 扩展 CanonicalSnapshot 与生成模型；数据库只追加新迁移，旧不可变快照不回填，新字段对
+   历史 Parser 版本保持安全的 null/unknown 兼容。
+4. Parser 读取同一 Agent 快照中显式声明的 `_dps.sav`，不直接扫描源存档；原始容器 GUID
+   只用于内部关联。无法由受控 fixture 证明共享设置时输出 `unresolved`，不得猜测。
+5. 统一库存列表、配种运行事实、路线与计划位置投影；页码和格号只由绝对槽位派生。
+6. 提升 Parser 身份，对 Agent 自有只读快照 reparse；检查 DPS 带来的输出体积、实例 UID
+   冲突和库存骤降/增长保护。
+7. 开发中只运行最小相关测试；最终状态运行一次根 `pnpm check`、完整 Supabase 测试和
+   `git diff --check`，聚合命令已覆盖的检查不重复执行。
+
+### 回滚与生产约束
+
+- 应用回滚保留追加列和历史快照；旧应用把新位置或访问范围安全降级为未知。
+- 数据库迁移只前向追加，不修改已应用迁移或历史 `pal_snapshot_items`。
+- 生产 Parser 只读取 Agent 自有不可变快照；任何 DPS 解码、实例 UID 或共享语义异常均保留
+  上一有效库存。
+- 首次生产启用前完成备份和 dry-run，镜像使用 Git SHA 与 digest；只重启 PalHatchHelper
+  服务，不操作 Palworld 或 mihomo。
 
 ## Phase 8：管理员功能、部署和端到端验收
 

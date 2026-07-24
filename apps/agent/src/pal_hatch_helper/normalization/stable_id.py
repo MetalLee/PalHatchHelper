@@ -28,6 +28,15 @@ def normalize_palworld_stable_id(source: str) -> str:
     return normalized
 
 
+def normalize_inventory_pal_id(source: str) -> str:
+    stable_id = normalize_palworld_stable_id(source)
+    if stable_id.startswith("boss_") and len(stable_id) > len("boss_"):
+        stable_id = stable_id[len("boss_") :]
+        if stable_id.endswith("_otomo") and len(stable_id) > len("_otomo"):
+            stable_id = stable_id[: -len("_otomo")]
+    return stable_id
+
+
 def build_stable_id_map(sources: Iterable[str]) -> dict[str, str]:
     result: dict[str, str] = {}
     source_by_stable_id: dict[str, str] = {}
@@ -87,8 +96,7 @@ def normalize_parser_snapshot_payload(payload: dict[str, JSONValue]) -> Canonica
             ]
             if (
                 len(typed_metadata_passives) != len(source_passives)
-                or normalize_palworld_stable_id(metadata_pal_id)
-                != normalize_palworld_stable_id(pal_id)
+                or normalize_inventory_pal_id(metadata_pal_id) != normalize_inventory_pal_id(pal_id)
                 or any(
                     normalize_palworld_stable_id(source) != normalize_palworld_stable_id(stable)
                     for source, stable in zip(typed_metadata_passives, source_passives, strict=True)
@@ -105,7 +113,7 @@ def normalize_parser_snapshot_payload(payload: dict[str, JSONValue]) -> Canonica
     pal_ids = build_stable_id_map(pal_sources)
     passive_ids = build_stable_id_map(passive_sources)
     for pal, (source_pal_id, typed_source_passives) in zip(typed_pals, source_names, strict=True):
-        pal["pal_id"] = pal_ids[source_pal_id]
+        pal["pal_id"] = normalize_inventory_pal_id(pal_ids[source_pal_id])
         pal["passive_skill_ids"] = [passive_ids[value] for value in typed_source_passives]
         source_passive_metadata: list[JSONValue] = []
         source_passive_metadata.extend(typed_source_passives)
@@ -131,6 +139,7 @@ def _canonical_schema_error() -> StructuredError:
 
 __all__ = [
     "build_stable_id_map",
+    "normalize_inventory_pal_id",
     "normalize_palworld_stable_id",
     "normalize_parser_snapshot_payload",
 ]

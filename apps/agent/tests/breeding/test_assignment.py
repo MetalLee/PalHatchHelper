@@ -160,6 +160,40 @@ def test_inventory_filtering_keeps_owned_and_enabled_guild_shared_instances_only
     assert shared_disabled.routes[0].missing_pal_count == 1
 
 
+def test_guild_owned_base_pal_is_eligible_for_same_guild_breeding() -> None:
+    inventory = (
+        inventory_pal("own-m", "pal-own", "male"),
+        inventory_pal(
+            "guild-f",
+            "pal-guild",
+            "female",
+            owner_player_id=None,
+            ownership_scope="guild",
+        ),
+    )
+
+    result = search(
+        DeterministicBreedingEngine(),
+        request("pal-target", inventory),
+        (recipe("pal-own", "pal-guild", "pal-target"),),
+    )
+
+    ready = [route for route in result.routes if route.adoptable]
+    assert len(ready) == 1
+    assert {
+        ready[0].steps[0].parent_a.instance_uid,
+        ready[0].steps[0].parent_b.instance_uid,
+    } == {"own-m", "guild-f"}
+    assert ready[0].borrowed_pal_count == 1
+
+    shared_disabled = search(
+        DeterministicBreedingEngine(),
+        request("pal-target", inventory, allow_shared_inventory=False),
+        (recipe("pal-own", "pal-guild", "pal-target"),),
+    )
+    assert all(not route.adoptable for route in shared_disabled.routes)
+
+
 def test_same_species_pair_uses_distinct_opposite_gender_instances() -> None:
     result = search(
         DeterministicBreedingEngine(),

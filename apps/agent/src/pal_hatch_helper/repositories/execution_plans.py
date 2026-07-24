@@ -121,6 +121,7 @@ def _snapshot_pal(value: object) -> SnapshotPal:
         "player_party",
         "player_storage",
         "base",
+        "dimensional_storage",
         "viewing_cage",
         "unknown",
     ):
@@ -133,7 +134,14 @@ def _snapshot_pal(value: object) -> SnapshotPal:
         level=_optional_int(value["level"]),
         owner_display_name=_string(value["owner_display_name"]),
         location_type=cast(
-            Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"],
+            Literal[
+                "player_party",
+                "player_storage",
+                "base",
+                "dimensional_storage",
+                "viewing_cage",
+                "unknown",
+            ],
             location_type,
         ),
         location_name=_optional_string(value["location_name"]),

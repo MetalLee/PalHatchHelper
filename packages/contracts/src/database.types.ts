@@ -1829,6 +1829,11 @@ export type Database = {
           location_name: string | null;
           raw_metadata: Json;
           created_at: string;
+          ownership_scope: string | null;
+          is_boss: boolean | null;
+          location_id: string | null;
+          location_slot_index: number | null;
+          location_access_scope: string;
         };
         Insert: {
           id?: string;
@@ -1845,6 +1850,10 @@ export type Database = {
           location_name?: string | null;
           raw_metadata?: Json;
           created_at?: string;
+          is_boss?: boolean | null;
+          location_id?: string | null;
+          location_slot_index?: number | null;
+          location_access_scope?: string;
         };
         Update: {
           id?: string;
@@ -1861,6 +1870,10 @@ export type Database = {
           location_name?: string | null;
           raw_metadata?: Json;
           created_at?: string;
+          is_boss?: boolean | null;
+          location_id?: string | null;
+          location_slot_index?: number | null;
+          location_access_scope?: string;
         };
         Relationships: [
           {
@@ -2971,6 +2984,7 @@ export type Database = {
         | "player_party"
         | "player_storage"
         | "base"
+        | "dimensional_storage"
         | "viewing_cage"
         | "unknown";
       profile_role: "admin" | "player";

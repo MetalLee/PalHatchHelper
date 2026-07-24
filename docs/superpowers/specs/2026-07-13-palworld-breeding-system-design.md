@@ -1,9 +1,9 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-24 库存快照 24 小时保留修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
+- 文档状态：已完成设计评审；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
-- 服务器端部署目录：`/opt/services/palworld-manager`
+- 服务器端部署目录：`/data/projects/PalHatchHelper`
 - 帕鲁服务器目录：`/opt/palworld`
 - 前端部署：Vercel
 - 用户、数据库与任务控制面：Supabase
@@ -35,7 +35,7 @@
 2. 管理员查看全服数据；普通玩家只查看绑定角色及完成配种所需的公会共享数据。
 3. 管理员手动绑定 Supabase 用户与游戏玩家 UID。
 4. 服务器 Agent 每五分钟检查存档变化，创建安全副本后解析。
-5. 解析玩家、公会、帕鲁实例、所有者、性别、被动和位置。
+5. 解析玩家、公会、帕鲁实例、所有者、性别、被动、头目标志和可证明的精确位置。
 6. 公会帕鲁默认可共享，玩家可以主动关闭自己帕鲁的共享状态。
 7. 玩家选择目标帕鲁和最多四个期望被动。
 8. 确定性算法使用固定游戏数据版本中的配种关系计算合法路线。
@@ -273,11 +273,16 @@ PalHatchHelper/
 - `pal_id text`
 - `owner_player_id uuid nullable`
 - `guild_id uuid nullable`
+- `ownership_scope text check in ('player','guild','unresolved')`
+- `is_boss boolean nullable`，仅历史 Parser 版本允许为空；新快照必须写入明确布尔值
 - `gender text`
 - `level integer nullable`
 - `passive_skill_ids text[]`
 - `location_type text`
 - `location_name text nullable`
+- `location_id text nullable`，保存稳定 Base UID 或不泄露原始容器 GUID 的逻辑仓库 ID
+- `location_slot_index integer nullable`，保存来源中的从零开始绝对槽位
+- `location_access_scope text check in ('player','guild','unresolved')`
 - `raw_metadata jsonb`
 - 唯一约束：`snapshot_id + pal_instance_uid`
 
@@ -584,11 +589,15 @@ pals[]
 ├── owner_player_uid
 ├── guild_uid
 ├── pal_id
+├── is_boss
 ├── gender
 ├── level
 ├── passive_skill_ids[]
 ├── location_type
-└── location_name
+├── location_name
+├── location_id
+├── location_slot_index
+└── location_access_scope
 ```
 
 ### 9.4 校验规则
@@ -596,11 +605,32 @@ pals[]
 1. `world_uid` 必须存在并匹配当前世界。
 2. 玩家 UID 不得出现冲突映射。
 3. 帕鲁实例 UID 在快照内唯一。
-4. 帕鲁种类必须能映射到目录数据；未知值记录告警。
+4. 帕鲁种类必须能映射到同一数据版本中的可配种目录帕鲁，或能由该版本受审计的
+   `pal_name.PAL_NAME_*` 本地化事实确认是可入库但不可配种的游戏角色；两者都无法确认时记录
+   告警。库存来源中以 `boss_` 开头的头目个体先去除一层前缀；头目随从内部名末尾保留的
+   `_otomo` 是角色用途后缀，也在头目前缀去除后移除，再以剩余部分作为基础帕鲁稳定 ID。
+   原始内部名保留在筛选后的 `raw_metadata` 中用于审计。`is_boss` 独立于基础帕鲁 ID：
+   保存数据的 `IsBoss=true` 或原始内部名具有一层 `boss_` 前缀时均为 `true`，两者都不满足时
+   为 `false`；来源证据保留在筛选后的审计元数据中。标准化后仍无法映射时才记录
+   `UNKNOWN_PAL`。只有正式 `catalog_pals` 中的帕鲁能进入配种计算，本地化事实不会生成或改变
+   配种关系。
 5. 性别只接受受支持枚举或 `unknown`。
 6. 未识别被动保留原值并标记，不丢弃整只帕鲁。
-7. 无法确认公会或所有者的帕鲁标记为 `unresolved`，不进入共享池。
-8. 库存数量异常下降时进入待审核状态。
+7. 所有权分为 `player`、`guild` 和 `unresolved`。有效玩家 UID 映射为 `player`；位于基地、
+   玩家所有者为空且公会可确认的工作帕鲁映射为 `guild`；其余无法可靠确认归属的帕鲁标记为
+   `unresolved`。存档内位置访问范围独立分为 `player`、`guild` 和 `unresolved`，不得根据
+   `_dps.sav` 文件名、建造者或基地归属猜测次元帕鲁仓库的公私设置。
+8. 位置类型支持 `player_party`、`player_storage`、`base`、`dimensional_storage`、
+   `viewing_cage` 和 `unknown`。基地工作帕鲁保存稳定 Base UID 与工作槽位；普通帕鲁终端和
+   次元帕鲁仓库保存绝对槽位。展示页码固定由
+   `floor(location_slot_index / 30) + 1`、格号由
+   `location_slot_index % 30 + 1` 计算，不重复持久化。原始 CharacterContainer GUID 不进入
+   CanonicalSnapshot 或浏览器响应。无法证明精度时对应字段为空并记录稳定告警。
+9. 次元帕鲁仓库来自同一稳定快照中显式声明的 `Players/<UID>_dps.sav`。Parser 必须保留其中
+   稳定实例 UID，并验证帕鲁在普通库存与次元仓库之间移动时不会产生冲突或虚假的新实例。
+   能从受控 fixture 证明仓库对公会开放时，`location_access_scope=guild`；私人仓库为
+   `player`；格式未知或证据不足时为 `unresolved`，且不得自动进入其他玩家的公会共享池。
+10. 库存数量异常下降时进入待审核状态。
 
 默认异常下降阈值：新快照帕鲁总数低于上一有效快照的 50%，且绝对减少超过 50 只时，不自动发布。
 
@@ -682,15 +712,20 @@ inventory_snapshot_id
 
 1. 玩家自己的全部可用帕鲁。
 2. 同公会 `share_enabled=true` 的帕鲁。
+3. 同公会所有、位于基地且归属已解析的工作帕鲁；这类实例没有玩家所有者，按公会共享库存
+   参与计算。
+4. 位于次元帕鲁仓库且存档内访问范围已证明为 `guild` 的同公会帕鲁；保留实际玩家所有者，
+   但按游戏内公会可访问库存参与计算。
 
 排除：
 
-1. 所有者或公会无法确认。
+1. 所有权为 `unresolved`，或玩家/公会归属与所有权类型不一致。
 2. 已从当前快照消失。
 3. 已关闭共享且不属于请求玩家。
 4. 管理员禁用或标记不可配种。
 5. 性别不满足当前步骤。
 6. 被同一执行计划锁定且配置不允许复用。
+7. 属于其他玩家且位于次元帕鲁仓库，但访问范围为 `player` 或 `unresolved`。
 
 ### 11.3 两层搜索
 
@@ -974,6 +1009,7 @@ requester
 统一筛选：
 
 - 名称或编号。
+- 头目。
 - 所有者。
 - 性别。
 - 被动。
@@ -983,6 +1019,10 @@ requester
 - 稀有被动。
 
 自己的帕鲁显示共享开关；其他玩家帕鲁只显示共享状态。每只帕鲁可“作为配种起点”。
+公会所有的基地工作帕鲁显示在“全部”和“公会共享”，所有者显示公会名，不显示个人共享开关。
+头目个体显示“头目”徽标。位置使用一致的诚实降级：基地显示基地名或稳定短 ID及工作位；
+普通帕鲁终端和次元帕鲁仓库显示第几页、第几格；无法证明精确位置时仅显示位置类型或
+“位置未解析”，不得展示原始容器 GUID。
 
 ### 17.6 配种器
 
@@ -1210,6 +1250,10 @@ save-worker
 17. 历史方案物化结果不可变、过期库存不被重新加载测试。
 18. 24 小时边界、最新快照保护、分批清理、相同哈希重新发布和并发发布互斥测试。
 19. 实例生命周期、执行计划依赖和清理后候选检测/失效检查测试。
+20. Boss 前缀库存 ID 标准化、`IsBoss`/前缀头目标志合并、公会所有基地帕鲁解析、列表展示、
+    配种可用性和计划生命周期测试。
+21. 基地 UID/工作槽位、普通终端页槽、次元帕鲁仓库页槽、私人/公会/未知访问范围、
+    DPS 实例 UID 稳定性、跨公会隔离和 Parser 输出上限测试。
 
 ### 20.2 数据库与权限
 
@@ -1261,6 +1305,8 @@ save-worker
 20. 新系统异常不会自动修改或重启帕鲁服务器。
 21. 已被取代的数据库库存明细在写入 24 小时后可被分批清理，最新有效库存始终可用。
 22. 快照明细清理后，候选子代检测和执行计划依赖失效检查仍基于轻量持久状态正确运行。
+23. 新快照保留头目标志；基地工作帕鲁可定位到基地与工作位，普通终端和次元帕鲁仓库可在
+    数据可证明时定位到页格；未知次元仓库共享状态不会误进入公会库存。
 
 ## 22. 后续扩展方向
 

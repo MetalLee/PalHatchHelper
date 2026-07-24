@@ -90,6 +90,7 @@ def build_synthetic_case() -> SyntheticCase:
                     passive_skill_ids=passive_ids,
                     location_type="base",
                     location_name="Synthetic Benchmark Base",
+                    ownership_scope="player",
                     share_enabled=True,
                     owner_resolved=True,
                     guild_resolved=True,

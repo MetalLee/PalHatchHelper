@@ -355,6 +355,23 @@ func loadPlayerDirectory(w *World, levelPath string, opts Options) error {
 		}
 		uid, ok := playerUIDFromSaveFilename(de.Name())
 		if !ok {
+			storageOwnerUID, dimensional := dimensionalStorageOwnerUIDFromFilename(de.Name())
+			if !dimensional {
+				continue
+			}
+			raw, e := readSave(filepath.Join(dir, de.Name()))
+			if e != nil {
+				return fmt.Errorf("sav: decode declared dimensional-storage file")
+			}
+			g, e := parsePlayerGVAS(raw, &w.Stats)
+			if e != nil {
+				return fmt.Errorf("sav: parse declared dimensional-storage GVAS")
+			}
+			pals, e := dimensionalPalsFromProperties(g.Properties, storageOwnerUID)
+			if e != nil {
+				return fmt.Errorf("sav: decode declared dimensional-storage inventory")
+			}
+			w.Pals = append(w.Pals, pals...)
 			continue
 		}
 		raw, e := readSave(filepath.Join(dir, de.Name()))
@@ -395,6 +412,10 @@ func playerUIDFromSaveFilename(name string) (string, bool) {
 		return "", false
 	}
 	compact := strings.TrimSuffix(name, extension)
+	return playerUIDFromCompactHex(compact)
+}
+
+func playerUIDFromCompactHex(compact string) (string, bool) {
 	if len(compact) != 32 {
 		return "", false
 	}

@@ -70,6 +70,10 @@ func characterFromEntry(e mapEntry, stats *ParseStats) (*Player, *Pal, error) {
 		}
 		return p, nil, nil
 	}
+	return nil, palFromSaveParameter(sp, instance), nil
+}
+
+func palFromSaveParameter(sp propertyMap, instance string) *Pal {
 	pal := &Pal{InstanceID: instance, CharacterID: firstString(sp, "CharacterID", "CharacterId", "character_id"), Level: palLevel(sp), Exp: firstInt(sp, "Exp"), HP: fixedPointDisplay(firstNumber(sp, "HP", "Hp")), OwnerUID: firstString(sp, "OwnerPlayerUId", "OwnerPlayerUID"), IsLucky: firstBool(sp, "IsRarePal", "IsLucky"), IsBoss: firstBool(sp, "IsBoss"), Talents: map[string]int{}, SlotIndex: -1}
 	pal.Gender = normalizedGender(firstString(sp, "Gender"))
 	pal.PassiveSkillIDs = propertyStringArray(sp, "PassiveSkillList")
@@ -104,7 +108,7 @@ func characterFromEntry(e mapEntry, stats *ParseStats) (*Player, *Pal, error) {
 	if len(pal.Talents) == 0 {
 		pal.Talents = nil
 	}
-	return nil, pal, nil
+	return pal
 }
 
 // palLevel preserves an explicit serialized value while applying Palworld's

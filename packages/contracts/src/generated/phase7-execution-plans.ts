@@ -23,7 +23,13 @@ export type PlanStepStatus =
   | "skipped"
   | "invalidated";
 export type PalGender = "male" | "female" | "genderless" | "unknown";
-export type PalLocationType = "player_party" | "player_storage" | "base" | "viewing_cage" | "unknown";
+export type PalLocationType =
+  | "player_party"
+  | "player_storage"
+  | "base"
+  | "dimensional_storage"
+  | "viewing_cage"
+  | "unknown";
 export type Phase7ErrorCode =
   | "ROUTE_NOT_ADOPTABLE"
   | "PLAN_NOT_FOUND"

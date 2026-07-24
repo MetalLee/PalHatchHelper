@@ -303,6 +303,7 @@ function snapshotPal(
     passive_skill_ids: passiveSkillIds,
     location_type: "base",
     location_name: "Fixture Breeding Base",
+    ownership_scope: "player",
     owner_resolved: true,
     guild_resolved: true,
     shared_eligible: true,

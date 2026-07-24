@@ -58,6 +58,7 @@ class PalLocationType(StrEnum):
     PLAYER_PARTY = "player_party"
     PLAYER_STORAGE = "player_storage"
     BASE = "base"
+    DIMENSIONAL_STORAGE = "dimensional_storage"
     VIEWING_CAGE = "viewing_cage"
     UNKNOWN = "unknown"
 
@@ -446,6 +447,7 @@ class BreedingEngineLocationType(StrEnum):
     PLAYER_PARTY = "player_party"
     PLAYER_STORAGE = "player_storage"
     BASE = "base"
+    DIMENSIONAL_STORAGE = "dimensional_storage"
     VIEWING_CAGE = "viewing_cage"
     UNKNOWN = "unknown"
 
@@ -523,6 +525,7 @@ class BreedingEngineInventoryPal(BaseModel):
     ]
     location_type: BreedingEngineLocationType
     location_name: Annotated[str, Field(max_length=160)] | None
+    ownership_scope: Literal["player", "guild", "unresolved"]
     share_enabled: bool
     owner_resolved: bool
     guild_resolved: bool
@@ -794,6 +797,7 @@ class CanonicalPal(BaseModel):
     owner_player_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
     guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
     pal_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    is_boss: bool
     gender: Literal["male", "female", "genderless", "unknown"]
     level: Annotated[int, Field(ge=1), Field(le=100)] | None
     passive_skill_ids: Annotated[
@@ -801,8 +805,18 @@ class CanonicalPal(BaseModel):
         Field(max_length=64),
         AfterValidator(_ensure_unique),
     ]
-    location_type: Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
+    location_type: Literal[
+        "player_party",
+        "player_storage",
+        "base",
+        "dimensional_storage",
+        "viewing_cage",
+        "unknown",
+    ]
     location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    location_id: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
+    location_access_scope: Literal["player", "guild", "unresolved"]
     metadata: CanonicalPalSourceMetadata | None = None
 
 
@@ -821,6 +835,7 @@ class InventoryPublishPal(BaseModel):
     owner_player_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
     guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
     pal_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    is_boss: bool
     gender: Literal["male", "female", "genderless", "unknown"]
     level: Annotated[int, Field(ge=1), Field(le=100)] | None
     passive_skill_ids: Annotated[
@@ -828,8 +843,19 @@ class InventoryPublishPal(BaseModel):
         Field(max_length=64),
         AfterValidator(_ensure_unique),
     ]
-    location_type: Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
+    location_type: Literal[
+        "player_party",
+        "player_storage",
+        "base",
+        "dimensional_storage",
+        "viewing_cage",
+        "unknown",
+    ]
     location_name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    location_id: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
+    location_access_scope: Literal["player", "guild", "unresolved"]
+    ownership_scope: Literal["player", "guild", "unresolved"]
     metadata: CanonicalPalSourceMetadata | None = None
     owner_resolved: bool
     guild_resolved: bool
@@ -1095,6 +1121,7 @@ class BreedingRouteViewParent(BaseModel):
             "player_party",
             "player_storage",
             "base",
+            "dimensional_storage",
             "viewing_cage",
             "unknown",
         ]
@@ -2077,6 +2104,7 @@ class PalListItem(BaseModel):
     snapshot_id: UUID
     pal_instance_uid: Annotated[str, Field(min_length=1), Field(max_length=160)]
     pal_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    is_boss: bool | None
     owner_player_id: UUID
     owner_display_name: Annotated[str, Field(min_length=1), Field(max_length=120)]
     guild_id: UUID | None
@@ -2089,6 +2117,9 @@ class PalListItem(BaseModel):
     ]
     location_type: PalLocationType
     location_name: Annotated[str, Field(max_length=160)] | None
+    location_id: Annotated[str, Field(max_length=160)] | None
+    location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
+    location_access_scope: Literal["player", "guild", "unresolved"]
     share_enabled: bool
     is_owned_by_requester: bool
 

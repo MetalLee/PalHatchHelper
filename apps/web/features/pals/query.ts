@@ -27,6 +27,7 @@ const locations = new Set<PalLocationType>([
   "player_party",
   "player_storage",
   "base",
+  "dimensional_storage",
   "viewing_cage",
   "unknown",
 ]);

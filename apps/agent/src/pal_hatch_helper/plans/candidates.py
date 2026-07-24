@@ -5,7 +5,14 @@ from typing import Literal
 
 type PalGender = Literal["male", "female", "genderless", "unknown"]
 type PreferredGender = Literal["male", "female"]
-type LocationType = Literal["player_party", "player_storage", "base", "viewing_cage", "unknown"]
+type LocationType = Literal[
+    "player_party",
+    "player_storage",
+    "base",
+    "dimensional_storage",
+    "viewing_cage",
+    "unknown",
+]
 
 
 @dataclass(frozen=True, slots=True)

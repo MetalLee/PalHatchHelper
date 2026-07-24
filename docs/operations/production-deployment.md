@@ -16,7 +16,7 @@
 
 将 [`infra/agent/.env.production.example`](../../infra/agent/.env.production.example) 复制到部署目录的 `.env.production`，通过受控渠道填值后执行 `chmod 0600`。不得在终端、日志、文档或 Git diff 打印值。部署工具只读取这一个文件。
 
-必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.0.2`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；不得继续配置旧 `palworld-save-tools` CLI。
+必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.1.0`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；`PARSER_REQUIRED_FILES_JSON` 需同时声明要同步的普通玩家存档与对应 `_dps.sav` 次元仓库存档。不得继续配置旧 `palworld-save-tools` CLI。
 
 Oodle 库不属于发布制品。经授权的运维人员从已确认且有权使用的来源人工取得
 `liboo2corelinux64.so.9`，把来源产品/版本、取得日期和 SHA-256 记入受控变更单，然后放到
@@ -57,11 +57,11 @@ unset oodle_actual
 先执行：
 
 ```bash
-ENV_FILE=/opt/services/palworld-manager/.env.production \
+ENV_FILE=/data/projects/PalHatchHelper/.env.production \
   infra/agent/scripts/backup-production.sh
 ```
 
-备份保存到 `/opt/services/palworld-manager/data/backups/<UTC timestamp>/`，目录权限 `0700`。内容包括 Supabase public schema/数据 dump、migration list、世界 active catalog pointer、当前 Agent image、production Compose、权限受控的环境副本、Git SHA 和 Vercel deployment reference。任何项目失败停止并报告 `PRODUCTION_BACKUP_FAILED`。
+备份保存到 `/data/projects/PalHatchHelper/data/backups/<UTC timestamp>/`，目录权限 `0700`。内容包括 Supabase public schema/数据 dump、migration list、世界 active catalog pointer、当前 Agent image、production Compose、权限受控的环境副本、Git SHA 和 Vercel deployment reference。任何项目失败停止并报告 `PRODUCTION_BACKUP_FAILED`。
 
 首次部署且 schema dump 明确不存在 `public.worlds` 时，REST 的 404 会被记录为
 `not_present_before_first_deploy` 空目录指针基线。只有这一已由 schema dump 证明的空库场景允许继续；
@@ -93,11 +93,11 @@ dry-run 的待应用文件必须全部来自当前仓库。迁移后执行 RLS�
 
 ```bash
 docker compose \
-  --env-file /opt/services/palworld-manager/.env.production \
+  --env-file /data/projects/PalHatchHelper/.env.production \
   -f infra/agent/docker-compose.production.yml \
   config --quiet
 
-ENV_FILE=/opt/services/palworld-manager/.env.production \
+ENV_FILE=/data/projects/PalHatchHelper/.env.production \
   infra/agent/scripts/deploy-production.sh
 ```
 
@@ -121,7 +121,7 @@ non-GVAS、world UID mismatch 或截断错误都必须保留上一份有效库�
 迁移完成后执行一次幂等 bootstrap：
 
 ```bash
-ENV_FILE=/opt/services/palworld-manager/.env.production \
+ENV_FILE=/data/projects/PalHatchHelper/.env.production \
   infra/agent/scripts/bootstrap-admin.sh
 ```
 

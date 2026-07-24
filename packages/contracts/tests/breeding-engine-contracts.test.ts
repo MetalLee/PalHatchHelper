@@ -30,6 +30,7 @@ function validRequest() {
         passive_skill_ids: ["passive-a"],
         location_type: "base",
         location_name: "Fixture Base",
+        ownership_scope: "player",
         share_enabled: false,
         owner_resolved: true,
         guild_resolved: true,

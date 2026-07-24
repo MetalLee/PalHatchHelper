@@ -1,7 +1,13 @@
 /* Generated from pal-list-item.schema.json. Do not edit directly. */
 
 export type PalGender = "male" | "female" | "genderless" | "unknown";
-export type PalLocationType = "player_party" | "player_storage" | "base" | "viewing_cage" | "unknown";
+export type PalLocationType =
+  | "player_party"
+  | "player_storage"
+  | "base"
+  | "dimensional_storage"
+  | "viewing_cage"
+  | "unknown";
 
 /**
  * Safe inventory projection returned by list_available_pals; raw metadata is excluded.
@@ -10,6 +16,7 @@ export interface PalListItem {
   snapshot_id: string;
   pal_instance_uid: string;
   pal_id: string;
+  is_boss: boolean | null;
   owner_player_id: string;
   owner_display_name: string;
   guild_id: string | null;
@@ -21,6 +28,9 @@ export interface PalListItem {
   passive_skill_ids: string[];
   location_type: PalLocationType;
   location_name: string | null;
+  location_id: string | null;
+  location_slot_index: number | null;
+  location_access_scope: "player" | "guild" | "unresolved";
   share_enabled: boolean;
   is_owned_by_requester: boolean;
 }

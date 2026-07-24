@@ -14,9 +14,50 @@ const locationLabels = {
   player_party: "队伍",
   player_storage: "终端",
   base: "据点",
+  dimensional_storage: "次元仓库",
   viewing_cage: "观赏笼",
   unknown: "未知位置",
 } as const;
+
+function storagePage(slotIndex: number): string {
+  return `第 ${Math.floor(slotIndex / 30) + 1} 页 · 第 ${(slotIndex % 30) + 1} 格`;
+}
+
+function locationDisplay(pal: PalInventoryPage["items"][number]): {
+  label: string;
+  detail: string | null;
+} {
+  if (pal.location_type === "base") {
+    const base = pal.location_name ?? locationLabels.base;
+    return {
+      label:
+        pal.location_slot_index === null
+          ? base
+          : `${base} · 工作位 ${pal.location_slot_index + 1}`,
+      detail: null,
+    };
+  }
+  if (
+    (pal.location_type === "player_storage" ||
+      pal.location_type === "dimensional_storage") &&
+    pal.location_slot_index !== null
+  ) {
+    return {
+      label: locationLabels[pal.location_type],
+      detail: storagePage(pal.location_slot_index),
+    };
+  }
+  if (
+    pal.location_type === "player_party" &&
+    pal.location_slot_index !== null
+  ) {
+    return {
+      label: locationLabels.player_party,
+      detail: `队伍第 ${pal.location_slot_index + 1} 位`,
+    };
+  }
+  return { label: locationLabels[pal.location_type], detail: null };
+}
 
 type ToggleShare = (
   palInstanceUid: string,
@@ -98,101 +139,129 @@ export function PalInventory({
         </p>
       ) : null}
       <div className="pal-grid">
-        {items.map((pal) => (
-          <article className="pal-card" key={pal.pal_instance_uid}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="eyebrow flex flex-wrap gap-2">
-                  {pal.encyclopedia_no === null ? null : (
-                    <span>#{String(pal.encyclopedia_no).padStart(3, "0")}</span>
+        {items.map((pal) => {
+          const location = locationDisplay(pal);
+          const dimensionalSharingUnresolved =
+            pal.location_type === "dimensional_storage" &&
+            pal.location_access_scope !== "guild";
+          return (
+            <article className="pal-card" key={pal.pal_instance_uid}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="eyebrow flex flex-wrap gap-2">
+                    {pal.encyclopedia_no === null ? null : (
+                      <span>
+                        #{String(pal.encyclopedia_no).padStart(3, "0")}
+                      </span>
+                    )}
+                    <span>{pal.pal_id}</span>
+                  </p>
+                  <h2 className="mt-1 truncate text-lg font-semibold text-white">
+                    {pal.pal_display_name}
+                  </h2>
+                  {pal.catalog_entry_state === "resolved" ? null : (
+                    <p className="mt-1 text-xs text-amber-200">未解析目录项</p>
                   )}
-                  <span>{pal.pal_id}</span>
-                </p>
-                <h2 className="mt-1 truncate text-lg font-semibold text-white">
-                  {pal.pal_display_name}
-                </h2>
-                {pal.catalog_entry_state === "resolved" ? null : (
-                  <p className="mt-1 text-xs text-amber-200">未解析目录项</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="level-chip">Lv. {pal.level ?? "—"}</span>
+                  {pal.is_boss === true ? (
+                    <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-xs font-semibold text-amber-100">
+                      头目
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <dl className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 text-sm">
+                <div>
+                  <dt className="detail-label">所有者</dt>
+                  <dd className="mt-1 truncate text-slate-200">
+                    {pal.owner_display_name}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="detail-label">性别</dt>
+                  <dd className="mt-1 text-slate-200">
+                    {genderLabels[pal.gender]}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="detail-label">位置</dt>
+                  <dd className="mt-1 text-slate-200">
+                    {location.label}
+                    {location.detail === null ? null : (
+                      <span className="mt-0.5 block text-xs text-slate-400">
+                        {location.detail}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="detail-label">共享状态</dt>
+                  <dd className="mt-1 text-slate-200">
+                    {dimensionalSharingUnresolved
+                      ? "共享权限未确认"
+                      : pal.ownership_scope === "guild"
+                        ? "公会所有"
+                        : pal.share_enabled
+                          ? "公会可用"
+                          : "仅自己"}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="mt-5 flex flex-wrap gap-2" aria-label="被动技能">
+                {pal.passive_display_names.length > 0 ? (
+                  pal.passive_display_names.map((passive, index) => (
+                    <span
+                      className="passive-chip"
+                      key={pal.passive_skill_ids[index]}
+                    >
+                      {pal.unknown_passive_skill_ids.includes(
+                        pal.passive_skill_ids[index] ?? "",
+                      )
+                        ? `未知被动：${passive}`
+                        : passive}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-500">无已识别被动</span>
                 )}
               </div>
-              <span className="level-chip">Lv. {pal.level ?? "—"}</span>
-            </div>
 
-            <dl className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 text-sm">
-              <div>
-                <dt className="detail-label">所有者</dt>
-                <dd className="mt-1 truncate text-slate-200">
-                  {pal.owner_display_name}
-                </dd>
-              </div>
-              <div>
-                <dt className="detail-label">性别</dt>
-                <dd className="mt-1 text-slate-200">
-                  {genderLabels[pal.gender]}
-                </dd>
-              </div>
-              <div>
-                <dt className="detail-label">位置</dt>
-                <dd className="mt-1 text-slate-200">
-                  {locationLabels[pal.location_type]}
-                </dd>
-              </div>
-              <div>
-                <dt className="detail-label">共享状态</dt>
-                <dd className="mt-1 text-slate-200">
-                  {pal.share_enabled ? "公会可用" : "仅自己"}
-                </dd>
-              </div>
-            </dl>
-
-            <div className="mt-5 flex flex-wrap gap-2" aria-label="被动技能">
-              {pal.passive_display_names.length > 0 ? (
-                pal.passive_display_names.map((passive, index) => (
-                  <span
-                    className="passive-chip"
-                    key={pal.passive_skill_ids[index]}
+              <div className="mt-5 border-t border-white/8 pt-4">
+                {pal.is_owned_by_requester && !dimensionalSharingUnresolved ? (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={pal.share_enabled}
+                    aria-label={`${pal.pal_display_name} 公会共享`}
+                    className="share-switch-row"
+                    disabled={pendingId === pal.pal_instance_uid}
+                    onClick={() =>
+                      void toggle(pal.pal_instance_uid, !pal.share_enabled)
+                    }
                   >
-                    {pal.unknown_passive_skill_ids.includes(
-                      pal.passive_skill_ids[index] ?? "",
-                    )
-                      ? `未知被动：${passive}`
-                      : passive}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-500">无已识别被动</span>
-              )}
-            </div>
-
-            <div className="mt-5 border-t border-white/8 pt-4">
-              {pal.is_owned_by_requester ? (
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={pal.share_enabled}
-                  aria-label={`${pal.pal_display_name} 公会共享`}
-                  className="share-switch-row"
-                  disabled={pendingId === pal.pal_instance_uid}
-                  onClick={() =>
-                    void toggle(pal.pal_instance_uid, !pal.share_enabled)
-                  }
-                >
-                  <span>公会共享</span>
-                  <span
-                    className={`share-switch ${pal.share_enabled ? "share-switch-on" : ""}`}
-                    aria-hidden="true"
-                  >
-                    <span />
-                  </span>
-                </button>
-              ) : (
-                <p className="text-xs text-slate-500">
-                  共享帕鲁仅显示状态，不提供修改操作
-                </p>
-              )}
-            </div>
-          </article>
-        ))}
+                    <span>公会共享</span>
+                    <span
+                      className={`share-switch ${pal.share_enabled ? "share-switch-on" : ""}`}
+                      aria-hidden="true"
+                    >
+                      <span />
+                    </span>
+                  </button>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    {dimensionalSharingUnresolved
+                      ? "次元仓库权限无法从当前存档可靠确认，暂不加入公会共享。"
+                      : "共享帕鲁仅显示状态，不提供修改操作"}
+                  </p>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </div>
   );

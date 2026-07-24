@@ -27,6 +27,7 @@ export function toSafeInventoryItem(
   return {
     pal_instance_uid: row.pal_instance_uid,
     pal_id: row.pal_id,
+    is_boss: row.is_boss,
     encyclopedia_no: row.encyclopedia_no,
     pal_display_name: row.pal_display_name,
     catalog_entry_state: row.catalog_entry_state,
@@ -39,6 +40,10 @@ export function toSafeInventoryItem(
     unknown_passive_skill_ids: [...row.unknown_passive_skill_ids],
     location_type: row.location_type,
     location_name: row.location_name,
+    location_id: row.location_id,
+    location_slot_index: row.location_slot_index,
+    location_access_scope: row.location_access_scope,
+    ownership_scope: row.ownership_scope,
     share_enabled: row.share_enabled,
     is_owned_by_requester: row.is_owned_by_requester,
   };

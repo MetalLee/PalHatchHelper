@@ -32,11 +32,15 @@ def canonical_payload() -> dict[str, object]:
                 "owner_player_uid": "fixture-player-001",
                 "guild_uid": "fixture-guild-001",
                 "pal_id": "Lamball",
+                "is_boss": False,
                 "gender": "female",
                 "level": 12,
                 "passive_skill_ids": ["Artisan"],
                 "location_type": "base",
                 "location_name": "Fixture Base",
+                "location_id": "fixture-base-001",
+                "location_slot_index": 7,
+                "location_access_scope": "guild",
             }
         ],
     }
@@ -182,3 +186,71 @@ def test_unresolved_owner_or_guild_is_excluded_from_sharing(
 
     assert not validated.pals[0].shared_eligible
     assert expected_codes <= set(validated.pals[0].warning_codes)
+
+
+def test_ownerless_base_pal_with_resolved_guild_is_guild_owned_and_shareable() -> None:
+    payload = canonical_payload()
+    pals = payload["pals"]
+    assert isinstance(pals, list) and isinstance(pals[0], dict)
+    pals[0]["owner_player_uid"] = None
+    pals[0]["guild_uid"] = "fixture-guild-001"
+    pals[0]["location_type"] = "base"
+
+    validated = _validator().validate(CanonicalSnapshot.model_validate(payload))
+
+    pal = validated.pals[0]
+    assert pal.ownership_scope == "guild"
+    assert pal.owner_resolved
+    assert pal.guild_resolved
+    assert pal.shared_eligible
+    assert "OWNER_UNRESOLVED" not in pal.warning_codes
+
+
+def test_ownerless_non_base_pal_remains_unresolved() -> None:
+    payload = canonical_payload()
+    pals = payload["pals"]
+    assert isinstance(pals, list) and isinstance(pals[0], dict)
+    pals[0]["owner_player_uid"] = None
+    pals[0]["guild_uid"] = "fixture-guild-001"
+    pals[0]["location_type"] = "player_storage"
+
+    validated = _validator().validate(CanonicalSnapshot.model_validate(payload))
+
+    pal = validated.pals[0]
+    assert pal.ownership_scope == "unresolved"
+    assert not pal.shared_eligible
+    assert "OWNER_UNRESOLVED" in pal.warning_codes
+
+
+def test_dimensional_storage_access_scope_is_not_guessed() -> None:
+    payload = canonical_payload()
+    pals = payload["pals"]
+    assert isinstance(pals, list) and isinstance(pals[0], dict)
+    pals[0]["location_type"] = "dimensional_storage"
+    pals[0]["location_name"] = "Redacted Player"
+    pals[0]["location_id"] = "dimensional-storage:fixture-player-001"
+    pals[0]["location_slot_index"] = 64
+    pals[0]["location_access_scope"] = "unresolved"
+
+    validated = _validator().validate(CanonicalSnapshot.model_validate(payload))
+
+    pal = validated.pals[0]
+    assert pal.ownership_scope == "player"
+    assert not pal.shared_eligible
+    assert "LOCATION_ACCESS_UNRESOLVED" in pal.warning_codes
+
+
+def test_guild_accessible_dimensional_storage_is_shareable() -> None:
+    payload = canonical_payload()
+    pals = payload["pals"]
+    assert isinstance(pals, list) and isinstance(pals[0], dict)
+    pals[0]["location_type"] = "dimensional_storage"
+    pals[0]["location_id"] = "dimensional-storage:fixture-player-001"
+    pals[0]["location_slot_index"] = 64
+    pals[0]["location_access_scope"] = "guild"
+
+    validated = _validator().validate(CanonicalSnapshot.model_validate(payload))
+
+    pal = validated.pals[0]
+    assert pal.ownership_scope == "player"
+    assert pal.shared_eligible

@@ -16,6 +16,7 @@
         "player_party",
         "player_storage",
         "base",
+        "dimensional_storage",
         "viewing_cage",
         "unknown"
       ]
@@ -25,6 +26,7 @@
     "snapshot_id",
     "pal_instance_uid",
     "pal_id",
+    "is_boss",
     "owner_player_id",
     "owner_display_name",
     "guild_id",
@@ -33,6 +35,9 @@
     "passive_skill_ids",
     "location_type",
     "location_name",
+    "location_id",
+    "location_slot_index",
+    "location_access_scope",
     "share_enabled",
     "is_owned_by_requester"
   ],
@@ -40,6 +45,7 @@
     "snapshot_id": { "type": "string", "format": "uuid" },
     "pal_instance_uid": { "type": "string", "minLength": 1, "maxLength": 160 },
     "pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "is_boss": { "type": ["boolean", "null"] },
     "owner_player_id": { "type": "string", "format": "uuid" },
     "owner_display_name": {
       "type": "string",
@@ -57,6 +63,16 @@
     },
     "location_type": { "$ref": "#/$defs/PalLocationType" },
     "location_name": { "type": ["string", "null"], "maxLength": 160 },
+    "location_id": { "type": ["string", "null"], "maxLength": 160 },
+    "location_slot_index": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "location_access_scope": {
+      "type": "string",
+      "enum": ["player", "guild", "unresolved"]
+    },
     "share_enabled": { "type": "boolean" },
     "is_owned_by_requester": { "type": "boolean" }
   }

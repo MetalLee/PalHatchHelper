@@ -547,6 +547,12 @@ values
   (
     '51000000-0000-4000-8000-000000000001',
     'zh-CN',
+    'pal_name.PAL_NAME_FixtureInventoryOnly',
+    '仅库存测试角色'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
     'fixture.passive.a',
     '认真'
   ),

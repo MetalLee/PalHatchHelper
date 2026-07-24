@@ -19,7 +19,7 @@ docker compose config --format json
 
 ```dotenv
 PARSER_NAME=palhatch-plm-save-parser
-PARSER_VERSION=1.0.2
+PARSER_VERSION=1.1.0
 PARSER_COMMAND_JSON=["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]
 PALHATCH_OODLE_LIB=/app/parser/lib/liboo2corelinux64.so.9
 PALHATCH_OODLE_SHA256=<64 位小写十六进制 SHA-256>
@@ -48,7 +48,8 @@ hash mismatch、non-GVAS 和只读 smoke。Parser 在 `dlopen` 前重新计算�
 `PALHATCH_WORLD_UID` 由 Agent 从已确认的 `PALWORLD_WORLD_UID` 单向传给受限子进程。若
 Level/Player GVAS 中存在 `WorldUID`/`WorldGuid`，Parser 要求它们与配置完全一致；旧存档省略
 该字段时才使用显式配置值，绝不从目录名猜测。`PARSER_REQUIRED_FILES_JSON` 必须列出
-`Level.sav` 和本轮允许复制的每个 `Players/<UID>.sav`；Parser 只扫描 Agent 快照中已经声明
+`Level.sav`、本轮允许复制的每个 `Players/<UID>.sav`，以及需要纳入库存的
+`Players/<UID>_dps.sav`；Parser 只扫描 Agent 快照中已经声明
 并复制的 Players 文件，不访问真实 `PALWORLD_SAVE_ROOT`。玩家文件清单变化时先更新声明并
 重新走双次稳定性检查，不能让 Parser 自行越过快照读取源目录。
 

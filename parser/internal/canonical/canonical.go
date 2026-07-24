@@ -46,16 +46,20 @@ type SourceMetadata struct {
 }
 
 type Pal struct {
-	InstanceUID     string         `json:"instance_uid"`
-	OwnerPlayerUID  *string        `json:"owner_player_uid"`
-	GuildUID        *string        `json:"guild_uid"`
-	PalID           string         `json:"pal_id"`
-	Gender          string         `json:"gender"`
-	Level           *int           `json:"level"`
-	PassiveSkillIDs []string       `json:"passive_skill_ids"`
-	LocationType    string         `json:"location_type"`
-	LocationName    *string        `json:"location_name"`
-	Metadata        SourceMetadata `json:"metadata"`
+	InstanceUID         string         `json:"instance_uid"`
+	OwnerPlayerUID      *string        `json:"owner_player_uid"`
+	GuildUID            *string        `json:"guild_uid"`
+	PalID               string         `json:"pal_id"`
+	IsBoss              bool           `json:"is_boss"`
+	Gender              string         `json:"gender"`
+	Level               *int           `json:"level"`
+	PassiveSkillIDs     []string       `json:"passive_skill_ids"`
+	LocationType        string         `json:"location_type"`
+	LocationName        *string        `json:"location_name"`
+	LocationID          *string        `json:"location_id"`
+	LocationSlotIndex   *int           `json:"location_slot_index"`
+	LocationAccessScope string         `json:"location_access_scope"`
+	Metadata            SourceMetadata `json:"metadata"`
 }
 
 type Warning struct {
@@ -75,6 +79,20 @@ func NormalizeStableID(source string) (string, error) {
 		return "", fmt.Errorf("GAME_ID_INVALID")
 	}
 	return normalized, nil
+}
+
+func NormalizeInventoryPalID(source string) (string, error) {
+	stableID, err := NormalizeStableID(source)
+	if err != nil {
+		return "", err
+	}
+	if strings.HasPrefix(stableID, "boss_") && len(stableID) > len("boss_") {
+		stableID = stableID[len("boss_"):]
+		if strings.HasSuffix(stableID, "_otomo") && len(stableID) > len("_otomo") {
+			stableID = stableID[:len(stableID)-len("_otomo")]
+		}
+	}
+	return stableID, nil
 }
 
 func Build(
@@ -146,6 +164,7 @@ func Build(
 			warnings.add("PAL_INSTANCE_UID_UNKNOWN")
 		}
 		sourcePalID := strings.TrimSpace(source.CharacterID)
+		isBoss := source.IsBoss || strings.HasPrefix(strings.ToLower(sourcePalID), "boss_")
 		palID, err := palIDs.mapID(sourcePalID)
 		if err != nil {
 			if err.Error() == "GAME_ID_NORMALIZATION_COLLISION" {
@@ -153,6 +172,12 @@ func Build(
 			}
 			palID, sourcePalID = "unknown", "unknown"
 			warnings.add("PAL_ID_UNKNOWN")
+		} else {
+			palID, err = NormalizeInventoryPalID(palID)
+			if err != nil {
+				palID, sourcePalID = "unknown", "unknown"
+				warnings.add("PAL_ID_UNKNOWN")
+			}
 		}
 		sourcePassives := uniqueStrings(source.PassiveSkillIDs)
 		passives := make([]string, 0, len(sourcePassives))
@@ -174,10 +199,32 @@ func Build(
 		guild := (*string)(nil)
 		locationType := "unknown"
 		locationName := (*string)(nil)
-		if base, ok := bases[strings.ToLower(source.BaseID)]; ok && source.BaseID != "" {
+		locationID := (*string)(nil)
+		locationSlotIndex := (*int)(nil)
+		locationAccessScope := "unresolved"
+		if source.InDimensionalStorage {
+			locationType = "dimensional_storage"
+			locationSlotIndex = optionalNonnegativeInt(source.SlotIndex)
+			locationAccessScope = normalizedAccessScope(source.LocationAccessScope)
+			if storageOwnerUID := optionalString(source.StorageOwnerUID); storageOwnerUID != nil {
+				locationID = optionalString("dimensional-storage:" + strings.ToLower(*storageOwnerUID))
+				if player, ok := players[strings.ToLower(*storageOwnerUID)]; ok {
+					locationName = optionalString(player.Nickname)
+					guild = optionalString(player.GuildID)
+				}
+			}
+			if owner != nil {
+				if player, ok := players[strings.ToLower(*owner)]; ok {
+					guild = optionalString(player.GuildID)
+				}
+			}
+		} else if base, ok := bases[strings.ToLower(source.BaseID)]; ok && source.BaseID != "" {
 			guild = optionalString(base.GuildID)
 			locationType = "base"
 			locationName = optionalString(base.Name)
+			locationID = optionalString(base.ID)
+			locationSlotIndex = optionalNonnegativeInt(source.SlotIndex)
+			locationAccessScope = "guild"
 		} else if owner != nil {
 			if player, ok := players[strings.ToLower(*owner)]; ok {
 				guild = optionalString(player.GuildID)
@@ -185,9 +232,13 @@ func Build(
 				case source.ContainerID != "" && strings.EqualFold(source.ContainerID, player.OtomoContainerID):
 					locationType = "player_party"
 					locationName = optionalString(player.Nickname)
+					locationSlotIndex = optionalNonnegativeInt(source.SlotIndex)
+					locationAccessScope = "player"
 				case source.ContainerID != "" && strings.EqualFold(source.ContainerID, player.PalStorageContainerID):
 					locationType = "player_storage"
 					locationName = optionalString(player.Nickname)
+					locationSlotIndex = optionalNonnegativeInt(source.SlotIndex)
+					locationAccessScope = "player"
 				}
 			}
 		}
@@ -198,9 +249,11 @@ func Build(
 		}
 		result.Pals = append(result.Pals, Pal{
 			InstanceUID: instanceUID, OwnerPlayerUID: owner, GuildUID: guild,
-			PalID: palID, Gender: gender, Level: boundedLevel(source.Level, warnings),
+			PalID: palID, IsBoss: isBoss, Gender: gender, Level: boundedLevel(source.Level, warnings),
 			PassiveSkillIDs: passives, LocationType: locationType, LocationName: locationName,
-			Metadata: SourceMetadata{SourceInternalName: sourcePalID, SourcePassiveSkillInternalNames: metadataPassives},
+			LocationID: locationID, LocationSlotIndex: locationSlotIndex,
+			LocationAccessScope: locationAccessScope,
+			Metadata:            SourceMetadata{SourceInternalName: sourcePalID, SourcePassiveSkillInternalNames: metadataPassives},
 		})
 	}
 
@@ -243,6 +296,22 @@ func optionalString(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func optionalNonnegativeInt(value int) *int {
+	if value < 0 {
+		return nil
+	}
+	return &value
+}
+
+func normalizedAccessScope(value string) string {
+	switch value {
+	case "player", "guild":
+		return value
+	default:
+		return "unresolved"
+	}
 }
 
 func uniqueStrings(values []string) []string {

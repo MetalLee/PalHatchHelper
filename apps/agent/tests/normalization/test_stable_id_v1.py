@@ -66,11 +66,15 @@ def test_parser_boundary_normalizes_ids_and_preserves_filtered_source_metadata()
                 "owner_player_uid": None,
                 "guild_uid": None,
                 "pal_id": "PlantSlime_Flower",
+                "is_boss": False,
                 "gender": "unknown",
                 "level": None,
                 "passive_skill_ids": ["Artisan", "Swift.Runner"],
                 "location_type": "unknown",
                 "location_name": None,
+                "location_id": None,
+                "location_slot_index": None,
+                "location_access_scope": "unresolved",
             }
         ],
     }
@@ -102,11 +106,15 @@ def test_parser_boundary_preserves_verified_pre_normalized_source_metadata() -> 
                 "owner_player_uid": None,
                 "guild_uid": None,
                 "pal_id": "plantslime_flower",
+                "is_boss": False,
                 "gender": "unknown",
                 "level": None,
                 "passive_skill_ids": ["artisan"],
                 "location_type": "unknown",
                 "location_name": None,
+                "location_id": None,
+                "location_slot_index": None,
+                "location_access_scope": "unresolved",
                 "metadata": {
                     "source_internal_name": "PlantSlime_Flower",
                     "source_passive_skill_internal_names": ["Artisan"],
@@ -122,3 +130,82 @@ def test_parser_boundary_preserves_verified_pre_normalized_source_metadata() -> 
     assert normalized.pals[0].metadata is not None
     assert normalized.pals[0].metadata.source_internal_name == "PlantSlime_Flower"
     assert normalized.pals[0].metadata.source_passive_skill_internal_names == ["Artisan"]
+
+
+def test_boss_inventory_prefix_maps_to_base_pal_and_preserves_source_name() -> None:
+    payload: dict[str, JSONValue] = {
+        "server": {
+            "world_uid": "fixture-world-001",
+            "save_version": "PlM/0x31",
+            "captured_at": "2026-07-18T16:00:00Z",
+        },
+        "guilds": [],
+        "players": [],
+        "pals": [
+            {
+                "instance_uid": "fixture-pal-boss-001",
+                "owner_player_uid": None,
+                "guild_uid": None,
+                "pal_id": "BOSS_Anubis",
+                "is_boss": True,
+                "gender": "male",
+                "level": 50,
+                "passive_skill_ids": ["Artisan"],
+                "location_type": "unknown",
+                "location_name": None,
+                "location_id": None,
+                "location_slot_index": None,
+                "location_access_scope": "unresolved",
+                "metadata": {
+                    "source_internal_name": "BOSS_Anubis",
+                    "source_passive_skill_internal_names": ["Artisan"],
+                },
+            }
+        ],
+    }
+
+    normalized = normalize_parser_snapshot_payload(payload)
+
+    assert normalized.pals[0].pal_id == "anubis"
+    assert normalized.pals[0].is_boss
+    assert normalized.pals[0].metadata is not None
+    assert normalized.pals[0].metadata.source_internal_name == "BOSS_Anubis"
+
+
+def test_boss_companion_suffix_maps_to_base_pal_and_preserves_source_name() -> None:
+    payload: dict[str, JSONValue] = {
+        "server": {
+            "world_uid": "fixture-world-001",
+            "save_version": "PlM/0x31",
+            "captured_at": "2026-07-18T16:00:00Z",
+        },
+        "guilds": [],
+        "players": [],
+        "pals": [
+            {
+                "instance_uid": "fixture-pal-boss-companion-001",
+                "owner_player_uid": None,
+                "guild_uid": None,
+                "pal_id": "BOSS_KingWhale_otomo",
+                "is_boss": True,
+                "gender": "male",
+                "level": 50,
+                "passive_skill_ids": ["Artisan"],
+                "location_type": "unknown",
+                "location_name": None,
+                "location_id": None,
+                "location_slot_index": None,
+                "location_access_scope": "unresolved",
+                "metadata": {
+                    "source_internal_name": "BOSS_KingWhale_otomo",
+                    "source_passive_skill_internal_names": ["Artisan"],
+                },
+            }
+        ],
+    }
+
+    normalized = normalize_parser_snapshot_payload(payload)
+
+    assert normalized.pals[0].pal_id == "kingwhale"
+    assert normalized.pals[0].metadata is not None
+    assert normalized.pals[0].metadata.source_internal_name == "BOSS_KingWhale_otomo"
