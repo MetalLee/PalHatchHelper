@@ -62,28 +62,25 @@ test("inventory scope and pagination links refresh the visible list", async ({
   await page.goto("/pals?scope=all&page_size=1");
 
   await page.getByRole("link", { name: "公会共享" }).click();
-  await expect(page).toHaveURL(/\/pals\?scope=shared$/);
+  await expect(page).toHaveURL(/\/pals\?scope=shared&page_size=1$/);
   await expect(page.getByText("共 1 只可见帕鲁")).toBeVisible();
   await expect(
     page.getByRole("article").getByText("Fixture Player B"),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "全部", exact: true }).click();
-  await expect(page).toHaveURL(/\/pals\?scope=all$/);
+  await expect(page).toHaveURL(/\/pals\?scope=all&page_size=1$/);
   await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
 
   await page.goto("/pals?scope=all&page_size=1");
   const firstPalId = await page
-    .locator(".pal-card .eyebrow span")
-    .last()
-    .textContent();
+    .getByRole("article")
+    .getAttribute("data-pal-id");
   await page.getByRole("link", { name: "下一页" }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(page).toHaveURL(/context=/);
   await expect
-    .poll(async () =>
-      page.locator(".pal-card .eyebrow span").last().textContent(),
-    )
+    .poll(async () => page.getByRole("article").getAttribute("data-pal-id"))
     .not.toBe(firstPalId);
 });
 
@@ -92,25 +89,38 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
 }) => {
   await login(page);
   await page.getByRole("link", { name: "帕鲁" }).last().click();
-  await expect(page.getByRole("heading", { name: "帕鲁列表" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
 
-  await page.getByLabel("名称、图鉴编号或稳定 ID").fill("棉");
-  await page.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByRole("button", { name: "筛选" }).click();
+  let filterSheet = page.getByRole("dialog", { name: "筛选库存" });
+  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉");
+  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await page.waitForLoadState("networkidle");
 
-  await page.getByLabel("名称、图鉴编号或稳定 ID").fill("2");
-  await page.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByRole("button", { name: "筛选" }).click();
+  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
+  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("2");
+  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toHaveCount(0);
 
-  await page.getByLabel("名称、图鉴编号或稳定 ID").fill("棉悠悠");
-  await page.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByRole("button", { name: "筛选" }).click();
+  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
+  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉悠悠");
+  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await page.waitForLoadState("networkidle");
 
   const sharing = page.getByRole("switch", { name: "棉悠悠 公会共享" });
   await expect(sharing).toHaveAttribute("aria-checked", "true");
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
   const shareResponsePromise = page.waitForResponse(
     (response) =>
       response.url().includes("/api/pals/fixture-pal-a-owned-001/share"),

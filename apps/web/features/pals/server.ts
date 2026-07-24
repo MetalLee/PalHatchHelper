@@ -93,6 +93,48 @@ export async function listPals(
   };
 }
 
+export async function loadPassiveRanks(
+  page: PalInventoryPage,
+  client?: SupabaseClient<Database>,
+): Promise<Record<string, number>> {
+  noStore();
+  if (
+    page.catalog_state !== "published" ||
+    page.game_data_version_id === null
+  ) {
+    return {};
+  }
+
+  const knownPassiveIds = Array.from(
+    new Set(
+      page.items.flatMap((item) =>
+        item.passive_skill_ids.filter(
+          (passiveId) => !item.unknown_passive_skill_ids.includes(passiveId),
+        ),
+      ),
+    ),
+  );
+  if (knownPassiveIds.length === 0) return {};
+
+  const supabase = client ?? (await createServerSupabaseClient());
+  const ranks: Record<string, number> = {};
+  for (let index = 0; index < knownPassiveIds.length; index += 100) {
+    const passiveIdBatch = knownPassiveIds.slice(index, index + 100);
+    const { data, error } = await supabase
+      .from("catalog_passive_skills")
+      .select("passive_skill_id,rank")
+      .eq("version_id", page.game_data_version_id)
+      .in("passive_skill_id", passiveIdBatch);
+    if (error !== null) throw new Phase5DataError(databaseFailureCode(error));
+    for (const row of data) ranks[row.passive_skill_id] = row.rank;
+  }
+
+  if (knownPassiveIds.some((passiveId) => ranks[passiveId] === undefined)) {
+    throw new Phase5DataError("GAME_DATA_VERSION_CHANGED");
+  }
+  return ranks;
+}
+
 export async function getInventoryDataStatus(
   client?: SupabaseClient<Database>,
 ): Promise<InventoryDataStatus> {
@@ -118,13 +160,16 @@ const emptyQuery: PalListQuery = {
   context: null,
 };
 
-export async function getOverviewSummary(): Promise<OverviewSummary> {
+export async function getOverviewSummary(
+  context: string | null = null,
+): Promise<OverviewSummary> {
   noStore();
   const supabase = await createServerSupabaseClient();
+  const query = { ...emptyQuery, context };
   const [all, mine, shared, dataStatus] = await Promise.all([
-    listPals(emptyQuery, supabase),
-    listPals({ ...emptyQuery, scope: "mine" }, supabase),
-    listPals({ ...emptyQuery, scope: "shared" }, supabase),
+    listPals(query, supabase),
+    listPals({ ...query, scope: "mine" }, supabase),
+    listPals({ ...query, scope: "shared" }, supabase),
     getInventoryDataStatus(supabase),
   ]);
   return {

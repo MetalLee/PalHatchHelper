@@ -1,5 +1,5 @@
 import type { PalInventoryPage } from "@palhatch/contracts";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PalInventory } from "../features/pals/pal-inventory";
@@ -145,10 +145,17 @@ describe("pal inventory", () => {
     const query = parsePalListQuery(new URLSearchParams());
     render(<PalFilters query={query} page={page} />);
 
+    fireEvent.click(screen.getByRole("combobox", { name: "所有者" }));
     expect(
       screen.getByRole("option", { name: "Fixture Player C" }),
     ).toBeTruthy();
-    expect(screen.getByRole("option", { name: "稀有被动" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("option", { name: "Fixture Player C" }));
+
+    fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
+    expect(screen.getByRole("option", { name: /稀有被动/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("option", { name: /稀有被动/ }));
+
+    fireEvent.click(screen.getByRole("combobox", { name: "位置" }));
     expect(screen.getByRole("option", { name: "观赏笼" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "次元仓库" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "未知" })).toBeNull();
@@ -156,7 +163,12 @@ describe("pal inventory", () => {
 
   it("provides previous, next, total pages and a bounded page jump", () => {
     const query = parsePalListQuery(
-      new URLSearchParams({ scope: "mine", query: "棉", page: "2" }),
+      new URLSearchParams({
+        scope: "mine",
+        query: "棉",
+        page: "2",
+        page_size: "12",
+      }),
     );
     render(
       <PalPagination
@@ -175,6 +187,12 @@ describe("pal inventory", () => {
     expect(
       screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
     ).toContain("page=3");
+    expect(
+      screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
+    ).toContain("page_size=12");
+    expect(
+      screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
+    ).toContain("context=");
     const jump = screen.getByRole("spinbutton", { name: "跳转页码" });
     expect(jump.getAttribute("min")).toBe("1");
     expect(jump.getAttribute("max")).toBe("4");
@@ -182,7 +200,16 @@ describe("pal inventory", () => {
 
   it("offers sharing controls only for the requester's own pals", () => {
     const onToggleShare = vi.fn();
-    render(<PalInventory page={page} onToggleShare={onToggleShare} />);
+    render(
+      <PalInventory
+        page={page}
+        passiveRanks={{
+          test_passive_a: 3,
+          test_passive_b: 5,
+        }}
+        onToggleShare={onToggleShare}
+      />,
+    );
 
     expect(screen.getAllByRole("switch")).toHaveLength(1);
     fireEvent.click(screen.getByRole("switch", { name: /棉悠悠.*共享/i }));
@@ -198,6 +225,15 @@ describe("pal inventory", () => {
     expect(screen.getByText("次元仓库")).toBeTruthy();
     expect(screen.getByText("第 2 页 · 第 2 格")).toBeTruthy();
     expect(screen.queryByText("Fixture Storage A")).toBeNull();
+    expect(screen.getByText("认真").dataset.rank).toBe("3");
+    expect(screen.getByText("工匠精神").dataset.rank).toBe("5");
+
+    const portrait = screen.getByRole("img", { name: "棉悠悠头像" });
+    expect(portrait.getAttribute("src")).toContain("pal-icons");
+    fireEvent.error(portrait);
+    expect(
+      screen.getByRole("img", { name: "棉悠悠头像（暂无本地图标）" }),
+    ).toBeTruthy();
   });
 
   it("makes missing catalog data and unknown IDs explicit", () => {
@@ -227,6 +263,47 @@ describe("pal inventory", () => {
       "游戏目录尚未配置",
     );
     expect(screen.getByText("未解析目录项")).toBeTruthy();
-    expect(screen.getByText("未知被动：unknown_passive")).toBeTruthy();
+    const unknownPassive = screen.getByText("未知被动 · unknown_passive");
+    expect(unknownPassive.dataset.rank).toBe("unknown");
+  });
+
+  it("opens secondary filters in a mobile sheet", () => {
+    const query = parsePalListQuery(new URLSearchParams());
+    render(<PalFilters query={query} page={page} />);
+
+    expect(screen.getByRole("link", { name: "全部" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "我的帕鲁" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "公会共享" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "筛选" }));
+    const sheet = screen.getByRole("dialog", { name: "筛选库存" });
+    expect(
+      within(sheet).getByLabelText("名称、图鉴编号或稳定 ID"),
+    ).toBeTruthy();
+    expect(within(sheet).getByLabelText("所有者")).toBeTruthy();
+    expect(
+      within(sheet).getByRole("button", { name: "应用筛选" }),
+    ).toBeTruthy();
+  });
+
+  it("shows a useful empty state without hiding catalog status", () => {
+    render(
+      <PalInventory
+        page={{
+          ...page,
+          items: [],
+          total_count: 0,
+          catalog_state: "not_configured",
+          game_data_version_id: null,
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("status").textContent).toContain(
+      "游戏目录尚未配置",
+    );
+    expect(
+      screen.getByRole("heading", { name: "没有匹配的帕鲁" }),
+    ).toBeTruthy();
   });
 });
