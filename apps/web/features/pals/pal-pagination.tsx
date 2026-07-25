@@ -1,10 +1,14 @@
 import type { PalInventoryPage } from "@palhatch/contracts";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import Link from "next/link";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { cn } from "@/lib/utils";
 
 import type { PalListQuery } from "./query";
 import { encodePageContext } from "./query";
@@ -31,42 +35,41 @@ function queryParams(
   if (query.location) params.set("location", query.location);
   if (query.shared !== null) params.set("shared", String(query.shared));
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));
+  if (query.view !== "cards") params.set("view", query.view);
   if (context !== null) params.set("context", context);
   params.set("page", String(pageNumber));
   return params;
 }
 
-function PageLink({
-  label,
-  href,
-  direction,
-}: Readonly<{
-  label: string;
-  href: string | null;
-  direction: "previous" | "next";
-}>) {
-  const icon =
-    direction === "previous" ? (
-      <ArrowLeft aria-hidden="true" className="size-4" />
-    ) : (
-      <ArrowRight aria-hidden="true" className="size-4" />
-    );
+type PageToken = number | "ellipsis";
 
-  return href === null ? (
-    <Button variant="outline" disabled>
-      {direction === "previous" ? icon : null}
-      {label}
-      {direction === "next" ? icon : null}
-    </Button>
-  ) : (
-    <Button asChild variant="outline">
-      <Link href={href}>
-        {direction === "previous" ? icon : null}
-        {label}
-        {direction === "next" ? icon : null}
-      </Link>
-    </Button>
-  );
+function pageTokens(currentPage: number, totalPages: number): PageToken[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 4) return [1, 2, 3, 4, 5, "ellipsis", totalPages];
+  if (currentPage >= totalPages - 3) {
+    return [
+      1,
+      "ellipsis",
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [
+    1,
+    "ellipsis",
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    "ellipsis",
+    totalPages,
+  ];
 }
 
 export function PalPagination({
@@ -82,53 +85,70 @@ export function PalPagination({
     page.page_number < page.total_pages
       ? `/pals?${queryParams(query, page.page_number + 1, context).toString()}`
       : null;
-  const hiddenParams = queryParams(query, page.page_number, context);
-  hiddenParams.delete("page");
+  const tokens = pageTokens(page.page_number, page.total_pages);
 
   return (
-    <nav
-      className="grid min-w-0 gap-4 rounded-3xl border border-glass-border bg-white/78 p-4 shadow-soft sm:grid-cols-[auto_1fr_auto] sm:items-center"
+    <Pagination
+      className="rounded-2xl border border-glass-border bg-white/78 p-3 shadow-soft"
       aria-label="帕鲁列表分页"
     >
-      <PageLink label="上一页" href={previousHref} direction="previous" />
-      <span
-        className="order-first text-center text-sm font-semibold tabular-nums text-foreground sm:order-none"
-        aria-live="polite"
-      >
-        第 {page.page_number} / {page.total_pages} 页
-      </span>
-      <PageLink label="下一页" href={nextHref} direction="next" />
-
-      <form
-        action="/pals"
-        method="get"
-        className="col-span-full flex min-w-0 flex-wrap items-end justify-center gap-2 border-t border-border/70 pt-4"
-      >
-        {Array.from(hiddenParams.entries()).map(([name, value]) => (
-          <input key={name} type="hidden" name={name} value={value} />
-        ))}
-        <div className="grid gap-1.5">
-          <Label
-            htmlFor="pal-page-number"
-            className="text-xs text-muted-foreground"
-          >
-            跳转页码
-          </Label>
-          <Input
-            id="pal-page-number"
-            type="number"
-            name="page"
-            min={1}
-            max={page.total_pages}
-            defaultValue={page.page_number}
-            inputMode="numeric"
-            className="w-24 bg-white"
-          />
-        </div>
-        <Button variant="secondary" type="submit">
-          跳转
-        </Button>
-      </form>
-    </nav>
+      <PaginationContent>
+        <PaginationItem>
+          {previousHref === null ? (
+            <span
+              aria-disabled="true"
+              className={cn(
+                "inline-flex size-11 min-h-11 shrink-0 items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap opacity-50 sm:w-auto sm:px-3",
+                "pointer-events-none",
+              )}
+            >
+              <span className="sr-only">上一页不可用</span>‹
+            </span>
+          ) : (
+            <PaginationPrevious href={previousHref} />
+          )}
+        </PaginationItem>
+        {tokens.map((token, index) =>
+          token === "ellipsis" ? (
+            <PaginationItem key={`ellipsis-${index}`}>
+              <PaginationEllipsis />
+            </PaginationItem>
+          ) : (
+            <PaginationItem
+              key={token}
+              className={
+                (token === 1 || token === page.total_pages) &&
+                page.total_pages > 7
+                  ? "hidden sm:list-item"
+                  : undefined
+              }
+            >
+              <PaginationLink
+                href={`/pals?${queryParams(query, token, context).toString()}`}
+                isActive={token === page.page_number}
+                aria-label={`第 ${token} 页`}
+              >
+                {token}
+              </PaginationLink>
+            </PaginationItem>
+          ),
+        )}
+        <PaginationItem>
+          {nextHref === null ? (
+            <span
+              aria-disabled="true"
+              className={cn(
+                "inline-flex size-11 min-h-11 shrink-0 items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap opacity-50 sm:w-auto sm:px-3",
+                "pointer-events-none",
+              )}
+            >
+              <span className="sr-only">下一页不可用</span>›
+            </span>
+          ) : (
+            <PaginationNext href={nextHref} />
+          )}
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
   );
 }

@@ -81,14 +81,29 @@ test("inventory scope and pagination links refresh the visible list", async ({
   await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
 
   await page.goto("/pals?scope=all&page_size=1");
+  await page.getByRole("link", { name: "表格视图" }).click();
+  await expect(page).toHaveURL(/view=table/);
+  const inventoryTable = page.getByRole("table", { name: "帕鲁库存表格" });
+  await expect(inventoryTable).toBeVisible();
+  await expect(
+    inventoryTable.getByRole("img", { name: "棉悠悠头像" }),
+  ).toBeVisible();
+
   const firstPalId = await page
-    .getByRole("article")
+    .getByRole("row")
+    .filter({ has: page.getByRole("img", { name: "棉悠悠头像" }) })
     .getAttribute("data-pal-id");
   await page.getByRole("link", { name: "下一页" }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(page).toHaveURL(/context=/);
+  await expect(page).toHaveURL(/view=table/);
   await expect
-    .poll(async () => page.getByRole("article").getAttribute("data-pal-id"))
+    .poll(async () =>
+      page
+        .getByRole("row")
+        .filter({ has: page.getByRole("img", { name: "棉绒兽头像" }) })
+        .getAttribute("data-pal-id"),
+    )
     .not.toBe(firstPalId);
 });
 
@@ -217,9 +232,7 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   await page.goto(nextHref!);
   await expect(page).toHaveURL(/page=2/);
   await expect(page).toHaveURL(/context=/);
-  await expect(
-    page.getByText("test_parent_a", { exact: true }).first(),
-  ).toBeVisible({
+  await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible({
     timeout: 15_000,
   });
 

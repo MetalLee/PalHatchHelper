@@ -2,6 +2,7 @@ import type { Database, InventoryScope } from "@palhatch/contracts";
 
 type PalGender = Database["public"]["Enums"]["pal_gender"];
 type PalLocationType = Database["public"]["Enums"]["pal_location_type"];
+export type PalInventoryView = "cards" | "table";
 
 export interface PalListQuery {
   scope: InventoryScope;
@@ -14,6 +15,7 @@ export interface PalListQuery {
   page_size: number;
   page: number;
   context: string | null;
+  view: PalInventoryView;
 }
 
 export interface InventoryPageContext {
@@ -46,6 +48,7 @@ export function parsePalListQuery(params: URLSearchParams): PalListQuery {
   );
   const requestedPage = Number.parseInt(params.get("page") ?? "1", 10);
   const shared = params.get("shared");
+  const requestedView = params.get("view");
   const context = shortValue(params.get("context"), 320);
 
   return {
@@ -74,6 +77,7 @@ export function parsePalListQuery(params: URLSearchParams): PalListQuery {
         ? Math.min(requestedPage, 1_000_000)
         : 1,
     context: decodePageContext(context) === null ? null : context,
+    view: requestedView === "table" ? "table" : "cards",
   };
 }
 

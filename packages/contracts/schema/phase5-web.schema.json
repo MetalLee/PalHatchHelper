@@ -33,6 +33,7 @@
         "pal_id",
         "is_boss",
         "encyclopedia_no",
+        "element_types",
         "pal_display_name",
         "catalog_entry_state",
         "owner_filter_key",
@@ -60,6 +61,12 @@
         "pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
         "is_boss": { "type": ["boolean", "null"] },
         "encyclopedia_no": { "type": ["integer", "null"], "minimum": 1 },
+        "element_types": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
         "pal_display_name": {
           "type": "string",
           "minLength": 1,
@@ -195,6 +202,7 @@
         "pal_id",
         "is_boss",
         "encyclopedia_no",
+        "element_types",
         "pal_display_name",
         "catalog_entry_state",
         "owner_filter_key",
@@ -222,6 +230,12 @@
         "pal_id": { "type": "string", "minLength": 1, "maxLength": 120 },
         "is_boss": { "type": ["boolean", "null"] },
         "encyclopedia_no": { "type": ["integer", "null"], "minimum": 1 },
+        "element_types": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
         "pal_display_name": {
           "type": "string",
           "minLength": 1,
