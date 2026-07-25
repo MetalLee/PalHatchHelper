@@ -10,6 +10,12 @@ async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
   await expect(page).toHaveURL(/\/overview$/);
 }
 
+async function navigateFromMobileMenu(page: Page, label: string) {
+  await page.getByRole("button", { name: "打开导航菜单" }).click();
+  const menu = page.getByRole("dialog", { name: "导航菜单" });
+  await menu.getByRole("link", { name: label }).click();
+}
+
 test.afterEach(async ({ page }) => {
   await page.request
     .patch("/api/pals/fixture-pal-a-owned-001/share", {
@@ -35,6 +41,28 @@ test("unbound test account receives the binding state", async ({ page }) => {
   await expect(page.getByText("尚未绑定游戏角色")).toBeVisible();
 });
 
+test("overview stays within a 390px viewport and uses CSS-only hero scenery", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page);
+
+  await expect(
+    page.getByRole("link", { name: "开始配种" }).first(),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看库存" })).toBeVisible();
+  const scenery = page.getByTestId("overview-scenery");
+  await expect(scenery).toHaveAttribute("data-visual-source", "css");
+  await expect(scenery.locator("img")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
 test("inventory scope and pagination links refresh the visible list", async ({
   page,
 }) => {
@@ -42,28 +70,25 @@ test("inventory scope and pagination links refresh the visible list", async ({
   await page.goto("/pals?scope=all&page_size=1");
 
   await page.getByRole("link", { name: "公会共享" }).click();
-  await expect(page).toHaveURL(/\/pals\?scope=shared$/);
+  await expect(page).toHaveURL(/\/pals\?scope=shared&page_size=1$/);
   await expect(page.getByText("共 1 只可见帕鲁")).toBeVisible();
   await expect(
     page.getByRole("article").getByText("Fixture Player B"),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "全部", exact: true }).click();
-  await expect(page).toHaveURL(/\/pals\?scope=all$/);
+  await expect(page).toHaveURL(/\/pals\?scope=all&page_size=1$/);
   await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
 
   await page.goto("/pals?scope=all&page_size=1");
   const firstPalId = await page
-    .locator(".pal-card .eyebrow span")
-    .last()
-    .textContent();
+    .getByRole("article")
+    .getAttribute("data-pal-id");
   await page.getByRole("link", { name: "下一页" }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(page).toHaveURL(/context=/);
   await expect
-    .poll(async () =>
-      page.locator(".pal-card .eyebrow span").last().textContent(),
-    )
+    .poll(async () => page.getByRole("article").getAttribute("data-pal-id"))
     .not.toBe(firstPalId);
 });
 
@@ -71,26 +96,39 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   page,
 }) => {
   await login(page);
-  await page.getByRole("link", { name: "帕鲁" }).last().click();
-  await expect(page.getByRole("heading", { name: "帕鲁列表" })).toBeVisible();
+  await navigateFromMobileMenu(page, "帕鲁");
+  await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
 
-  await page.getByLabel("名称、图鉴编号或稳定 ID").fill("棉");
-  await page.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByRole("button", { name: "筛选" }).click();
+  let filterSheet = page.getByRole("dialog", { name: "筛选库存" });
+  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉");
+  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await page.waitForLoadState("networkidle");
 
-  await page.getByLabel("名称、图鉴编号或稳定 ID").fill("2");
-  await page.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByRole("button", { name: "筛选" }).click();
+  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
+  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("2");
+  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toHaveCount(0);
 
-  await page.getByLabel("名称、图鉴编号或稳定 ID").fill("棉悠悠");
-  await page.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByRole("button", { name: "筛选" }).click();
+  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
+  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉悠悠");
+  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await page.waitForLoadState("networkidle");
 
   const sharing = page.getByRole("switch", { name: "棉悠悠 公会共享" });
   await expect(sharing).toHaveAttribute("aria-checked", "true");
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
   const shareResponsePromise = page.waitForResponse(
     (response) =>
       response.url().includes("/api/pals/fixture-pal-a-owned-001/share"),
@@ -174,7 +212,7 @@ test("player responses never contain private, cross-guild, raw-save or path data
 
 test("stale data status stays explicit on iPhone width", async ({ page }) => {
   await login(page);
-  await page.getByRole("link", { name: "数据状态" }).last().click();
+  await navigateFromMobileMenu(page, "数据状态");
   await expect(page.getByRole("heading", { name: "数据状态" })).toBeVisible();
   await expect(
     page.getByRole("status").filter({ hasText: "数据已过期" }),

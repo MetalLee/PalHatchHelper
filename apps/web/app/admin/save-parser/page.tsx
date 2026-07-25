@@ -1,7 +1,13 @@
 import { AdminActionButton } from "@/features/admin/admin-actions";
 import { AdminAccessDenied } from "@/features/admin/access";
 import {
+  AdminCode,
   AdminPageHeader,
+  adminActionsClasses,
+  adminDefinitionListClasses,
+  adminGridClasses,
+  adminPageClasses,
+  adminPanelClasses,
   formatAdminTime,
   StatusPill,
 } from "@/features/admin/presentation";
@@ -14,21 +20,24 @@ export default async function AdminSaveParserPage() {
   if (!(await requireAdminPageAccess())) return <AdminAccessDenied />;
   const status = await loadAdminSaveParserStatus();
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="READ-ONLY SAVE PIPELINE"
         title="存档与 Parser"
         description="管理员动作进入私有数据库命令队列；Agent 主动轮询，仅执行固定白名单。"
       />
       {status.stale && (
-        <section className="admin-card border-amber-300/20" role="status">
+        <section
+          className={`${adminPanelClasses} border-amber-200 bg-amber-50/80`}
+          role="status"
+        >
           STALE：Save Worker 心跳已过期。
         </section>
       )}
-      <section className="admin-grid">
-        <article className="admin-card">
+      <section className={adminGridClasses}>
+        <article className={adminPanelClasses}>
           <h2>Save Worker</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>状态</dt>
             <dd>
               <StatusPill state={status.worker.state} />
@@ -43,9 +52,9 @@ export default async function AdminSaveParserPage() {
             </dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>Parser</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>名称</dt>
             <dd>{status.parser.name ?? "—"}</dd>
             <dt>版本</dt>
@@ -60,9 +69,9 @@ export default async function AdminSaveParserPage() {
             <dd>{status.pal_count ?? "—"}</dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>安全保护</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>库存下降</dt>
             <dd>
               <StatusPill state={status.inventory_drop_state} />
@@ -74,24 +83,28 @@ export default async function AdminSaveParserPage() {
             <dt>保留数量</dt>
             <dd>{status.snapshot_retention_count}</dd>
             <dt>最新快照</dt>
-            <dd>{status.latest_snapshot?.snapshot_id ?? "—"}</dd>
+            <dd>
+              <AdminCode>
+                {status.latest_snapshot?.snapshot_id ?? "—"}
+              </AdminCode>
+            </dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>最近失败</h2>
           {status.recent_failure ? (
-            <p>
-              {status.recent_failure.error_code} ·{" "}
-              {status.recent_failure.summary}
-            </p>
+            <div className="grid gap-2">
+              <AdminCode>{status.recent_failure.error_code}</AdminCode>
+              <p>{status.recent_failure.summary}</p>
+            </div>
           ) : (
-            <p className="text-slate-400">暂无失败摘要。</p>
+            <p className="text-muted-foreground">暂无失败摘要。</p>
           )}
         </article>
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>受控动作</h2>
-        <div className="admin-actions">
+        <div className={adminActionsClasses}>
           <AdminActionButton action="sync_save_once">
             请求安全同步
           </AdminActionButton>
@@ -128,7 +141,7 @@ export default async function AdminSaveParserPage() {
             </AdminActionButton>
           )}
         </div>
-        <p className="mt-4 text-sm text-slate-400">
+        <p className="mt-4 text-sm text-muted-foreground">
           不提供 shell、路径、Steam update、Docker 或 Palworld/mihomo 重启入口。
         </p>
       </section>

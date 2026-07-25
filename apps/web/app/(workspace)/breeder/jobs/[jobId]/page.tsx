@@ -28,15 +28,13 @@ export default async function BreedingJobPage({
       />
     );
   }
+  const targetName =
+    result.data.localization.pals.find(
+      (pal) => pal.pal_id === result.data.target_pal_id,
+    )?.display_name ?? result.data.target_pal_id;
   return (
-    <div className="page-stack min-w-0">
-      <header className="page-header">
-        <div className="min-w-0">
-          <p className="eyebrow">BREEDING JOB</p>
-          <h1>路线比较</h1>
-          <p className="break-all">{jobId}</p>
-        </div>
-      </header>
+    <div className="grid min-w-0 max-w-full gap-6 overflow-x-clip pb-4 sm:gap-8">
+      <h1 className="sr-only">{targetName}的方案推荐与配种路径</h1>
       <BreedingJobView initialResult={result} />
     </div>
   );

@@ -404,6 +404,7 @@ test.describe.serial("Phase 7 local execution workflow", () => {
     await login(page);
     await page.goto(`/breeder/jobs/${jobId}`);
     await expect(page.getByTestId("job-stage")).toContainText("completed");
+    await page.getByRole("button", { name: "展开固定版本" }).click();
     originalSnapshotId = await page
       .locator("dd")
       .filter({ hasText: "40000000" })
@@ -427,18 +428,30 @@ test.describe.serial("Phase 7 local execution workflow", () => {
     await detectCandidates(nextSnapshotId);
     await page.reload();
 
-    const bestCandidate = page
+    await page.getByRole("button", { name: "查看候选子代" }).click();
+    const candidateDialog = page.getByRole("dialog", { name: "候选子代" });
+    const bestCandidate = candidateDialog
       .getByTestId("offspring-candidate")
-      .filter({ hasText: "phase7-e2e-child-best" });
+      .filter({ hasText: "phase7…best" });
     await expect(bestCandidate).toBeVisible();
-    await expect(page.getByTestId("offspring-candidate")).toHaveCount(2);
-    await page.reload();
-    await expect(bestCandidate).toBeVisible();
-    await bestCandidate.getByRole("button", { name: "确认真实子代" }).click();
     await expect(
-      page.getByText(/已选真实实例：phase7-e2e-child-best/),
-    ).toHaveText(/phase7-e2e-child-best/);
-    await expect(page.getByText("步骤 2")).toBeVisible();
+      candidateDialog.getByTestId("offspring-candidate"),
+    ).toHaveCount(2);
+    await page.reload();
+    await page.getByRole("button", { name: "查看候选子代" }).click();
+    const reloadedBestCandidate = page
+      .getByRole("dialog", { name: "候选子代" })
+      .getByTestId("offspring-candidate")
+      .filter({ hasText: "phase7…best" });
+    await expect(reloadedBestCandidate).toBeVisible();
+    await reloadedBestCandidate
+      .getByRole("button", { name: "确认真实子代" })
+      .click();
+    await page.getByRole("button", { name: "确认并推进计划" }).click();
+    await expect(
+      page.getByRole("button", { name: "标记为配种中" }),
+    ).toBeVisible();
+    await expect(page.getByText("Current step · 2")).toBeVisible();
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - window.innerWidth,
@@ -462,6 +475,7 @@ test.describe.serial("Phase 7 local execution workflow", () => {
 
     await page.goto(`/plans/${planId}`);
     await expect(page.getByText("DEPENDENCY_DISAPPEARED")).toBeVisible();
+    await page.getByRole("button", { name: "展开固定版本" }).click();
     await expect(page.getByText(originalSnapshotId)).toBeVisible();
     await expect(page.getByText(originalCatalogId)).toBeVisible();
   });

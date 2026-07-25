@@ -26,10 +26,13 @@ export function BreederError({ code }: Readonly<{ code: string }>) {
     "当前输入或固定数据状态不满足创建条件。",
   ];
   return (
-    <section className="state-card border-rose-300/20" role="alert">
-      <p className="eyebrow text-rose-200">{code}</p>
-      <h2 className="mt-3 text-xl font-semibold text-white">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
-    </section>
+    <PageError
+      code={code}
+      title={title}
+      description={description}
+      headingLevel="h1"
+      className="mx-auto max-w-2xl"
+    />
   );
 }
+import { PageError } from "@/components/states/page-error";

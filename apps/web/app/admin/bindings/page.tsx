@@ -5,14 +5,30 @@ import {
 } from "@/features/admin/admin-actions";
 import { AdminAccessDenied } from "@/features/admin/access";
 import {
+  AdminCode,
   AdminEmpty,
   AdminPageHeader,
+  adminActionStackClasses,
+  adminActionsClasses,
+  adminControlClasses,
+  adminPageClasses,
+  adminPanelClasses,
+  adminTableFrameClasses,
   formatAdminTime,
 } from "@/features/admin/presentation";
 import {
   loadAdminBindings,
   requireAdminPageAccess,
 } from "@/features/admin/server";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminBindingsPage({
   searchParams,
@@ -21,61 +37,62 @@ export default async function AdminBindingsPage({
   if (!(await requireAdminPageAccess())) return <AdminAccessDenied />;
   const data = await loadAdminBindings(q.slice(0, 120));
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="IDENTITY LINKING"
         title="玩家绑定"
         description="Supabase 用户与游戏玩家保持双向唯一；所有修改均使用幂等键、乐观并发与不可变审计。"
       />
-      <section className="admin-card">
-        <form className="admin-actions" method="get">
+      <section className={adminPanelClasses}>
+        <form className={adminActionsClasses} method="get">
           <input
+            className={`${adminControlClasses} flex-1`}
             aria-label="搜索用户或玩家"
             name="q"
             defaultValue={q}
             placeholder="搜索安全显示名或玩家昵称"
           />
-          <button className="secondary-button" type="submit">
+          <Button variant="outline" type="submit">
             搜索
-          </button>
+          </Button>
         </form>
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>创建绑定</h2>
         <BindingCreateForm users={data.users} players={data.players} />
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>账号摘要</h2>
         {data.users.length === 0 ? (
           <AdminEmpty>没有匹配账号。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>用户</th>
-                  <th>角色</th>
-                  <th>游戏玩家</th>
-                  <th>世界 / 公会</th>
-                  <th>版本</th>
-                  <th>动作</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className={adminTableFrameClasses}>
+            <Table className="min-w-[52rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>用户</TableHead>
+                  <TableHead>角色</TableHead>
+                  <TableHead>游戏玩家</TableHead>
+                  <TableHead>世界 / 公会</TableHead>
+                  <TableHead>版本</TableHead>
+                  <TableHead>动作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {data.users.map((user) => (
-                  <tr key={user.user_id}>
-                    <td>{user.user_display}</td>
-                    <td>{user.role}</td>
-                    <td>{user.player_nickname ?? "未绑定"}</td>
-                    <td>
+                  <TableRow key={user.user_id}>
+                    <TableCell>{user.user_display}</TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell>{user.player_nickname ?? "未绑定"}</TableCell>
+                    <TableCell>
                       {user.world_name ?? "—"} / {user.guild_name ?? "—"}
-                    </td>
-                    <td>{user.binding_version ?? "—"}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell>{user.binding_version ?? "—"}</TableCell>
+                    <TableCell>
                       {user.binding_version === null ? (
                         "—"
                       ) : (
-                        <div className="admin-action-stack">
+                        <div className={adminActionStackClasses}>
                           <BindingUpdateForm
                             user={user}
                             players={data.players}
@@ -92,42 +109,46 @@ export default async function AdminBindingsPage({
                           </AdminActionButton>
                         </div>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>绑定历史</h2>
         {data.events.length === 0 ? (
           <AdminEmpty>暂无绑定操作。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>事件</th>
-                  <th>用户</th>
-                  <th>玩家</th>
-                  <th>操作者</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className={adminTableFrameClasses}>
+            <Table className="min-w-[48rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>时间</TableHead>
+                  <TableHead>事件</TableHead>
+                  <TableHead>用户</TableHead>
+                  <TableHead>玩家</TableHead>
+                  <TableHead>操作者</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {data.events.map((event) => (
-                  <tr key={event.event_id}>
-                    <td>{formatAdminTime(event.created_at)}</td>
-                    <td>{event.event_type}</td>
-                    <td>{event.user_id}</td>
-                    <td>{event.player_id ?? "—"}</td>
-                    <td>{event.actor_display}</td>
-                  </tr>
+                  <TableRow key={event.event_id}>
+                    <TableCell>{formatAdminTime(event.created_at)}</TableCell>
+                    <TableCell>{event.event_type}</TableCell>
+                    <TableCell>
+                      <AdminCode>{event.user_id}</AdminCode>
+                    </TableCell>
+                    <TableCell>
+                      <AdminCode>{event.player_id ?? "—"}</AdminCode>
+                    </TableCell>
+                    <TableCell>{event.actor_display}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </section>

@@ -4,8 +4,13 @@ import {
 } from "@/features/admin/admin-actions";
 import { AdminAccessDenied } from "@/features/admin/access";
 import {
+  AdminCode,
   AdminEmpty,
   AdminPageHeader,
+  adminActionsClasses,
+  adminPageClasses,
+  adminPanelClasses,
+  adminTableFrameClasses,
   formatAdminTime,
   StatusPill,
 } from "@/features/admin/presentation";
@@ -14,6 +19,14 @@ import {
   loadRuntimeSettings,
   requireAdminPageAccess,
 } from "@/features/admin/server";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function AdminJobsPage() {
   if (!(await requireAdminPageAccess())) return <AdminAccessDenied />;
@@ -22,15 +35,15 @@ export default async function AdminJobsPage() {
     loadRuntimeSettings(),
   ]);
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="DETERMINISTIC JOB CONTROL"
         title="任务与 AI"
         description="只能重试、取消或回收确认超时的任务；固定快照、目录版本、路线与分数不可修改。"
       />
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>控制</h2>
-        <div className="admin-actions">
+        <div className={adminActionsClasses}>
           <StatusPill
             state={
               settings.settings.job_creation_enabled
@@ -44,47 +57,48 @@ export default async function AdminJobsPage() {
           </AdminActionButton>
         </div>
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>最近任务</h2>
         {jobs.length === 0 ? (
           <AdminEmpty>暂无任务。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>ID / requester</th>
-                  <th>状态</th>
-                  <th>固定版本</th>
-                  <th>租约</th>
-                  <th>结果</th>
-                  <th>动作</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className={adminTableFrameClasses}>
+            <Table className="min-w-[68rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID / requester</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>固定版本</TableHead>
+                  <TableHead>租约</TableHead>
+                  <TableHead>结果</TableHead>
+                  <TableHead>动作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {jobs.map((job) => (
-                  <tr key={job.job_id}>
-                    <td>
-                      {job.job_id}
+                  <TableRow key={job.job_id}>
+                    <TableCell>
+                      <AdminCode>{job.job_id}</AdminCode>
                       <br />
                       <small>{job.requester_display}</small>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <StatusPill state={job.status} />
                       <br />
                       attempt {job.attempt_count}
-                    </td>
-                    <td>
-                      snapshot {job.snapshot_id}
-                      <br />
-                      catalog {job.catalog_version_id}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
+                      <small>snapshot</small>
+                      <AdminCode>{job.snapshot_id}</AdminCode>
+                      <small>catalog</small>
+                      <AdminCode>{job.catalog_version_id}</AdminCode>
+                    </TableCell>
+                    <TableCell>
                       {job.locked ? "已锁定" : "无锁"}
                       <br />
                       <small>{formatAdminTime(job.heartbeat_at)}</small>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       routes {job.route_count}
                       <br />
                       {job.ai_provider ?? "—"}
@@ -95,9 +109,9 @@ export default async function AdminJobsPage() {
                       {job.execution_plan_id
                         ? `plan ${job.execution_plan_id}`
                         : ""}
-                    </td>
-                    <td>
-                      <div className="admin-actions">
+                    </TableCell>
+                    <TableCell>
+                      <div className={adminActionsClasses}>
                         {job.status === "failed" && (
                           <AdminActionButton
                             action="retry_breeding_job"
@@ -130,11 +144,11 @@ export default async function AdminJobsPage() {
                           </AdminActionButton>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </section>

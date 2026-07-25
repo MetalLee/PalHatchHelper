@@ -27,14 +27,7 @@ export default async function PlanDetailPage({
     );
   }
   return (
-    <div className="page-stack min-w-0">
-      <header className="page-header">
-        <div className="min-w-0">
-          <p className="eyebrow">PLAN HISTORY</p>
-          <h1>执行计划详情</h1>
-          <p className="break-all">{planId}</p>
-        </div>
-      </header>
+    <div className="min-w-0 max-w-full overflow-x-clip">
       <PlanDetail detail={detail} />
     </div>
   );

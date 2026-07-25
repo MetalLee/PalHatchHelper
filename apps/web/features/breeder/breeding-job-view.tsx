@@ -5,12 +5,32 @@ import type {
   BreedingJobDetailRpcResult,
   BreedingJobDetailRpcSuccess,
   BreedingRoute,
-  BreedingRouteViewParent,
-  RouteScoreComponent,
 } from "@palhatch/contracts";
-import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+import { BreederFlowProgress } from "./components/breeder-flow-progress";
+import { BreedingRouteTree } from "./components/breeding-route-tree";
+import {
+  BreedingSearchDiagnostics,
+  NoBreedingRouteState,
+  WaitingForBreedingResult,
+} from "./components/breeding-job-result-state";
+import { BreedingJobTargetSummary } from "./components/breeding-job-target-summary";
+import { JobStagePanel } from "./components/job-stage-panel";
+import { PinnedVersionDetails } from "./components/pinned-version-details";
+import { RouteAdoptionPanel } from "./components/route-adoption-panel";
+import { RouteComparisonGrid } from "./components/route-comparison-grid";
+import { RouteScoreBreakdown } from "./components/route-score-breakdown";
+import {
+  RouteExplanation,
+  RouteMissingRequirements,
+  RoutePassiveSources,
+} from "./components/route-supporting-details";
+import { localizedName, localizedNames } from "./presentation";
 
 const terminal = new Set(["completed", "failed", "cancelled"]);
 const uuidPattern =
@@ -60,52 +80,6 @@ function parseAdoption(value: unknown): AdoptRouteResponse {
   return value as AdoptRouteResponse;
 }
 
-const stageLabels: Record<string, string> = {
-  pending: "等待 Worker 领取",
-  processing: "正在运行确定性算法",
-  algorithm_completed: "算法已完成，正在准备解释",
-  ai_enriching: "正在生成辅助解释",
-  retry_pending: "Worker 将安全重试",
-  completed: "任务完成",
-  failed: "任务失败",
-  cancelled: "任务已取消",
-};
-
-const optimizationModeLabels: Record<
-  BreedingRoute["optimization_mode"],
-  string
-> = {
-  balanced: "综合推荐",
-  fastest: "最快路线",
-  highest_success: "最高成功率",
-  least_borrowing: "最少借用",
-};
-
-const scoreComponentLabels: Record<RouteScoreComponent["component"], string> = {
-  route_length: "路线长度",
-  inventory_coverage: "库存覆盖",
-  passive_concentration: "被动集中度",
-  borrowing: "公会借用成本",
-  intermediate_cost: "中间帕鲁成本",
-  attempt_cost: "预计尝试成本",
-  stability: "路线稳定性",
-  acquisition_cost: "缺失库存成本",
-};
-
-const difficultyLabels: Record<BreedingRoute["difficulty"], string> = {
-  low: "低",
-  medium: "中",
-  high: "高",
-};
-
-const recipeTypeLabels: Record<
-  BreedingRoute["steps"][number]["recipe_type"],
-  string
-> = {
-  normal: "常规配方",
-  special: "特殊配方",
-};
-
 export function BreedingJobView({
   initialResult,
   poll = true,
@@ -122,6 +96,7 @@ export function BreedingJobView({
   const [pollPaused, setPollPaused] = useState(false);
   const [adoptingRouteId, setAdoptingRouteId] = useState<string | null>(null);
   const [adoptionError, setAdoptionError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!poll || terminal.has(result.data.status)) return;
     let attempts = 0;
@@ -158,27 +133,8 @@ export function BreedingJobView({
     }, 2_000);
     return () => window.clearInterval(timer);
   }, [poll, result.data.job_id, result.data.status]);
+
   const plan = result.data.plan;
-  const readyRoutes = useMemo(
-    () =>
-      plan?.routes.filter((route) => route.feasibility_status === "ready") ??
-      [],
-    [plan],
-  );
-  const fallbackRoutes = useMemo(
-    () =>
-      plan?.routes.filter(
-        (route) => route.feasibility_status === "needs_inventory",
-      ) ?? [],
-    [plan],
-  );
-  const hardSearchLimit =
-    plan?.explanation_codes.includes("SEARCH_LIMIT_REACHED") === true ||
-    plan?.explanation_codes.includes("SEARCH_TIMEOUT") === true ||
-    plan?.diagnostics.search_complete === false;
-  const heuristicSearchPruned =
-    !hardSearchLimit &&
-    plan?.explanation_codes.includes("SEARCH_PRUNED") === true;
   const selected = useMemo(
     () =>
       plan?.routes.find((route) => route.route_key === selectedKey) ??
@@ -205,6 +161,28 @@ export function BreedingJobView({
       ),
     [result.data.localization.passive_skills],
   );
+  const passiveFacts = useMemo(
+    () =>
+      new Map(
+        result.data.localization.passive_skills.map((passive) => [
+          passive.passive_skill_id,
+          {
+            rank: passive.rank,
+            isNegative: passive.is_negative,
+          },
+        ]),
+      ),
+    [result.data.localization.passive_skills],
+  );
+  const hardSearchLimit =
+    plan?.explanation_codes.includes("SEARCH_LIMIT_REACHED") === true ||
+    plan?.explanation_codes.includes("SEARCH_TIMEOUT") === true ||
+    plan?.diagnostics.search_complete === false;
+  const heuristicSearchPruned =
+    !hardSearchLimit &&
+    plan?.explanation_codes.includes("SEARCH_PRUNED") === true;
+  const activeStep = plan !== null && plan.routes.length > 0 ? 3 : 2;
+  const targetName = localizedName(palNames, result.data.target_pal_id, "Pal");
 
   async function adoptSelectedRoute(route: BreedingRoute): Promise<void> {
     setAdoptingRouteId(route.route_id);
@@ -242,509 +220,117 @@ export function BreedingJobView({
   }
 
   return (
-    <div className="grid min-w-0 gap-5">
-      <section className="content-panel min-w-0" aria-live="polite">
-        <p className="eyebrow">JOB PROGRESS</p>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold text-white">真实任务阶段</h2>
-            <p className="mt-2 text-sm text-slate-300" data-testid="job-stage">
-              {result.data.status} · {stageLabels[result.data.status]}
-            </p>
-          </div>
-          <span className="level-chip">尝试 {result.data.attempt_count}</span>
-        </div>
-        {pollPaused ? (
-          <p className="notice-banner mt-4" role="status">
-            自动刷新已暂停，请手动刷新页面继续查看。
-          </p>
-        ) : null}
-        {result.data.error_code === null ? null : (
-          <p className="notice-banner mt-4" role="alert">
-            稳定错误码：{result.data.error_code}
-          </p>
-        )}
-      </section>
+    <div className="grid min-w-0 max-w-full gap-6 overflow-x-clip">
+      <BreederFlowProgress activeStep={activeStep} />
 
-      <section className="content-panel min-w-0" aria-label="配种目标摘要">
-        <p className="eyebrow">BREEDING TARGET</p>
-        <h2 className="mt-3 text-xl font-semibold text-white">
-          {localizedName(palNames, result.data.target_pal_id, "Pal")}
-        </h2>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {result.data.desired_passive_ids.length === 0 ? (
-            <span className="text-sm text-slate-400">未指定期望被动</span>
-          ) : (
-            result.data.desired_passive_ids.map((id) => (
-              <span className="passive-chip" key={id}>
-                {localizedName(passiveNames, id, "被动")}
-              </span>
-            ))
-          )}
-        </div>
-      </section>
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
+        <BreedingJobTargetSummary
+          jobId={result.data.job_id}
+          targetPalId={result.data.target_pal_id}
+          targetName={targetName}
+          desiredPassiveIds={result.data.desired_passive_ids}
+          passiveNames={passiveNames}
+          passiveFacts={passiveFacts}
+          optimizationMode={result.data.optimization_mode}
+          allowGuildShared={result.data.allow_guild_shared}
+          maxGenerations={result.data.max_generations}
+        />
+        <JobStagePanel
+          status={result.data.status}
+          attemptCount={result.data.attempt_count}
+          errorCode={result.data.error_code}
+          pollPaused={pollPaused}
+          aiDegraded={plan?.ai.degraded === true}
+        />
+      </div>
 
       {plan?.missing_passive_ids.length ? (
-        <section className="notice-banner min-w-0" role="alert">
-          <h2 className="font-semibold text-white">
-            库存缺少以下目标被动来源：
-          </h2>
-          <ul className="mt-2 grid gap-1 text-sm text-amber-100">
-            {plan.missing_passive_ids.map((passiveId) => (
-              <li className="break-all" key={passiveId}>
-                {localizedName(passiveNames, passiveId, "被动")}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Alert className="rounded-3xl border-amber-200 bg-amber-50/94 text-amber-950">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle>库存缺少以下目标被动来源：</AlertTitle>
+          <AlertDescription className="text-amber-900">
+            {localizedNames(
+              passiveNames,
+              plan.missing_passive_ids,
+              "被动",
+            ).join("、")}
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      <section className="content-panel min-w-0">
-        <p className="eyebrow">PINNED VERSIONS</p>
-        <dl className="fixed-inputs mt-4 md:grid-cols-2">
-          <div>
-            <dt>库存快照</dt>
-            <dd>{result.data.inventory_snapshot_id}</dd>
-          </div>
-          <div>
-            <dt>目录版本</dt>
-            <dd>{result.data.game_data_version_id}</dd>
-          </div>
-          <div>
-            <dt>Content hash</dt>
-            <dd>{result.data.game_data_content_hash}</dd>
-          </div>
-          <div>
-            <dt>算法</dt>
-            <dd>{result.data.algorithm_version}</dd>
-          </div>
-          <div>
-            <dt>评分</dt>
-            <dd>{result.data.scoring_profile_version}</dd>
-          </div>
-          <div>
-            <dt>优化模式</dt>
-            <dd>{optimizationModeLabels[result.data.optimization_mode]}</dd>
-          </div>
-        </dl>
-      </section>
-
-      {plan === null ? null : plan.routes.length === 0 && hardSearchLimit ? (
-        <section className="state-card" role="status">
-          <p className="eyebrow">BOUNDED SEARCH INCOMPLETE</p>
-          <h2 className="mt-3 text-xl font-semibold text-white">
-            搜索达到安全上限
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            当前结果不能证明不存在合法路线。可降低最大代数、减少期望被动，或缩小可借用库存范围后创建新任务。
-          </p>
-        </section>
-      ) : plan.routes.length === 0 && heuristicSearchPruned ? (
-        <section className="state-card" role="status">
-          <p className="eyebrow">HEURISTIC SEARCH PRUNED</p>
-          <h2 className="mt-3 text-xl font-semibold text-white">
-            启发式搜索未找到候选
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            本轮搜索经过状态剪枝，不能据此断言没有合法路线。系统会保留固定输入，便于使用优化后的算法重新计算。
-          </p>
-        </section>
+      {plan === null ? (
+        <WaitingForBreedingResult status={result.data.status} />
       ) : plan.routes.length === 0 ? (
-        <section className="state-card" role="status">
-          <p className="eyebrow">NO LEGAL ROUTE</p>
-          <h2 className="mt-3 text-xl font-semibold text-white">
-            当前没有合法路线
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            可减少期望被动、提高最大代数，或在确认共享权限后允许使用公会库存，再创建新任务。
-          </p>
-        </section>
+        <NoBreedingRouteState
+          hardSearchLimit={hardSearchLimit}
+          heuristicSearchPruned={heuristicSearchPruned}
+          explanationCodes={plan.explanation_codes}
+        />
       ) : (
         <>
-          {hardSearchLimit ? (
-            <p className="notice-banner" role="status">
-              已返回当前最优候选；搜索受到安全预算限制，未穷举全部路线。
-            </p>
-          ) : heuristicSearchPruned ? (
-            <p className="notice-banner" role="status">
-              已返回当前候选；搜索使用了确定性的启发式剪枝。
-            </p>
-          ) : null}
-          <section
-            className="content-panel min-w-0"
-            aria-label="库存可执行方案"
-          >
-            <p className="eyebrow">READY ROUTES</p>
-            <h2 className="mt-3 text-xl font-semibold text-white">
-              库存可执行方案
-            </h2>
-            {readyRoutes.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-400">
-                当前库存还没有可直接采用的路线。
-              </p>
-            ) : (
-              <div className="route-tabs mt-4" aria-label="可执行路线比较">
-                {readyRoutes.map((route) => (
-                  <button
-                    type="button"
-                    key={route.route_key}
-                    className={
-                      route.route_key === selected?.route_key
-                        ? "route-tab-active"
-                        : "route-tab"
-                    }
-                    onClick={() => setSelectedKey(route.route_key)}
-                  >
-                    可执行路线 {route.rank}
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-          {fallbackRoutes.length === 0 ? null : (
-            <details className="content-panel min-w-0 opacity-80">
-              <summary className="cursor-pointer text-lg font-semibold text-slate-200">
-                需补充库存的备选方案（{fallbackRoutes.length}）
-              </summary>
-              <p className="mt-2 text-sm text-slate-400">
-                这些路线不能采用，补齐种类、性别或目标被动来源后请重新计算。
-              </p>
-              <div className="route-tabs mt-4" aria-label="缺库存备选路线">
-                {fallbackRoutes.map((route) => (
-                  <button
-                    type="button"
-                    key={route.route_key}
-                    className={
-                      route.route_key === selected?.route_key
-                        ? "route-tab-active"
-                        : "route-tab"
-                    }
-                    onClick={() => setSelectedKey(route.route_key)}
-                  >
-                    备选路线 {route.rank}
-                  </button>
-                ))}
-              </div>
-            </details>
+          <BreedingSearchDiagnostics
+            hardSearchLimit={hardSearchLimit}
+            heuristicSearchPruned={heuristicSearchPruned}
+            explanationCodes={plan.explanation_codes}
+          />
+          <RouteComparisonGrid
+            routes={plan.routes}
+            selectedRouteKey={selected?.route_key ?? null}
+            aiDegraded={plan.ai.degraded}
+            palNames={palNames}
+            passiveNames={passiveNames}
+            onSelect={setSelectedKey}
+          />
+
+          {selected === undefined ? null : (
+            <section className="grid min-w-0 gap-5" aria-label="路线详情">
+              <RouteExplanation
+                route={selected}
+                planExplanation={plan.ai.explanation}
+                degraded={plan.ai.degraded}
+              />
+              <RouteMissingRequirements
+                route={selected}
+                palNames={palNames}
+                passiveNames={passiveNames}
+              />
+              <RoutePassiveSources
+                route={selected}
+                historical={
+                  result.data.algorithm_version !==
+                  "inventory-trait-aware-deterministic-v4"
+                }
+                palNames={palNames}
+                passiveNames={passiveNames}
+              />
+              <BreedingRouteTree
+                route={selected}
+                targetPalId={result.data.target_pal_id}
+                palNames={palNames}
+                passiveNames={passiveNames}
+                passiveFacts={passiveFacts}
+              />
+              <RouteAdoptionPanel
+                route={selected}
+                jobStatus={result.data.status}
+                adopting={adoptingRouteId !== null}
+                adoptionError={adoptionError}
+                onAdopt={() => void adoptSelectedRoute(selected)}
+              />
+              <RouteScoreBreakdown route={selected} />
+            </section>
           )}
-          <section className="content-panel min-w-0" aria-label="路线详情">
-            {selected === undefined ? null : (
-              <>
-                <RouteFacts
-                  route={selected}
-                  historical={
-                    result.data.algorithm_version !==
-                    "inventory-trait-aware-deterministic-v4"
-                  }
-                  palNames={palNames}
-                  passiveNames={passiveNames}
-                />
-                {result.data.status !== "completed" ? null : (
-                  <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-white/8 pt-5">
-                    {selected.execution_plan_id !== null ? (
-                      <Link
-                        className="primary-button"
-                        href={`/plans/${selected.execution_plan_id}`}
-                      >
-                        查看执行计划
-                      </Link>
-                    ) : selected.adoptable ? (
-                      <button
-                        className="primary-button"
-                        disabled={adoptingRouteId !== null}
-                        onClick={() => void adoptSelectedRoute(selected)}
-                      >
-                        {adoptingRouteId === selected.route_id
-                          ? "正在采用…"
-                          : "采用此方案"}
-                      </button>
-                    ) : (
-                      <p className="notice-banner" role="status">
-                        补齐库存后才可采用此方案
-                      </p>
-                    )}
-                    {adoptionError === null ? null : (
-                      <p className="text-sm text-rose-200" role="alert">
-                        {adoptionError}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-          <section className="content-panel min-w-0">
-            <p className="eyebrow">AI EXPLANATION · NON-AUTHORITATIVE</p>
-            <h2 className="mt-3 text-xl font-semibold text-white">
-              AI 辅助解释（不改变确定性事实）
-            </h2>
-            {plan.ai.degraded ? (
-              <p className="notice-banner mt-4" role="status">
-                解释已降级
-              </p>
-            ) : null}
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              {selected?.ai_explanation ?? plan.ai.explanation ?? "暂无解释"}
-            </p>
-            {selected?.ai_labels.length ? (
-              <p className="mt-3 text-xs text-slate-400">
-                标签：{selected.ai_labels.join(" · ")}
-              </p>
-            ) : null}
-          </section>
         </>
       )}
-    </div>
-  );
-}
 
-function RouteFacts({
-  route,
-  historical,
-  palNames,
-  passiveNames,
-}: Readonly<{
-  route: BreedingRoute;
-  historical: boolean;
-  palNames: ReadonlyMap<string, string>;
-  passiveNames: ReadonlyMap<string, string>;
-}>) {
-  const currentScore = route.score_breakdown.mode_scores.find(
-    (score) => score.optimization_mode === route.optimization_mode,
-  );
-  return (
-    <div className="mt-5 grid min-w-0 gap-5">
-      <div className="route-metrics">
-        <Metric label="总分" value={route.total_score.toFixed(2)} />
-        <Metric label="代数" value={String(route.generation_count)} />
-        <Metric label="借用数" value={String(route.borrowed_pal_count)} />
-        <Metric
-          label="库存覆盖率"
-          value={`${Math.round(route.inventory_coverage * 100)}%`}
-        />
-        <Metric
-          label="词条来源覆盖率"
-          value={`${Math.round(route.inventory_passive_coverage * 100)}%`}
-        />
-        <Metric label="难度" value={difficultyLabels[route.difficulty]} />
-        <Metric
-          label="尝试区间"
-          value={`${route.estimated_attempts_min}–${route.estimated_attempts_max}`}
-        />
-      </div>
-      {route.missing_requirements.length === 0 ? null : (
-        <section className="notice-banner" aria-label="仍缺少的 Pal">
-          <h3 className="font-semibold text-white">
-            仍需准备 {route.missing_pal_count} 只 Pal
-          </h3>
-          <ul className="mt-3 grid gap-2 text-sm text-slate-200">
-            {route.missing_requirements.map((requirement) => (
-              <li
-                key={`${requirement.pal_id}:${requirement.gender}:${requirement.required_passive_ids.join(",")}`}
-              >
-                {requirement.quantity}×{" "}
-                {localizedName(palNames, requirement.pal_id, "Pal")} ·{" "}
-                {genderRequirementLabel(requirement.gender)}
-                {" · 被动无要求"}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {route.missing_passive_ids.length === 0 ? null : (
-        <section className="notice-banner" aria-label="缺少目标被动来源">
-          <h3 className="font-semibold text-white">
-            库存缺少以下目标被动来源：
-          </h3>
-          <ul className="mt-2 grid gap-1 text-sm text-amber-100">
-            {route.missing_passive_ids.map((passiveId) => (
-              <li className="break-all" key={passiveId}>
-                {localizedName(passiveNames, passiveId, "被动")}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      <section className="score-panel min-w-0" aria-label="词条来源">
-        <h3 className="text-lg font-semibold text-white">词条来源</h3>
-        {route.passive_sources.length ? (
-          <dl className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2">
-            {route.passive_sources.map((source) => (
-              <div className="min-w-0" key={source.passive_id}>
-                <dt className="font-medium text-teal-100">
-                  {localizedName(passiveNames, source.passive_id, "被动")}
-                </dt>
-                <dd className="mt-1 break-all text-xs leading-5 text-slate-300">
-                  ← 库存 {localizedName(palNames, source.source_pal_id, "Pal")}{" "}
-                  · {source.source_instance_uid}
-                </dd>
-                <dd className="text-xs text-slate-500">
-                  首次保留于步骤 {source.first_required_step_index + 1}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className="mt-3 text-sm text-slate-400">
-            {historical
-              ? "历史结果未记录词条来源；兼容投影不会改写原路线或摘要。"
-              : "此路线没有已追踪的目标被动来源。"}
-          </p>
-        )}
-      </section>
-      <div className="grid gap-4">
-        {route.steps.map((step) => {
-          const parents = [step.parent_a, step.parent_b].toSorted(
-            (left, right) =>
-              genderOrder(left.gender) - genderOrder(right.gender),
-          );
-          return (
-            <article className="route-step" key={step.step_index}>
-              <p className="eyebrow">
-                第 {step.generation} 代 · {recipeTypeLabels[step.recipe_type]}
-              </p>
-              <div className="parent-grid mt-4">
-                {parents.map((parent, index) => (
-                  <ParentCard
-                    key={`${parent.source_type}:${parent.instance_uid ?? parent.pal_id}:${index}`}
-                    label={parentRoleLabel(parent.gender, index)}
-                    parent={parent}
-                    palNames={palNames}
-                    passiveNames={passiveNames}
-                  />
-                ))}
-              </div>
-              <p className="mt-4 text-sm text-slate-300">
-                子代：
-                <strong className="text-white">
-                  {localizedName(palNames, step.child_pal_id, "Pal")}
-                </strong>
-                {step.required_passive_ids.length
-                  ? ` · 被动 ${localizedNames(passiveNames, step.required_passive_ids, "被动").join("、")}`
-                  : ""}
-              </p>
-            </article>
-          );
-        })}
-      </div>
-      <section className="score-panel">
-        <h3 className="text-lg font-semibold text-white">完整评分明细</h3>
-        <p className="mt-2 text-xs text-slate-400">
-          估算依据：策略启发式，不是已验证概率。
-        </p>
-        <div className="mt-4 grid gap-2">
-          <div className="score-row score-row-heading" aria-hidden="true">
-            <span>评分项</span>
-            <span>标准分 × 权重</span>
-            <strong>加权分</strong>
-          </div>
-          {currentScore?.components.map((component) => (
-            <div className="score-row" key={component.component}>
-              <span>{scoreComponentLabels[component.component]}</span>
-              <span>
-                {component.normalized_score.toFixed(1)} ×{" "}
-                {component.weight.toFixed(2)}
-              </span>
-              <strong>{component.weighted_score.toFixed(2)}</strong>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {route.score_breakdown.mode_scores.map((score) => (
-            <span className="passive-chip" key={score.optimization_mode}>
-              {optimizationModeLabels[score.optimization_mode]}：
-              {score.total_score.toFixed(2)}
-            </span>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function ParentCard({
-  label,
-  parent,
-  palNames,
-  passiveNames,
-}: Readonly<{
-  label: string;
-  parent: BreedingRouteViewParent;
-  palNames: ReadonlyMap<string, string>;
-  passiveNames: ReadonlyMap<string, string>;
-}>) {
-  return (
-    <div className="parent-card">
-      <p className="detail-label">{label}</p>
-      <h3 className="mt-2 font-semibold text-white">
-        {localizedName(palNames, parent.pal_id, "Pal")}
-      </h3>
-      <p className="mt-2 break-all text-xs text-teal-100">
-        {parent.instance_uid ??
-          (parent.source_type === "missing" ? "尚未入库" : "中间产物")}
-      </p>
-      <p className="mt-3 text-sm text-slate-300">
-        <span>{parent.owner_display_name}</span> ·{" "}
-        {genderRequirementLabel(parent.gender)}
-      </p>
-      <p className="mt-1 text-xs text-slate-400">
-        {parent.location_name ??
-          parent.location_type ??
-          (parent.source_type === "missing" ? "需补充库存" : "中间步骤")}
-      </p>
-      <p className="mt-3 text-xs text-slate-300">
-        {parent.source_type === "missing"
-          ? "被动无要求"
-          : `被动：${localizedNames(passiveNames, parent.passive_skill_ids, "被动").join("、") || "无要求"}`}
-      </p>
-    </div>
-  );
-}
-
-function localizedName(
-  names: ReadonlyMap<string, string>,
-  id: string,
-  entityLabel: string,
-): string {
-  return names.get(id) ?? `未翻译${entityLabel}（${id}）`;
-}
-
-function localizedNames(
-  names: ReadonlyMap<string, string>,
-  ids: readonly string[],
-  entityLabel: string,
-): string[] {
-  return ids.map((id) => localizedName(names, id, entityLabel));
-}
-
-function genderOrder(gender: BreedingRouteViewParent["gender"]): number {
-  if (gender === "male") return 0;
-  if (gender === "female") return 1;
-  return 2;
-}
-
-function parentRoleLabel(
-  gender: BreedingRouteViewParent["gender"],
-  index: number,
-): string {
-  if (gender === "male") return "父本";
-  if (gender === "female") return "母本";
-  return `亲本 ${index + 1}`;
-}
-
-function genderRequirementLabel(
-  gender: BreedingRouteViewParent["gender"],
-): string {
-  if (gender === "male") return "雄性";
-  if (gender === "female") return "雌性";
-  return "性别待定";
-}
-
-function Metric({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <div>
-      <span>{label}</span>
-      <strong>{value}</strong>
+      <PinnedVersionDetails
+        inventorySnapshotId={result.data.inventory_snapshot_id}
+        gameDataVersionId={result.data.game_data_version_id}
+        gameDataContentHash={result.data.game_data_content_hash}
+        algorithmVersion={result.data.algorithm_version}
+        scoringProfileVersion={result.data.scoring_profile_version}
+        optimizationMode={result.data.optimization_mode}
+      />
     </div>
   );
 }

@@ -6,7 +6,13 @@ import type {
   RouteModeScore,
   RouteScoreComponent,
 } from "@palhatch/contracts";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -60,9 +66,20 @@ const context: BreederFormContext = {
     passive_skill_id: `test_passive_${id}`,
     display_name: `被动 ${id.toUpperCase()}`,
     rank: 5 - index,
-    is_negative: false,
+    is_negative: index === 4,
   })),
 };
+
+function selectTarget(query: string): void {
+  fireEvent.click(
+    screen.getByRole("combobox", {
+      name: "目标 Pal（名称、编号或 Stable ID）",
+    }),
+  );
+  const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
+  fireEvent.change(search, { target: { value: query } });
+  fireEvent.click(screen.getByRole("option", { name: /幻色幼崽/ }));
+}
 
 const components: RouteScoreComponent[] = [
   "route_length",
@@ -216,7 +233,12 @@ function completedJob(): BreedingJobDetailRpcSuccess {
           { pal_id: "test_child_pal", display_name: "幻色幼崽" },
         ],
         passive_skills: [
-          { passive_skill_id: "test_passive_a", display_name: "认真" },
+          {
+            passive_skill_id: "test_passive_a",
+            display_name: "认真",
+            rank: 5,
+            is_negative: false,
+          },
         ],
       },
       attempt_count: 1,
@@ -247,11 +269,30 @@ describe("Phase 6 breeder form", () => {
     const markup = renderToString(<BreederForm context={context} />);
 
     expect(markup).toMatch(
-      /<button[^>]*disabled=""[^>]*>创建配种任务<\/button>/,
+      /<button[^>]*disabled=""[^>]*>[\s\S]*创建配种任务[\s\S]*<\/button>/,
     );
   });
 
-  it("searches stable catalog options, enforces four passives and creates a fixed request", async () => {
+  it("selects a target from the searchable combobox with the keyboard", () => {
+    render(<BreederForm context={context} />);
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "目标 Pal（名称、编号或 Stable ID）",
+      }),
+    );
+    const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
+    fireEvent.change(search, { target: { value: "test_child_pal" } });
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    const summary = screen.getByRole("region", { name: "目标 Pal 摘要" });
+    expect(summary.textContent).toContain("幻色幼崽");
+    expect(summary.textContent).toContain("#003");
+    expect(summary.textContent).toContain("test_child_pal");
+  });
+
+  it("shows passive ranks, enforces four selections and creates the fixed request", async () => {
     const createJob = vi.fn(async (request: CreateBreedingJobRequest) => {
       void request;
       return {
@@ -262,24 +303,21 @@ describe("Phase 6 breeder form", () => {
     });
     render(<BreederForm context={context} createJob={createJob} />);
 
-    fireEvent.change(
-      screen.getByLabelText("目标 Pal（名称、编号或 Stable ID）"),
-      {
-        target: { value: "test_child_pal" },
-      },
-    );
+    selectTarget("test_child_pal");
+
     for (const id of ["A", "B", "C", "D", "E"]) {
       fireEvent.click(
-        screen.getByRole("checkbox", { name: new RegExp(`被动 ${id}`) }),
+        screen.getByRole("button", { name: new RegExp(`选择被动 ${id}`) }),
       );
     }
     expect(screen.getByRole("alert").textContent).toContain("最多选择四个被动");
-    fireEvent.change(screen.getByLabelText("优化模式"), {
-      target: { value: "least_borrowing" },
-    });
+    expect(screen.getByText("Rank 5")).toBeTruthy();
+    expect(screen.getByText("负面")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "最少借用" }));
     fireEvent.change(screen.getByLabelText("最大代数"), {
       target: { value: "6" },
     });
+    fireEvent.click(screen.getByRole("switch", { name: "允许使用公会共享" }));
     fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
 
     await waitFor(() => expect(createJob).toHaveBeenCalledTimes(1));
@@ -292,30 +330,57 @@ describe("Phase 6 breeder form", () => {
         "test_passive_d",
       ],
       optimization_mode: "least_borrowing",
+      allow_guild_shared: false,
       max_generations: 6,
     });
-    expect(screen.getByText("24181105")).toBeTruthy();
-    expect(screen.getByText("phase4b-deterministic-v1")).toBeTruthy();
+    expect(routerPush).toHaveBeenCalledWith(
+      "/breeder/jobs/60000000-0000-4000-8000-000000000066",
+    );
   });
 
-  it("keeps selected passives visible above the long list and removes them directly", () => {
+  it("keeps selected passives above the scrollable candidates, removes and clears them", () => {
     render(<BreederForm context={context} />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /被动 A/ }));
-    fireEvent.change(screen.getByPlaceholderText("筛选被动"), {
+    fireEvent.click(screen.getByRole("button", { name: /选择被动 A/ }));
+    fireEvent.click(screen.getByRole("button", { name: /选择被动 B/ }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "搜索被动" }), {
       target: { value: "被动 E" },
     });
 
     const selected = screen.getByRole("region", { name: "已选择的被动" });
     expect(selected.textContent).toContain("被动 A");
     fireEvent.click(screen.getByRole("button", { name: "移除被动 A" }));
+    expect(selected.textContent).not.toContain("被动 A");
+    fireEvent.click(within(selected).getByRole("button", { name: "清空" }));
     expect(selected.textContent).toContain("尚未选择被动");
     expect(screen.getByText("已选择 0 / 4")).toBeTruthy();
   });
 
-  it.each(["幻色幼崽", "3", "#3"])(
-    "resolves the target from the published name or encyclopedia number: %s",
-    async (targetQuery) => {
+  it("renders all four optimization modes as selectable cards", () => {
+    render(<BreederForm context={context} />);
+
+    const modes = screen.getByRole("radiogroup", { name: "优化模式" });
+    expect(within(modes).getAllByRole("radio")).toHaveLength(4);
+    expect(
+      (
+        within(modes).getByRole("radio", {
+          name: "综合推荐",
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    fireEvent.click(within(modes).getByRole("radio", { name: "最高成功率" }));
+    expect(
+      (
+        within(modes).getByRole("radio", {
+          name: "最高成功率",
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+  });
+
+  it.each(["幻色幼崽", "3", "#3", "test_child_pal"])(
+    "resolves a published target by name, encyclopedia number or Stable ID: %s",
+    async (query) => {
       const createJob = vi.fn(async (request: CreateBreedingJobRequest) => {
         void request;
         return {
@@ -326,16 +391,132 @@ describe("Phase 6 breeder form", () => {
       });
       render(<BreederForm context={context} createJob={createJob} />);
 
-      fireEvent.change(
-        screen.getByLabelText("目标 Pal（名称、编号或 Stable ID）"),
-        { target: { value: targetQuery } },
-      );
+      selectTarget(query);
       fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
 
       await waitFor(() => expect(createJob).toHaveBeenCalledTimes(1));
       expect(createJob.mock.calls[0]?.[0].target_pal_id).toBe("test_child_pal");
     },
   );
+
+  it("rejects an invalid target Stable ID", async () => {
+    const invalidContext: BreederFormContext = {
+      ...context,
+      pals: [{ ...context.pals[0]!, pal_id: "Invalid Target ID" }],
+    };
+    const createJob = vi.fn(async () => ({
+      job_id: "60000000-0000-4000-8000-000000000066",
+      reused: false,
+      status: "pending" as const,
+    }));
+    render(<BreederForm context={invalidContext} createJob={createJob} />);
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "目标 Pal（名称、编号或 Stable ID）",
+      }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: /幻色幼崽/ }));
+    fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "INVALID_BREEDING_REQUEST",
+      ),
+    );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("requires a target from the fixed published catalog", async () => {
+    const createJob = vi.fn(async () => ({
+      job_id: "60000000-0000-4000-8000-000000000066",
+      reused: false,
+      status: "pending" as const,
+    }));
+    render(<BreederForm context={context} createJob={createJob} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "INVALID_TARGET_PAL",
+      ),
+    );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("rejects an out-of-range maximum generation", async () => {
+    const createJob = vi.fn(async () => ({
+      job_id: "60000000-0000-4000-8000-000000000066",
+      reused: false,
+      status: "pending" as const,
+    }));
+    render(<BreederForm context={context} createJob={createJob} />);
+
+    selectTarget("幻色幼崽");
+    fireEvent.change(screen.getByLabelText("最大代数"), {
+      target: { value: "9" },
+    });
+    fireEvent.submit(screen.getByTestId("breeder-create-form"));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "INVALID_BREEDING_REQUEST",
+      ),
+    );
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it("shows the stable API error code without navigating", async () => {
+    const createJob = vi.fn(async () => {
+      throw new Error("JOB_CREATE_CONFLICT");
+    });
+    render(<BreederForm context={context} createJob={createJob} />);
+
+    selectTarget("幻色幼崽");
+    fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "JOB_CREATE_CONFLICT",
+      ),
+    );
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("preserves the current data-state warning", () => {
+    render(<BreederForm context={{ ...context, data_state: "parse_error" }} />);
+
+    const status = screen.getByRole("status");
+    expect(status.textContent).toContain("parse_error");
+    expect(status.textContent).toContain("published 快照");
+  });
+
+  it("keeps full pinned versions collapsed behind a readable summary", () => {
+    render(<BreederForm context={context} />);
+
+    expect(screen.getByText("Build 24181105")).toBeTruthy();
+    expect(screen.queryByText(context.inventory_snapshot_id)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "查看固定版本" }));
+    expect(screen.getByText(context.inventory_snapshot_id)).toBeTruthy();
+    expect(screen.getByText(context.game_data_content_hash)).toBeTruthy();
+    expect(screen.getByText("phase4b-deterministic-v1")).toBeTruthy();
+  });
+
+  it("keeps the creation form shrinkable without horizontal overflow at 390px", () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390,
+    });
+    const { container } = render(<BreederForm context={context} />);
+
+    const form = container.querySelector('[data-testid="breeder-create-form"]');
+    expect(form?.className).toContain("min-w-0");
+    expect(form?.className).toContain("max-w-full");
+    expect(form?.className).toContain("overflow-x-clip");
+    expect(container.querySelectorAll('[class*="min-w-["]').length).toBe(0);
+  });
 });
 
 describe("Phase 6 job comparison", () => {
@@ -345,9 +526,12 @@ describe("Phase 6 job comparison", () => {
     render(<BreedingJobView initialResult={value} poll={false} />);
 
     expect(screen.getAllByText("幻色幼崽").length).toBeGreaterThan(0);
-    expect(screen.getByText("棉悠悠")).toBeTruthy();
-    expect(screen.getByText("捣蛋猫")).toBeTruthy();
+    expect(screen.getAllByText("棉悠悠").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("捣蛋猫").length).toBeGreaterThan(0);
     expect(screen.getAllByText("认真").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rank 5").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Rank 未知")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
     expect(screen.getByText("路线长度")).toBeTruthy();
     expect(screen.getByText(/综合推荐：80\.00/)).toBeTruthy();
     expect(screen.queryByText("test_parent_a")).toBeNull();
@@ -360,15 +544,90 @@ describe("Phase 6 job comparison", () => {
     render(<BreedingJobView initialResult={completedJob()} poll={false} />);
 
     expect(screen.getByText("解释已降级")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /路线/ })).toHaveLength(3);
+    const routeButtons = screen.getAllByRole("button", { name: /路线/ });
+    expect(routeButtons).toHaveLength(3);
+    expect(
+      screen
+        .getByRole("button", { name: "可执行路线 1" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("region", {
+        name: "当前路线的配种路径树",
+      }),
+    ).toBeTruthy();
+
     fireEvent.click(screen.getByRole("button", { name: "可执行路线 2" }));
-    expect(screen.getByText("fixture-parent-a-2")).toBeTruthy();
-    expect(screen.getByText("Fixture Player B")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "可执行路线 2" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Fixture Player B").length).toBeGreaterThan(0);
     expect(screen.getByText("路线 2 模板解释")).toBeTruthy();
-    expect(screen.getByText("完整评分明细")).toBeTruthy();
     expect(screen.getByText("词条来源")).toBeTruthy();
     expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
+    expect(screen.getByText("完整评分明细")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "展开固定版本" }));
     expect(screen.getByText(context.game_data_version_id)).toBeTruthy();
+  });
+
+  it("renders real comparison metrics without inventing a success probability", () => {
+    render(<BreedingJobView initialResult={completedJob()} poll={false} />);
+
+    const firstRoute = screen.getByRole("button", {
+      name: "可执行路线 1",
+    });
+    expect(firstRoute.textContent).toContain("总分");
+    expect(firstRoute.textContent).toContain("89.00");
+    expect(firstRoute.textContent).toContain("1 代");
+    expect(firstRoute.textContent).toContain("1–3 次");
+    expect(firstRoute.textContent).toContain("库存可执行");
+    expect(firstRoute.textContent).toContain("库存覆盖");
+    expect(firstRoute.textContent).toContain("词条覆盖");
+    expect(firstRoute.textContent).not.toMatch(/成功率\s*\d/);
+  });
+
+  it("keeps the tree text order understandable and draws lightweight SVG connections", () => {
+    render(<BreedingJobView initialResult={completedJob()} poll={false} />);
+
+    const tree = screen.getByRole("region", {
+      name: "当前路线的配种路径树",
+    });
+    const mobileSteps = tree.querySelector("ol");
+    const mobileText = mobileSteps?.textContent ?? "";
+    expect(mobileText.indexOf("棉悠悠")).toBeGreaterThanOrEqual(0);
+    expect(mobileText.indexOf("捣蛋猫")).toBeGreaterThan(
+      mobileText.indexOf("棉悠悠"),
+    );
+    expect(mobileText.lastIndexOf("幻色幼崽")).toBeGreaterThan(
+      mobileText.indexOf("捣蛋猫"),
+    );
+    expect(tree.querySelectorAll("path[marker-end]").length).toBe(2);
+  });
+
+  it("shows an existing target inventory node on both responsive tree renderers", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    const existingTarget = route(1);
+    existingTarget.steps = [];
+    existingTarget.step_count = 0;
+    existingTarget.generation_count = 0;
+    existingTarget.existing_target_instance_uid = "existing-target-instance";
+    value.data.plan.routes = [existingTarget];
+    value.data.plan.route_count = 1;
+
+    const { container } = render(
+      <BreedingJobView initialResult={value} poll={false} />,
+    );
+
+    expect(
+      container.querySelectorAll('[data-tree-node="existing_target"]'),
+    ).toHaveLength(2);
+    expect(screen.getAllByText("现有目标").length).toBeGreaterThan(0);
   });
 
   it("separates ready and fallback routes and selects the first ready route", () => {
@@ -396,10 +655,8 @@ describe("Phase 6 job comparison", () => {
 
     expect(screen.getByText("库存可执行方案")).toBeTruthy();
     expect(screen.getByText(/需补充库存的备选方案/)).toBeTruthy();
-    expect(screen.getByText("fixture-parent-a-2")).toBeTruthy();
-    expect(container.querySelector("details")?.hasAttribute("open")).toBe(
-      false,
-    );
+    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+    expect(container.querySelector("details")).toBeNull();
     expect(screen.getByRole("button", { name: "采用此方案" })).toBeTruthy();
   });
 
@@ -436,7 +693,10 @@ describe("Phase 6 job comparison", () => {
     );
 
     expect(container.firstElementChild?.className).toContain("min-w-0");
-    expect(container.querySelectorAll(".break-all").length).toBeGreaterThan(0);
+    expect(container.firstElementChild?.className).toContain("max-w-full");
+    expect(
+      screen.getByRole("region", { name: "当前路线的配种路径树" }).className,
+    ).toContain("min-w-0");
   });
 
   it.each([
@@ -461,22 +721,23 @@ describe("Phase 6 job comparison", () => {
     expect(screen.queryByText(/%/)).toBeNull();
   });
 
-  it("does not report an incomplete bounded search as proof that no legal route exists", () => {
-    const value = completedJob();
-    if (value.data.plan === null) throw new Error("fixture plan missing");
-    value.data.plan.routes = [];
-    value.data.plan.route_count = 0;
-    value.data.plan.explanation_codes = [
-      "SEARCH_LIMIT_REACHED",
-      "SEARCH_INCOMPLETE",
-    ];
-    value.data.plan.diagnostics = { search_complete: false };
+  it.each(["SEARCH_LIMIT_REACHED", "SEARCH_TIMEOUT"])(
+    "does not report %s as proof that no legal route exists",
+    (limitCode) => {
+      const value = completedJob();
+      if (value.data.plan === null) throw new Error("fixture plan missing");
+      value.data.plan.routes = [];
+      value.data.plan.route_count = 0;
+      value.data.plan.explanation_codes = [limitCode, "SEARCH_INCOMPLETE"];
+      value.data.plan.diagnostics = { search_complete: false };
 
-    render(<BreedingJobView initialResult={value} poll={false} />);
+      render(<BreedingJobView initialResult={value} poll={false} />);
 
-    expect(screen.getByText("搜索达到安全上限")).toBeTruthy();
-    expect(screen.queryByText("当前没有合法路线")).toBeNull();
-  });
+      expect(screen.getByText("搜索达到安全上限")).toBeTruthy();
+      expect(screen.getByText(limitCode)).toBeTruthy();
+      expect(screen.queryByText("当前没有合法路线")).toBeNull();
+    },
+  );
 
   it("does not label heuristic pruning as a hard safety limit", () => {
     const value = completedJob();
@@ -593,10 +854,10 @@ describe("Phase 6 job comparison", () => {
     render(<BreedingJobView initialResult={value} poll={false} />);
 
     expect(screen.getByText("仍需准备 1 只 Pal")).toBeTruthy();
-    expect(screen.getByText(/捣蛋猫 · 雌性/)).toBeTruthy();
+    expect(screen.getAllByText(/捣蛋猫 · 雌性/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
-    expect(screen.getByText("父本")).toBeTruthy();
-    expect(screen.getByText("母本")).toBeTruthy();
+    expect(screen.getAllByText("父本").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("母本").length).toBeGreaterThan(0);
     expect(screen.getByText("补齐库存后才可采用此方案")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
   });

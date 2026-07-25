@@ -49,7 +49,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
 }) => {
   test.setTimeout(120_000);
   await login(page);
-  await page.getByRole("link", { name: "配种器" }).last().click();
+  await page.getByRole("link", { name: "开始配种" }).first().click();
   await expect(page.getByRole("heading", { name: "配种器" })).toBeVisible();
   await page.waitForFunction(
     () => {
@@ -65,9 +65,19 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
     { timeout: 30_000 },
   );
 
-  await page.getByLabel("目标 Pal（名称、编号或 Stable ID）").fill("幻色幼崽");
-  await page.getByRole("checkbox", { name: /认真/ }).check();
-  await page.getByLabel("优化模式").selectOption("balanced");
+  await page
+    .getByRole("combobox", {
+      name: "目标 Pal（名称、编号或 Stable ID）",
+    })
+    .click();
+  const targetSearch = page.getByRole("combobox", {
+    name: "搜索目标 Pal",
+  });
+  await targetSearch.fill("幻色幼崽");
+  await targetSearch.press("ArrowDown");
+  await targetSearch.press("Enter");
+  await page.getByRole("button", { name: /选择认真/ }).click();
+  await page.getByRole("radio", { name: "综合推荐" }).check();
   await page.getByLabel("最大代数").fill("5");
   const createButton = page.getByRole("button", { name: "创建配种任务" });
   await expect(createButton).toBeEnabled();
@@ -99,8 +109,14 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   expect(routeCount).toBeGreaterThan(0);
   expect(routeCount).toBeLessThanOrEqual(3);
   await routeTabs.first().click();
+  await expect(routeTabs.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("region", { name: "当前路线的配种路径树" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "展开评分明细" }).click();
   await expect(page.getByText("完整评分明细")).toBeVisible();
   await expect(page.getByText("解释已降级")).toBeVisible();
+  await page.getByRole("button", { name: "展开固定版本" }).click();
   await expect(
     page.getByText("inventory-trait-aware-deterministic-v4"),
   ).toBeVisible();

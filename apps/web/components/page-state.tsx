@@ -1,25 +1,18 @@
 import type { Phase5ErrorCode } from "@palhatch/contracts";
 
+import { PageEmpty } from "@/components/states/page-empty";
+import { PageError } from "@/components/states/page-error";
+import { PageLoading } from "@/components/states/page-loading";
+
 export function LoadingState({ label }: Readonly<{ label: string }>) {
-  return (
-    <div className="state-card animate-pulse" role="status" aria-live="polite">
-      <span className="state-orb" aria-hidden="true" />
-      <p>{label}</p>
-    </div>
-  );
+  return <PageLoading label={label} />;
 }
 
 export function EmptyState({
   title,
   description,
 }: Readonly<{ title: string; description: string }>) {
-  return (
-    <section className="state-card text-center">
-      <span className="state-orb mx-auto" aria-hidden="true" />
-      <h2 className="mt-4 text-xl font-semibold text-white">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
-    </section>
-  );
+  return <PageEmpty title={title} description={description} />;
 }
 
 const errorContent: Partial<Record<Phase5ErrorCode, [string, string]>> = {
@@ -36,16 +29,23 @@ const errorContent: Partial<Record<Phase5ErrorCode, [string, string]>> = {
   ],
 };
 
-export function ErrorState({ code }: Readonly<{ code: Phase5ErrorCode }>) {
+export function ErrorState({
+  code,
+  headingLevel = "h1",
+}: Readonly<{
+  code: Phase5ErrorCode;
+  headingLevel?: "h1" | "h2" | "h3";
+}>) {
   const [title, description] = errorContent[code] ?? [
     "请求未完成",
     "输入或当前状态不符合要求，请检查后重试。",
   ];
   return (
-    <section className="state-card border-rose-300/20" role="alert">
-      <p className="eyebrow text-rose-200">{code}</p>
-      <h2 className="mt-3 text-xl font-semibold text-white">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
-    </section>
+    <PageError
+      code={code}
+      title={title}
+      description={description}
+      headingLevel={headingLevel}
+    />
   );
 }

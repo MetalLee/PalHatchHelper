@@ -6,8 +6,23 @@ import type {
   CreateBreedingJobRequest,
   CreateBreedingJobResponse,
 } from "@palhatch/contracts";
+import {
+  AlertTriangle,
+  SlidersHorizontal,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+import { BreederSettings } from "./components/breeder-settings";
+import { BreederSubmitSummary } from "./components/breeder-submit-summary";
+import { BreederVersionSummary } from "./components/breeder-version-summary";
+import { OptimizationModePicker } from "./components/optimization-mode-picker";
+import { PassiveSkillPicker } from "./components/passive-skill-picker";
+import { TargetPalCombobox } from "./components/target-pal-combobox";
 
 type CreateJob = (
   request: CreateBreedingJobRequest,
@@ -104,13 +119,38 @@ async function createThroughApi(
   return parseCreateResponse(payload);
 }
 
+function SectionHeading({
+  icon: Icon,
+  title,
+  description,
+}: Readonly<{
+  icon: typeof Target;
+  title: string;
+  description: string;
+}>) {
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+        <Icon aria-hidden="true" className="size-5" />
+      </span>
+      <div className="min-w-0">
+        <h2 className="text-lg font-bold tracking-tight text-foreground">
+          {title}
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function BreederForm({
   context,
   createJob = createThroughApi,
 }: Readonly<{ context: BreederFormContext; createJob?: CreateJob }>) {
   const router = useRouter();
   const [target, setTarget] = useState("");
-  const [passiveQuery, setPassiveQuery] = useState("");
   const [passives, setPassives] = useState<string[]>([]);
   const [mode, setMode] =
     useState<CreateBreedingJobRequest["optimization_mode"]>("balanced");
@@ -120,24 +160,10 @@ export function BreederForm({
   const [submitting, setSubmitting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
-  const visiblePassives = useMemo(() => {
-    const query = passiveQuery.trim().toLocaleLowerCase("zh-CN");
-    if (!query) return context.passive_skills;
-    return context.passive_skills.filter(
-      (skill) =>
-        skill.passive_skill_id.includes(query) ||
-        skill.display_name.toLocaleLowerCase("zh-CN").includes(query),
-    );
-  }, [context.passive_skills, passiveQuery]);
-  const selectedPassives = useMemo(
-    () =>
-      passives.flatMap((id) => {
-        const skill = context.passive_skills.find(
-          (candidate) => candidate.passive_skill_id === id,
-        );
-        return skill === undefined ? [] : [skill];
-      }),
-    [context.passive_skills, passives],
+
+  const selectedPal = useMemo(
+    () => resolveTargetPal(context.pals, target),
+    [context.pals, target],
   );
 
   function togglePassive(id: string): void {
@@ -158,7 +184,6 @@ export function BreederForm({
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setErrorCode(null);
-    const selectedPal = resolveTargetPal(context.pals, target);
     if (selectedPal === undefined) {
       setErrorCode("INVALID_TARGET_PAL");
       return;
@@ -188,195 +213,100 @@ export function BreederForm({
   }
 
   return (
-    <form className="breeder-layout" onSubmit={submit}>
-      <section
-        className="content-panel grid min-w-0 gap-5"
-        aria-label="配种目标"
-      >
-        {context.data_state === "healthy" ? null : (
-          <p className="notice-banner" role="status">
-            当前库存状态为 {context.data_state}；任务仍会固定本页所示 published
-            快照。
-          </p>
-        )}
-        <label className="filter-field">
-          <span>目标 Pal（名称、编号或 Stable ID）</span>
-          <input
-            aria-label="目标 Pal（名称、编号或 Stable ID）"
-            type="search"
-            list="breeder-pal-options"
-            value={target}
-            onChange={(event) => setTarget(event.target.value)}
-            placeholder="输入名称、编号或 Stable ID 后选择"
-            required
-          />
-          <datalist id="breeder-pal-options">
-            {context.pals.map((pal) => (
-              <option key={pal.pal_id} value={pal.pal_id}>
-                {pal.encyclopedia_no === null
-                  ? ""
-                  : `#${pal.encyclopedia_no} · `}
-                {pal.display_name}
-              </option>
-            ))}
-          </datalist>
-        </label>
-
-        <fieldset className="grid min-w-0 gap-3">
-          <legend className="detail-label">期望被动（0 至 4 个）</legend>
-          <section className="selected-passives" aria-label="已选择的被动">
-            <div className="selected-passives-header">
-              <strong>已选择 {passives.length} / 4</strong>
-              {passives.length === 0 ? null : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPassives([]);
-                    setErrorCode(null);
-                  }}
-                >
-                  清空
-                </button>
-              )}
-            </div>
-            {selectedPassives.length === 0 ? (
-              <p>尚未选择被动</p>
-            ) : (
-              <div className="selected-passive-list">
-                {selectedPassives.map((skill) => (
-                  <button
-                    className="selected-passive-chip"
-                    type="button"
-                    key={skill.passive_skill_id}
-                    aria-label={`移除${skill.display_name}`}
-                    onClick={() => togglePassive(skill.passive_skill_id)}
-                  >
-                    <span>{skill.display_name}</span>
-                    <span aria-hidden="true">×</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-          <label className="filter-field">
-            <span>搜索被动名称或 Stable ID</span>
-            <input
-              type="search"
-              value={passiveQuery}
-              onChange={(event) => setPassiveQuery(event.target.value)}
-              placeholder="筛选被动"
-            />
-          </label>
-          <div className="passive-picker" aria-label="被动技能选择">
-            {visiblePassives.length === 0 ? (
-              <p className="passive-picker-empty">没有匹配的被动</p>
-            ) : (
-              visiblePassives.map((skill) => (
-                <label className="passive-option" key={skill.passive_skill_id}>
-                  <input
-                    type="checkbox"
-                    checked={passives.includes(skill.passive_skill_id)}
-                    onChange={() => togglePassive(skill.passive_skill_id)}
-                  />
-                  <span>
-                    <strong>{skill.display_name}</strong>
-                    <small>{skill.passive_skill_id}</small>
-                  </span>
-                </label>
-              ))
-            )}
-          </div>
-        </fieldset>
-
-        <div className="breeder-controls">
-          <label className="filter-field">
-            <span>优化模式</span>
-            <select
-              value={mode}
-              onChange={(event) =>
-                setMode(
-                  event.target
-                    .value as CreateBreedingJobRequest["optimization_mode"],
-                )
-              }
-            >
-              <option value="balanced">均衡</option>
-              <option value="fastest">最快路线</option>
-              <option value="highest_success">最高成功倾向</option>
-              <option value="least_borrowing">最少借用</option>
-            </select>
-          </label>
-          <label className="filter-field">
-            <span>最大代数</span>
-            <input
-              type="number"
-              min={1}
-              max={8}
-              value={maxGenerations}
-              onChange={(event) =>
-                setMaxGenerations(Number(event.target.value))
-              }
-            />
-          </label>
-          <label className="share-choice">
-            <input
-              type="checkbox"
-              checked={allowShared}
-              onChange={(event) => setAllowShared(event.target.checked)}
-            />
-            允许使用公会已共享实例
-          </label>
-        </div>
-        {errorCode === null ? null : (
-          <p className="notice-banner" role="alert">
-            {errorCode}
-          </p>
-        )}
-        <button
-          className="primary-button"
-          type="submit"
-          disabled={!hydrated || submitting}
+    <form
+      data-testid="breeder-create-form"
+      className="grid min-w-0 max-w-full gap-6 overflow-x-clip xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start"
+      onSubmit={submit}
+    >
+      <div className="grid min-w-0 gap-6">
+        <section
+          className="grid min-w-0 gap-5 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-6"
+          aria-label="配种目标"
         >
-          {submitting ? "正在创建…" : "创建配种任务"}
-        </button>
-      </section>
+          <SectionHeading
+            icon={Target}
+            title="目标设置"
+            description="从当前固定目录中选择目标 Pal，并确认任务真正要搜索的物种。"
+          />
+          {context.data_state === "healthy" ? null : (
+            <Alert
+              role="status"
+              className="rounded-2xl border-amber-200 bg-amber-50/92 text-amber-950"
+            >
+              <AlertTriangle aria-hidden="true" className="size-5" />
+              <AlertTitle>当前库存状态：{context.data_state}</AlertTitle>
+              <AlertDescription className="text-amber-900">
+                任务仍会固定本页所示 published 快照，请留意数据状态后再创建。
+              </AlertDescription>
+            </Alert>
+          )}
+          <TargetPalCombobox
+            pals={context.pals}
+            value={target}
+            onValueChange={(value) => {
+              setTarget(value);
+              setErrorCode(null);
+            }}
+          />
+        </section>
 
-      <aside className="content-panel min-w-0" aria-label="固定版本">
-        <p className="eyebrow">FIXED INPUTS</p>
-        <h2 className="mt-3 text-lg font-semibold text-white">
-          本次任务固定版本
-        </h2>
-        <dl className="fixed-inputs mt-5">
-          <div>
-            <dt>库存快照</dt>
-            <dd>{context.inventory_snapshot_id}</dd>
-          </div>
-          <div>
-            <dt>目录版本</dt>
-            <dd>{context.game_data_version_id}</dd>
-          </div>
-          <div>
-            <dt>Content hash</dt>
-            <dd>{context.game_data_content_hash}</dd>
-          </div>
-          <div>
-            <dt>Build</dt>
-            <dd>{context.game_build_id}</dd>
-          </div>
-          <div>
-            <dt>游戏版本</dt>
-            <dd>{context.game_version}</dd>
-          </div>
-          <div>
-            <dt>算法</dt>
-            <dd>{context.algorithm_version}</dd>
-          </div>
-          <div>
-            <dt>评分</dt>
-            <dd>{context.scoring_profile_versions[mode]}</dd>
-          </div>
-        </dl>
-      </aside>
+        <section className="grid min-w-0 gap-5 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-6">
+          <SectionHeading
+            icon={Sparkles}
+            title="期望被动"
+            description="搜索并选择最多四个词条；点击已选词条即可移除。"
+          />
+          <PassiveSkillPicker
+            skills={context.passive_skills}
+            selectedIds={passives}
+            onToggle={togglePassive}
+            onClear={() => {
+              setPassives([]);
+              setErrorCode(null);
+            }}
+          />
+        </section>
+
+        <section className="grid min-w-0 gap-6 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-6">
+          <SectionHeading
+            icon={SlidersHorizontal}
+            title="路线偏好"
+            description="选择评分倾向，并设置公会共享与确定性搜索边界。"
+          />
+          <OptimizationModePicker value={mode} onValueChange={setMode} />
+          <BreederSettings
+            allowShared={allowShared}
+            onAllowSharedChange={setAllowShared}
+            maxGenerations={maxGenerations}
+            onMaxGenerationsChange={setMaxGenerations}
+          />
+        </section>
+      </div>
+
+      <div className="grid min-w-0 gap-4 xl:sticky xl:top-24">
+        <BreederVersionSummary context={context} mode={mode} />
+        {errorCode === null ? null : (
+          <Alert
+            variant="destructive"
+            role="alert"
+            className="rounded-2xl border-rose-200 bg-rose-50 text-rose-900"
+          >
+            <AlertTriangle aria-hidden="true" className="size-5" />
+            <AlertTitle>无法创建任务</AlertTitle>
+            <AlertDescription className="break-words text-rose-800">
+              {errorCode}
+            </AlertDescription>
+          </Alert>
+        )}
+        <BreederSubmitSummary
+          target={selectedPal}
+          passiveCount={passives.length}
+          mode={mode}
+          allowShared={allowShared}
+          disabled={!hydrated || submitting}
+          submitting={submitting}
+        />
+      </div>
     </form>
   );
 }

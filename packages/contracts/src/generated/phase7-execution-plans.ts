@@ -120,6 +120,15 @@ export interface PlanSummary {
     | [string, string]
     | [string, string, string]
     | [string, string, string, string];
+  /**
+   * @maxItems 4
+   */
+  desired_passives:
+    | []
+    | [PlanPassiveSummary]
+    | [PlanPassiveSummary, PlanPassiveSummary]
+    | [PlanPassiveSummary, PlanPassiveSummary, PlanPassiveSummary]
+    | [PlanPassiveSummary, PlanPassiveSummary, PlanPassiveSummary, PlanPassiveSummary];
   status: PlanStatus;
   current_step_index: number;
   completed_step_count: number;
@@ -129,6 +138,12 @@ export interface PlanSummary {
   concurrency_version: number;
   created_at: string;
   updated_at: string;
+}
+export interface PlanPassiveSummary {
+  passive_skill_id: StableId;
+  display_name: string;
+  rank: number;
+  is_negative: boolean;
 }
 export interface PlanVersionPin {
   inventory_snapshot_id: string;
