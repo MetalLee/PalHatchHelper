@@ -229,7 +229,9 @@ describe("pal inventory", () => {
     expect(screen.getByText("工匠精神").dataset.rank).toBe("5");
 
     const portrait = screen.getByRole("img", { name: "棉悠悠头像" });
-    expect(portrait.getAttribute("src")).toContain("pal-icons");
+    expect(decodeURIComponent(portrait.getAttribute("src") ?? "")).toContain(
+      "/pal-assets/872e4a79af5b/pals/test_parent_a.webp",
+    );
     fireEvent.error(portrait);
     expect(
       screen.getByRole("img", { name: "棉悠悠头像（暂无本地图标）" }),

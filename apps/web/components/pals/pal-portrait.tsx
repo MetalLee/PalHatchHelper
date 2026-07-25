@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
+import { palPortraitPath } from "@/lib/pal-assets";
 import { cn } from "@/lib/utils";
 
 const fallbackGradients = [
@@ -59,7 +60,7 @@ export function PalPortrait({
 
   return (
     <Image
-      src={`/pal-icons/${encodeURIComponent(palId)}.webp`}
+      src={palPortraitPath(palId)}
       alt={`${name}头像`}
       width={size}
       height={size}

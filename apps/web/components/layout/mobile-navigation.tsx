@@ -2,6 +2,7 @@
 
 import { LogOut, Menu, Settings, ShieldCheck, Sprout } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import {
   currentPageTitle,
@@ -31,6 +32,12 @@ export function MobileNavigation({
   role: "admin" | "player";
   onSignOut: () => void;
 }>) {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -40,6 +47,7 @@ export function MobileNavigation({
           size="icon"
           className="size-11 rounded-xl lg:hidden"
           aria-label="打开导航菜单"
+          disabled={!hydrated}
         >
           <Menu aria-hidden="true" className="size-5" />
         </Button>

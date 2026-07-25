@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SiteHeader } from "../components/layout/site-header";
@@ -70,6 +71,20 @@ describe("Forest Healing design system", () => {
     expect(within(sheet).getByText("当前页面：我的计划")).toBeTruthy();
   });
 
+  it("keeps the mobile navigation trigger disabled until hydration", () => {
+    const markup = renderToString(
+      <SiteHeader
+        activePath="/overview"
+        displayName="Fixture Player A"
+        role="player"
+      />,
+    );
+
+    expect(markup).toMatch(
+      /<button(?=[^>]*aria-label="打开导航菜单")(?=[^>]*disabled="")[^>]*>/,
+    );
+  });
+
   it("maps passive ranks without guessing from the passive name", () => {
     const { rerender } = render(<PassiveBadge name="任意名称" rank={1} />);
     expect(screen.getByText("任意名称").dataset.rank).toBe("1");
@@ -103,7 +118,7 @@ describe("Forest Healing design system", () => {
   it("replaces a missing local pal icon with a stable portrait fallback", () => {
     render(
       <PalPortrait
-        palId="missing-pal"
+        palId="Missing-Pal"
         name="幻悦蝶"
         catalogNumber="103"
         size={72}
@@ -111,7 +126,9 @@ describe("Forest Healing design system", () => {
     );
 
     const image = screen.getByRole("img", { name: "幻悦蝶头像" });
-    expect(image.getAttribute("src")).toContain("pal-icons");
+    expect(decodeURIComponent(image.getAttribute("src") ?? "")).toContain(
+      "/pal-assets/872e4a79af5b/pals/missing-pal.webp",
+    );
     fireEvent.error(image);
 
     expect(
