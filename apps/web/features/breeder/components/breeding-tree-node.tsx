@@ -350,7 +350,7 @@ function PassiveList({
       ) : (
         <div
           className={cn(
-            "mt-2 grid grid-cols-2 gap-1.5",
+            "mt-2 grid grid-cols-2 items-start gap-1.5",
             fixedGrid && "min-h-[3.875rem]",
           )}
           data-passive-layout={fixedGrid ? "2x2" : undefined}

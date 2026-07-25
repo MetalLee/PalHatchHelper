@@ -614,6 +614,11 @@ describe("Phase 6 job comparison", () => {
     expect(
       tree.querySelectorAll('[data-passive-layout="2x2"]').length,
     ).toBeGreaterThan(0);
+    for (const passiveGrid of tree.querySelectorAll(
+      '[data-passive-layout="2x2"]',
+    )) {
+      expect(passiveGrid.className).toContain("items-start");
+    }
     expect(screen.queryByText("本步骤需保留")).toBeNull();
     expect(screen.queryByText("Breeding route tree")).toBeNull();
     expect(screen.queryByText("Route comparison")).toBeNull();
