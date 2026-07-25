@@ -13,7 +13,10 @@ import {
   type BreedingTreePassiveFact,
 } from "../lib/build-breeding-tree";
 import { genderLabel } from "../presentation";
-import { BreedingTreeNode } from "./breeding-tree-node";
+import {
+  BreedingTreeNode,
+  type BreedingTreeNodeOverlay,
+} from "./breeding-tree-node";
 
 const cardWidth = 244;
 const columnGap = 72;
@@ -37,27 +40,43 @@ interface TreeLayout {
 
 export function BreedingRouteTree({
   route,
+  treeModel,
   targetPalId,
   palNames,
   passiveNames,
   passiveFacts,
+  stepOverlays,
+  ariaLabel = "当前路线的配种路径树",
+  eyebrow = "Breeding route tree",
+  title = "当前路线的配种路径",
+  description = "初始亲本 → 中间代 → 最终目标；连接线只表达确定的配种关系。",
+  summary,
 }: Readonly<{
-  route: BreedingRoute | null;
+  route?: BreedingRoute | null;
+  treeModel?: BreedingTreeModel;
   targetPalId: string;
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
   passiveFacts?: ReadonlyMap<string, BreedingTreePassiveFact>;
+  stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
+  ariaLabel?: string;
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  summary?: string;
 }>) {
   let model: BreedingTreeModel;
   try {
-    model = buildBreedingTree(route, { targetPalId, passiveFacts });
+    model =
+      treeModel ??
+      buildBreedingTree(route ?? null, { targetPalId, passiveFacts });
   } catch (error) {
     const code =
       error instanceof BreedingTreeBuildError
         ? error.code
         : "INVALID_BREEDING_TREE";
     return (
-      <section className="min-w-0 max-w-full" aria-label="当前路线的配种路径树">
+      <section className="min-w-0 max-w-full" aria-label={ariaLabel}>
         <Alert
           variant="destructive"
           className="rounded-3xl border-rose-200 bg-rose-50/94"
@@ -76,7 +95,7 @@ export function BreedingRouteTree({
     return (
       <section
         className="min-w-0 max-w-full rounded-3xl border border-dashed border-border bg-white/68 p-6 text-center"
-        aria-label="当前路线的配种路径树"
+        aria-label={ariaLabel}
       >
         <GitBranch
           aria-hidden="true"
@@ -101,23 +120,25 @@ export function BreedingRouteTree({
   return (
     <section
       className="min-w-0 max-w-full overflow-hidden rounded-[1.75rem] border border-glass-border bg-white/72 shadow-soft"
-      aria-label="当前路线的配种路径树"
+      aria-label={ariaLabel}
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 border-b border-border bg-white/70 px-4 py-4 sm:px-6">
         <div>
           <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-            Breeding route tree
+            {eyebrow}
           </p>
-          <h3 className="mt-1 text-xl font-bold text-foreground">
-            当前路线的配种路径
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            初始亲本 → 中间代 → 最终目标；连接线只表达确定的配种关系。
-          </p>
+          <h3 className="mt-1 text-xl font-bold text-foreground">{title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
         <p className="rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-muted-foreground">
-          {model.steps.length} 个步骤 ·{" "}
-          {model.feasibilityStatus === "ready" ? "库存可执行" : "需要补充库存"}
+          {summary ??
+            `${model.steps.length} 个步骤 · ${
+              model.feasibilityStatus === "ready"
+                ? "库存可执行"
+                : model.feasibilityStatus === "needs_inventory"
+                  ? "需要补充库存"
+                  : "已采用路线"
+            }`}
         </p>
       </div>
 
@@ -127,6 +148,7 @@ export function BreedingRouteTree({
         entityById={entityById}
         palNames={palNames}
         passiveNames={passiveNames}
+        stepOverlays={stepOverlays}
       />
       <MobileTree
         model={model}
@@ -134,6 +156,7 @@ export function BreedingRouteTree({
         occurrenceById={occurrenceById}
         palNames={palNames}
         passiveNames={passiveNames}
+        stepOverlays={stepOverlays}
       />
     </section>
   );
@@ -145,12 +168,14 @@ function DesktopTree({
   entityById,
   palNames,
   passiveNames,
+  stepOverlays,
 }: Readonly<{
   model: BreedingTreeModel;
   layout: TreeLayout;
   entityById: ReadonlyMap<string, BreedingTreeEntity>;
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
+  stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
 }>) {
   const gridStyle: CSSProperties = {
     width: layout.width,
@@ -264,6 +289,7 @@ function DesktopTree({
                   roleLabel={occurrenceRoleLabel(occurrence, entity)}
                   palNames={palNames}
                   passiveNames={passiveNames}
+                  overlay={overlayFor(occurrence, stepOverlays)}
                   className="h-full"
                 />
               </div>
@@ -281,12 +307,14 @@ function MobileTree({
   occurrenceById,
   palNames,
   passiveNames,
+  stepOverlays,
 }: Readonly<{
   model: BreedingTreeModel;
   entityById: ReadonlyMap<string, BreedingTreeEntity>;
   occurrenceById: ReadonlyMap<string, BreedingTreeOccurrence>;
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
+  stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
 }>) {
   if (model.steps.length === 0 && model.targetOccurrenceId !== null) {
     const targetOccurrence = occurrenceById.get(model.targetOccurrenceId);
@@ -305,13 +333,17 @@ function MobileTree({
           roleLabel="库存中的目标"
           palNames={palNames}
           passiveNames={passiveNames}
+          overlay={overlayFor(targetOccurrence, stepOverlays)}
         />
       </div>
     );
   }
 
   return (
-    <ol className="grid min-w-0 gap-5 p-4 sm:p-6 lg:hidden">
+    <ol
+      className="grid min-w-0 gap-5 p-4 sm:p-6 lg:hidden"
+      data-tree-layout="mobile-vertical"
+    >
       {model.steps.map((step, index) => {
         const parentAEntity = entityById.get(step.parentA.entityId);
         const parentBEntity = entityById.get(step.parentB.entityId);
@@ -339,7 +371,11 @@ function MobileTree({
                 步骤 {index + 1} · 第 {step.generation} 代
               </h4>
               <span className="text-xs font-semibold text-muted-foreground">
-                {step.recipeType === "special" ? "特殊配方" : "常规配方"}
+                {step.recipeType === "special"
+                  ? "特殊配方"
+                  : step.recipeType === "normal"
+                    ? "常规配方"
+                    : "配方类型未提供"}
               </span>
             </div>
             <BreedingTreeNode
@@ -351,6 +387,7 @@ function MobileTree({
               roleLabel={parentRoleLabel(parentAEntity, "a")}
               palNames={palNames}
               passiveNames={passiveNames}
+              overlay={overlayFor(parentAOccurrence, stepOverlays)}
             />
             <Connector icon={Plus} label="与" />
             <BreedingTreeNode
@@ -362,6 +399,7 @@ function MobileTree({
               roleLabel={parentRoleLabel(parentBEntity, "b")}
               palNames={palNames}
               passiveNames={passiveNames}
+              overlay={overlayFor(parentBOccurrence, stepOverlays)}
             />
             <Connector icon={ArrowDown} label="配种产出" />
             <BreedingTreeNode
@@ -370,6 +408,7 @@ function MobileTree({
               roleLabel={childEntity.isTarget ? "最终目标" : "中间子代"}
               palNames={palNames}
               passiveNames={passiveNames}
+              overlay={overlayFor(childOccurrence, stepOverlays)}
             />
           </li>
         );
@@ -388,6 +427,15 @@ function Connector({
       <span className="sr-only">{label}</span>
     </div>
   );
+}
+
+function overlayFor(
+  occurrence: BreedingTreeOccurrence,
+  overlays: ReadonlyMap<number, BreedingTreeNodeOverlay> | undefined,
+): BreedingTreeNodeOverlay | undefined {
+  return occurrence.stepIndex === null
+    ? undefined
+    : overlays?.get(occurrence.stepIndex);
 }
 
 function createTreeLayout(

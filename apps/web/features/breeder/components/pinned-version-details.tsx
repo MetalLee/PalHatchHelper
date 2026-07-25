@@ -21,23 +21,27 @@ export function PinnedVersionDetails({
   algorithmVersion,
   scoringProfileVersion,
   optimizationMode,
+  title = "固定版本",
 }: Readonly<{
   inventorySnapshotId: string;
   gameDataVersionId: string;
   gameDataContentHash: string;
   algorithmVersion: string;
   scoringProfileVersion: string;
-  optimizationMode: BreederOptimizationMode;
+  optimizationMode?: BreederOptimizationMode;
+  title?: string;
 }>) {
   const [open, setOpen] = useState(false);
-  const versions = [
+  const versions: [string, string][] = [
     ["库存快照", inventorySnapshotId],
     ["目录版本", gameDataVersionId],
     ["Content hash", gameDataContentHash],
     ["算法版本", algorithmVersion],
     ["评分版本", scoringProfileVersion],
-    ["优化模式", optimizationModeLabels[optimizationMode]],
-  ] as const;
+  ];
+  if (optimizationMode !== undefined) {
+    versions.push(["优化模式", optimizationModeLabels[optimizationMode]]);
+  }
 
   return (
     <section
@@ -50,7 +54,7 @@ export function PinnedVersionDetails({
             <Pin aria-hidden="true" className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-foreground">固定版本</h3>
+            <h3 className="font-bold text-foreground">{title}</h3>
             <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
               快照 {compactIdentifier(inventorySnapshotId, 18)} · 目录{" "}
               {compactIdentifier(gameDataVersionId, 18)}

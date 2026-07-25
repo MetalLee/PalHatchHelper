@@ -1,43 +1,87 @@
 "use client";
 
-import type {
-  OffspringCandidate,
-  PlanDetail as PlanDetailData,
-  PlanStep,
-} from "@palhatch/contracts";
+import type { PlanDetail as PlanDetailData } from "@palhatch/contracts";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Clock3,
+  History,
+  Pause,
+  Play,
+  RefreshCcw,
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const statusLabels: Record<string, string> = {
-  active: "进行中",
-  awaiting_confirmation: "待确认",
-  paused: "已暂停",
-  completed: "已完成",
-  invalidated: "已失效",
-  cancelled: "已取消",
-  not_started: "未开始",
-  breeding: "配种中",
-  candidate_detected: "发现候选",
-  retrying: "继续尝试",
-  skipped: "已跳过",
-};
+import { PageHero } from "@/components/layout/page-hero";
+import { PalPortrait } from "@/components/pals/pal-portrait";
+import { PassiveBadge } from "@/components/pals/passive-badge";
+import { StatusChip } from "@/components/status/status-chip";
+import { ForestScenery } from "@/components/surfaces/forest-scenery";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { BreedingRouteTree } from "@/features/breeder/components/breeding-route-tree";
+import { PinnedVersionDetails } from "@/features/breeder/components/pinned-version-details";
+import { BreedingTreeBuildError } from "@/features/breeder/lib/build-breeding-tree";
 
-type ActionPayload = Record<string, boolean | number | string> & {
-  action: string;
-};
+import { buildPlanBreedingTree } from "./build-plan-breeding-tree";
+import { CurrentStepPanel } from "./current-step-panel";
+import type { PlanActionPayload } from "./plan-action-types";
+import { PlanStepList } from "./plan-step-list";
+import {
+  buildPlanStepOverlays,
+  formatPlanDateTime,
+  invalidationReasonDescriptions,
+  planStatusLabels,
+  planStatusTone,
+  safeInstanceSummary,
+} from "./presentation";
 
 export function PlanDetail({ detail }: Readonly<{ detail: PlanDetailData }>) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
-  const [existingUid, setExistingUid] = useState("");
-  const [allowMismatch, setAllowMismatch] = useState(false);
-  const [reason, setReason] = useState("");
   const currentStep = detail.steps.find(
     (step) => step.step_index === detail.summary.current_step_index,
   );
+  const currentCandidates =
+    currentStep === undefined
+      ? []
+      : detail.candidates.filter(
+          (candidate) => candidate.step_id === currentStep.step_id,
+        );
+  const progress =
+    detail.summary.total_step_count === 0
+      ? 0
+      : Math.min(
+          100,
+          (detail.summary.completed_step_count /
+            detail.summary.total_step_count) *
+            100,
+        );
+  const palNames = buildPalNames(detail);
+  const passiveNames = new Map(
+    detail.summary.desired_passive_ids.map((passiveId, index) => [
+      passiveId,
+      detail.summary.desired_passive_display_names[index] ?? passiveId,
+    ]),
+  );
+  const stepOverlays = buildPlanStepOverlays(detail);
+  let treeModel;
+  let treeError: string | null = null;
+  try {
+    treeModel = buildPlanBreedingTree(detail);
+  } catch (error) {
+    treeError =
+      error instanceof BreedingTreeBuildError
+        ? error.code
+        : "INVALID_BREEDING_TREE";
+  }
 
-  async function act(payload: ActionPayload): Promise<void> {
+  async function act(payload: PlanActionPayload): Promise<void> {
     setBusy(true);
     setErrorCode(null);
     try {
@@ -73,335 +117,398 @@ export function PlanDetail({ detail }: Readonly<{ detail: PlanDetailData }>) {
   }
 
   return (
-    <div className="grid min-w-0 gap-5">
-      <section className="content-panel min-w-0">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="eyebrow">{statusLabels[detail.summary.status]}</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">
-              {detail.summary.target_pal_display_name}
-            </h2>
-            <p className="mt-1 break-all text-xs text-slate-500">
-              {detail.summary.target_pal_id}
+    <div
+      className="grid min-w-0 max-w-full gap-6 overflow-x-clip pb-4 sm:gap-8"
+      aria-busy={busy}
+    >
+      <Button
+        variant="ghost"
+        asChild
+        className="w-fit justify-start px-2 text-primary"
+      >
+        <Link href="/plans">
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          返回我的计划
+        </Link>
+      </Button>
+
+      <PageHero
+        eyebrow={`Execution plan · ${planStatusLabels[detail.summary.status]}`}
+        title={detail.summary.target_pal_display_name}
+        description={`固定路线 ${safeInstanceSummary(detail.adopted_route_id)}。按真实步骤人工推进，候选子代只在确认后进入计划。`}
+        className="min-h-[17rem] border-white/80 bg-white/74 sm:min-h-[18rem] lg:pr-[28%]"
+        background={<ForestScenery variant="hero" />}
+        actions={
+          <>
+            <StatusChip tone={planStatusTone(detail.summary.status)}>
+              {planStatusLabels[detail.summary.status]}
+            </StatusChip>
+            <StatusChip
+              tone={detail.invalidation_reasons.length ? "danger" : "good"}
+            >
+              {detail.invalidation_reasons.length
+                ? "计划已失效"
+                : "固定版本可追溯"}
+            </StatusChip>
+          </>
+        }
+        visual={
+          <div
+            aria-hidden="true"
+            className="hidden h-full items-center lg:flex"
+          >
+            <span className="rounded-[2rem] border border-white/80 bg-white/78 p-5 shadow-soft backdrop-blur-sm">
+              <PalPortrait
+                palId={detail.summary.target_pal_id}
+                name={detail.summary.target_pal_display_name}
+                size={104}
+                className="rounded-3xl"
+              />
+            </span>
+          </div>
+        }
+      />
+
+      <Card className="min-w-0 border-glass-border bg-card/92 py-0 shadow-soft">
+        <CardContent className="grid min-w-0 gap-5 p-5 sm:p-6">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
+                Plan focus
+              </p>
+              <h2 className="mt-2 text-xl font-bold text-foreground">
+                目标摘要与计划进度
+              </h2>
+              <p className="mt-2 break-all font-mono text-xs text-muted-foreground">
+                {detail.summary.plan_id}
+              </p>
+            </div>
+            <PlanTopActions
+              status={detail.summary.status}
+              busy={busy}
+              act={act}
+            />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground">
+              目标被动及 Rank
             </p>
+            {detail.summary.desired_passive_display_names.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">无指定被动</p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {detail.summary.desired_passive_display_names.map(
+                  (name, index) => (
+                    <PassiveBadge
+                      key={detail.summary.desired_passive_ids[index] ?? name}
+                      name={name}
+                      rank={null}
+                      showRank
+                      className="max-w-full"
+                    />
+                  ),
+                )}
+              </div>
+            )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {detail.summary.status === "paused" ? (
-              <button
-                className="primary-button"
-                disabled={busy}
-                onClick={() => void act({ action: "resume" })}
-              >
-                恢复计划
-              </button>
-            ) : detail.summary.status === "active" ||
-              detail.summary.status === "awaiting_confirmation" ? (
-              <button
-                className="secondary-button"
-                disabled={busy}
-                onClick={() => void act({ action: "pause" })}
-              >
-                暂停计划
-              </button>
-            ) : null}
+
+          <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
+            <div className="grid gap-2 rounded-2xl bg-muted/55 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">计划进度</span>
+                <strong className="tabular-nums text-foreground">
+                  {detail.summary.completed_step_count} /{" "}
+                  {detail.summary.total_step_count} · {Math.round(progress)}%
+                </strong>
+              </div>
+              <Progress value={progress} aria-label="计划进度" />
+            </div>
+            <dl className="grid grid-cols-2 gap-3 rounded-2xl bg-muted/55 p-4 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">当前步骤</dt>
+                <dd className="mt-1 font-bold tabular-nums text-foreground">
+                  {Math.min(
+                    detail.summary.current_step_index + 1,
+                    detail.summary.total_step_count,
+                  )}{" "}
+                  / {detail.summary.total_step_count}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">并发版本</dt>
+                <dd className="mt-1 font-bold tabular-nums text-foreground">
+                  v{detail.summary.concurrency_version}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">创建时间</dt>
+                <dd className="mt-1 text-foreground">
+                  {formatPlanDateTime(detail.summary.created_at)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">更新时间</dt>
+                <dd className="mt-1 text-foreground">
+                  {formatPlanDateTime(detail.summary.updated_at)}
+                </dd>
+              </div>
+            </dl>
           </div>
-        </div>
-        <p className="notice-banner mt-5" role="note">
-          系统只检测候选，必须由玩家确认；不会自动修改游戏或存档。
-        </p>
-        <dl className="fixed-inputs mt-5">
-          <div>
-            <dt>库存快照</dt>
-            <dd>{detail.summary.version_pin.inventory_snapshot_id}</dd>
-          </div>
-          <div>
-            <dt>目录版本</dt>
-            <dd>{detail.summary.version_pin.game_data_version_id}</dd>
-          </div>
-          <div>
-            <dt>Content hash</dt>
-            <dd>{detail.summary.version_pin.content_hash}</dd>
-          </div>
-          <div>
-            <dt>算法 / 评分</dt>
-            <dd>
-              {detail.summary.version_pin.algorithm_version} /{" "}
-              {detail.summary.version_pin.scoring_profile_version}
-            </dd>
-          </div>
-        </dl>
-      </section>
+
+          {detail.invalidation_reasons.length > 0 ? (
+            <section
+              className="rounded-3xl border border-orange-300 bg-orange-50 p-4 text-orange-950 sm:p-5"
+              role="alert"
+              aria-labelledby="plan-invalidation-heading"
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle
+                  aria-hidden="true"
+                  className="mt-0.5 size-5 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <h3
+                    id="plan-invalidation-heading"
+                    className="font-bold text-orange-950"
+                  >
+                    计划失效原因
+                  </h3>
+                  <ul className="mt-3 grid gap-3">
+                    {detail.invalidation_reasons.map((reason, index) => (
+                      <li
+                        key={`${reason.code}-${index}`}
+                        className="rounded-2xl bg-white/70 p-3"
+                      >
+                        <code className="text-xs font-bold">{reason.code}</code>
+                        <p className="mt-1 text-sm leading-6">
+                          {invalidationReasonDescriptions[reason.code]}
+                        </p>
+                        <p className="mt-1 text-xs text-orange-900">
+                          {reason.step_index === null
+                            ? "影响整个计划"
+                            : `影响步骤 ${reason.step_index + 1}`}
+                          {reason.instance_uid === null
+                            ? ""
+                            : ` · 实例 ${safeInstanceSummary(
+                                reason.instance_uid,
+                              )}`}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </section>
+          ) : null}
+        </CardContent>
+      </Card>
 
       {errorCode === null ? null : (
-        <p className="notice-banner" role="alert">
-          {errorCode}
+        <Alert variant="destructive" role="alert">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle>计划操作未完成</AlertTitle>
+          <AlertDescription className="font-mono break-all">
+            {errorCode}
+          </AlertDescription>
+        </Alert>
+      )}
+      {busy ? (
+        <p
+          className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950"
+          role="status"
+          aria-live="polite"
+        >
+          正在提交计划动作，请稍候…
         </p>
+      ) : null}
+
+      <PinnedVersionDetails
+        inventorySnapshotId={detail.summary.version_pin.inventory_snapshot_id}
+        gameDataVersionId={detail.summary.version_pin.game_data_version_id}
+        gameDataContentHash={detail.summary.version_pin.content_hash}
+        algorithmVersion={detail.summary.version_pin.algorithm_version}
+        scoringProfileVersion={
+          detail.summary.version_pin.scoring_profile_version
+        }
+        title="计划固定版本"
+      />
+
+      {treeModel === undefined ? (
+        <Alert variant="destructive" role="alert">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle>计划树数据不一致</AlertTitle>
+          <AlertDescription className="font-mono break-all">
+            {treeError}
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <BreedingRouteTree
+          treeModel={treeModel}
+          targetPalId={detail.summary.target_pal_id}
+          palNames={palNames}
+          passiveNames={passiveNames}
+          stepOverlays={stepOverlays}
+          ariaLabel="完整配种路径树"
+          eyebrow="Execution route tree"
+          title="完整配种路径"
+          description="初始库存亲本 → 中间子代 → 最终目标；节点颜色表示完成、当前、待开始、候选与失效状态。"
+          summary={`${detail.steps.length} 个步骤 · 当前第 ${
+            Math.min(
+              detail.summary.current_step_index + 1,
+              detail.summary.total_step_count,
+            ) || 0
+          } 步`}
+        />
       )}
 
-      <section className="grid gap-3" aria-label="执行步骤">
-        {detail.steps.map((step) => (
-          <StepPanel
-            key={step.step_id}
-            step={step}
-            current={step.step_id === currentStep?.step_id}
-            candidates={detail.candidates.filter(
-              (candidate) => candidate.step_id === step.step_id,
-            )}
-            busy={busy}
-            act={act}
-          />
-        ))}
-      </section>
-
-      {currentStep === undefined ||
-      detail.summary.status === "completed" ||
-      detail.summary.status === "invalidated" ? null : (
-        <section className="content-panel grid gap-4" aria-label="当前步骤操作">
-          <h2 className="text-lg font-semibold text-white">当前步骤操作</h2>
-          <div className="flex flex-wrap gap-2">
-            {currentStep.status === "not_started" ? (
-              <button
-                className="primary-button"
-                disabled={busy}
-                onClick={() =>
-                  void act({ action: "start", step_id: currentStep.step_id })
-                }
-              >
-                标记为配种中
-              </button>
-            ) : null}
-            {["breeding", "candidate_detected", "retrying"].includes(
-              currentStep.status,
-            ) ? (
-              <button
-                className="secondary-button"
-                disabled={busy}
-                onClick={() =>
-                  void act({ action: "continue", step_id: currentStep.step_id })
-                }
-              >
-                继续尝试
-              </button>
-            ) : null}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-            <label className="filter-field">
-              <span>使用最新安全库存中的已有 Pal UID</span>
-              <input
-                value={existingUid}
-                onChange={(event) => setExistingUid(event.target.value)}
-                placeholder="输入实例 UID"
-              />
-            </label>
-            <button
-              className="secondary-button self-end"
-              disabled={busy || existingUid.trim() === ""}
-              onClick={() =>
-                void act({
-                  action: "select_existing",
-                  step_id: currentStep.step_id,
-                  pal_instance_uid: existingUid.trim(),
-                  allow_passive_mismatch: allowMismatch,
-                })
-              }
-            >
-              选择已有 Pal
-            </button>
-          </div>
-          <label className="share-choice">
-            <input
-              type="checkbox"
-              checked={allowMismatch}
-              onChange={(event) => setAllowMismatch(event.target.checked)}
-            />
-            明确接受被动不完全匹配
-          </label>
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-            <label className="filter-field">
-              <span>跳过原因</span>
-              <input
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                placeholder="必填并写入审计"
-              />
-            </label>
-            <button
-              className="secondary-button self-end"
-              disabled={busy || reason.trim() === ""}
-              onClick={() =>
-                void act({
-                  action: "skip",
-                  step_id: currentStep.step_id,
-                  reason: reason.trim(),
-                })
-              }
-            >
-              跳过步骤
-            </button>
-          </div>
-        </section>
+      {currentStep === undefined ? (
+        <Card className="border-dashed border-glass-border bg-white/78">
+          <CardContent className="p-6">
+            <h2 className="font-bold text-foreground">当前没有执行步骤</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              该历史计划未物化可执行步骤，界面不会生成虚构节点。
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <CurrentStepPanel
+          step={currentStep}
+          planStatus={detail.summary.status}
+          planConcurrencyVersion={detail.summary.concurrency_version}
+          candidates={currentCandidates}
+          palNames={palNames}
+          passiveNames={passiveNames}
+          busy={busy}
+          act={act}
+        />
       )}
 
-      {detail.invalidation_reasons.length === 0 ? null : (
-        <section className="state-card border-amber-300/20" role="alert">
-          <h2 className="text-xl font-semibold text-white">计划需要重新计算</h2>
-          <ul className="mt-3 grid gap-2 text-sm text-amber-100">
-            {detail.invalidation_reasons.map((item, index) => (
-              <li key={`${item.code}-${index}`}>{item.code}</li>
-            ))}
-          </ul>
-          <button
-            className="primary-button mt-5"
-            disabled={busy}
-            onClick={() =>
-              void act({ action: "recalculate", reason: "plan invalidated" })
-            }
-          >
-            基于最新库存重新计算
-          </button>
-        </section>
-      )}
+      <PlanStepList
+        steps={detail.steps}
+        currentStepIndex={detail.summary.current_step_index}
+        palNames={palNames}
+        passiveNames={passiveNames}
+      />
 
-      <section className="content-panel">
-        <h2 className="text-lg font-semibold text-white">审计时间线</h2>
-        <ol className="mt-4 grid gap-4">
-          {detail.events.map((event) => (
-            <li
-              className="border-l border-teal-200/20 pl-4"
-              key={event.event_id}
-            >
-              <p className="text-sm font-medium text-white">
-                {event.event_type}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                {event.actor_display_name} ·{" "}
-                {new Date(event.created_at).toLocaleString("zh-CN")}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <AuditTimeline detail={detail} />
     </div>
   );
 }
 
-function StepPanel({
-  step,
-  current,
-  candidates,
+function PlanTopActions({
+  status,
   busy,
   act,
 }: Readonly<{
-  step: PlanStep;
-  current: boolean;
-  candidates: OffspringCandidate[];
+  status: PlanDetailData["summary"]["status"];
   busy: boolean;
-  act: (payload: ActionPayload) => Promise<void>;
+  act: (payload: PlanActionPayload) => Promise<void>;
 }>) {
+  if (status === "paused") {
+    return (
+      <Button
+        type="button"
+        disabled={busy}
+        onClick={() => void act({ action: "resume" })}
+      >
+        <Play aria-hidden="true" className="size-4" />
+        恢复计划
+      </Button>
+    );
+  }
+  if (status === "active" || status === "awaiting_confirmation") {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        disabled={busy}
+        onClick={() => void act({ action: "pause" })}
+      >
+        <Pause aria-hidden="true" className="size-4" />
+        暂停计划
+      </Button>
+    );
+  }
+  if (status === "invalidated") {
+    return (
+      <Button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          void act({ action: "recalculate", reason: "plan invalidated" })
+        }
+      >
+        <RefreshCcw aria-hidden="true" className="size-4" />
+        基于最新库存重新计算
+      </Button>
+    );
+  }
   return (
-    <details className="content-panel min-w-0" open={current}>
-      <summary className="cursor-pointer list-none">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="eyebrow">步骤 {step.step_index + 1}</p>
-            <h2 className="mt-1 text-lg font-semibold text-white">
-              {step.expected_child_pal_id}
-            </h2>
-          </div>
-          <span className="passive-chip">{statusLabels[step.status]}</span>
-        </div>
-      </summary>
-      <div className="mt-5 grid gap-3 text-sm text-slate-300">
-        <p>期望被动：{step.required_passive_ids.join("、") || "无"}</p>
-        <p>期望性别：{step.preferred_gender ?? "不限"}</p>
-        <p>尝试窗口：{step.attempt_number}</p>
-        {step.selected_child_instance_uid ? (
-          <p className="break-all text-teal-100">
-            已选真实实例：{step.selected_child_instance_uid}
-          </p>
-        ) : null}
-      </div>
-      {candidates.length === 0 ? null : (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {candidates.map((candidate) => (
-            <CandidateCard
-              key={candidate.candidate_key}
-              candidate={candidate}
-              busy={busy}
-              act={act}
-            />
-          ))}
-        </div>
-      )}
-    </details>
+    <Button variant="outline" asChild>
+      <Link href="/plans">
+        <History aria-hidden="true" className="size-4" />
+        查看历史计划
+      </Link>
+    </Button>
   );
 }
 
-function CandidateCard({
-  candidate,
-  busy,
-  act,
-}: Readonly<{
-  candidate: OffspringCandidate;
-  busy: boolean;
-  act: (payload: ActionPayload) => Promise<void>;
-}>) {
-  const unavailable = candidate.confirmed || candidate.rejected_at !== null;
+function AuditTimeline({ detail }: Readonly<{ detail: PlanDetailData }>) {
   return (
-    <article className="parent-card min-w-0" data-testid="offspring-candidate">
-      <p className="eyebrow">匹配 {Math.round(candidate.match_score * 100)}%</p>
-      <h3 className="mt-2 text-lg font-semibold text-white">
-        {candidate.pal_display_name}
-      </h3>
-      <p className="mt-1 break-all text-xs text-slate-500">
-        {candidate.pal_instance_uid}
-      </p>
-      <dl className="mt-4 grid gap-2 text-sm text-slate-300">
-        <div>性别：{candidate.gender}</div>
-        <div>等级：{candidate.level ?? "未知"}</div>
-        <div>所有者：{candidate.owner_display_name}</div>
-        <div>位置：{candidate.location_name ?? candidate.location_type}</div>
-        <div>匹配被动：{candidate.matched_passive_ids.join("、") || "无"}</div>
-        <div>
-          首次检测：
-          {new Date(candidate.first_detected_at).toLocaleString("zh-CN")}
-        </div>
-      </dl>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-400">
-        {Object.entries(candidate.match_breakdown).map(([key, value]) => (
-          <span key={key}>
-            {key}: {Math.round(value * 100)}
+    <Card className="min-w-0 border-glass-border bg-card/90 py-0 shadow-soft">
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <History aria-hidden="true" className="size-5" />
           </span>
-        ))}
-      </div>
-      <div className="mt-5 flex flex-wrap gap-2">
-        <button
-          className="primary-button"
-          disabled={busy || unavailable}
-          onClick={() =>
-            void act({
-              action: "confirm",
-              step_id: candidate.step_id,
-              candidate_key: candidate.candidate_key,
-            })
-          }
-        >
-          {candidate.confirmed ? "已确认" : "确认真实子代"}
-        </button>
-        <button
-          className="secondary-button"
-          disabled={busy || unavailable}
-          onClick={() =>
-            void act({
-              action: "reject",
-              candidate_key: candidate.candidate_key,
-              reason: "玩家确认不是本次配种结果",
-            })
-          }
-        >
-          {candidate.rejected_at ? "已拒绝" : "拒绝"}
-        </button>
-      </div>
-    </article>
+          <div>
+            <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
+              Immutable history
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-foreground">
+              审计时间线
+            </h2>
+          </div>
+        </div>
+        {detail.events.length === 0 ? (
+          <p className="mt-5 rounded-2xl bg-muted/55 p-4 text-sm text-muted-foreground">
+            暂无已物化事件。
+          </p>
+        ) : (
+          <ol className="mt-5 grid gap-4">
+            {detail.events.map((event) => (
+              <li
+                className="relative min-w-0 border-l-2 border-primary/20 pl-5"
+                key={event.event_id}
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1 -left-[0.44rem] size-3 rounded-full border-2 border-white bg-primary"
+                />
+                <p className="break-all text-sm font-bold text-foreground">
+                  {event.event_type}
+                </p>
+                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock3 aria-hidden="true" className="size-3.5" />
+                  {event.actor_display_name} ·{" "}
+                  {formatPlanDateTime(event.created_at)}
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
   );
+}
+
+function buildPalNames(detail: PlanDetailData): ReadonlyMap<string, string> {
+  const names = new Map<string, string>([
+    [detail.summary.target_pal_id, detail.summary.target_pal_display_name],
+  ]);
+  for (const candidate of detail.candidates) {
+    names.set(candidate.pal_id, candidate.pal_display_name);
+  }
+  return names;
 }

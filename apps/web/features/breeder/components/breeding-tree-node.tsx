@@ -12,6 +12,19 @@ import type {
 } from "../lib/build-breeding-tree";
 import { compactIdentifier, genderLabel, localizedName } from "../presentation";
 
+export type BreedingTreeNodeTone =
+  | "completed"
+  | "current"
+  | "pending"
+  | "invalidated"
+  | "candidate";
+
+export interface BreedingTreeNodeOverlay {
+  tone: BreedingTreeNodeTone;
+  label: string;
+  current?: boolean;
+}
+
 const locationLabels: Record<string, string> = {
   player_party: "队伍",
   player_storage: "玩家仓库",
@@ -27,6 +40,7 @@ export function BreedingTreeNode({
   roleLabel,
   palNames,
   passiveNames,
+  overlay,
   className,
 }: Readonly<{
   entity: BreedingTreeEntity;
@@ -34,9 +48,11 @@ export function BreedingTreeNode({
   roleLabel: string;
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
+  overlay?: BreedingTreeNodeOverlay;
   className?: string;
 }>) {
-  const palName = localizedName(palNames, entity.palId, "Pal");
+  const palName =
+    entity.displayNameOverride ?? localizedName(palNames, entity.palId, "Pal");
   const requiredPassives = occurrence.requiredPassiveIds.map((passiveId) => {
     const actual = entity.passives.find(
       (passive) => passive.passiveId === passiveId,
@@ -67,12 +83,25 @@ export function BreedingTreeNode({
             : entity.kind === "intermediate"
               ? "border-sky-200 bg-gradient-to-br from-sky-50 to-white"
               : "border-border bg-white/94",
+        overlay?.tone === "completed" &&
+          "border-emerald-300 bg-gradient-to-br from-emerald-50 to-white",
+        overlay?.tone === "current" &&
+          "border-sky-400 bg-gradient-to-br from-sky-50 via-white to-emerald-50 shadow-md",
+        overlay?.tone === "pending" &&
+          "border-slate-200 bg-slate-50/82 opacity-75 shadow-none",
+        overlay?.tone === "invalidated" &&
+          "border-orange-400 bg-gradient-to-br from-orange-50 to-rose-50 shadow-md",
+        overlay?.tone === "candidate" &&
+          "border-violet-300 bg-gradient-to-br from-violet-50 via-white to-amber-50 shadow-md",
+        overlay?.current && "ring-2 ring-primary/30 ring-offset-2",
         className,
       )}
       aria-label={`${roleLabel}：${palName}`}
       data-tree-node={entity.kind}
       data-entity-id={entity.id}
       data-occurrence-id={occurrence.id}
+      data-plan-step-state={overlay?.tone}
+      data-current-step={overlay?.current ? "true" : undefined}
     >
       <div className="flex min-w-0 items-start gap-3">
         <PalPortrait palId={entity.palId} name={palName} size={52} />
@@ -88,6 +117,7 @@ export function BreedingTreeNode({
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         <SourceBadge entity={entity} />
+        {overlay ? <StepStateBadge overlay={overlay} /> : null}
         <Badge
           variant="outline"
           className="border-border bg-white/78 text-foreground"
@@ -196,7 +226,11 @@ export function BreedingTreeNode({
       {!showActualPassives && entity.kind !== "missing" ? (
         <PassiveList
           label={entity.isTarget ? "目标被动" : "需保留被动"}
-          passives={entity.passives}
+          passives={
+            entity.requiredPassives.length > 0
+              ? entity.requiredPassives
+              : entity.passives
+          }
           passiveNames={passiveNames}
         />
       ) : null}
@@ -208,6 +242,24 @@ export function BreedingTreeNode({
         />
       ) : null}
     </article>
+  );
+}
+
+function StepStateBadge({
+  overlay,
+}: Readonly<{ overlay: BreedingTreeNodeOverlay }>) {
+  const className = {
+    completed: "border-emerald-200 bg-emerald-100 text-emerald-900",
+    current: "border-sky-200 bg-sky-100 text-sky-900",
+    pending: "border-slate-200 bg-slate-100 text-slate-700",
+    invalidated: "border-orange-300 bg-orange-100 text-orange-950",
+    candidate: "border-violet-200 bg-violet-100 text-violet-900",
+  }[overlay.tone];
+
+  return (
+    <Badge variant="outline" className={className}>
+      {overlay.label}
+    </Badge>
   );
 }
 

@@ -1,3 +1,5 @@
+import { PageError } from "@/components/states/page-error";
+
 const messages: Record<string, [string, string]> = {
   PLAN_NOT_FOUND: ["计划不存在", "该计划不存在，或当前账号无权查看。"],
   PLAN_ACCESS_DENIED: ["权限不足", "只能查看和操作自己的执行计划。"],
@@ -14,11 +16,5 @@ const messages: Record<string, [string, string]> = {
 
 export function PlanError({ code }: Readonly<{ code: string }>) {
   const [title, description] = messages[code] ?? ["操作未完成", code];
-  return (
-    <section className="state-card" role="alert">
-      <p className="eyebrow text-rose-200">{code}</p>
-      <h2 className="mt-3 text-xl font-semibold text-white">{title}</h2>
-      <p className="mt-2 text-sm text-slate-400">{description}</p>
-    </section>
-  );
+  return <PageError code={code} title={title} description={description} />;
 }

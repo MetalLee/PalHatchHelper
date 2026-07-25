@@ -1,7 +1,14 @@
 import type { PlanDetail, PlanListPage } from "@palhatch/contracts";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { buildPlanBreedingTree } from "../features/plans/build-plan-breeding-tree";
 import { PlanDetail as PlanDetailView } from "../features/plans/plan-detail";
 import { PlanError } from "../features/plans/plan-error";
 import { PlanList } from "../features/plans/plan-list";
@@ -160,9 +167,27 @@ beforeEach(() => {
 });
 
 describe("Phase 7 plan list", () => {
-  it("renders status filters, pinned versions, progress and candidate count", () => {
+  it("renders status tabs, real query metrics, progress and candidate count", () => {
     const page: PlanListPage = {
-      items: [summary()],
+      items: [
+        {
+          ...summary("active"),
+          plan_id: "71000000-0000-4000-8000-000000000002",
+          pending_candidate_count: 0,
+        },
+        summary(),
+        {
+          ...summary("completed"),
+          plan_id: "71000000-0000-4000-8000-000000000003",
+          completed_step_count: 2,
+          pending_candidate_count: 0,
+        },
+        {
+          ...summary("invalidated"),
+          plan_id: "71000000-0000-4000-8000-000000000004",
+          pending_candidate_count: 0,
+        },
+      ],
       next_cursor: "fixture-cursor",
       query_boundary: "2026-07-16T04:10:00Z",
     };
@@ -172,12 +197,25 @@ describe("Phase 7 plan list", () => {
       screen.getByRole("navigation", { name: "计划状态筛选" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: "待确认" }).getAttribute("aria-current"),
+      screen.getByRole("tab", { name: "待确认" }).getAttribute("aria-current"),
     ).toBe("page");
-    expect(screen.getByText("幻色幼崽")).toBeTruthy();
+    expect(screen.getByLabelText("进行中计划数量").textContent).toContain("1");
+    expect(screen.getByLabelText("待确认计划数量").textContent).toContain("1");
+    expect(screen.getByLabelText("已完成计划数量").textContent).toContain("1");
+    expect(
+      screen.getByLabelText("已暂停或已失效计划数量").textContent,
+    ).toContain("1");
+    expect(screen.getAllByText("幻色幼崽").length).toBe(4);
     expect(screen.getByText("1 个候选")).toBeTruthy();
-    expect(screen.getByText("1 / 2")).toBeTruthy();
+    expect(screen.getAllByText("1 / 2").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rank 未知").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "下一页" })).toBeTruthy();
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "更多筛选" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    expect(screen.getByRole("menuitem", { name: "已取消" })).toBeTruthy();
   });
 
   it("has an actionable empty state", () => {
@@ -197,18 +235,63 @@ describe("Phase 7 plan list", () => {
 });
 
 describe("Phase 7 plan detail", () => {
-  it("prioritizes the current step, candidate facts, manual warning and audit history", () => {
-    render(<PlanDetailView detail={detail()} />);
+  it("keeps actual candidate passives separate from route requirements", () => {
+    const plan = detail();
+    plan.candidates[0]!.matched_passive_ids = ["test_passive_a"];
+    plan.candidates[0]!.confirmed = true;
+    plan.steps[0]!.selected_child_instance_uid =
+      plan.candidates[0]!.pal_instance_uid;
+
+    const tree = buildPlanBreedingTree(plan);
+    const child = tree.entities.find((entity) => entity.id === "step:0:child");
+
+    expect(child?.passiveSkillIds).toEqual(["test_passive_a"]);
+    expect(child?.requiredPassiveIds).toEqual([
+      "test_passive_a",
+      "test_passive_b",
+    ]);
+  });
+
+  it("prioritizes the current step in the shared route tree and keeps a vertical mobile tree", () => {
+    const { container } = render(<PlanDetailView detail={detail()} />);
 
     expect(screen.getByText(/系统只检测候选，必须由玩家确认/)).toBeTruthy();
-    expect(screen.getByTestId("offspring-candidate")).toBeTruthy();
-    expect(screen.getByText(/所有者：Fixture Player A/)).toBeTruthy();
-    expect(screen.getByText(/位置：Fixture Breeding Base/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "确认真实子代" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "完整配种路径树" })).toBeTruthy();
+    expect(
+      container.querySelectorAll('[data-current-step="true"]').length,
+    ).toBeGreaterThan(0);
+    const mobileTree = container.querySelector(
+      'ol[data-tree-layout="mobile-vertical"]',
+    );
+    expect(mobileTree).toBeTruthy();
+    expect(mobileTree?.className).toContain("lg:hidden");
+    expect(container.firstElementChild?.className).toContain("overflow-x-clip");
+    expect(container.firstElementChild?.className).toContain("max-w-full");
     expect(screen.getByRole("button", { name: "继续尝试" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "选择已有 Pal" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "跳过步骤" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "查看候选子代" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "更多步骤操作" })).toBeTruthy();
     expect(screen.getByText("OFFSPRING_CANDIDATES_DETECTED")).toBeTruthy();
+  });
+
+  it("shows real candidate facts in a dialog and labels match score as a system score", () => {
+    render(<PlanDetailView detail={detail()} />);
+
+    expect(screen.queryByTestId("offspring-candidate")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "查看候选子代" }));
+
+    const dialog = screen.getByRole("dialog", { name: "候选子代" });
+    const candidateDialog = within(dialog);
+    expect(dialog).toBeTruthy();
+    expect(candidateDialog.getByTestId("offspring-candidate")).toBeTruthy();
+    expect(candidateDialog.getByText("Fixture Player A")).toBeTruthy();
+    expect(candidateDialog.getByText("Fixture Breeding Base")).toBeTruthy();
+    expect(candidateDialog.getByText(/实例 phase7…best/)).toBeTruthy();
+    expect(candidateDialog.getByText(/系统匹配评分 1\.00/)).toBeTruthy();
+    expect(candidateDialog.getByText(/不是遗传概率/)).toBeTruthy();
+    expect(candidateDialog.getAllByText("Rank 未知").length).toBeGreaterThan(0);
+    expect(
+      candidateDialog.getByRole("button", { name: "确认真实子代" }),
+    ).toBeTruthy();
   });
 
   it("confirms only through the action endpoint with the displayed optimistic version", async () => {
@@ -230,7 +313,9 @@ describe("Phase 7 plan detail", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<PlanDetailView detail={detail()} />);
 
+    fireEvent.click(screen.getByRole("button", { name: "查看候选子代" }));
     fireEvent.click(screen.getByRole("button", { name: "确认真实子代" }));
+    fireEvent.click(screen.getByRole("button", { name: "确认并推进计划" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(captured?.input).toBe(`/api/plans/${planId}/actions`);
     expect(JSON.parse(String(captured?.init?.body))).toMatchObject({
@@ -268,6 +353,7 @@ describe("Phase 7 plan detail", () => {
   it("keeps structured invalidation history and offers recalculation", () => {
     render(<PlanDetailView detail={detail("invalidated")} />);
     expect(screen.getByText("DEPENDENCY_DISAPPEARED")).toBeTruthy();
+    expect(screen.getByText(/依赖的 Pal 已从最新库存消失/)).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "基于最新库存重新计算" }),
     ).toBeTruthy();

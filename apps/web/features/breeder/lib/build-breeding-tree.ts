@@ -26,6 +26,7 @@ export interface BreedingTreeEntity {
   id: string;
   kind: BreedingTreeEntityKind;
   palId: string;
+  displayNameOverride: string | null;
   instanceUid: string | null;
   ownerDisplayName: string;
   gender: BreedingRouteViewParent["gender"];
@@ -60,7 +61,7 @@ export interface BreedingTreeEdge {
   toOccurrenceId: string;
   stepIndex: number;
   parentSide: "a" | "b";
-  recipeType: BreedingRouteViewStep["recipe_type"];
+  recipeType: BreedingRouteViewStep["recipe_type"] | null;
   requiredPassiveIds: string[];
 }
 
@@ -68,14 +69,14 @@ export interface BreedingTreeParentLink {
   side: "a" | "b";
   entityId: string;
   occurrenceId: string;
-  sourceType: BreedingRouteViewParent["source_type"];
+  sourceType: BreedingTreeSourceParent["sourceType"];
   requiredPassiveIds: string[];
 }
 
 export interface BreedingTreeStep {
   stepIndex: number;
   generation: number;
-  recipeType: BreedingRouteViewStep["recipe_type"];
+  recipeType: BreedingRouteViewStep["recipe_type"] | null;
   parentA: BreedingTreeParentLink;
   parentB: BreedingTreeParentLink;
   parentAOccurrenceId: string;
@@ -109,6 +110,54 @@ export interface BuildBreedingTreeOptions {
   targetPalId?: string;
 }
 
+export interface BreedingTreeSourceParent {
+  sourceType: BreedingRouteViewParent["source_type"];
+  palId: string;
+  displayNameOverride?: string | null;
+  instanceUid: string | null;
+  ownerDisplayName: string;
+  gender: BreedingRouteViewParent["gender"];
+  passiveSkillIds: string[];
+  requiredPassiveIds: string[];
+  borrowed: boolean;
+  producedByStepIndex: number | null;
+  locationType: BreedingRouteViewParent["location_type"];
+  locationName: string | null;
+}
+
+export interface BreedingTreeSourceStep {
+  stepIndex: number;
+  generation: number | null;
+  recipeType: BreedingRouteViewStep["recipe_type"] | null;
+  parentA: BreedingTreeSourceParent;
+  parentB: BreedingTreeSourceParent;
+  childPalId: string;
+  childDisplayName?: string | null;
+  childRequiredGender: BreedingRouteViewStep["child_required_gender"];
+  requiredPassiveIds: string[];
+  selectedChildInstanceUid?: string | null;
+  childOwnerDisplayName?: string | null;
+  childGender?: BreedingRouteViewParent["gender"];
+  childPassiveSkillIds?: string[];
+  childLocationType?: BreedingRouteViewParent["location_type"];
+  childLocationName?: string | null;
+}
+
+export interface BreedingTreeSource {
+  steps: BreedingTreeSourceStep[];
+  feasibilityStatus: BreedingRoute["feasibility_status"] | null;
+  adoptable: boolean;
+  hasMissing: boolean;
+  existingTargetInstanceUid?: string | null;
+}
+
+type ResolvedBreedingTreeSourceStep = Omit<
+  BreedingTreeSourceStep,
+  "generation"
+> & {
+  generation: number;
+};
+
 export class BreedingTreeBuildError extends Error {
   constructor(readonly code: string) {
     super(code);
@@ -136,24 +185,53 @@ export function buildBreedingTree(
 ): BreedingTreeModel {
   if (route === null || route === undefined) return emptyModel;
 
-  const sortedSteps = [...route.steps].sort(
-    (left, right) => left.step_index - right.step_index,
+  if (route.steps.length === 0) {
+    return buildRouteWithoutSteps(route, options);
+  }
+
+  return buildBreedingTreeFromSource(
+    {
+      steps: route.steps.map(toSourceStep),
+      feasibilityStatus: route.feasibility_status,
+      adoptable: route.adoptable,
+      hasMissing:
+        route.feasibility_status === "needs_inventory" ||
+        route.missing_pal_count > 0,
+      existingTargetInstanceUid: route.existing_target_instance_uid,
+    },
+    options,
+  );
+}
+
+export function buildBreedingTreeFromSource(
+  source: BreedingTreeSource,
+  options: Pick<BuildBreedingTreeOptions, "passiveFacts"> = {},
+): BreedingTreeModel {
+  const sortedSteps = [...source.steps].sort(
+    (left, right) => left.stepIndex - right.stepIndex,
   );
   assertUniqueStepIndexes(sortedSteps);
 
   if (sortedSteps.length === 0) {
-    return buildRouteWithoutSteps(route, options);
+    return {
+      ...emptyModel,
+      emptyReason: "route_without_steps",
+      feasibilityStatus: source.feasibilityStatus,
+      adoptable: source.adoptable,
+      hasMissing: source.hasMissing,
+    };
   }
+  const resolvedSteps = resolveSourceGenerations(sortedSteps);
 
   const entities = new Map<string, BreedingTreeEntity>();
   const occurrences = new Map<string, BreedingTreeOccurrence>();
   const steps: BreedingTreeStep[] = [];
   const edges: BreedingTreeEdge[] = [];
-  const finalStepIndex = sortedSteps.at(-1)!.step_index;
+  const finalStepIndex = resolvedSteps.at(-1)!.stepIndex;
 
-  for (const step of sortedSteps) {
+  for (const step of resolvedSteps) {
     const parentA = resolveParent(
-      step.parent_a,
+      step.parentA,
       "a",
       step,
       entities,
@@ -161,41 +239,44 @@ export function buildBreedingTree(
       options.passiveFacts,
     );
     const parentB = resolveParent(
-      step.parent_b,
+      step.parentB,
       "b",
       step,
       entities,
       occurrences,
       options.passiveFacts,
     );
-    const isTarget = step.step_index === finalStepIndex;
-    const childEntityId = `step:${step.step_index}:child`;
+    const isTarget = step.stepIndex === finalStepIndex;
+    const childEntityId = `step:${step.stepIndex}:child`;
     const childOccurrenceId = `occurrence:${childEntityId}`;
+    const childPassiveSkillIds =
+      step.childPassiveSkillIds ?? step.requiredPassiveIds;
     const childEntity: BreedingTreeEntity = {
       id: childEntityId,
       kind: isTarget ? "target" : "intermediate",
-      palId: step.child_pal_id,
-      instanceUid: null,
-      ownerDisplayName: isTarget
-        ? "本路线最终目标"
-        : `步骤 ${step.step_index + 1} 中间产物`,
-      gender: step.child_required_gender,
-      passiveSkillIds: [...step.required_passive_ids],
-      passives: toPassives(step.required_passive_ids, options.passiveFacts),
-      requiredPassiveIds: [...step.required_passive_ids],
+      palId: step.childPalId,
+      displayNameOverride: step.childDisplayName ?? null,
+      instanceUid: step.selectedChildInstanceUid ?? null,
+      ownerDisplayName:
+        step.childOwnerDisplayName ??
+        (isTarget ? "本路线最终目标" : `步骤 ${step.stepIndex + 1} 中间产物`),
+      gender: step.childGender ?? step.childRequiredGender,
+      passiveSkillIds: [...childPassiveSkillIds],
+      passives: toPassives(childPassiveSkillIds, options.passiveFacts),
+      requiredPassiveIds: [...step.requiredPassiveIds],
       requiredPassives: toPassives(
-        step.required_passive_ids,
+        step.requiredPassiveIds,
         options.passiveFacts,
       ),
       borrowed: false,
-      producedByStepIndex: step.step_index,
-      locationType: null,
-      locationName: null,
+      producedByStepIndex: step.stepIndex,
+      locationType: step.childLocationType ?? null,
+      locationName: step.childLocationName ?? null,
       generation: step.generation,
-      recipeType: step.recipe_type,
+      recipeType: step.recipeType,
       isTarget,
       existingTargetInstanceUid: isTarget
-        ? route.existing_target_instance_uid
+        ? (source.existingTargetInstanceUid ?? null)
         : null,
     };
     entities.set(childEntityId, childEntity);
@@ -203,22 +284,22 @@ export function buildBreedingTree(
       id: childOccurrenceId,
       entityId: childEntityId,
       layer: step.generation,
-      stepIndex: step.step_index,
+      stepIndex: step.stepIndex,
       role: "child",
-      requiredPassiveIds: [...step.required_passive_ids],
+      requiredPassiveIds: [...step.requiredPassiveIds],
     });
 
     const stepModel: BreedingTreeStep = {
-      stepIndex: step.step_index,
+      stepIndex: step.stepIndex,
       generation: step.generation,
-      recipeType: step.recipe_type,
+      recipeType: step.recipeType,
       parentA,
       parentB,
       parentAOccurrenceId: parentA.occurrenceId,
       parentBOccurrenceId: parentB.occurrenceId,
       childEntityId,
       childOccurrenceId,
-      requiredPassiveIds: [...step.required_passive_ids],
+      requiredPassiveIds: [...step.requiredPassiveIds],
     };
     steps.push(stepModel);
     edges.push(
@@ -237,11 +318,10 @@ export function buildBreedingTree(
     steps,
     layers: groupLayers(occurrenceList),
     targetOccurrenceId: `occurrence:step:${finalStepIndex}:child`,
-    feasibilityStatus: route.feasibility_status,
-    adoptable: route.adoptable,
+    feasibilityStatus: source.feasibilityStatus,
+    adoptable: source.adoptable,
     hasMissing:
-      route.feasibility_status === "needs_inventory" ||
-      route.missing_pal_count > 0 ||
+      source.hasMissing ||
       [...entities.values()].some((entity) => entity.kind === "missing"),
   };
 }
@@ -274,6 +354,7 @@ function buildRouteWithoutSteps(
         id: entityId,
         kind: "existing_target",
         palId: targetPalId,
+        displayNameOverride: null,
         instanceUid,
         ownerDisplayName: "当前库存中的目标实例",
         gender: null,
@@ -313,17 +394,48 @@ function buildRouteWithoutSteps(
   };
 }
 
-function resolveParent(
+function toSourceStep(step: BreedingRouteViewStep): BreedingTreeSourceStep {
+  return {
+    stepIndex: step.step_index,
+    generation: step.generation,
+    recipeType: step.recipe_type,
+    parentA: toSourceParent(step.parent_a),
+    parentB: toSourceParent(step.parent_b),
+    childPalId: step.child_pal_id,
+    childRequiredGender: step.child_required_gender,
+    requiredPassiveIds: [...step.required_passive_ids],
+  };
+}
+
+function toSourceParent(
   parent: BreedingRouteViewParent,
+): BreedingTreeSourceParent {
+  return {
+    sourceType: parent.source_type,
+    palId: parent.pal_id,
+    instanceUid: parent.instance_uid,
+    ownerDisplayName: parent.owner_display_name,
+    gender: parent.gender,
+    passiveSkillIds: [...parent.passive_skill_ids],
+    requiredPassiveIds: [...parent.required_passive_ids],
+    borrowed: parent.borrowed,
+    producedByStepIndex: parent.produced_by_step_index,
+    locationType: parent.location_type,
+    locationName: parent.location_name,
+  };
+}
+
+function resolveParent(
+  parent: BreedingTreeSourceParent,
   side: "a" | "b",
-  step: BreedingRouteViewStep,
+  step: ResolvedBreedingTreeSourceStep,
   entities: Map<string, BreedingTreeEntity>,
   occurrences: Map<string, BreedingTreeOccurrence>,
   passiveFacts: ReadonlyMap<string, BreedingTreePassiveFact> | undefined,
 ): BreedingTreeParentLink {
-  if (parent.source_type === "intermediate") {
-    const producedBy = parent.produced_by_step_index;
-    if (producedBy === null || producedBy >= step.step_index) {
+  if (parent.sourceType === "intermediate") {
+    const producedBy = parent.producedByStepIndex;
+    if (producedBy === null || producedBy >= step.stepIndex) {
       throw new BreedingTreeBuildError("INVALID_INTERMEDIATE_REFERENCE");
     }
     const entityId = `step:${producedBy}:child`;
@@ -333,7 +445,7 @@ function resolveParent(
     if (
       entity === undefined ||
       occurrence === undefined ||
-      entity.palId !== parent.pal_id ||
+      entity.palId !== parent.palId ||
       entity.generation >= step.generation
     ) {
       throw new BreedingTreeBuildError("INVALID_INTERMEDIATE_REFERENCE");
@@ -342,73 +454,75 @@ function resolveParent(
       side,
       entityId,
       occurrenceId,
-      sourceType: parent.source_type,
-      requiredPassiveIds: [...parent.required_passive_ids],
+      sourceType: parent.sourceType,
+      requiredPassiveIds: [...parent.requiredPassiveIds],
     };
   }
 
-  if (parent.source_type === "inventory") {
-    if (parent.instance_uid === null) {
+  if (parent.sourceType === "inventory") {
+    if (parent.instanceUid === null) {
       throw new BreedingTreeBuildError("INVENTORY_INSTANCE_UID_REQUIRED");
     }
-    const entityId = `inventory:${parent.instance_uid}`;
+    const entityId = `inventory:${parent.instanceUid}`;
     const existing = entities.get(entityId);
-    if (existing !== undefined && existing.palId !== parent.pal_id) {
+    if (existing !== undefined && existing.palId !== parent.palId) {
       throw new BreedingTreeBuildError("INCONSISTENT_INVENTORY_ENTITY");
     }
     if (existing === undefined) {
       entities.set(entityId, {
         id: entityId,
         kind: "inventory",
-        palId: parent.pal_id,
-        instanceUid: parent.instance_uid,
-        ownerDisplayName: parent.owner_display_name,
+        palId: parent.palId,
+        displayNameOverride: parent.displayNameOverride ?? null,
+        instanceUid: parent.instanceUid,
+        ownerDisplayName: parent.ownerDisplayName,
         gender: parent.gender,
-        passiveSkillIds: [...parent.passive_skill_ids],
-        passives: toPassives(parent.passive_skill_ids, passiveFacts),
+        passiveSkillIds: [...parent.passiveSkillIds],
+        passives: toPassives(parent.passiveSkillIds, passiveFacts),
         requiredPassiveIds: [],
         requiredPassives: [],
         borrowed: parent.borrowed,
         producedByStepIndex: null,
-        locationType: parent.location_type,
-        locationName: parent.location_name,
+        locationType: parent.locationType,
+        locationName: parent.locationName,
         generation: Math.max(0, step.generation - 1),
         recipeType: null,
         isTarget: false,
         existingTargetInstanceUid: null,
       });
     }
-    const occurrenceId = `occurrence:${step.step_index}:${side}:inventory:${parent.instance_uid}`;
+    const occurrenceId = `occurrence:${step.stepIndex}:${side}:inventory:${parent.instanceUid}`;
     occurrences.set(occurrenceId, {
       id: occurrenceId,
       entityId,
       layer: Math.max(0, step.generation - 1),
-      stepIndex: step.step_index,
+      stepIndex: step.stepIndex,
       role: side === "a" ? "parent_a" : "parent_b",
-      requiredPassiveIds: [...parent.required_passive_ids],
+      requiredPassiveIds: [...parent.requiredPassiveIds],
     });
     return {
       side,
       entityId,
       occurrenceId,
-      sourceType: parent.source_type,
-      requiredPassiveIds: [...parent.required_passive_ids],
+      sourceType: parent.sourceType,
+      requiredPassiveIds: [...parent.requiredPassiveIds],
     };
   }
 
-  const entityId = `missing:${step.step_index}:${side}`;
-  const occurrenceId = `occurrence:${step.step_index}:${side}:missing`;
+  const entityId = `missing:${step.stepIndex}:${side}`;
+  const occurrenceId = `occurrence:${step.stepIndex}:${side}:missing`;
   entities.set(entityId, {
     id: entityId,
     kind: "missing",
-    palId: parent.pal_id,
+    palId: parent.palId,
+    displayNameOverride: parent.displayNameOverride ?? null,
     instanceUid: null,
-    ownerDisplayName: parent.owner_display_name,
+    ownerDisplayName: parent.ownerDisplayName,
     gender: parent.gender,
     passiveSkillIds: [],
     passives: [],
-    requiredPassiveIds: [...parent.required_passive_ids],
-    requiredPassives: toPassives(parent.required_passive_ids, passiveFacts),
+    requiredPassiveIds: [...parent.requiredPassiveIds],
+    requiredPassives: toPassives(parent.requiredPassiveIds, passiveFacts),
     borrowed: false,
     producedByStepIndex: null,
     locationType: null,
@@ -422,31 +536,31 @@ function resolveParent(
     id: occurrenceId,
     entityId,
     layer: Math.max(0, step.generation - 1),
-    stepIndex: step.step_index,
+    stepIndex: step.stepIndex,
     role: side === "a" ? "parent_a" : "parent_b",
-    requiredPassiveIds: [...parent.required_passive_ids],
+    requiredPassiveIds: [...parent.requiredPassiveIds],
   });
   return {
     side,
     entityId,
     occurrenceId,
-    sourceType: parent.source_type,
-    requiredPassiveIds: [...parent.required_passive_ids],
+    sourceType: parent.sourceType,
+    requiredPassiveIds: [...parent.requiredPassiveIds],
   };
 }
 
 function edgeFor(
   parent: BreedingTreeParentLink,
   childOccurrenceId: string,
-  step: BreedingRouteViewStep,
+  step: ResolvedBreedingTreeSourceStep,
 ): BreedingTreeEdge {
   return {
-    id: `edge:${step.step_index}:${parent.side}`,
+    id: `edge:${step.stepIndex}:${parent.side}`,
     fromOccurrenceId: parent.occurrenceId,
     toOccurrenceId: childOccurrenceId,
-    stepIndex: step.step_index,
+    stepIndex: step.stepIndex,
     parentSide: parent.side,
-    recipeType: step.recipe_type,
+    recipeType: step.recipeType,
     requiredPassiveIds: [...parent.requiredPassiveIds],
   };
 }
@@ -466,15 +580,39 @@ function toPassives(
 }
 
 function assertUniqueStepIndexes(
-  steps: readonly BreedingRouteViewStep[],
+  steps: readonly BreedingTreeSourceStep[],
 ): void {
   const indexes = new Set<number>();
   for (const step of steps) {
-    if (indexes.has(step.step_index)) {
+    if (indexes.has(step.stepIndex)) {
       throw new BreedingTreeBuildError("DUPLICATE_STEP_INDEX");
     }
-    indexes.add(step.step_index);
+    indexes.add(step.stepIndex);
   }
+}
+
+function resolveSourceGenerations(
+  steps: readonly BreedingTreeSourceStep[],
+): ResolvedBreedingTreeSourceStep[] {
+  const generations = new Map<number, number>();
+  return steps.map((step) => {
+    const parentStepIndexes = [step.parentA, step.parentB]
+      .filter((parent) => parent.sourceType === "intermediate")
+      .map((parent) => parent.producedByStepIndex);
+    const parentGenerations = parentStepIndexes.map((stepIndex) => {
+      if (
+        stepIndex === null ||
+        stepIndex >= step.stepIndex ||
+        !generations.has(stepIndex)
+      ) {
+        throw new BreedingTreeBuildError("INVALID_INTERMEDIATE_REFERENCE");
+      }
+      return generations.get(stepIndex)!;
+    });
+    const generation = step.generation ?? Math.max(0, ...parentGenerations) + 1;
+    generations.set(step.stepIndex, generation);
+    return { ...step, generation };
+  });
 }
 
 function compareOccurrences(

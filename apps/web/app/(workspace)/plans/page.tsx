@@ -1,8 +1,15 @@
+import { ClipboardList, GitBranch, Sprout } from "lucide-react";
+import Link from "next/link";
+
+import { PageHero } from "@/components/layout/page-hero";
+import { ForestScenery } from "@/components/surfaces/forest-scenery";
+import { Button } from "@/components/ui/button";
 import { requireUserContext } from "@/features/auth/server";
 import { PlanError } from "@/features/plans/plan-error";
 import { PlanList } from "@/features/plans/plan-list";
 import {
   PlanDataError,
+  loadPlanDetail,
   loadPlans,
   type PlanStatusFilter,
 } from "@/features/plans/server";
@@ -49,16 +56,58 @@ export default async function PlansPage({
       />
     );
   }
+  const invalidationReasons = Object.fromEntries(
+    await Promise.all(
+      page.items
+        .filter((plan) => plan.status === "invalidated")
+        .map(async (plan) => {
+          try {
+            const detail = await loadPlanDetail(plan.plan_id);
+            return [plan.plan_id, detail.invalidation_reasons] as const;
+          } catch {
+            return [plan.plan_id, []] as const;
+          }
+        }),
+    ),
+  );
+
   return (
-    <div className="page-stack min-w-0">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">EXECUTION PLANS</p>
-          <h1>执行计划</h1>
-          <p>人工推进固定版本路线，并确认新快照中检测到的真实子代。</p>
-        </div>
-      </header>
-      <PlanList page={page} status={status} />
+    <div className="grid min-w-0 max-w-full gap-6 overflow-x-clip pb-4 sm:gap-8">
+      <PageHero
+        eyebrow="Execution plans"
+        title="我的计划"
+        description="追踪已采用的确定性配种路线，聚焦当前步骤，并由玩家人工确认新快照中的真实子代。"
+        className="min-h-[17rem] border-white/80 bg-white/74 sm:min-h-[18rem] lg:pr-[30%]"
+        background={<ForestScenery variant="hero" />}
+        actions={
+          <Button asChild size="lg">
+            <Link href="/breeder">
+              <Sprout aria-hidden="true" className="size-4" />
+              创建配种任务
+            </Link>
+          </Button>
+        }
+        visual={
+          <div
+            aria-hidden="true"
+            className="hidden h-full items-center gap-3 lg:flex"
+          >
+            {[ClipboardList, GitBranch, Sprout].map((Icon, index) => (
+              <span
+                key={index}
+                className="grid size-16 place-items-center rounded-2xl border border-white/80 bg-white/76 text-primary shadow-soft backdrop-blur-sm"
+              >
+                <Icon className="size-7" strokeWidth={1.8} />
+              </span>
+            ))}
+          </div>
+        }
+      />
+      <PlanList
+        page={page}
+        status={status}
+        invalidationReasons={invalidationReasons}
+      />
     </div>
   );
 }
