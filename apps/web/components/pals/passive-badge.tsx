@@ -21,21 +21,46 @@ function rankKey(rank: number | null): string {
 export function PassiveBadge({
   name,
   rank,
+  showRank = false,
   className,
-}: Readonly<{ name: string; rank: number | null; className?: string }>) {
+}: Readonly<{
+  name: string;
+  rank: number | null;
+  showRank?: boolean;
+  className?: string;
+}>) {
   const key = rankKey(rank);
   return (
     <Badge
       variant="outline"
       data-rank={key}
-      aria-label={key === "negative" ? `${name}，负面被动` : undefined}
+      aria-label={
+        key === "negative"
+          ? showRank
+            ? `${name}，Rank ${rank}，负面被动`
+            : `${name}，负面被动`
+          : undefined
+      }
       className={cn(
         "min-h-7 rounded-lg px-2.5 py-1 font-semibold",
         rankStyles[key],
         className,
       )}
     >
-      {name}
+      {showRank ? (
+        <>
+          <span className="min-w-0 whitespace-normal">{name}</span>
+          <span className="shrink-0 border-l border-current/20 pl-1.5 text-[0.65rem] opacity-80">
+            {rank === null
+              ? "Rank 未知"
+              : rank < 0
+                ? `Rank ${rank} · 负面`
+                : `Rank ${rank}`}
+          </span>
+        </>
+      ) : (
+        name
+      )}
     </Badge>
   );
 }

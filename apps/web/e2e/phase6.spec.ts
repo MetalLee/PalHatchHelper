@@ -109,8 +109,14 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   expect(routeCount).toBeGreaterThan(0);
   expect(routeCount).toBeLessThanOrEqual(3);
   await routeTabs.first().click();
+  await expect(routeTabs.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("region", { name: "当前路线的配种路径树" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "展开评分明细" }).click();
   await expect(page.getByText("完整评分明细")).toBeVisible();
   await expect(page.getByText("解释已降级")).toBeVisible();
+  await page.getByRole("button", { name: "展开固定版本" }).click();
   await expect(
     page.getByText("inventory-trait-aware-deterministic-v4"),
   ).toBeVisible();

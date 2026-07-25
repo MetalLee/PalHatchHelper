@@ -521,9 +521,10 @@ describe("Phase 6 job comparison", () => {
     render(<BreedingJobView initialResult={value} poll={false} />);
 
     expect(screen.getAllByText("幻色幼崽").length).toBeGreaterThan(0);
-    expect(screen.getByText("棉悠悠")).toBeTruthy();
-    expect(screen.getByText("捣蛋猫")).toBeTruthy();
+    expect(screen.getAllByText("棉悠悠").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("捣蛋猫").length).toBeGreaterThan(0);
     expect(screen.getAllByText("认真").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
     expect(screen.getByText("路线长度")).toBeTruthy();
     expect(screen.getByText(/综合推荐：80\.00/)).toBeTruthy();
     expect(screen.queryByText("test_parent_a")).toBeNull();
@@ -536,15 +537,90 @@ describe("Phase 6 job comparison", () => {
     render(<BreedingJobView initialResult={completedJob()} poll={false} />);
 
     expect(screen.getByText("解释已降级")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /路线/ })).toHaveLength(3);
+    const routeButtons = screen.getAllByRole("button", { name: /路线/ });
+    expect(routeButtons).toHaveLength(3);
+    expect(
+      screen
+        .getByRole("button", { name: "可执行路线 1" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("region", {
+        name: "当前路线的配种路径树",
+      }),
+    ).toBeTruthy();
+
     fireEvent.click(screen.getByRole("button", { name: "可执行路线 2" }));
-    expect(screen.getByText("fixture-parent-a-2")).toBeTruthy();
-    expect(screen.getByText("Fixture Player B")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "可执行路线 2" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Fixture Player B").length).toBeGreaterThan(0);
     expect(screen.getByText("路线 2 模板解释")).toBeTruthy();
-    expect(screen.getByText("完整评分明细")).toBeTruthy();
     expect(screen.getByText("词条来源")).toBeTruthy();
     expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
+    expect(screen.getByText("完整评分明细")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "展开固定版本" }));
     expect(screen.getByText(context.game_data_version_id)).toBeTruthy();
+  });
+
+  it("renders real comparison metrics without inventing a success probability", () => {
+    render(<BreedingJobView initialResult={completedJob()} poll={false} />);
+
+    const firstRoute = screen.getByRole("button", {
+      name: "可执行路线 1",
+    });
+    expect(firstRoute.textContent).toContain("总分");
+    expect(firstRoute.textContent).toContain("89.00");
+    expect(firstRoute.textContent).toContain("1 代");
+    expect(firstRoute.textContent).toContain("1–3 次");
+    expect(firstRoute.textContent).toContain("库存可执行");
+    expect(firstRoute.textContent).toContain("库存覆盖");
+    expect(firstRoute.textContent).toContain("词条覆盖");
+    expect(firstRoute.textContent).not.toMatch(/成功率\s*\d/);
+  });
+
+  it("keeps the tree text order understandable and draws lightweight SVG connections", () => {
+    render(<BreedingJobView initialResult={completedJob()} poll={false} />);
+
+    const tree = screen.getByRole("region", {
+      name: "当前路线的配种路径树",
+    });
+    const mobileSteps = tree.querySelector("ol");
+    const mobileText = mobileSteps?.textContent ?? "";
+    expect(mobileText.indexOf("棉悠悠")).toBeGreaterThanOrEqual(0);
+    expect(mobileText.indexOf("捣蛋猫")).toBeGreaterThan(
+      mobileText.indexOf("棉悠悠"),
+    );
+    expect(mobileText.lastIndexOf("幻色幼崽")).toBeGreaterThan(
+      mobileText.indexOf("捣蛋猫"),
+    );
+    expect(tree.querySelectorAll("path[marker-end]").length).toBe(2);
+  });
+
+  it("shows an existing target inventory node on both responsive tree renderers", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    const existingTarget = route(1);
+    existingTarget.steps = [];
+    existingTarget.step_count = 0;
+    existingTarget.generation_count = 0;
+    existingTarget.existing_target_instance_uid = "existing-target-instance";
+    value.data.plan.routes = [existingTarget];
+    value.data.plan.route_count = 1;
+
+    const { container } = render(
+      <BreedingJobView initialResult={value} poll={false} />,
+    );
+
+    expect(
+      container.querySelectorAll('[data-tree-node="existing_target"]'),
+    ).toHaveLength(2);
+    expect(screen.getAllByText("现有目标").length).toBeGreaterThan(0);
   });
 
   it("separates ready and fallback routes and selects the first ready route", () => {
@@ -572,10 +648,8 @@ describe("Phase 6 job comparison", () => {
 
     expect(screen.getByText("库存可执行方案")).toBeTruthy();
     expect(screen.getByText(/需补充库存的备选方案/)).toBeTruthy();
-    expect(screen.getByText("fixture-parent-a-2")).toBeTruthy();
-    expect(container.querySelector("details")?.hasAttribute("open")).toBe(
-      false,
-    );
+    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+    expect(container.querySelector("details")).toBeNull();
     expect(screen.getByRole("button", { name: "采用此方案" })).toBeTruthy();
   });
 
@@ -612,7 +686,10 @@ describe("Phase 6 job comparison", () => {
     );
 
     expect(container.firstElementChild?.className).toContain("min-w-0");
-    expect(container.querySelectorAll(".break-all").length).toBeGreaterThan(0);
+    expect(container.firstElementChild?.className).toContain("max-w-full");
+    expect(
+      screen.getByRole("region", { name: "当前路线的配种路径树" }).className,
+    ).toContain("min-w-0");
   });
 
   it.each([
@@ -637,22 +714,23 @@ describe("Phase 6 job comparison", () => {
     expect(screen.queryByText(/%/)).toBeNull();
   });
 
-  it("does not report an incomplete bounded search as proof that no legal route exists", () => {
-    const value = completedJob();
-    if (value.data.plan === null) throw new Error("fixture plan missing");
-    value.data.plan.routes = [];
-    value.data.plan.route_count = 0;
-    value.data.plan.explanation_codes = [
-      "SEARCH_LIMIT_REACHED",
-      "SEARCH_INCOMPLETE",
-    ];
-    value.data.plan.diagnostics = { search_complete: false };
+  it.each(["SEARCH_LIMIT_REACHED", "SEARCH_TIMEOUT"])(
+    "does not report %s as proof that no legal route exists",
+    (limitCode) => {
+      const value = completedJob();
+      if (value.data.plan === null) throw new Error("fixture plan missing");
+      value.data.plan.routes = [];
+      value.data.plan.route_count = 0;
+      value.data.plan.explanation_codes = [limitCode, "SEARCH_INCOMPLETE"];
+      value.data.plan.diagnostics = { search_complete: false };
 
-    render(<BreedingJobView initialResult={value} poll={false} />);
+      render(<BreedingJobView initialResult={value} poll={false} />);
 
-    expect(screen.getByText("搜索达到安全上限")).toBeTruthy();
-    expect(screen.queryByText("当前没有合法路线")).toBeNull();
-  });
+      expect(screen.getByText("搜索达到安全上限")).toBeTruthy();
+      expect(screen.getByText(limitCode)).toBeTruthy();
+      expect(screen.queryByText("当前没有合法路线")).toBeNull();
+    },
+  );
 
   it("does not label heuristic pruning as a hard safety limit", () => {
     const value = completedJob();
@@ -769,10 +847,10 @@ describe("Phase 6 job comparison", () => {
     render(<BreedingJobView initialResult={value} poll={false} />);
 
     expect(screen.getByText("仍需准备 1 只 Pal")).toBeTruthy();
-    expect(screen.getByText(/捣蛋猫 · 雌性/)).toBeTruthy();
+    expect(screen.getAllByText(/捣蛋猫 · 雌性/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
-    expect(screen.getByText("父本")).toBeTruthy();
-    expect(screen.getByText("母本")).toBeTruthy();
+    expect(screen.getAllByText("父本").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("母本").length).toBeGreaterThan(0);
     expect(screen.getByText("补齐库存后才可采用此方案")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
   });

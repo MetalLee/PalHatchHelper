@@ -2,7 +2,9 @@ import { Check } from "lucide-react";
 
 const steps = ["目标设置", "方案推荐", "配种路径"] as const;
 
-export function BreederFlowProgress() {
+export function BreederFlowProgress({
+  activeStep = 1,
+}: Readonly<{ activeStep?: 1 | 2 | 3 }>) {
   return (
     <nav
       className="rounded-3xl border border-glass-border bg-glass p-3 shadow-soft backdrop-blur-md sm:p-4"
@@ -10,7 +12,9 @@ export function BreederFlowProgress() {
     >
       <ol className="grid min-w-0 grid-cols-3">
         {steps.map((step, index) => {
-          const current = index === 0;
+          const stepNumber = (index + 1) as 1 | 2 | 3;
+          const current = stepNumber === activeStep;
+          const completed = stepNumber < activeStep;
           return (
             <li
               key={step}
@@ -27,16 +31,23 @@ export function BreederFlowProgress() {
                 className={
                   current
                     ? "relative z-10 grid size-11 place-items-center rounded-full bg-primary font-bold text-primary-foreground shadow-sm"
-                    : "relative z-10 grid size-11 place-items-center rounded-full border border-border bg-white font-bold text-muted-foreground"
+                    : completed
+                      ? "relative z-10 grid size-11 place-items-center rounded-full border border-primary/25 bg-emerald-50 font-bold text-primary"
+                      : "relative z-10 grid size-11 place-items-center rounded-full border border-border bg-white font-bold text-muted-foreground"
                 }
               >
-                {current ? (
+                {completed ? (
                   <>
                     <Check aria-hidden="true" className="size-4" />
-                    <span className="sr-only">当前步骤 1</span>
+                    <span className="sr-only">已完成步骤 {stepNumber}</span>
                   </>
                 ) : (
-                  index + 1
+                  <>
+                    {stepNumber}
+                    {current ? (
+                      <span className="sr-only">，当前步骤</span>
+                    ) : null}
+                  </>
                 )}
               </span>
               <span
