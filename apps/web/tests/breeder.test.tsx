@@ -185,6 +185,7 @@ function route(rank: number): BreedingRoute {
           produced_by_step_index: null,
           location_type: "base",
           location_name: "Fixture Base",
+          location_slot_index: 7,
         },
         parent_b: {
           source_type: "inventory",
@@ -196,8 +197,9 @@ function route(rank: number): BreedingRoute {
           required_passive_ids: [],
           borrowed: rank > 1,
           produced_by_step_index: null,
-          location_type: "base",
-          location_name: "Fixture Base",
+          location_type: "player_storage",
+          location_name: null,
+          location_slot_index: 64,
         },
         child_pal_id: "test_child_pal",
         child_required_gender: null,
@@ -606,6 +608,8 @@ describe("Phase 6 job comparison", () => {
     expect(mobileText.lastIndexOf("幻色幼崽")).toBeGreaterThan(
       mobileText.indexOf("捣蛋猫"),
     );
+    expect(mobileText).toContain("Fixture Base · 工作位 8");
+    expect(mobileText).toContain("终端 · 第 3 页 · 第 5 格");
     expect(tree.querySelectorAll("path[marker-end]").length).toBe(2);
   });
 
@@ -847,6 +851,7 @@ describe("Phase 6 job comparison", () => {
       produced_by_step_index: null,
       location_type: null,
       location_name: null,
+      location_slot_index: null,
     };
     value.data.plan.routes = [missing];
     value.data.plan.route_count = 1;

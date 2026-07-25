@@ -22,6 +22,7 @@ import { type ReactNode, useState } from "react";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
+import { palLocationText } from "@/components/pals/pal-location";
 import { StatusChip } from "@/components/status/status-chip";
 import {
   AlertDialog,
@@ -94,11 +95,7 @@ export function CurrentStepPanel({
   const candidateOwners = uniqueFacts(
     candidates.map((candidate) => candidate.owner_display_name),
   );
-  const candidateLocations = uniqueFacts(
-    candidates.map(
-      (candidate) => candidate.location_name ?? candidate.location_type,
-    ),
-  );
+  const candidateLocations = uniqueFacts(candidates.map(palLocationText));
 
   return (
     <Card

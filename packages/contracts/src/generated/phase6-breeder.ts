@@ -223,6 +223,7 @@ export interface BreedingRouteViewParent {
     | ("player_party" | "player_storage" | "base" | "dimensional_storage" | "viewing_cage" | "unknown")
     | null;
   location_name: string | null;
+  location_slot_index: number | null;
 }
 export interface BreedingRouteViewStep {
   step_index: number;

@@ -149,9 +149,15 @@
         "parent_a_source_kind",
         "parent_a_instance_uid",
         "parent_a_step_index",
+        "parent_a_location_type",
+        "parent_a_location_name",
+        "parent_a_location_slot_index",
         "parent_b_source_kind",
         "parent_b_instance_uid",
         "parent_b_step_index",
+        "parent_b_location_type",
+        "parent_b_location_name",
+        "parent_b_location_slot_index",
         "expected_child_pal_id",
         "required_passive_ids",
         "preferred_gender",
@@ -173,11 +179,35 @@
           "anyOf": [{ "$ref": "#/$defs/InstanceUid" }, { "type": "null" }]
         },
         "parent_a_step_index": { "type": ["integer", "null"], "minimum": 0 },
+        "parent_a_location_type": {
+          "anyOf": [{ "$ref": "#/$defs/PalLocationType" }, { "type": "null" }]
+        },
+        "parent_a_location_name": {
+          "type": ["string", "null"],
+          "maxLength": 160
+        },
+        "parent_a_location_slot_index": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100000
+        },
         "parent_b_source_kind": { "$ref": "#/$defs/PlanParentSourceKind" },
         "parent_b_instance_uid": {
           "anyOf": [{ "$ref": "#/$defs/InstanceUid" }, { "type": "null" }]
         },
         "parent_b_step_index": { "type": ["integer", "null"], "minimum": 0 },
+        "parent_b_location_type": {
+          "anyOf": [{ "$ref": "#/$defs/PalLocationType" }, { "type": "null" }]
+        },
+        "parent_b_location_name": {
+          "type": ["string", "null"],
+          "maxLength": 160
+        },
+        "parent_b_location_slot_index": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100000
+        },
         "expected_child_pal_id": { "$ref": "#/$defs/StableId" },
         "required_passive_ids": {
           "type": "array",
@@ -249,6 +279,7 @@
         "owner_display_name",
         "location_type",
         "location_name",
+        "location_slot_index",
         "accessible",
         "match_score",
         "match_breakdown",
@@ -289,6 +320,11 @@
         },
         "location_type": { "$ref": "#/$defs/PalLocationType" },
         "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "location_slot_index": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100000
+        },
         "accessible": { "type": "boolean" },
         "match_score": { "type": "number", "minimum": 0, "maximum": 1 },
         "match_breakdown": { "$ref": "#/$defs/CandidateMatchBreakdown" },
