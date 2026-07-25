@@ -406,7 +406,8 @@
         "borrowed",
         "produced_by_step_index",
         "location_type",
-        "location_name"
+        "location_name",
+        "location_slot_index"
       ],
       "properties": {
         "source_type": {
@@ -459,7 +460,12 @@
             { "type": "null" }
           ]
         },
-        "location_name": { "type": ["string", "null"], "maxLength": 160 }
+        "location_name": { "type": ["string", "null"], "maxLength": 160 },
+        "location_slot_index": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100000
+        }
       }
     },
     "BreedingRouteViewStep": {

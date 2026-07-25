@@ -244,6 +244,7 @@ insert into public.pal_snapshot_items (
   passive_skill_ids,
   location_type,
   location_name,
+  location_slot_index,
   raw_metadata,
   created_at
 )
@@ -261,6 +262,7 @@ values
     array['test_passive_a'],
     'player_storage',
     'Fixture Storage',
+    0,
     '{"fixture_note":"historical"}',
     '2026-07-13T08:01:00Z'
   ),
@@ -277,6 +279,7 @@ values
     array['test_passive_a'],
     'player_storage',
     'Fixture Storage A',
+    64,
     '{"fixture_note":"owned-a-1"}',
     '2026-07-13T09:01:00Z'
   ),
@@ -293,6 +296,7 @@ values
     array['test_passive_a', 'test_passive_b'],
     'base',
     'Fixture Base Alpha',
+    7,
     '{"fixture_note":"owned-a-2"}',
     '2026-07-13T09:01:00Z'
   ),
@@ -309,6 +313,7 @@ values
     array['test_passive_b'],
     'base',
     'Fixture Base Alpha',
+    8,
     '{"fixture_note":"shared-by-default"}',
     '2026-07-13T09:01:00Z'
   ),
@@ -325,6 +330,7 @@ values
     array['test_passive_private'],
     'player_party',
     null,
+    2,
     '{"fixture_note":"explicitly-private"}',
     '2026-07-13T09:01:00Z'
   ),
@@ -341,6 +347,7 @@ values
     '{}',
     'base',
     'Fixture Base Beta',
+    3,
     '{"fixture_note":"other-guild"}',
     '2026-07-13T09:01:00Z'
   );

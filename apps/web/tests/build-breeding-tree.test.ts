@@ -28,6 +28,7 @@ function inventoryParent(
     produced_by_step_index: null,
     location_type: "player_storage",
     location_name: "Fixture Storage",
+    location_slot_index: 64,
   };
 }
 
@@ -48,6 +49,7 @@ function intermediateParent(
     produced_by_step_index: producedByStepIndex,
     location_type: null,
     location_name: null,
+    location_slot_index: null,
   };
 }
 
@@ -69,6 +71,7 @@ function missingParent(
     produced_by_step_index: null,
     location_type: null,
     location_name: null,
+    location_slot_index: null,
   };
 }
 

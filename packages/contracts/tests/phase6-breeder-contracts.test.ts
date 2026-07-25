@@ -89,6 +89,7 @@ const legacyRoute = {
         produced_by_step_index: null,
         location_type: "base",
         location_name: "Fixture Base",
+        location_slot_index: 7,
       },
       parent_b: {
         source_type: "inventory",
@@ -102,6 +103,7 @@ const legacyRoute = {
         produced_by_step_index: null,
         location_type: "base",
         location_name: "Fixture Base",
+        location_slot_index: 8,
       },
       child_pal_id: "test_child_pal",
       child_required_gender: null,

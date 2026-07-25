@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(57);
+select plan(60);
 
 create temporary table phase7_ids (
   name text primary key,
@@ -365,6 +365,13 @@ select is(
 );
 
 select is(
+  public.get_breeding_job_detail((select id from phase7_ids where name = 'job'))
+    #>> '{data,plan,routes,0,steps,0,parent_a,location_slot_index}',
+  '64',
+  'the breeder route projects the parent slot from its pinned inventory snapshot'
+);
+
+select is(
   jsonb_array_length(
     public.get_breeding_job_detail((select id from phase7_ids where name = 'job'))
       #> '{data,plan,routes,0,missing_requirements}'
@@ -443,6 +450,14 @@ select is(
   ) #>> '{data,summary,desired_passives,0,is_negative}',
   'false',
   'the plan summary projects the catalog negative-passive fact'
+);
+
+select is(
+  public.get_execution_plan_detail(
+    (select id from phase7_ids where name = 'plan-main')
+  ) #>> '{data,steps,0,parent_a_location_slot_index}',
+  '64',
+  'the execution plan projects fixed-parent slots from its pinned snapshot'
 );
 
 select results_eq(
@@ -705,6 +720,7 @@ select 'next-snapshot', public.publish_inventory_snapshot(
         'pal_id', 'test_child_pal', 'gender', 'female', 'level', 1,
         'passive_skill_ids', jsonb_build_array('test_passive_a', 'test_passive_b'),
         'location_type', 'base', 'location_name', 'Fixture Breeding Base',
+        'location_slot_index', 7,
         'owner_resolved', true, 'guild_resolved', true, 'shared_eligible', true,
         'warning_codes', '[]'::jsonb, 'metadata', '{}'::jsonb
       ),
@@ -833,6 +849,14 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select is(
+  public.get_execution_plan_detail(
+    (select id from phase7_ids where name = 'plan-main')
+  ) #>> '{data,candidates,0,location_slot_index}',
+  '7',
+  'the execution plan projects candidate slots from the detected snapshot'
+);
 
 select lives_ok(
   $$

@@ -12,6 +12,7 @@ import {
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
+import { palLocationDisplay } from "@/components/pals/pal-location";
 import { StatusChip } from "@/components/status/status-chip";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -39,55 +40,6 @@ const genderIcons: Record<PalInventoryItem["gender"], LucideIcon> = {
   unknown: CircleHelp,
 };
 
-const locationLabels = {
-  player_party: "队伍",
-  player_storage: "终端",
-  base: "据点",
-  dimensional_storage: "次元仓库",
-  viewing_cage: "观赏笼",
-  unknown: "未知位置",
-} as const;
-
-function storagePage(slotIndex: number): string {
-  return `第 ${Math.floor(slotIndex / 30) + 1} 页 · 第 ${(slotIndex % 30) + 1} 格`;
-}
-
-function locationDisplay(pal: PalInventoryItem): {
-  label: string;
-  detail: string | null;
-} {
-  if (pal.location_type === "base") {
-    const base = pal.location_name ?? locationLabels.base;
-    return {
-      label:
-        pal.location_slot_index === null
-          ? base
-          : `${base} · 工作位 ${pal.location_slot_index + 1}`,
-      detail: null,
-    };
-  }
-  if (
-    (pal.location_type === "player_storage" ||
-      pal.location_type === "dimensional_storage") &&
-    pal.location_slot_index !== null
-  ) {
-    return {
-      label: locationLabels[pal.location_type],
-      detail: storagePage(pal.location_slot_index),
-    };
-  }
-  if (
-    pal.location_type === "player_party" &&
-    pal.location_slot_index !== null
-  ) {
-    return {
-      label: locationLabels.player_party,
-      detail: `队伍第 ${pal.location_slot_index + 1} 位`,
-    };
-  }
-  return { label: locationLabels[pal.location_type], detail: null };
-}
-
 function shareLabel(
   pal: PalInventoryItem,
   dimensionalSharingUnresolved: boolean,
@@ -108,7 +60,7 @@ export function PalInventoryCard({
   pending: boolean;
   onToggleShare: (palInstanceUid: string, enabled: boolean) => void;
 }>) {
-  const location = locationDisplay(pal);
+  const location = palLocationDisplay(pal);
   const dimensionalSharingUnresolved =
     pal.location_type === "dimensional_storage" &&
     pal.location_access_scope !== "guild";

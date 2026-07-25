@@ -2,6 +2,7 @@ import { Box, MapPin, Sparkles, UserRound } from "lucide-react";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
+import { palLocationText } from "@/components/pals/pal-location";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -24,15 +25,6 @@ export interface BreedingTreeNodeOverlay {
   label: string;
   current?: boolean;
 }
-
-const locationLabels: Record<string, string> = {
-  player_party: "队伍",
-  player_storage: "玩家仓库",
-  base: "基地",
-  dimensional_storage: "次元 Pal 仓库",
-  viewing_cage: "观赏笼",
-  unknown: "位置未解析",
-};
 
 export function BreedingTreeNode({
   entity,
@@ -351,12 +343,18 @@ function PassiveList({
 }
 
 function locationText(entity: BreedingTreeEntity): string {
-  if (entity.kind === "intermediate" || entity.kind === "target") {
+  if (
+    (entity.kind === "intermediate" || entity.kind === "target") &&
+    entity.instanceUid === null
+  ) {
     return entity.isTarget ? "由本路线最终步骤产出" : "由前序步骤产出";
   }
-  if (entity.locationName !== null) return entity.locationName;
   if (entity.locationType !== null) {
-    return locationLabels[entity.locationType] ?? entity.locationType;
+    return palLocationText({
+      location_type: entity.locationType,
+      location_name: entity.locationName,
+      location_slot_index: entity.locationSlotIndex,
+    });
   }
   return "位置未提供";
 }

@@ -88,9 +88,15 @@ function detail(
         parent_a_source_kind: "inventory",
         parent_a_instance_uid: "fixture-parent-a",
         parent_a_step_index: null,
+        parent_a_location_type: "player_party",
+        parent_a_location_name: null,
+        parent_a_location_slot_index: 2,
         parent_b_source_kind: "inventory",
         parent_b_instance_uid: "fixture-parent-b",
         parent_b_step_index: null,
+        parent_b_location_type: "dimensional_storage",
+        parent_b_location_name: null,
+        parent_b_location_slot_index: 31,
         expected_child_pal_id: "test_child_pal",
         required_passive_ids: ["test_passive_a", "test_passive_b"],
         preferred_gender: "female",
@@ -110,9 +116,15 @@ function detail(
         parent_a_source_kind: "prior_step",
         parent_a_instance_uid: null,
         parent_a_step_index: 0,
+        parent_a_location_type: null,
+        parent_a_location_name: null,
+        parent_a_location_slot_index: null,
         parent_b_source_kind: "inventory",
         parent_b_instance_uid: "fixture-parent-c",
         parent_b_step_index: null,
+        parent_b_location_type: "base",
+        parent_b_location_name: "Fixture Plan Base",
+        parent_b_location_slot_index: 4,
         expected_child_pal_id: "test_child_pal",
         required_passive_ids: ["test_passive_a"],
         preferred_gender: null,
@@ -141,8 +153,9 @@ function detail(
         gender: "female",
         level: 1,
         owner_display_name: "Fixture Player A",
-        location_type: "base",
-        location_name: "Fixture Breeding Base",
+        location_type: "player_storage",
+        location_name: null,
+        location_slot_index: 64,
         accessible: true,
         match_score: 1,
         match_breakdown: {
@@ -287,6 +300,10 @@ describe("Phase 7 plan detail", () => {
     expect(screen.getByRole("button", { name: "查看候选子代" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "更多步骤操作" })).toBeTruthy();
     expect(screen.getByText("OFFSPRING_CANDIDATES_DETECTED")).toBeTruthy();
+    expect(screen.getAllByText("队伍 · 队伍第 3 位").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("次元仓库 · 第 2 页 · 第 2 格").length,
+    ).toBeGreaterThan(0);
   });
 
   it("shows real candidate facts in a dialog and labels match score as a system score", () => {
@@ -300,7 +317,7 @@ describe("Phase 7 plan detail", () => {
     expect(dialog).toBeTruthy();
     expect(candidateDialog.getByTestId("offspring-candidate")).toBeTruthy();
     expect(candidateDialog.getByText("Fixture Player A")).toBeTruthy();
-    expect(candidateDialog.getByText("Fixture Breeding Base")).toBeTruthy();
+    expect(candidateDialog.getByText("终端 · 第 3 页 · 第 5 格")).toBeTruthy();
     expect(candidateDialog.getByText(/实例 phase7…best/)).toBeTruthy();
     expect(candidateDialog.getByText(/系统匹配评分 1\.00/)).toBeTruthy();
     expect(candidateDialog.getByText(/不是遗传概率/)).toBeTruthy();

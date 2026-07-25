@@ -38,6 +38,7 @@ export interface BreedingTreeEntity {
   producedByStepIndex: number | null;
   locationType: BreedingRouteViewParent["location_type"];
   locationName: string | null;
+  locationSlotIndex: number | null;
   generation: number;
   recipeType: BreedingRouteViewStep["recipe_type"] | null;
   isTarget: boolean;
@@ -123,6 +124,7 @@ export interface BreedingTreeSourceParent {
   producedByStepIndex: number | null;
   locationType: BreedingRouteViewParent["location_type"];
   locationName: string | null;
+  locationSlotIndex?: number | null;
 }
 
 export interface BreedingTreeSourceStep {
@@ -141,6 +143,7 @@ export interface BreedingTreeSourceStep {
   childPassiveSkillIds?: string[];
   childLocationType?: BreedingRouteViewParent["location_type"];
   childLocationName?: string | null;
+  childLocationSlotIndex?: number | null;
 }
 
 export interface BreedingTreeSource {
@@ -272,6 +275,7 @@ export function buildBreedingTreeFromSource(
       producedByStepIndex: step.stepIndex,
       locationType: step.childLocationType ?? null,
       locationName: step.childLocationName ?? null,
+      locationSlotIndex: step.childLocationSlotIndex ?? null,
       generation: step.generation,
       recipeType: step.recipeType,
       isTarget,
@@ -366,6 +370,7 @@ function buildRouteWithoutSteps(
         producedByStepIndex: null,
         locationType: null,
         locationName: null,
+        locationSlotIndex: null,
         generation: 0,
         recipeType: null,
         isTarget: true,
@@ -422,6 +427,7 @@ function toSourceParent(
     producedByStepIndex: parent.produced_by_step_index,
     locationType: parent.location_type,
     locationName: parent.location_name,
+    locationSlotIndex: parent.location_slot_index,
   };
 }
 
@@ -485,6 +491,7 @@ function resolveParent(
         producedByStepIndex: null,
         locationType: parent.locationType,
         locationName: parent.locationName,
+        locationSlotIndex: parent.locationSlotIndex ?? null,
         generation: Math.max(0, step.generation - 1),
         recipeType: null,
         isTarget: false,
@@ -527,6 +534,7 @@ function resolveParent(
     producedByStepIndex: null,
     locationType: null,
     locationName: null,
+    locationSlotIndex: null,
     generation: Math.max(0, step.generation - 1),
     recipeType: null,
     isTarget: false,

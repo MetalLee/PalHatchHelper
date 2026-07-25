@@ -14,6 +14,13 @@ export type InvalidationReasonCode =
   | "FIXED_CONTENT_HASH_MISMATCH";
 export type InstanceUid = string;
 export type PlanParentSourceKind = "inventory" | "prior_step";
+export type PalLocationType =
+  | "player_party"
+  | "player_storage"
+  | "base"
+  | "dimensional_storage"
+  | "viewing_cage"
+  | "unknown";
 export type PlanStepStatus =
   | "not_started"
   | "breeding"
@@ -23,13 +30,6 @@ export type PlanStepStatus =
   | "skipped"
   | "invalidated";
 export type PalGender = "male" | "female" | "genderless" | "unknown";
-export type PalLocationType =
-  | "player_party"
-  | "player_storage"
-  | "base"
-  | "dimensional_storage"
-  | "viewing_cage"
-  | "unknown";
 export type Phase7ErrorCode =
   | "ROUTE_NOT_ADOPTABLE"
   | "PLAN_NOT_FOUND"
@@ -174,9 +174,15 @@ export interface PlanStep {
   parent_a_source_kind: PlanParentSourceKind;
   parent_a_instance_uid: InstanceUid | null;
   parent_a_step_index: number | null;
+  parent_a_location_type: PalLocationType | null;
+  parent_a_location_name: string | null;
+  parent_a_location_slot_index: number | null;
   parent_b_source_kind: PlanParentSourceKind;
   parent_b_instance_uid: InstanceUid | null;
   parent_b_step_index: number | null;
+  parent_b_location_type: PalLocationType | null;
+  parent_b_location_name: string | null;
+  parent_b_location_slot_index: number | null;
   expected_child_pal_id: StableId;
   /**
    * @maxItems 4
@@ -221,6 +227,7 @@ export interface OffspringCandidate {
   owner_display_name: string;
   location_type: PalLocationType;
   location_name: string | null;
+  location_slot_index: number | null;
   accessible: boolean;
   match_score: number;
   match_breakdown: CandidateMatchBreakdown;

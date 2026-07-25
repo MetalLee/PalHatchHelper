@@ -48,6 +48,7 @@ export function buildPlanBreedingTree(detail: PlanDetail): BreedingTreeModel {
       childPassiveSkillIds: selectedCandidate?.matched_passive_ids ?? [],
       childLocationType: selectedCandidate?.location_type ?? null,
       childLocationName: selectedCandidate?.location_name ?? null,
+      childLocationSlotIndex: selectedCandidate?.location_slot_index ?? null,
     };
   });
 
@@ -101,6 +102,7 @@ function planParentToSource(
       producedByStepIndex: parentStepIndex,
       locationType: selectedCandidate?.location_type ?? null,
       locationName: selectedCandidate?.location_name ?? null,
+      locationSlotIndex: selectedCandidate?.location_slot_index ?? null,
     };
   }
 
@@ -118,8 +120,14 @@ function planParentToSource(
     requiredPassiveIds: [],
     borrowed: false,
     producedByStepIndex: null,
-    locationType: null,
-    locationName: null,
+    locationType:
+      side === "a" ? step.parent_a_location_type : step.parent_b_location_type,
+    locationName:
+      side === "a" ? step.parent_a_location_name : step.parent_b_location_name,
+    locationSlotIndex:
+      side === "a"
+        ? step.parent_a_location_slot_index
+        : step.parent_b_location_slot_index,
   };
 }
 

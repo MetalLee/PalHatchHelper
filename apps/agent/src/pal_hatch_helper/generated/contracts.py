@@ -1130,6 +1130,7 @@ class BreedingRouteViewParent(BaseModel):
         | None
     )
     location_name: Annotated[str, Field(max_length=160)] | None
+    location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
 
 
 class BreedingRouteViewStep(BaseModel):
@@ -1439,9 +1440,15 @@ class PlanStep(BaseModel):
     parent_a_source_kind: PlanParentSourceKind
     parent_a_instance_uid: InstanceUid | None
     parent_a_step_index: Annotated[int, Field(ge=0)] | None
+    parent_a_location_type: PalLocationType | None
+    parent_a_location_name: Annotated[str, Field(max_length=160)] | None
+    parent_a_location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
     parent_b_source_kind: PlanParentSourceKind
     parent_b_instance_uid: InstanceUid | None
     parent_b_step_index: Annotated[int, Field(ge=0)] | None
+    parent_b_location_type: PalLocationType | None
+    parent_b_location_name: Annotated[str, Field(max_length=160)] | None
+    parent_b_location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
     expected_child_pal_id: StableId
     required_passive_ids: Annotated[
         list[StableId],
@@ -1491,6 +1498,7 @@ class OffspringCandidate(BaseModel):
     owner_display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
     location_type: PalLocationType
     location_name: Annotated[str, Field(max_length=160)] | None
+    location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
     accessible: bool
     match_score: Annotated[float, Field(ge=0), Field(le=1)]
     match_breakdown: CandidateMatchBreakdown
