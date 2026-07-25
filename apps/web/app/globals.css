@@ -150,15 +150,19 @@ textarea:focus-visible {
 
 .app-frame {
   min-height: 100vh;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .admin-access-denied {
   width: min(100% - 2rem, 42rem);
   margin: 15vh auto;
-  border: 1px solid rgba(251, 113, 133, 0.22);
-  border-radius: 1rem;
+  border: 1px solid rgb(254 205 211);
+  border-radius: 1.5rem;
   padding: 2rem;
-  background: var(--panel);
+  background: rgb(255 255 255 / 0.88);
+  color: var(--foreground);
+  box-shadow: var(--shadow-soft);
 }
 
 .admin-access-denied h1 {
@@ -172,58 +176,31 @@ textarea:focus-visible {
 
 .admin-card {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  padding: 1rem;
-  background: rgba(11, 23, 32, 0.86);
+  border: 1px solid var(--glass-border);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  background: rgb(255 255 255 / 0.84);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
 }
 
 .admin-card h2,
 .admin-card h3 {
   margin-top: 0;
-}
-
-.admin-status {
-  display: inline-flex;
-  max-width: 100%;
-  align-items: center;
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  background: rgba(251, 191, 36, 0.08);
-  color: #fde68a;
-  font-size: 0.72rem;
-  overflow-wrap: anywhere;
-}
-
-.admin-status-good {
-  border-color: rgba(94, 234, 212, 0.25);
-  background: rgba(45, 212, 191, 0.08);
-  color: #99f6e4;
+  color: var(--foreground);
 }
 
 .admin-table-wrap {
+  max-width: 100%;
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.68);
+  scrollbar-width: thin;
 }
 
-.admin-table {
-  width: 100%;
-  min-width: 44rem;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.admin-table th,
-.admin-table td {
-  border-bottom: 1px solid var(--line);
-  padding: 0.75rem 0.6rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.admin-table th {
-  color: var(--muted-foreground);
-  font-weight: 600;
+.admin-table-wrap > [data-slot="table-container"] {
+  max-width: 100%;
 }
 
 .admin-actions {
@@ -242,15 +219,16 @@ textarea:focus-visible {
 .admin-inline-form select {
   min-height: 2.75rem;
   max-width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--input);
   border-radius: 0.7rem;
   padding: 0.55rem 0.65rem;
-  background: #0d1b24;
-  color: white;
+  background: rgb(255 255 255 / 0.8);
+  color: var(--foreground);
 }
 
 .admin-form-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
   gap: 0.8rem;
 }
 
@@ -258,7 +236,8 @@ textarea:focus-visible {
   display: grid;
   gap: 0.35rem;
   color: var(--muted-foreground);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .admin-form-grid input,
@@ -266,11 +245,31 @@ textarea:focus-visible {
 .admin-form-grid textarea {
   min-width: 0;
   min-height: 2.75rem;
-  border: 1px solid var(--line);
+  width: 100%;
+  border: 1px solid var(--input);
   border-radius: 0.7rem;
   padding: 0.65rem 0.75rem;
-  background: rgba(255, 255, 255, 0.035);
-  color: white;
+  background: rgb(255 255 255 / 0.82);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 400;
+}
+
+.admin-form-grid label:has(input[type="checkbox"]) {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.75rem;
+  background: rgb(255 255 255 / 0.62);
+}
+
+.admin-form-grid input[type="checkbox"] {
+  width: 1.25rem;
+  min-height: 1.25rem;
+  accent-color: var(--primary);
 }
 
 .admin-kv {
@@ -288,6 +287,14 @@ textarea:focus-visible {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
+  color: var(--foreground);
+}
+
+.admin-nav-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  scrollbar-width: thin;
 }
 
 @media (min-width: 760px) {
@@ -401,14 +408,14 @@ textarea:focus-visible {
 }
 
 .primary-button {
-  border: 1px solid #63e6d2;
-  background: #54dbc6;
-  color: #06211f;
-  box-shadow: 0 8px 30px rgba(45, 212, 191, 0.13);
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 8px 24px rgb(40 122 84 / 0.16);
 }
 
 .primary-button:hover {
-  background: #7cebd9;
+  background: color-mix(in srgb, var(--primary) 88%, black);
 }
 
 .primary-button:disabled {
@@ -418,13 +425,13 @@ textarea:focus-visible {
 
 .secondary-button {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.03);
-  color: #d9e9e7;
+  background: rgb(255 255 255 / 0.72);
+  color: var(--foreground);
 }
 
 .secondary-button:hover {
-  border-color: rgba(94, 234, 212, 0.3);
-  background: rgba(45, 212, 191, 0.06);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: var(--accent);
 }
 
 .secondary-button[aria-disabled="true"] {

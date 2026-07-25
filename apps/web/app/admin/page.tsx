@@ -1,6 +1,9 @@
+import { AdminAccessDenied } from "@/features/admin/access";
 import {
+  AdminCode,
   AdminEmpty,
   AdminPageHeader,
+  AdminQuickLinks,
   formatAdminTime,
   StatusPill,
 } from "@/features/admin/presentation";
@@ -9,6 +12,14 @@ import {
   loadAdminOverview,
   requireAdminPageAccess,
 } from "@/features/admin/server";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default async function AdminOverviewPage() {
   if (!(await requireAdminPageAccess())) return <AdminAccessDenied />;
@@ -29,9 +40,13 @@ export default async function AdminOverviewPage() {
         title="管理员概览"
         description="仅显示脱敏运行摘要；不包含密钥、Token、公网 IP、路径、原始存档名、堆栈或 SQL。"
       />
+      <AdminQuickLinks />
       {overview.stale && (
-        <section className="admin-card border-amber-300/20" role="status">
-          <p className="eyebrow text-amber-200">STALE</p>
+        <section
+          className="admin-card border-amber-200 bg-amber-50/80"
+          role="status"
+        >
+          <p className="eyebrow text-amber-800">STALE</p>
           <p>最近心跳已过期，当前状态可能不是实时值。</p>
         </section>
       )}
@@ -58,7 +73,11 @@ export default async function AdminOverviewPage() {
           {overview.latest_successful_snapshot ? (
             <dl className="admin-kv">
               <dt>最新快照</dt>
-              <dd>{overview.latest_successful_snapshot.snapshot_id}</dd>
+              <dd>
+                <AdminCode>
+                  {overview.latest_successful_snapshot.snapshot_id}
+                </AdminCode>
+              </dd>
               <dt>同步时间</dt>
               <dd>
                 {formatAdminTime(
@@ -81,13 +100,17 @@ export default async function AdminOverviewPage() {
           <h2>游戏目录</h2>
           <dl className="admin-kv">
             <dt>版本 ID</dt>
-            <dd>{overview.catalog.version_id ?? "未发布"}</dd>
+            <dd>
+              <AdminCode>{overview.catalog.version_id ?? "未发布"}</AdminCode>
+            </dd>
             <dt>Build</dt>
             <dd>{overview.catalog.build ?? "—"}</dd>
             <dt>游戏版本</dt>
             <dd>{overview.catalog.game_version ?? "—"}</dd>
             <dt>Content hash</dt>
-            <dd>{overview.catalog.content_hash ?? "—"}</dd>
+            <dd>
+              <AdminCode>{overview.catalog.content_hash ?? "—"}</AdminCode>
+            </dd>
           </dl>
         </article>
         <article className="admin-card">
@@ -130,7 +153,7 @@ export default async function AdminOverviewPage() {
         </article>
       </section>
       {overview.recent_failure && (
-        <section className="admin-card border-rose-300/20">
+        <section className="admin-card border-rose-200 bg-rose-50/80">
           <h2>最近失败安全摘要</h2>
           <p>
             <StatusPill state={overview.recent_failure.error_code} /> ·{" "}
@@ -145,32 +168,31 @@ export default async function AdminOverviewPage() {
           <AdminEmpty>暂无管理员操作。</AdminEmpty>
         ) : (
           <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>事件</th>
-                  <th>操作者</th>
-                  <th>目标</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="min-w-[44rem]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>时间</TableHead>
+                  <TableHead>事件</TableHead>
+                  <TableHead>操作者</TableHead>
+                  <TableHead>目标</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {audit.slice(0, 20).map((event) => (
-                  <tr key={event.event_id}>
-                    <td>{formatAdminTime(event.created_at)}</td>
-                    <td>{event.event_type}</td>
-                    <td>{event.actor_display}</td>
-                    <td>
+                  <TableRow key={event.event_id}>
+                    <TableCell>{formatAdminTime(event.created_at)}</TableCell>
+                    <TableCell>{event.event_type}</TableCell>
+                    <TableCell>{event.actor_display}</TableCell>
+                    <TableCell>
                       {event.target_type} · {event.target_id ?? "—"}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </section>
     </div>
   );
 }
-import { AdminAccessDenied } from "@/features/admin/access";

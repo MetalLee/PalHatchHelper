@@ -14,6 +14,19 @@ import type {
   AdminCatalogVersion,
   RuntimeSettingsVersion,
 } from "@palhatch/contracts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 async function runAdminAction<T = unknown>(
@@ -53,12 +66,8 @@ export function AdminActionButton({
   const [state, setState] = useState<"idle" | "pending" | "done" | "error">(
     "idle",
   );
+  const [confirmation, setConfirmation] = useState("");
   async function submit() {
-    if (
-      confirmText &&
-      window.prompt(`请输入确认文字：${confirmText}`) !== confirmText
-    )
-      return;
     setState("pending");
     try {
       await runAdminAction({ action, ...payload });
@@ -68,21 +77,71 @@ export function AdminActionButton({
       setState("error");
     }
   }
+  const label =
+    state === "pending"
+      ? "处理中…"
+      : state === "done"
+        ? "已提交"
+        : state === "error"
+          ? "提交失败"
+          : children;
+
+  if (confirmText === undefined) {
+    return (
+      <Button
+        variant="outline"
+        disabled={state === "pending"}
+        onClick={submit}
+        type="button"
+      >
+        {label}
+      </Button>
+    );
+  }
+
   return (
-    <button
-      className="secondary-button"
-      disabled={state === "pending"}
-      onClick={submit}
-      type="button"
-    >
-      {state === "pending"
-        ? "处理中…"
-        : state === "done"
-          ? "已提交"
-          : state === "error"
-            ? "提交失败"
-            : children}
-    </button>
+    <AlertDialog onOpenChange={(open) => !open && setConfirmation("")}>
+      <AlertDialogTrigger asChild>
+        <Button
+          className="border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 hover:text-rose-900"
+          variant="outline"
+          disabled={state === "pending"}
+          type="button"
+        >
+          {label}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认执行受审计操作</AlertDialogTitle>
+          <AlertDialogDescription>
+            此操作会写入管理员审计记录。请输入下方完整确认文字后继续：
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-mono text-sm text-rose-900">
+          {confirmText}
+        </div>
+        <label className="grid gap-2 text-sm font-semibold text-foreground">
+          确认文字
+          <Input
+            aria-label="确认文字"
+            autoComplete="off"
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+          />
+        </label>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={confirmation !== confirmText || state === "pending"}
+            onClick={submit}
+          >
+            确认执行
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -468,7 +527,7 @@ export function CatalogUploadGuard({
       >
         {pending ? "上传中…" : "上传私有目录包"}
       </button>
-      <p className="text-sm text-slate-400" role="status">
+      <p className="text-sm text-muted-foreground" role="status">
         {message}
       </p>
     </form>

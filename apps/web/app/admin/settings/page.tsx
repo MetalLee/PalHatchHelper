@@ -28,7 +28,7 @@ export default async function AdminSettingsPage() {
       />
       <section className="admin-card">
         <h2>当前版本 v{version.version}</h2>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           创建者：{version.created_by_display} ·{" "}
           {formatAdminTime(version.created_at)}
         </p>

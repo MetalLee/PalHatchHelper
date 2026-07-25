@@ -3,23 +3,24 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { PageHero } from "@/components/layout/page-hero";
+
 import { AdminNavigation } from "./admin-navigation";
 
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   return (
-    <div className="grid gap-5">
-      <section className="rounded-2xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-5">
-        <div>
-          <p className="eyebrow">PALHATCH ADMIN</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-            管理中心
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            管理子页面沿用同一顶部导航，权限继续由服务端守卫验证。
-          </p>
+    <div className="grid min-w-0 gap-5">
+      <PageHero
+        eyebrow="PALHATCH ADMIN"
+        title="管理中心"
+        description="查看真实运行摘要并执行受审计操作。权限由每次服务器请求验证，导航可见性不参与授权判断。"
+        className="p-5 sm:p-7"
+      />
+      <section className="-mt-12 min-w-0 px-3 sm:px-5">
+        <div className="relative z-20 rounded-2xl border border-glass-border bg-glass p-3 shadow-soft backdrop-blur-xl">
+          <AdminNavigation activePath={pathname} />
         </div>
-        <AdminNavigation activePath={pathname} />
       </section>
       {children}
     </div>

@@ -1,6 +1,7 @@
 import { AdminActionButton } from "@/features/admin/admin-actions";
 import { AdminAccessDenied } from "@/features/admin/access";
 import {
+  AdminCode,
   AdminPageHeader,
   formatAdminTime,
   StatusPill,
@@ -21,7 +22,10 @@ export default async function AdminSaveParserPage() {
         description="管理员动作进入私有数据库命令队列；Agent 主动轮询，仅执行固定白名单。"
       />
       {status.stale && (
-        <section className="admin-card border-amber-300/20" role="status">
+        <section
+          className="admin-card border-amber-200 bg-amber-50/80"
+          role="status"
+        >
           STALE：Save Worker 心跳已过期。
         </section>
       )}
@@ -74,18 +78,22 @@ export default async function AdminSaveParserPage() {
             <dt>保留数量</dt>
             <dd>{status.snapshot_retention_count}</dd>
             <dt>最新快照</dt>
-            <dd>{status.latest_snapshot?.snapshot_id ?? "—"}</dd>
+            <dd>
+              <AdminCode>
+                {status.latest_snapshot?.snapshot_id ?? "—"}
+              </AdminCode>
+            </dd>
           </dl>
         </article>
         <article className="admin-card">
           <h2>最近失败</h2>
           {status.recent_failure ? (
-            <p>
-              {status.recent_failure.error_code} ·{" "}
-              {status.recent_failure.summary}
-            </p>
+            <div className="grid gap-2">
+              <AdminCode>{status.recent_failure.error_code}</AdminCode>
+              <p>{status.recent_failure.summary}</p>
+            </div>
           ) : (
-            <p className="text-slate-400">暂无失败摘要。</p>
+            <p className="text-muted-foreground">暂无失败摘要。</p>
           )}
         </article>
       </section>
@@ -128,7 +136,7 @@ export default async function AdminSaveParserPage() {
             </AdminActionButton>
           )}
         </div>
-        <p className="mt-4 text-sm text-slate-400">
+        <p className="mt-4 text-sm text-muted-foreground">
           不提供 shell、路径、Steam update、Docker 或 Palworld/mihomo 重启入口。
         </p>
       </section>
