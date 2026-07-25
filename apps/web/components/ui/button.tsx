@@ -7,7 +7,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -15,7 +15,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",

@@ -56,7 +56,7 @@
   --destructive-foreground: #ffffff;
   --border: #cfe5dc;
   --input: #bdd9ce;
-  --ring: #338864;
+  --ring: #4f8798;
   --sky: #78c9ee;
   --forest: #1f6848;
   --leaf: #75b95a;
@@ -84,6 +84,21 @@
 
 * {
   box-sizing: border-box;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--ring) 56%, transparent);
+    outline-offset: 3px;
+  }
 }
 
 html {
@@ -121,15 +136,6 @@ select,
 textarea {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-}
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--ring) 56%, transparent);
-  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -92,6 +92,66 @@ test("inventory scope and pagination links refresh the visible list", async ({
     .not.toBe(firstPalId);
 });
 
+test("inventory filter styles use semantic border colors", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page);
+  await page.goto("/pals");
+
+  const semanticColors = await page
+    .getByRole("link", { name: "清除" })
+    .evaluate((element) => {
+      const resolveColor = (variable: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(${variable})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      return {
+        border: getComputedStyle(element).borderTopColor,
+        foreground: resolveColor("--foreground"),
+        semanticBorder: resolveColor("--border"),
+        semanticInput: resolveColor("--input"),
+      };
+    });
+
+  expect(semanticColors.border).toBe(semanticColors.semanticInput);
+  expect(semanticColors.border).not.toBe(semanticColors.foreground);
+
+  await page.getByRole("combobox", { name: "所有者" }).click();
+  const selectContent = page.locator('[data-slot="select-content"]');
+  await expect(selectContent).toBeVisible();
+  const selectBorder = await selectContent.evaluate(
+    (element) => getComputedStyle(element).borderTopColor,
+  );
+  expect(selectBorder).toBe(semanticColors.semanticBorder);
+});
+
+test("inventory filter styles keep a single search focus indicator", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page);
+  await page.goto("/pals");
+
+  await page.getByRole("combobox", { name: "被动" }).click();
+  const commandInput = page.locator('[data-slot="command-input"]');
+  await expect(commandInput).toBeFocused();
+
+  const inputFocus = await commandInput.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return style.outlineStyle;
+  });
+  expect(inputFocus).toBe("none");
+
+  const wrapperShadow = await page
+    .locator('[data-slot="command-input-wrapper"]')
+    .evaluate((element) => getComputedStyle(element).boxShadow);
+  expect(wrapperShadow).not.toBe("none");
+});
+
 test("iPhone flow filters inventory, pages deterministically and toggles owned sharing", async ({
   page,
 }) => {
