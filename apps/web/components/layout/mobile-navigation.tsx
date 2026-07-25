@@ -2,7 +2,7 @@
 
 import { LogOut, Menu, Settings, ShieldCheck, Sprout } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import {
   currentPageTitle,
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+const subscribeToHydration = (): (() => void) => () => undefined;
+
 export function MobileNavigation({
   activePath,
   displayName,
@@ -32,11 +34,11 @@ export function MobileNavigation({
   role: "admin" | "player";
   onSignOut: () => void;
 }>) {
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
 
   return (
     <Sheet>
