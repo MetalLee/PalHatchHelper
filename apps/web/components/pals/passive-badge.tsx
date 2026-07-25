@@ -11,7 +11,8 @@ const rankStyles: Record<string, string> = {
   unknown: "border-slate-200 bg-slate-100 text-slate-600",
 };
 
-function rankKey(rank: number | null): string {
+function rankKey(rank: number | null, isNegative: boolean | null): string {
+  if (isNegative === true) return "negative";
   if (rank === null) return "unknown";
   if (rank < 0) return "negative";
   if (rank >= 1 && rank <= 5) return String(rank);
@@ -21,15 +22,17 @@ function rankKey(rank: number | null): string {
 export function PassiveBadge({
   name,
   rank,
+  isNegative = null,
   showRank = false,
   className,
 }: Readonly<{
   name: string;
   rank: number | null;
+  isNegative?: boolean | null;
   showRank?: boolean;
   className?: string;
 }>) {
-  const key = rankKey(rank);
+  const key = rankKey(rank, isNegative);
   return (
     <Badge
       variant="outline"
@@ -51,10 +54,10 @@ export function PassiveBadge({
         <>
           <span className="min-w-0 whitespace-normal">{name}</span>
           <span className="shrink-0 border-l border-current/20 pl-1.5 text-[0.65rem] opacity-80">
-            {rank === null
-              ? "Rank 未知"
-              : rank < 0
-                ? `Rank ${rank} · 负面`
+            {key === "negative"
+              ? `Rank ${rank ?? "未知"} · 负面`
+              : rank === null
+                ? "Rank 未知"
                 : `Rank ${rank}`}
           </span>
         </>

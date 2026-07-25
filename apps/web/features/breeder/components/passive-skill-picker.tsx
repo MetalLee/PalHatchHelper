@@ -17,7 +17,11 @@ type PassiveOption = BreederFormContext["passive_skills"][number];
 function PassiveMetadata({ skill }: Readonly<{ skill: PassiveOption }>) {
   return (
     <span className="flex flex-wrap items-center gap-1.5">
-      <PassiveBadge name={skill.display_name} rank={skill.rank} />
+      <PassiveBadge
+        name={skill.display_name}
+        rank={skill.rank}
+        isNegative={skill.is_negative}
+      />
       <Badge
         variant="outline"
         className="rounded-full border-sky-200 bg-sky-50 text-sky-900"
@@ -104,6 +108,7 @@ export function PassiveSkillPicker({
                 <PassiveBadge
                   name={skill.display_name}
                   rank={skill.rank}
+                  isNegative={skill.is_negative}
                   className="max-w-[13rem] truncate"
                 />
                 <span className="text-xs font-semibold text-muted-foreground">

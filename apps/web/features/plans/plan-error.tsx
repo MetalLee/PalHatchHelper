@@ -16,5 +16,12 @@ const messages: Record<string, [string, string]> = {
 
 export function PlanError({ code }: Readonly<{ code: string }>) {
   const [title, description] = messages[code] ?? ["操作未完成", code];
-  return <PageError code={code} title={title} description={description} />;
+  return (
+    <PageError
+      code={code}
+      title={title}
+      description={description}
+      headingLevel="h1"
+    />
+  );
 }

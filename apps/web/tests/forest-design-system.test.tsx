@@ -85,6 +85,17 @@ describe("Forest Healing design system", () => {
       "负面",
     );
 
+    rerender(
+      <PassiveBadge name="目录负面被动" rank={1} isNegative={true} showRank />,
+    );
+    expect(
+      screen
+        .getByText("目录负面被动")
+        .closest("[data-rank]")
+        ?.getAttribute("data-rank"),
+    ).toBe("negative");
+    expect(screen.getByText(/Rank 1/).textContent).toContain("负面");
+
     rerender(<PassiveBadge name="未知品级" rank={null} />);
     expect(screen.getByText("未知品级").dataset.rank).toBe("unknown");
   });

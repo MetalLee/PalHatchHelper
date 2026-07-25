@@ -32,6 +32,20 @@ function summary(
     target_pal_display_name: "幻色幼崽",
     desired_passive_ids: ["test_passive_a", "test_passive_b"],
     desired_passive_display_names: ["稀有", "工匠精神"],
+    desired_passives: [
+      {
+        passive_skill_id: "test_passive_a",
+        display_name: "稀有",
+        rank: 5,
+        is_negative: false,
+      },
+      {
+        passive_skill_id: "test_passive_b",
+        display_name: "工匠精神",
+        rank: 4,
+        is_negative: false,
+      },
+    ],
     status,
     current_step_index: 0,
     completed_step_count: 0,
@@ -208,7 +222,9 @@ describe("Phase 7 plan list", () => {
     expect(screen.getAllByText("幻色幼崽").length).toBe(4);
     expect(screen.getByText("1 个候选")).toBeTruthy();
     expect(screen.getAllByText("1 / 2").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Rank 未知").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rank 5").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rank 4").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Rank 未知")).toBeNull();
     expect(screen.getByRole("link", { name: "下一页" })).toBeTruthy();
 
     fireEvent.pointerDown(screen.getByRole("button", { name: "更多筛选" }), {
@@ -288,7 +304,9 @@ describe("Phase 7 plan detail", () => {
     expect(candidateDialog.getByText(/实例 phase7…best/)).toBeTruthy();
     expect(candidateDialog.getByText(/系统匹配评分 1\.00/)).toBeTruthy();
     expect(candidateDialog.getByText(/不是遗传概率/)).toBeTruthy();
-    expect(candidateDialog.getAllByText("Rank 未知").length).toBeGreaterThan(0);
+    expect(candidateDialog.getAllByText("Rank 5").length).toBeGreaterThan(0);
+    expect(candidateDialog.getAllByText("Rank 4").length).toBeGreaterThan(0);
+    expect(candidateDialog.queryByText("Rank 未知")).toBeNull();
     expect(
       candidateDialog.getByRole("button", { name: "确认真实子代" }),
     ).toBeTruthy();

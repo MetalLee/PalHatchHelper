@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 
 import type { RunPlanAction } from "./plan-action-types";
+import type { BreedingTreePassiveFact } from "@/features/breeder/lib/build-breeding-tree";
 import {
   formatPlanDateTime,
   palGenderLabel,
@@ -58,11 +59,13 @@ const breakdownLabels: Record<
 export function CandidateDialog({
   candidates,
   passiveNames,
+  passiveFacts,
   busy,
   act,
 }: Readonly<{
   candidates: readonly OffspringCandidate[];
   passiveNames: ReadonlyMap<string, string>;
+  passiveFacts: ReadonlyMap<string, BreedingTreePassiveFact>;
   busy: boolean;
   act: RunPlanAction;
 }>) {
@@ -87,6 +90,7 @@ export function CandidateDialog({
               key={candidate.candidate_key}
               candidate={candidate}
               passiveNames={passiveNames}
+              passiveFacts={passiveFacts}
               busy={busy}
               act={act}
             />
@@ -100,11 +104,13 @@ export function CandidateDialog({
 function CandidateCard({
   candidate,
   passiveNames,
+  passiveFacts,
   busy,
   act,
 }: Readonly<{
   candidate: OffspringCandidate;
   passiveNames: ReadonlyMap<string, string>;
+  passiveFacts: ReadonlyMap<string, BreedingTreePassiveFact>;
   busy: boolean;
   act: RunPlanAction;
 }>) {
@@ -185,7 +191,8 @@ function CandidateCard({
               <PassiveBadge
                 key={passiveId}
                 name={passiveNames.get(passiveId) ?? passiveId}
-                rank={null}
+                rank={passiveFacts.get(passiveId)?.rank ?? null}
+                isNegative={passiveFacts.get(passiveId)?.isNegative ?? null}
                 showRank
                 className="max-w-full"
               />

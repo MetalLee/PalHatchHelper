@@ -5,6 +5,9 @@ import {
 import { AdminAccessDenied } from "@/features/admin/access";
 import {
   AdminPageHeader,
+  adminDefinitionListClasses,
+  adminPageClasses,
+  adminPanelClasses,
   formatAdminTime,
 } from "@/features/admin/presentation";
 import {
@@ -20,13 +23,13 @@ export default async function AdminSettingsPage() {
     loadAdminSecretStatuses(),
   ]);
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="VERSIONED NON-SECRET SETTINGS"
         title="系统设置"
         description="这里只管理非秘密设置。密钥只显示 configured / not_configured 与最近检查时间，不返回值。"
       />
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>当前版本 v{version.version}</h2>
         <p className="text-sm text-muted-foreground">
           创建者：{version.created_by_display} ·{" "}
@@ -34,7 +37,7 @@ export default async function AdminSettingsPage() {
         </p>
         <SettingsForm version={version} />
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>回滚</h2>
         <p>回滚会追加新版本，不修改或删除历史。</p>
         {version.version > 1 && (
@@ -47,9 +50,9 @@ export default async function AdminSettingsPage() {
           </AdminActionButton>
         )}
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>秘密配置状态</h2>
-        <dl className="admin-kv">
+        <dl className={adminDefinitionListClasses}>
           {secrets.map((secret) => (
             <div key={secret.name} className="contents">
               <dt>{secret.name}</dt>

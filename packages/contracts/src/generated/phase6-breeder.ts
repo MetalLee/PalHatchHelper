@@ -456,6 +456,8 @@ export interface BreederPalLocalization {
 export interface BreederPassiveLocalization {
   passive_skill_id: BreederStableId;
   display_name: string;
+  rank: number;
+  is_negative: boolean;
 }
 export interface BreedingError {
   error_code: string;

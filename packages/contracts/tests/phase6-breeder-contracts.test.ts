@@ -136,7 +136,12 @@ describe("Phase 6 historical route compatibility", () => {
             { pal_id: "test_child_pal", display_name: "幻色幼崽" },
           ],
           passive_skills: [
-            { passive_skill_id: "test_passive_a", display_name: "认真" },
+            {
+              passive_skill_id: "test_passive_a",
+              display_name: "认真",
+              rank: 1,
+              is_negative: false,
+            },
           ],
         },
         attempt_count: 1,

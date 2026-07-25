@@ -29,6 +29,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
+import {
+  adminActionsClasses,
+  adminActionStackClasses,
+  adminControlClasses,
+  adminFormClasses,
+} from "./presentation";
+
 async function runAdminAction<T = unknown>(
   body: Record<string, unknown>,
 ): Promise<T> {
@@ -175,7 +182,7 @@ export function BindingCreateForm({
     }
   }
   return (
-    <form className="admin-form-grid" onSubmit={submit}>
+    <form className={adminFormClasses} onSubmit={submit}>
       <label>
         Supabase 用户
         <select name="user_id" required defaultValue="">
@@ -202,17 +209,13 @@ export function BindingCreateForm({
           ))}
         </select>
       </label>
-      <button
-        className="primary-button"
-        disabled={status === "pending"}
-        type="submit"
-      >
+      <Button disabled={status === "pending"} type="submit">
         {status === "pending"
           ? "创建中…"
           : status === "error"
             ? "创建失败，重试"
             : "创建绑定"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -249,8 +252,9 @@ export function BindingUpdateForm({
     }
   }
   return (
-    <form className="admin-inline-form" onSubmit={submit}>
+    <form className={adminActionStackClasses} onSubmit={submit}>
       <select
+        className={adminControlClasses}
         aria-label={`修改 ${user.user_display} 的绑定`}
         name="player_id"
         required
@@ -262,17 +266,13 @@ export function BindingUpdateForm({
           </option>
         ))}
       </select>
-      <button
-        className="secondary-button"
-        disabled={status === "pending"}
-        type="submit"
-      >
+      <Button variant="outline" disabled={status === "pending"} type="submit">
         {status === "error"
           ? "修改失败"
           : status === "pending"
             ? "修改中…"
             : "修改"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -319,12 +319,13 @@ export function SettingsForm({
     }
   }
   return (
-    <form className="admin-form-grid" onSubmit={submit}>
-      <label>
+    <form className={adminFormClasses} onSubmit={submit}>
+      <label className="!flex min-h-11 items-center justify-between rounded-lg border border-border bg-white/62 px-3 py-2">
         <span>允许创建任务</span>
         <input
           name="job_creation_enabled"
           type="checkbox"
+          className="size-5 accent-primary"
           defaultChecked={settings.job_creation_enabled}
         />
       </label>
@@ -403,17 +404,13 @@ export function SettingsForm({
           defaultValue={settings.maintenance_announcement ?? ""}
         />
       </label>
-      <button
-        className="primary-button"
-        type="submit"
-        disabled={status === "pending"}
-      >
+      <Button type="submit" disabled={status === "pending"}>
         {status === "pending"
           ? "保存中…"
           : status === "error"
             ? "保存失败，重试"
             : "保存新版本"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -496,7 +493,7 @@ export function CatalogUploadGuard({
     }
   }
   return (
-    <form className="admin-form-grid" onSubmit={submit}>
+    <form className={adminFormClasses} onSubmit={submit}>
       <label>
         目录来源
         <select name="source_id" required defaultValue="">
@@ -520,13 +517,9 @@ export function CatalogUploadGuard({
           accept=".tar.zst,application/zstd"
         />
       </label>
-      <button
-        className="primary-button"
-        disabled={pending || sources.length === 0}
-        type="submit"
-      >
+      <Button disabled={pending || sources.length === 0} type="submit">
         {pending ? "上传中…" : "上传私有目录包"}
-      </button>
+      </Button>
       <p className="text-sm text-muted-foreground" role="status">
         {message}
       </p>
@@ -538,7 +531,7 @@ export function CatalogUploadActions({
   upload,
 }: Readonly<{ upload: AdminCatalogUpload }>) {
   return (
-    <div className="admin-actions">
+    <div className={adminActionsClasses}>
       {(upload.status === "uploaded" || upload.status === "failed") && (
         <AdminActionButton
           action="catalog_validate"
@@ -577,9 +570,10 @@ export function CatalogVersionActions({
 }: Readonly<{ version: AdminCatalogVersion; worlds: AdminCatalogWorld[] }>) {
   const [worldId, setWorldId] = useState(worlds[0]?.world_id ?? "");
   return (
-    <div className="admin-action-stack">
+    <div className={adminActionStackClasses}>
       {worlds.length > 0 && (
         <select
+          className={adminControlClasses}
           aria-label={`选择 ${version.version_id} 的世界`}
           value={worldId}
           onChange={(event) => setWorldId(event.target.value)}
@@ -591,7 +585,7 @@ export function CatalogVersionActions({
           ))}
         </select>
       )}
-      <div className="admin-actions">
+      <div className={adminActionsClasses}>
         <AdminActionButton
           action="catalog_inspect"
           payload={{ version_id: version.version_id }}

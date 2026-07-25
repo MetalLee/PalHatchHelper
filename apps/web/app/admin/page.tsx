@@ -4,6 +4,11 @@ import {
   AdminEmpty,
   AdminPageHeader,
   AdminQuickLinks,
+  adminDefinitionListClasses,
+  adminGridClasses,
+  adminPageClasses,
+  adminPanelClasses,
+  adminTableFrameClasses,
   formatAdminTime,
   StatusPill,
 } from "@/features/admin/presentation";
@@ -34,7 +39,7 @@ export default async function AdminOverviewPage() {
     ["Candidate Detector", overview.candidate_detector],
   ] as const;
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="OPERATIONS OVERVIEW"
         title="管理员概览"
@@ -43,18 +48,20 @@ export default async function AdminOverviewPage() {
       <AdminQuickLinks />
       {overview.stale && (
         <section
-          className="admin-card border-amber-200 bg-amber-50/80"
+          className={`${adminPanelClasses} border-amber-200 bg-amber-50/80`}
           role="status"
         >
-          <p className="eyebrow text-amber-800">STALE</p>
+          <p className="text-xs font-bold tracking-[0.16em] text-amber-800 uppercase">
+            STALE
+          </p>
           <p>最近心跳已过期，当前状态可能不是实时值。</p>
         </section>
       )}
-      <section className="admin-grid" aria-label="Worker 状态">
+      <section className={adminGridClasses} aria-label="Worker 状态">
         {workers.map(([name, worker]) => (
-          <article className="admin-card" key={name}>
+          <article className={adminPanelClasses} key={name}>
             <h2>{name}</h2>
-            <dl className="admin-kv">
+            <dl className={adminDefinitionListClasses}>
               <dt>状态</dt>
               <dd>
                 <StatusPill state={worker.state} />
@@ -67,11 +74,11 @@ export default async function AdminOverviewPage() {
           </article>
         ))}
       </section>
-      <section className="admin-grid">
-        <article className="admin-card">
+      <section className={adminGridClasses}>
+        <article className={adminPanelClasses}>
           <h2>库存与 Parser</h2>
           {overview.latest_successful_snapshot ? (
-            <dl className="admin-kv">
+            <dl className={adminDefinitionListClasses}>
               <dt>最新快照</dt>
               <dd>
                 <AdminCode>
@@ -96,9 +103,9 @@ export default async function AdminOverviewPage() {
             <AdminEmpty>暂无成功快照。</AdminEmpty>
           )}
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>游戏目录</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>版本 ID</dt>
             <dd>
               <AdminCode>{overview.catalog.version_id ?? "未发布"}</AdminCode>
@@ -113,9 +120,9 @@ export default async function AdminOverviewPage() {
             </dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>任务队列</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>pending</dt>
             <dd>{overview.job_counts.pending}</dd>
             <dt>processing</dt>
@@ -126,9 +133,9 @@ export default async function AdminOverviewPage() {
             <dd>{overview.job_counts.failed}</dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>AI 与部署</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>Provider</dt>
             <dd>{overview.ai_provider.provider}</dd>
             <dt>状态</dt>
@@ -153,7 +160,9 @@ export default async function AdminOverviewPage() {
         </article>
       </section>
       {overview.recent_failure && (
-        <section className="admin-card border-rose-200 bg-rose-50/80">
+        <section
+          className={`${adminPanelClasses} border-rose-200 bg-rose-50/80`}
+        >
           <h2>最近失败安全摘要</h2>
           <p>
             <StatusPill state={overview.recent_failure.error_code} /> ·{" "}
@@ -162,12 +171,12 @@ export default async function AdminOverviewPage() {
           <small>{formatAdminTime(overview.recent_failure.occurred_at)}</small>
         </section>
       )}
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>最近审计</h2>
         {audit.length === 0 ? (
           <AdminEmpty>暂无管理员操作。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
+          <div className={adminTableFrameClasses}>
             <Table className="min-w-[44rem]">
               <TableHeader>
                 <TableRow>

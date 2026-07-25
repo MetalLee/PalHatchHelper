@@ -273,15 +273,16 @@ function PlanCard({
           <p className="text-xs font-semibold text-muted-foreground">
             目标被动及 Rank
           </p>
-          {plan.desired_passive_display_names.length === 0 ? (
+          {plan.desired_passives.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">无指定被动</p>
           ) : (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {plan.desired_passive_display_names.map((name, index) => (
+              {plan.desired_passives.map((passive) => (
                 <PassiveBadge
-                  key={plan.desired_passive_ids[index] ?? name}
-                  name={name}
-                  rank={null}
+                  key={passive.passive_skill_id}
+                  name={passive.display_name}
+                  rank={passive.rank}
+                  isNegative={passive.is_negative}
                   showRank
                   className="max-w-full"
                 />

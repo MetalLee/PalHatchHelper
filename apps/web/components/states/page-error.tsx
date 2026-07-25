@@ -10,15 +10,18 @@ export function PageError({
   description,
   action,
   className,
+  headingLevel = "h2",
 }: Readonly<{
   code?: string;
   title: string;
   description: string;
   action?: ReactNode;
   className?: string;
+  headingLevel?: "h1" | "h2" | "h3";
 }>) {
   const titleId = useId();
   const descriptionId = useId();
+  const Heading = headingLevel;
 
   return (
     <Alert
@@ -37,12 +40,12 @@ export function PageError({
           {code}
         </p>
       ) : null}
-      <h2
+      <Heading
         id={titleId}
         className="col-start-2 min-h-4 text-lg font-bold tracking-tight"
       >
         {title}
-      </h2>
+      </Heading>
       <AlertDescription id={descriptionId} className="text-rose-800">
         {description}
       </AlertDescription>

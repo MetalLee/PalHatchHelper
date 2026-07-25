@@ -7,6 +7,10 @@ import {
   AdminCode,
   AdminEmpty,
   AdminPageHeader,
+  adminActionsClasses,
+  adminPageClasses,
+  adminPanelClasses,
+  adminTableFrameClasses,
   formatAdminTime,
   StatusPill,
 } from "@/features/admin/presentation";
@@ -31,15 +35,15 @@ export default async function AdminJobsPage() {
     loadRuntimeSettings(),
   ]);
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="DETERMINISTIC JOB CONTROL"
         title="任务与 AI"
         description="只能重试、取消或回收确认超时的任务；固定快照、目录版本、路线与分数不可修改。"
       />
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>控制</h2>
-        <div className="admin-actions">
+        <div className={adminActionsClasses}>
           <StatusPill
             state={
               settings.settings.job_creation_enabled
@@ -53,12 +57,12 @@ export default async function AdminJobsPage() {
           </AdminActionButton>
         </div>
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>最近任务</h2>
         {jobs.length === 0 ? (
           <AdminEmpty>暂无任务。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
+          <div className={adminTableFrameClasses}>
             <Table className="min-w-[68rem]">
               <TableHeader>
                 <TableRow>
@@ -107,7 +111,7 @@ export default async function AdminJobsPage() {
                         : ""}
                     </TableCell>
                     <TableCell>
-                      <div className="admin-actions">
+                      <div className={adminActionsClasses}>
                         {job.status === "failed" && (
                           <AdminActionButton
                             action="retry_breeding_job"

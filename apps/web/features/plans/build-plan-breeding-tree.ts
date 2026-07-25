@@ -12,6 +12,8 @@ import {
   type BreedingTreeSourceStep,
 } from "@/features/breeder/lib/build-breeding-tree";
 
+import { buildPlanPassiveFacts } from "./passive-facts";
+
 export function buildPlanBreedingTree(detail: PlanDetail): BreedingTreeModel {
   const sortedSteps = [...detail.steps].sort(
     (left, right) => left.step_index - right.step_index,
@@ -49,12 +51,15 @@ export function buildPlanBreedingTree(detail: PlanDetail): BreedingTreeModel {
     };
   });
 
-  return buildBreedingTreeFromSource({
-    steps: sourceSteps,
-    feasibilityStatus: null,
-    adoptable: false,
-    hasMissing: false,
-  });
+  return buildBreedingTreeFromSource(
+    {
+      steps: sourceSteps,
+      feasibilityStatus: null,
+      adoptable: false,
+      hasMissing: false,
+    },
+    { passiveFacts: buildPlanPassiveFacts(detail.summary) },
+  );
 }
 
 function planParentToSource(

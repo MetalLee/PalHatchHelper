@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(55);
+select plan(57);
 
 create temporary table phase7_ids (
   name text primary key,
@@ -427,6 +427,22 @@ select ok(
     (select id from phase7_ids where name = 'route-main'), 'phase7:adopt:retry'
   )),
   'route adoption is idempotent and returns the same plan'
+);
+
+select is(
+  public.get_execution_plan_detail(
+    (select id from phase7_ids where name = 'plan-main')
+  ) #>> '{data,summary,desired_passives,0,rank}',
+  '1',
+  'the plan summary projects passive rank from its fixed catalog version'
+);
+
+select is(
+  public.get_execution_plan_detail(
+    (select id from phase7_ids where name = 'plan-main')
+  ) #>> '{data,summary,desired_passives,0,is_negative}',
+  'false',
+  'the plan summary projects the catalog negative-passive fact'
 );
 
 select results_eq(

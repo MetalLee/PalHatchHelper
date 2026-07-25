@@ -18,15 +18,15 @@
 
 以下 7 个文件全部存在，均为 `1672 × 941` RGB PNG：
 
-| 原型 | 状态 |
-| --- | --- |
-| `docs/ui-reference/forest-healing/01-login.png` | 存在 |
-| `docs/ui-reference/forest-healing/02-overview.png` | 存在 |
-| `docs/ui-reference/forest-healing/03-pals.png` | 存在 |
-| `docs/ui-reference/forest-healing/04-breeder.png` | 存在 |
-| `docs/ui-reference/forest-healing/05-plans.png` | 存在 |
+| 原型                                                  | 状态 |
+| ----------------------------------------------------- | ---- |
+| `docs/ui-reference/forest-healing/01-login.png`       | 存在 |
+| `docs/ui-reference/forest-healing/02-overview.png`    | 存在 |
+| `docs/ui-reference/forest-healing/03-pals.png`        | 存在 |
+| `docs/ui-reference/forest-healing/04-breeder.png`     | 存在 |
+| `docs/ui-reference/forest-healing/05-plans.png`       | 存在 |
 | `docs/ui-reference/forest-healing/06-data-status.png` | 存在 |
-| `docs/ui-reference/forest-healing/07-admin.png` | 存在 |
+| `docs/ui-reference/forest-healing/07-admin.png`       | 存在 |
 
 ### 2.1 只能借鉴的视觉语言
 
@@ -50,24 +50,24 @@
 
 所有受保护业务页面均通过 `force-dynamic` 或动态父布局按用户请求读取会话，不应在 UI 重构中改成跨用户静态缓存。
 
-| 路由 | App Router 文件 | 边界 | 页面直接依赖 |
-| --- | --- | --- | --- |
-| `/` | `app/page.tsx` | Server | 重定向 `/overview` |
-| `/login` | `app/login/page.tsx` | Server + `LoginForm` Client | `POST /api/auth/login` |
-| `/overview` | `app/(workspace)/overview/page.tsx` | Server | `requireUserContext`、`getOverviewSummary`、`dataStatusPresentation` |
-| `/pals` | `app/(workspace)/pals/page.tsx` | Server + `PalInventory` Client | `parsePalListQuery`、`listPals`、筛选/分页展示 |
-| `/breeder` | `app/(workspace)/breeder/page.tsx` | Server + `BreederForm` Client | `loadBreederFormContext` |
-| `/breeder/jobs/[jobId]` | `app/(workspace)/breeder/jobs/[jobId]/page.tsx` | Server + `BreedingJobView` Client | `loadBreedingJob` |
-| `/plans` | `app/(workspace)/plans/page.tsx` | Server | `loadPlans`、`PlanList` |
-| `/plans/[planId]` | `app/(workspace)/plans/[planId]/page.tsx` | Server + `PlanDetail` Client | `loadPlanDetail` |
-| `/data-status` | `app/(workspace)/data-status/page.tsx` | Server | `getInventoryDataStatus`、状态 presentation |
-| `/account` | `app/(workspace)/account/page.tsx` | Server + `SignOutButton` Client | `requireUserContext`、`POST /api/auth/logout` |
-| `/admin` | `app/admin/page.tsx` | Server | `loadAdminOverview`、`loadAdminAuditEvents` |
-| `/admin/bindings` | `app/admin/bindings/page.tsx` | Server + admin actions Client | `loadAdminBindings` |
-| `/admin/save-parser` | `app/admin/save-parser/page.tsx` | Server + admin actions Client | `loadAdminSaveParserStatus` |
-| `/admin/breeding-data` | `app/admin/breeding-data/page.tsx` | Server + admin actions Client | `loadAdminCatalogWorkspace` |
-| `/admin/jobs` | `app/admin/jobs/page.tsx` | Server + admin actions Client | `loadAdminJobs`、秘密配置状态 |
-| `/admin/settings` | `app/admin/settings/page.tsx` | Server + admin actions Client | runtime settings、秘密配置状态 |
+| 路由                    | App Router 文件                                 | 边界                              | 页面直接依赖                                                         |
+| ----------------------- | ----------------------------------------------- | --------------------------------- | -------------------------------------------------------------------- |
+| `/`                     | `app/page.tsx`                                  | Server                            | 重定向 `/overview`                                                   |
+| `/login`                | `app/login/page.tsx`                            | Server + `LoginForm` Client       | `POST /api/auth/login`                                               |
+| `/overview`             | `app/(workspace)/overview/page.tsx`             | Server                            | `requireUserContext`、`getOverviewSummary`、`dataStatusPresentation` |
+| `/pals`                 | `app/(workspace)/pals/page.tsx`                 | Server + `PalInventory` Client    | `parsePalListQuery`、`listPals`、筛选/分页展示                       |
+| `/breeder`              | `app/(workspace)/breeder/page.tsx`              | Server + `BreederForm` Client     | `loadBreederFormContext`                                             |
+| `/breeder/jobs/[jobId]` | `app/(workspace)/breeder/jobs/[jobId]/page.tsx` | Server + `BreedingJobView` Client | `loadBreedingJob`                                                    |
+| `/plans`                | `app/(workspace)/plans/page.tsx`                | Server                            | `loadPlans`、`PlanList`                                              |
+| `/plans/[planId]`       | `app/(workspace)/plans/[planId]/page.tsx`       | Server + `PlanDetail` Client      | `loadPlanDetail`                                                     |
+| `/data-status`          | `app/(workspace)/data-status/page.tsx`          | Server                            | `getInventoryDataStatus`、状态 presentation                          |
+| `/account`              | `app/(workspace)/account/page.tsx`              | Server + `SignOutButton` Client   | `requireUserContext`、`POST /api/auth/logout`                        |
+| `/admin`                | `app/admin/page.tsx`                            | Server                            | `loadAdminOverview`、`loadAdminAuditEvents`                          |
+| `/admin/bindings`       | `app/admin/bindings/page.tsx`                   | Server + admin actions Client     | `loadAdminBindings`                                                  |
+| `/admin/save-parser`    | `app/admin/save-parser/page.tsx`                | Server + admin actions Client     | `loadAdminSaveParserStatus`                                          |
+| `/admin/breeding-data`  | `app/admin/breeding-data/page.tsx`              | Server + admin actions Client     | `loadAdminCatalogWorkspace`                                          |
+| `/admin/jobs`           | `app/admin/jobs/page.tsx`                       | Server + admin actions Client     | `loadAdminJobs`、秘密配置状态                                        |
+| `/admin/settings`       | `app/admin/settings/page.tsx`                   | Server + admin actions Client     | runtime settings、秘密配置状态                                       |
 
 规格中的正式路由均已存在。管理员页面名 `/admin/breeding-data` 保留了早期命名，但当前实际处理统一游戏目录；仅改显示名时不能改变 RPC 或版本语义。
 
@@ -84,35 +84,35 @@
 
 ### 4.2 Client Components
 
-| Client Component | 必须保留的交互职责 |
-| --- | --- |
-| `components/app-shell.tsx` | 读取 pathname，设置当前导航；可替换视觉外壳 |
-| `app/login/login-form.tsx` | 登录提交、稳定错误提示、完整导航刷新会话 |
-| `account/sign-out-button.tsx` | 调用退出 Route Handler |
-| `features/pals/pal-inventory.tsx` | 自有 Pal 的共享开关、乐观展示、错误处理 |
-| `features/breeder/breeder-form.tsx` | 目标/被动/模式/共享/代数输入和创建任务 |
-| `features/breeder/breeding-job-view.tsx` | 有上限轮询、路线选择/比较、正式采用 |
-| `features/plans/plan-detail.tsx` | 人工状态动作、候选确认/拒绝、乐观并发、重算 |
-| `features/admin/admin-shell.tsx` | 管理员 pathname 导航状态 |
-| `features/admin/admin-actions.tsx` | 受审计管理员动作及目录制品上传 |
-| `app/admin/error.tsx` | error boundary 重试 |
+| Client Component                         | 必须保留的交互职责                          |
+| ---------------------------------------- | ------------------------------------------- |
+| `components/app-shell.tsx`               | 读取 pathname，设置当前导航；可替换视觉外壳 |
+| `app/login/login-form.tsx`               | 登录提交、稳定错误提示、完整导航刷新会话    |
+| `account/sign-out-button.tsx`            | 调用退出 Route Handler                      |
+| `features/pals/pal-inventory.tsx`        | 自有 Pal 的共享开关、乐观展示、错误处理     |
+| `features/breeder/breeder-form.tsx`      | 目标/被动/模式/共享/代数输入和创建任务      |
+| `features/breeder/breeding-job-view.tsx` | 有上限轮询、路线选择/比较、正式采用         |
+| `features/plans/plan-detail.tsx`         | 人工状态动作、候选确认/拒绝、乐观并发、重算 |
+| `features/admin/admin-shell.tsx`         | 管理员 pathname 导航状态                    |
+| `features/admin/admin-actions.tsx`       | 受审计管理员动作及目录制品上传              |
+| `app/admin/error.tsx`                    | error boundary 重试                         |
 
 重构应把这些文件中的展示片段拆到纯组件，但不应把数据查询、权限判定、稳定错误映射或状态机复制进新展示组件。
 
 ## 5. 页面、feature、API 与 Supabase 映射
 
-| 页面/能力 | feature/server 查询 | Web API Route | Supabase 入口 | 主要 migration |
-| --- | --- | --- | --- | --- |
-| 登录/会话 | `loadUserContext` | `POST /api/auth/login`、`POST /api/auth/logout` | Supabase Auth；直接读身份/绑定表 | Phase 1 身份/RLS；Phase 5 foundation |
-| 概览 | `getOverviewSummary` | 无 | `list_available_pals_page_v2` ×3、`get_inventory_data_status` | `20260721030000`、`20260721040000`、`20260724020000`、`20260724040000`；`20260715020000`、`20260716031000` |
-| 帕鲁列表 | `listPals` | `GET /api/pals`（当前 UI 的首屏使用 Server Component）；`PATCH /api/pals/[uid]/share` | `list_available_pals_page_v2`、`set_pal_share_enabled_for_web` | 同上；共享 RPC 在 `20260715020000` |
-| 配种创建 | `loadBreederFormContext` | `POST /api/breeder/jobs` | `get_breeder_form_context`、`create_breeding_job_v2`，随后受 RLS 读取 job status | `20260716031000`、`20260716030000`、`20260720010000` |
-| 任务结果 | `loadBreedingJob` | `GET /api/breeder/jobs/[jobId]` | `get_breeding_job_detail` | `20260716030000`，由 Phase 7、localization、v3 路线 migrations 继续扩展 |
-| 路线采用 | 无 | `POST /api/plans/adopt` | `adopt_breeding_route` | `20260716040000_phase7_execution_plans.sql` |
-| 计划列表/详情 | `loadPlans`、`loadPlanDetail` | 无（初始读取为 Server Component） | `list_execution_plans`、`get_execution_plan_detail` | `20260716040000` |
-| 计划动作 | 无 | `POST /api/plans/[planId]/actions` | start/continue/skip/select/confirm/reject/pause/resume/recalculate RPC | `20260716040000` |
-| 管理员读取 | `features/admin/server.ts` | 无 | `is_admin`、overview/binding/save-parser/catalog/jobs/settings/secret/audit RPC | `20260717010000`、`20260717011000` |
-| 管理员动作 | 无 | `POST /api/admin/actions` | binding/settings/catalog RPC 与白名单 `create_agent_command` | `20260717010000`、`20260717011000` |
+| 页面/能力     | feature/server 查询           | Web API Route                                                                         | Supabase 入口                                                                    | 主要 migration                                                                                             |
+| ------------- | ----------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 登录/会话     | `loadUserContext`             | `POST /api/auth/login`、`POST /api/auth/logout`                                       | Supabase Auth；直接读身份/绑定表                                                 | Phase 1 身份/RLS；Phase 5 foundation                                                                       |
+| 概览          | `getOverviewSummary`          | 无                                                                                    | `list_available_pals_page_v2` ×3、`get_inventory_data_status`                    | `20260721030000`、`20260721040000`、`20260724020000`、`20260724040000`；`20260715020000`、`20260716031000` |
+| 帕鲁列表      | `listPals`                    | `GET /api/pals`（当前 UI 的首屏使用 Server Component）；`PATCH /api/pals/[uid]/share` | `list_available_pals_page_v2`、`set_pal_share_enabled_for_web`                   | 同上；共享 RPC 在 `20260715020000`                                                                         |
+| 配种创建      | `loadBreederFormContext`      | `POST /api/breeder/jobs`                                                              | `get_breeder_form_context`、`create_breeding_job_v2`，随后受 RLS 读取 job status | `20260716031000`、`20260716030000`、`20260720010000`                                                       |
+| 任务结果      | `loadBreedingJob`             | `GET /api/breeder/jobs/[jobId]`                                                       | `get_breeding_job_detail`                                                        | `20260716030000`，由 Phase 7、localization、v3 路线 migrations 继续扩展                                    |
+| 路线采用      | 无                            | `POST /api/plans/adopt`                                                               | `adopt_breeding_route`                                                           | `20260716040000_phase7_execution_plans.sql`                                                                |
+| 计划列表/详情 | `loadPlans`、`loadPlanDetail` | 无（初始读取为 Server Component）                                                     | `list_execution_plans`、`get_execution_plan_detail`                              | `20260716040000`                                                                                           |
+| 计划动作      | 无                            | `POST /api/plans/[planId]/actions`                                                    | start/continue/skip/select/confirm/reject/pause/resume/recalculate RPC           | `20260716040000`                                                                                           |
+| 管理员读取    | `features/admin/server.ts`    | 无                                                                                    | `is_admin`、overview/binding/save-parser/catalog/jobs/settings/secret/audit RPC  | `20260717010000`、`20260717011000`                                                                         |
+| 管理员动作    | 无                            | `POST /api/admin/actions`                                                             | binding/settings/catalog RPC 与白名单 `create_agent_command`                     | `20260717010000`、`20260717011000`                                                                         |
 
 所有 Route Handler 都应继续返回 `private, no-store`。Phase 5–7 API 还设置 `Vary: Cookie, Authorization`；管理员 Route 当前仅设置 `Cache-Control`，视觉重构不应改变其权限行为。
 
@@ -148,18 +148,18 @@
 
 全局类共 94 个，按实际引用边界分组如下。状态后缀类中部分由模板字符串动态引用。
 
-| 引用边界 | 全局类 |
-| --- | --- |
-| 全站壳层/导航 | `app-frame`、`app-main`、`skip-link`、`desktop-sidebar`、`brand-lockup`、`brand-mark`、`side-nav-link`、`side-nav-link-active`、`mobile-bottom-nav`、`mobile-nav-link`、`mobile-nav-link-active` |
-| 页面骨架/状态 | `page-stack`、`page-header`、`eyebrow`、`content-panel`、`state-card`、`state-orb`、`primary-button`、`secondary-button`、`notice-banner` |
-| 登录 | `login-page`、`login-card`、`login-field` |
-| 概览 | `stats-grid`、`stat-card`、`stat-card-accent`、`status-callout` |
-| 数据状态 | `status-dot`、`status-good`、`status-warning`、`status-danger`、`status-hero`、`status-hero-good`、`status-hero-warning`、`status-hero-danger`、`detail-grid` |
-| 帕鲁筛选/分页 | `filter-panel`、`scope-tabs`、`scope-tab`、`scope-tab-active`、`filter-grid`、`filter-field`、`filter-search`、`pal-pagination`、`pal-page-summary`、`pal-page-jump` |
-| 帕鲁卡片/共享 | `pal-grid`、`pal-card`、`level-chip`、`passive-chip`、`detail-label`、`share-switch-row`、`share-switch`、`share-switch-on` |
-| 配种表单 | `breeder-layout`、`breeder-controls`、`selected-passives`、`selected-passives-header`、`selected-passive-list`、`selected-passive-chip`、`passive-picker`、`passive-picker-empty`、`passive-option`、`share-choice`、`fixed-inputs` |
-| 路线/计划详情 | `route-tabs`、`route-tab`、`route-tab-active`、`route-metrics`、`parent-grid`、`parent-card`、`route-step`、`score-panel`、`score-row`、`score-row-heading` |
-| 管理员 | `admin-frame`、`admin-topbar`、`admin-identity`、`admin-navigation`、`admin-nav-link`、`admin-nav-link-active`、`admin-main`、`admin-access-denied`、`admin-grid`、`admin-card`、`admin-status`、`admin-status-good`、`admin-table-wrap`、`admin-table`、`admin-actions`、`admin-action-stack`、`admin-inline-form`、`admin-form-grid`、`admin-kv` |
+| 引用边界      | 全局类                                                                                                                                                                                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 全站壳层/导航 | `app-frame`、`app-main`、`skip-link`、`desktop-sidebar`、`brand-lockup`、`brand-mark`、`side-nav-link`、`side-nav-link-active`、`mobile-bottom-nav`、`mobile-nav-link`、`mobile-nav-link-active`                                                                                                                                                   |
+| 页面骨架/状态 | `page-stack`、`page-header`、`eyebrow`、`content-panel`、`state-card`、`state-orb`、`primary-button`、`secondary-button`、`notice-banner`                                                                                                                                                                                                          |
+| 登录          | `login-page`、`login-card`、`login-field`                                                                                                                                                                                                                                                                                                          |
+| 概览          | `stats-grid`、`stat-card`、`stat-card-accent`、`status-callout`                                                                                                                                                                                                                                                                                    |
+| 数据状态      | `status-dot`、`status-good`、`status-warning`、`status-danger`、`status-hero`、`status-hero-good`、`status-hero-warning`、`status-hero-danger`、`detail-grid`                                                                                                                                                                                      |
+| 帕鲁筛选/分页 | `filter-panel`、`scope-tabs`、`scope-tab`、`scope-tab-active`、`filter-grid`、`filter-field`、`filter-search`、`pal-pagination`、`pal-page-summary`、`pal-page-jump`                                                                                                                                                                               |
+| 帕鲁卡片/共享 | `pal-grid`、`pal-card`、`level-chip`、`passive-chip`、`detail-label`、`share-switch-row`、`share-switch`、`share-switch-on`                                                                                                                                                                                                                        |
+| 配种表单      | `breeder-layout`、`breeder-controls`、`selected-passives`、`selected-passives-header`、`selected-passive-list`、`selected-passive-chip`、`passive-picker`、`passive-picker-empty`、`passive-option`、`share-choice`、`fixed-inputs`                                                                                                                |
+| 路线/计划详情 | `route-tabs`、`route-tab`、`route-tab-active`、`route-metrics`、`parent-grid`、`parent-card`、`route-step`、`score-panel`、`score-row`、`score-row-heading`                                                                                                                                                                                        |
+| 管理员        | `admin-frame`、`admin-topbar`、`admin-identity`、`admin-navigation`、`admin-nav-link`、`admin-nav-link-active`、`admin-main`、`admin-access-denied`、`admin-grid`、`admin-card`、`admin-status`、`admin-status-good`、`admin-table-wrap`、`admin-table`、`admin-actions`、`admin-action-stack`、`admin-inline-form`、`admin-form-grid`、`admin-kv` |
 
 精确文件映射：
 
@@ -438,17 +438,17 @@ git diff --check
 
 ## 13. 风险与回滚
 
-| 风险 | 控制 | 回滚 |
-| --- | --- | --- |
-| 原型诱导虚假功能/数据 | 原型仅作视觉参考；字段必须来自共享契约 | 删除未接业务的展示，不迁移数据库事实 |
-| Server/Client 边界倒退导致会话泄漏/跨用户缓存 | 保持 server query、`noStore`、private/no-store 和 RLS | 恢复上一页面组件和 Route Handler |
-| 大组件改写丢失轮询、状态机或乐观并发 | 先抽交互 controller，再替换 view；逐页测试 | 逐文件恢复旧 view，保留 server/API |
-| 位置或公会数据泄漏 | 只加最小 projection；跨公会 pgTAP/E2E | 回退新增 projection/RPC 调用，字段 nullable |
-| 历史固定计划被新 UI 误算 | 只读展示物化结果和 version pin，不在浏览器重算 | 回退到现有详情组件 |
-| 资产许可/体积/移动性能 | 记录来源，使用响应式优化资产，不使用目录制品携带游戏资产 | 移除新资产并恢复无图安全占位 |
-| shadcn 依赖一次性膨胀 | 按真实组件增量安装 | 删除未使用组件/依赖并恢复 lockfile 对应变更 |
-| Node 版本漂移 | CI/正式验证使用仓库要求的 Node 22.x | 以 Node 22 结果为发布门禁 |
-| 用户未提交原型被覆盖 | 始终保持 `docs/ui-reference/` 原样未跟踪 | 不对该目录执行清理、暂存或覆盖 |
+| 风险                                          | 控制                                                     | 回滚                                        |
+| --------------------------------------------- | -------------------------------------------------------- | ------------------------------------------- |
+| 原型诱导虚假功能/数据                         | 原型仅作视觉参考；字段必须来自共享契约                   | 删除未接业务的展示，不迁移数据库事实        |
+| Server/Client 边界倒退导致会话泄漏/跨用户缓存 | 保持 server query、`noStore`、private/no-store 和 RLS    | 恢复上一页面组件和 Route Handler            |
+| 大组件改写丢失轮询、状态机或乐观并发          | 先抽交互 controller，再替换 view；逐页测试               | 逐文件恢复旧 view，保留 server/API          |
+| 位置或公会数据泄漏                            | 只加最小 projection；跨公会 pgTAP/E2E                    | 回退新增 projection/RPC 调用，字段 nullable |
+| 历史固定计划被新 UI 误算                      | 只读展示物化结果和 version pin，不在浏览器重算           | 回退到现有详情组件                          |
+| 资产许可/体积/移动性能                        | 记录来源，使用响应式优化资产，不使用目录制品携带游戏资产 | 移除新资产并恢复无图安全占位                |
+| shadcn 依赖一次性膨胀                         | 按真实组件增量安装                                       | 删除未使用组件/依赖并恢复 lockfile 对应变更 |
+| Node 版本漂移                                 | CI/正式验证使用仓库要求的 Node 22.x                      | 以 Node 22 结果为发布门禁                   |
+| 用户未提交原型被覆盖                          | 始终保持 `docs/ui-reference/` 原样未跟踪                 | 不对该目录执行清理、暂存或覆盖              |
 
 回滚单位应是“一个页面或一个基础组件小阶段”，不修改历史 migration，不删除业务表，不改变 Agent/Palworld。Git 回滚前必须先检查并保留用户工作区改动。
 
@@ -460,12 +460,12 @@ git diff --check
 - 当前 Node `v26.3.0`
 - 仓库 `engines.node` 要求 `22.x`
 
-| 命令 | 结果 | 备注 |
-| --- | --- | --- |
-| `pnpm --filter @palhatch/web lint` | 通过 | ESLint 0 warning；pnpm 报 Node engine 警告 |
-| `pnpm --filter @palhatch/web typecheck` | 通过 | `tsc --noEmit` |
-| `pnpm --filter @palhatch/web test` | 通过 | 11 files、54 tests 全部通过；Node 26 有 `module.register()` 弃用和 localStorage 实验性警告 |
-| `pnpm --filter @palhatch/web build` | 通过 | Next.js 15.5.20 编译、lint/type validity、静态/动态路由收集全部成功；读取现有 `.env.local` 但未查看或输出其内容 |
-| `git diff --check` | 通过 | 本步骤最终内容检查无 whitespace error |
+| 命令                                    | 结果 | 备注                                                                                                            |
+| --------------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @palhatch/web lint`      | 通过 | ESLint 0 warning；pnpm 报 Node engine 警告                                                                      |
+| `pnpm --filter @palhatch/web typecheck` | 通过 | `tsc --noEmit`                                                                                                  |
+| `pnpm --filter @palhatch/web test`      | 通过 | 11 files、54 tests 全部通过；Node 26 有 `module.register()` 弃用和 localStorage 实验性警告                      |
+| `pnpm --filter @palhatch/web build`     | 通过 | Next.js 15.5.20 编译、lint/type validity、静态/动态路由收集全部成功；读取现有 `.env.local` 但未查看或输出其内容 |
+| `git diff --check`                      | 通过 | 本步骤最终内容检查无 whitespace error                                                                           |
 
 基线没有业务失败，不需要也没有修改业务代码来掩盖问题。环境阻塞项是 Node 版本不符合仓库声明；虽然本次命令通过，正式 UI 迁移和发布门禁应在 Node 22.x 重跑。

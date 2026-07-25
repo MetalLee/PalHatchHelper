@@ -20,14 +20,16 @@ export default function LoginPage() {
               <p className="text-xl font-bold tracking-tight">
                 PalHatch Helper
               </p>
-              <p className="text-sm text-muted-foreground">帕鲁配种协作工作台</p>
+              <p className="text-sm text-muted-foreground">
+                帕鲁配种协作工作台
+              </p>
             </div>
           </div>
-          <h2 className="mt-10 max-w-xl text-4xl font-bold tracking-[-0.04em] text-forest">
+          <p className="mt-10 max-w-xl text-4xl font-bold tracking-[-0.04em] text-forest">
             安全同步库存，
             <br />
             清楚推进每一代计划。
-          </h2>
+          </p>
           <p className="mt-5 max-w-lg text-base leading-8 text-muted-foreground">
             用固定数据版本计算确定性路线，与公会伙伴协作，并由你亲自确认每一步真实结果。
           </p>
@@ -44,7 +46,9 @@ export default function LoginPage() {
             </span>
             <div>
               <p className="font-bold text-foreground">PalHatch Helper</p>
-              <p className="text-xs text-muted-foreground">帕鲁配种协作工作台</p>
+              <p className="text-xs text-muted-foreground">
+                帕鲁配种协作工作台
+              </p>
             </div>
           </div>
           <p className="mt-8 text-xs font-bold tracking-[0.16em] text-primary uppercase lg:mt-0">

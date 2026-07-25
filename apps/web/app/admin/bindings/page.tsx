@@ -8,6 +8,12 @@ import {
   AdminCode,
   AdminEmpty,
   AdminPageHeader,
+  adminActionStackClasses,
+  adminActionsClasses,
+  adminControlClasses,
+  adminPageClasses,
+  adminPanelClasses,
+  adminTableFrameClasses,
   formatAdminTime,
 } from "@/features/admin/presentation";
 import {
@@ -22,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminBindingsPage({
   searchParams,
@@ -30,35 +37,36 @@ export default async function AdminBindingsPage({
   if (!(await requireAdminPageAccess())) return <AdminAccessDenied />;
   const data = await loadAdminBindings(q.slice(0, 120));
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="IDENTITY LINKING"
         title="玩家绑定"
         description="Supabase 用户与游戏玩家保持双向唯一；所有修改均使用幂等键、乐观并发与不可变审计。"
       />
-      <section className="admin-card">
-        <form className="admin-actions" method="get">
+      <section className={adminPanelClasses}>
+        <form className={adminActionsClasses} method="get">
           <input
+            className={`${adminControlClasses} flex-1`}
             aria-label="搜索用户或玩家"
             name="q"
             defaultValue={q}
             placeholder="搜索安全显示名或玩家昵称"
           />
-          <button className="secondary-button" type="submit">
+          <Button variant="outline" type="submit">
             搜索
-          </button>
+          </Button>
         </form>
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>创建绑定</h2>
         <BindingCreateForm users={data.users} players={data.players} />
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>账号摘要</h2>
         {data.users.length === 0 ? (
           <AdminEmpty>没有匹配账号。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
+          <div className={adminTableFrameClasses}>
             <Table className="min-w-[52rem]">
               <TableHeader>
                 <TableRow>
@@ -84,7 +92,7 @@ export default async function AdminBindingsPage({
                       {user.binding_version === null ? (
                         "—"
                       ) : (
-                        <div className="admin-action-stack">
+                        <div className={adminActionStackClasses}>
                           <BindingUpdateForm
                             user={user}
                             players={data.players}
@@ -109,12 +117,12 @@ export default async function AdminBindingsPage({
           </div>
         )}
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>绑定历史</h2>
         {data.events.length === 0 ? (
           <AdminEmpty>暂无绑定操作。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
+          <div className={adminTableFrameClasses}>
             <Table className="min-w-[48rem]">
               <TableHeader>
                 <TableRow>

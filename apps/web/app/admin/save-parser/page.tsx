@@ -3,6 +3,11 @@ import { AdminAccessDenied } from "@/features/admin/access";
 import {
   AdminCode,
   AdminPageHeader,
+  adminActionsClasses,
+  adminDefinitionListClasses,
+  adminGridClasses,
+  adminPageClasses,
+  adminPanelClasses,
   formatAdminTime,
   StatusPill,
 } from "@/features/admin/presentation";
@@ -15,7 +20,7 @@ export default async function AdminSaveParserPage() {
   if (!(await requireAdminPageAccess())) return <AdminAccessDenied />;
   const status = await loadAdminSaveParserStatus();
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="READ-ONLY SAVE PIPELINE"
         title="存档与 Parser"
@@ -23,16 +28,16 @@ export default async function AdminSaveParserPage() {
       />
       {status.stale && (
         <section
-          className="admin-card border-amber-200 bg-amber-50/80"
+          className={`${adminPanelClasses} border-amber-200 bg-amber-50/80`}
           role="status"
         >
           STALE：Save Worker 心跳已过期。
         </section>
       )}
-      <section className="admin-grid">
-        <article className="admin-card">
+      <section className={adminGridClasses}>
+        <article className={adminPanelClasses}>
           <h2>Save Worker</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>状态</dt>
             <dd>
               <StatusPill state={status.worker.state} />
@@ -47,9 +52,9 @@ export default async function AdminSaveParserPage() {
             </dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>Parser</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>名称</dt>
             <dd>{status.parser.name ?? "—"}</dd>
             <dt>版本</dt>
@@ -64,9 +69,9 @@ export default async function AdminSaveParserPage() {
             <dd>{status.pal_count ?? "—"}</dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>安全保护</h2>
-          <dl className="admin-kv">
+          <dl className={adminDefinitionListClasses}>
             <dt>库存下降</dt>
             <dd>
               <StatusPill state={status.inventory_drop_state} />
@@ -85,7 +90,7 @@ export default async function AdminSaveParserPage() {
             </dd>
           </dl>
         </article>
-        <article className="admin-card">
+        <article className={adminPanelClasses}>
           <h2>最近失败</h2>
           {status.recent_failure ? (
             <div className="grid gap-2">
@@ -97,9 +102,9 @@ export default async function AdminSaveParserPage() {
           )}
         </article>
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>受控动作</h2>
-        <div className="admin-actions">
+        <div className={adminActionsClasses}>
           <AdminActionButton action="sync_save_once">
             请求安全同步
           </AdminActionButton>

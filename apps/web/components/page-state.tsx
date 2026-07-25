@@ -29,10 +29,23 @@ const errorContent: Partial<Record<Phase5ErrorCode, [string, string]>> = {
   ],
 };
 
-export function ErrorState({ code }: Readonly<{ code: Phase5ErrorCode }>) {
+export function ErrorState({
+  code,
+  headingLevel = "h1",
+}: Readonly<{
+  code: Phase5ErrorCode;
+  headingLevel?: "h1" | "h2" | "h3";
+}>) {
   const [title, description] = errorContent[code] ?? [
     "请求未完成",
     "输入或当前状态不符合要求，请检查后重试。",
   ];
-  return <PageError code={code} title={title} description={description} />;
+  return (
+    <PageError
+      code={code}
+      title={title}
+      description={description}
+      headingLevel={headingLevel}
+    />
+  );
 }

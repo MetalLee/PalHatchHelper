@@ -10,6 +10,12 @@ async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
   await expect(page).toHaveURL(/\/overview$/);
 }
 
+async function navigateFromMobileMenu(page: Page, label: string) {
+  await page.getByRole("button", { name: "打开导航菜单" }).click();
+  const menu = page.getByRole("dialog", { name: "导航菜单" });
+  await menu.getByRole("link", { name: label }).click();
+}
+
 test.afterEach(async ({ page }) => {
   await page.request
     .patch("/api/pals/fixture-pal-a-owned-001/share", {
@@ -41,7 +47,9 @@ test("overview stays within a 390px viewport and uses CSS-only hero scenery", as
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
 
-  await expect(page.getByRole("link", { name: "开始配种" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "开始配种" }).first(),
+  ).toBeVisible();
   await expect(page.getByRole("link", { name: "查看库存" })).toBeVisible();
   const scenery = page.getByTestId("overview-scenery");
   await expect(scenery).toHaveAttribute("data-visual-source", "css");
@@ -88,7 +96,7 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   page,
 }) => {
   await login(page);
-  await page.getByRole("link", { name: "帕鲁" }).last().click();
+  await navigateFromMobileMenu(page, "帕鲁");
   await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
 
   await page.getByRole("button", { name: "筛选" }).click();
@@ -204,7 +212,7 @@ test("player responses never contain private, cross-guild, raw-save or path data
 
 test("stale data status stays explicit on iPhone width", async ({ page }) => {
   await login(page);
-  await page.getByRole("link", { name: "数据状态" }).last().click();
+  await navigateFromMobileMenu(page, "数据状态");
   await expect(page.getByRole("heading", { name: "数据状态" })).toBeVisible();
   await expect(
     page.getByRole("status").filter({ hasText: "数据已过期" }),

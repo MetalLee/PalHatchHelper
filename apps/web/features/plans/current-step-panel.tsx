@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/sheet";
 
 import { CandidateDialog } from "./candidate-dialog";
+import type { BreedingTreePassiveFact } from "@/features/breeder/lib/build-breeding-tree";
 import type { RunPlanAction } from "./plan-action-types";
 import {
   palGenderLabel,
@@ -69,6 +70,7 @@ export function CurrentStepPanel({
   candidates,
   palNames,
   passiveNames,
+  passiveFacts,
   busy,
   act,
 }: Readonly<{
@@ -78,6 +80,7 @@ export function CurrentStepPanel({
   candidates: readonly OffspringCandidate[];
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
+  passiveFacts: ReadonlyMap<string, BreedingTreePassiveFact>;
   busy: boolean;
   act: RunPlanAction;
 }>) {
@@ -189,7 +192,8 @@ export function CurrentStepPanel({
                 <PassiveBadge
                   key={passiveId}
                   name={passiveNames.get(passiveId) ?? passiveId}
-                  rank={null}
+                  rank={passiveFacts.get(passiveId)?.rank ?? null}
+                  isNegative={passiveFacts.get(passiveId)?.isNegative ?? null}
                   showRank
                   className="max-w-full"
                 />
@@ -238,6 +242,7 @@ export function CurrentStepPanel({
             <CandidateDialog
               candidates={candidates}
               passiveNames={passiveNames}
+              passiveFacts={passiveFacts}
               busy={busy || !canMutate}
               act={act}
             />

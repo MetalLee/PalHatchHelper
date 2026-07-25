@@ -161,6 +161,19 @@ export function BreedingJobView({
       ),
     [result.data.localization.passive_skills],
   );
+  const passiveFacts = useMemo(
+    () =>
+      new Map(
+        result.data.localization.passive_skills.map((passive) => [
+          passive.passive_skill_id,
+          {
+            rank: passive.rank,
+            isNegative: passive.is_negative,
+          },
+        ]),
+      ),
+    [result.data.localization.passive_skills],
+  );
   const hardSearchLimit =
     plan?.explanation_codes.includes("SEARCH_LIMIT_REACHED") === true ||
     plan?.explanation_codes.includes("SEARCH_TIMEOUT") === true ||
@@ -217,6 +230,7 @@ export function BreedingJobView({
           targetName={targetName}
           desiredPassiveIds={result.data.desired_passive_ids}
           passiveNames={passiveNames}
+          passiveFacts={passiveFacts}
           optimizationMode={result.data.optimization_mode}
           allowGuildShared={result.data.allow_guild_shared}
           maxGenerations={result.data.max_generations}
@@ -294,6 +308,7 @@ export function BreedingJobView({
                 targetPalId={result.data.target_pal_id}
                 palNames={palNames}
                 passiveNames={passiveNames}
+                passiveFacts={passiveFacts}
               />
               <RouteAdoptionPanel
                 route={selected}

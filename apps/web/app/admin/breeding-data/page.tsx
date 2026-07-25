@@ -8,6 +8,9 @@ import {
   AdminCode,
   AdminEmpty,
   AdminPageHeader,
+  adminPageClasses,
+  adminPanelClasses,
+  adminTableFrameClasses,
   formatAdminTime,
   StatusPill,
 } from "@/features/admin/presentation";
@@ -29,13 +32,13 @@ export default async function AdminBreedingDataPage() {
   const { versions, sources, worlds, uploads } =
     await loadAdminCatalogWorkspace();
   return (
-    <div className="page-stack">
+    <div className={adminPageClasses}>
       <AdminPageHeader
         eyebrow="IMMUTABLE GAME CATALOG"
         title="配种数据"
         description="历史版本不可修改；发布与回滚只使用已验证目录和明确确认。浏览器永不持有 Service Role。"
       />
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>上传标准化目录包</h2>
         <CatalogUploadGuard sources={sources} />
         <p className="text-sm text-muted-foreground">
@@ -43,12 +46,12 @@ export default async function AdminBreedingDataPage() {
           会再次执行白名单、大小、SHA-256、manifest 和七类关系校验。
         </p>
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>上传与操作队列</h2>
         {uploads.length === 0 ? (
           <AdminEmpty>暂无上传。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
+          <div className={adminTableFrameClasses}>
             <Table className="min-w-[54rem]">
               <TableHeader>
                 <TableRow>
@@ -92,12 +95,12 @@ export default async function AdminBreedingDataPage() {
           </div>
         )}
       </section>
-      <section className="admin-card">
+      <section className={adminPanelClasses}>
         <h2>目录版本</h2>
         {versions.length === 0 ? (
           <AdminEmpty>暂无目录版本。</AdminEmpty>
         ) : (
-          <div className="admin-table-wrap">
+          <div className={adminTableFrameClasses}>
             <Table className="min-w-[72rem]">
               <TableHeader>
                 <TableRow>

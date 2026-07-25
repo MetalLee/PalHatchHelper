@@ -29,6 +29,7 @@ import { BreedingTreeBuildError } from "@/features/breeder/lib/build-breeding-tr
 
 import { buildPlanBreedingTree } from "./build-plan-breeding-tree";
 import { CurrentStepPanel } from "./current-step-panel";
+import { buildPlanPassiveFacts, buildPlanPassiveNames } from "./passive-facts";
 import type { PlanActionPayload } from "./plan-action-types";
 import { PlanStepList } from "./plan-step-list";
 import {
@@ -63,12 +64,8 @@ export function PlanDetail({ detail }: Readonly<{ detail: PlanDetailData }>) {
             100,
         );
   const palNames = buildPalNames(detail);
-  const passiveNames = new Map(
-    detail.summary.desired_passive_ids.map((passiveId, index) => [
-      passiveId,
-      detail.summary.desired_passive_display_names[index] ?? passiveId,
-    ]),
-  );
+  const passiveNames = buildPlanPassiveNames(detail.summary);
+  const passiveFacts = buildPlanPassiveFacts(detail.summary);
   const stepOverlays = buildPlanStepOverlays(detail);
   let treeModel;
   let treeError: string | null = null;
@@ -194,21 +191,20 @@ export function PlanDetail({ detail }: Readonly<{ detail: PlanDetailData }>) {
             <p className="text-xs font-semibold text-muted-foreground">
               目标被动及 Rank
             </p>
-            {detail.summary.desired_passive_display_names.length === 0 ? (
+            {detail.summary.desired_passives.length === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">无指定被动</p>
             ) : (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {detail.summary.desired_passive_display_names.map(
-                  (name, index) => (
-                    <PassiveBadge
-                      key={detail.summary.desired_passive_ids[index] ?? name}
-                      name={name}
-                      rank={null}
-                      showRank
-                      className="max-w-full"
-                    />
-                  ),
-                )}
+                {detail.summary.desired_passives.map((passive) => (
+                  <PassiveBadge
+                    key={passive.passive_skill_id}
+                    name={passive.display_name}
+                    rank={passive.rank}
+                    isNegative={passive.is_negative}
+                    showRank
+                    className="max-w-full"
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -348,6 +344,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: PlanDetailData }>) {
           targetPalId={detail.summary.target_pal_id}
           palNames={palNames}
           passiveNames={passiveNames}
+          passiveFacts={passiveFacts}
           stepOverlays={stepOverlays}
           ariaLabel="完整配种路径树"
           eyebrow="Execution route tree"
@@ -379,6 +376,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: PlanDetailData }>) {
           candidates={currentCandidates}
           palNames={palNames}
           passiveNames={passiveNames}
+          passiveFacts={passiveFacts}
           busy={busy}
           act={act}
         />
@@ -389,6 +387,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: PlanDetailData }>) {
         currentStepIndex={detail.summary.current_step_index}
         palNames={palNames}
         passiveNames={passiveNames}
+        passiveFacts={passiveFacts}
       />
 
       <AuditTimeline detail={detail} />

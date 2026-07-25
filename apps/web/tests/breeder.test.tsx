@@ -233,7 +233,12 @@ function completedJob(): BreedingJobDetailRpcSuccess {
           { pal_id: "test_child_pal", display_name: "幻色幼崽" },
         ],
         passive_skills: [
-          { passive_skill_id: "test_passive_a", display_name: "认真" },
+          {
+            passive_skill_id: "test_passive_a",
+            display_name: "认真",
+            rank: 5,
+            is_negative: false,
+          },
         ],
       },
       attempt_count: 1,
@@ -524,6 +529,8 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getAllByText("棉悠悠").length).toBeGreaterThan(0);
     expect(screen.getAllByText("捣蛋猫").length).toBeGreaterThan(0);
     expect(screen.getAllByText("认真").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rank 5").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Rank 未知")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
     expect(screen.getByText("路线长度")).toBeTruthy();
     expect(screen.getByText(/综合推荐：80\.00/)).toBeTruthy();

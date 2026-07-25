@@ -16,11 +16,18 @@ describe("login page", () => {
   it("identifies the secure breeding workspace without unsupported actions", () => {
     render(<LoginPage />);
 
+    const headings = screen.getAllByRole("heading");
+    expect(headings[0]?.tagName).toBe("H1");
+    expect(headings.filter((heading) => heading.tagName === "H1")).toHaveLength(
+      1,
+    );
     expect(
       screen.getByRole("heading", { name: /欢迎回到配种工作台/i }),
     ).toBeTruthy();
     expect(screen.getByText(/RLS\/RPC 授权/)).toBeTruthy();
-    expect(screen.queryByRole("link", { name: /注册|游客|忘记密码/ })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: /注册|游客|忘记密码/ }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: /上传存档/ })).toBeNull();
   });
 

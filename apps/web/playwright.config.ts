@@ -22,7 +22,7 @@ export default defineConfig({
   webServer: {
     command: "pnpm dev",
     url: "http://127.0.0.1:3000/login",
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PALHATCH_E2E_REUSE_SERVER === "1",
     timeout: 120_000,
   },
 });

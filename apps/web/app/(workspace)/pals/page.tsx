@@ -49,6 +49,7 @@ function InventoryContextError({
   return (
     <PageError
       code={code}
+      headingLevel="h1"
       title={snapshotChanged ? "库存快照已更新" : "游戏目录版本已更新"}
       description={
         snapshotChanged

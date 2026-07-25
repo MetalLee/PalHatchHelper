@@ -331,6 +331,21 @@
         "created_at": { "type": "string", "format": "date-time" }
       }
     },
+    "PlanPassiveSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passive_skill_id", "display_name", "rank", "is_negative"],
+      "properties": {
+        "passive_skill_id": { "$ref": "#/$defs/StableId" },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "rank": { "type": "integer" },
+        "is_negative": { "type": "boolean" }
+      }
+    },
     "PlanSummary": {
       "type": "object",
       "additionalProperties": false,
@@ -340,6 +355,7 @@
         "target_pal_display_name",
         "desired_passive_ids",
         "desired_passive_display_names",
+        "desired_passives",
         "status",
         "current_step_index",
         "completed_step_count",
@@ -368,6 +384,11 @@
           "type": "array",
           "maxItems": 4,
           "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+        },
+        "desired_passives": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/PlanPassiveSummary" }
         },
         "status": { "$ref": "#/$defs/PlanStatus" },
         "current_step_index": { "type": "integer", "minimum": 0 },

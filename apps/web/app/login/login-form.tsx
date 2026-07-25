@@ -101,9 +101,7 @@ export function LoginForm({
           className="rounded-xl border-rose-200 bg-rose-50/90 text-rose-900"
         >
           <AlertCircle aria-hidden="true" />
-          <AlertDescription className="text-rose-800">
-            {error}
-          </AlertDescription>
+          <AlertDescription className="text-rose-800">{error}</AlertDescription>
         </Alert>
       ) : null}
       <Button

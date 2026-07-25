@@ -339,6 +339,7 @@ function PassiveList({
               key={passive.passiveId}
               name={localizedName(passiveNames, passive.passiveId, "被动")}
               rank={passive.rank}
+              isNegative={passive.isNegative}
               showRank
               className="max-w-full whitespace-normal"
             />

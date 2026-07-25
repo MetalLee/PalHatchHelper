@@ -62,7 +62,7 @@ export function AdminNavigation({
         </Select>
       </div>
       <Tabs value={activeHref} className="hidden min-w-0 md:flex">
-        <div className="admin-nav-scroll">
+        <div className="max-w-full overflow-x-auto pb-1 [scrollbar-width:thin]">
           <TabsList
             variant="line"
             className="min-w-max justify-start gap-1 rounded-2xl border border-white/70 bg-white/45 p-1"

@@ -8,6 +8,7 @@ import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { StatusChip } from "@/components/status/status-chip";
 
+import { type BreedingTreePassiveFact } from "../lib/build-breeding-tree";
 import {
   compactIdentifier,
   localizedName,
@@ -20,6 +21,7 @@ export function BreedingJobTargetSummary({
   targetName,
   desiredPassiveIds,
   passiveNames,
+  passiveFacts,
   optimizationMode,
   allowGuildShared,
   maxGenerations,
@@ -29,6 +31,7 @@ export function BreedingJobTargetSummary({
   targetName: string;
   desiredPassiveIds: readonly string[];
   passiveNames: ReadonlyMap<string, string>;
+  passiveFacts: ReadonlyMap<string, BreedingTreePassiveFact>;
   optimizationMode: BreederOptimizationMode;
   allowGuildShared: boolean;
   maxGenerations: number;
@@ -70,7 +73,8 @@ export function BreedingJobTargetSummary({
               <PassiveBadge
                 key={passiveId}
                 name={localizedName(passiveNames, passiveId, "被动")}
-                rank={null}
+                rank={passiveFacts.get(passiveId)?.rank ?? null}
+                isNegative={passiveFacts.get(passiveId)?.isNegative ?? null}
                 showRank
                 className="max-w-full whitespace-normal"
               />

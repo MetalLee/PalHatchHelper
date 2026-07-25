@@ -9,7 +9,10 @@ import AdminLoading from "../app/admin/loading";
 import { AdminAccessDenied, hasAdminRole } from "../features/admin/access";
 import { AdminActionButton } from "../features/admin/admin-actions";
 import { AdminNavigation } from "../features/admin/admin-navigation";
-import { AdminEmpty } from "../features/admin/presentation";
+import {
+  AdminEmpty,
+  adminTableFrameClasses,
+} from "../features/admin/presentation";
 
 const refresh = vi.fn();
 
@@ -122,14 +125,19 @@ describe("Phase 8 admin access", () => {
       resolve(process.cwd(), "app/globals.css"),
       "utf8",
     );
+    const appShell = readFileSync(
+      resolve(process.cwd(), "components/app-shell.tsx"),
+      "utf8",
+    );
     expect(actions).not.toContain("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY");
     expect(actions).not.toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
     expect(actions).toContain(
       '"Cache-Control": "private, no-store, max-age=0"',
     );
-    expect(styles).toContain(".admin-table-wrap");
-    expect(styles).toMatch(/\.admin-table-wrap\s*\{[^}]*overflow-x:\s*auto/s);
-    expect(styles).toMatch(/\.app-frame\s*\{[^}]*overflow-x:\s*clip/s);
+    expect(adminTableFrameClasses).toContain("overflow-x-auto");
+    expect(appShell).toContain("overflow-x-clip");
+    expect(styles).not.toContain(".admin-table-wrap");
+    expect(styles).not.toContain(".app-frame");
     expect(styles).not.toMatch(/\.admin-nav-link:hover/);
   });
 });

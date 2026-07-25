@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import type { BreedingTreePassiveFact } from "@/features/breeder/lib/build-breeding-tree";
 
 import {
   palGenderLabel,
@@ -27,11 +28,13 @@ export function PlanStepList({
   currentStepIndex,
   palNames,
   passiveNames,
+  passiveFacts,
 }: Readonly<{
   steps: readonly PlanStep[];
   currentStepIndex: number;
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
+  passiveFacts: ReadonlyMap<string, BreedingTreePassiveFact>;
 }>) {
   return (
     <Card
@@ -156,7 +159,10 @@ export function PlanStepList({
                             <PassiveBadge
                               key={passiveId}
                               name={passiveNames.get(passiveId) ?? passiveId}
-                              rank={null}
+                              rank={passiveFacts.get(passiveId)?.rank ?? null}
+                              isNegative={
+                                passiveFacts.get(passiveId)?.isNegative ?? null
+                              }
                               showRank
                               className="max-w-full"
                             />

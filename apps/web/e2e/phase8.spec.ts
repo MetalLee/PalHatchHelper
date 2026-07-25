@@ -39,9 +39,9 @@ test("ordinary player receives stable server-side admin denial", async ({
   await login(page, "player-a@palhatch.fixture.invalid");
   const response = await page.goto("/admin");
   expect(response?.headers()["cache-control"]).toContain("no-store");
-  await expect(page.locator("main.admin-access-denied")).toContainText(
-    "ADMIN_ACCESS_DENIED",
-  );
+  await expect(
+    page.getByRole("alert", { name: "没有管理员权限" }),
+  ).toContainText("ADMIN_ACCESS_DENIED");
   await expect(page.getByRole("heading", { name: "管理员概览" })).toHaveCount(
     0,
   );
@@ -72,12 +72,16 @@ test("iPhone admin completes binding, status, catalog, jobs, settings and audit 
   ).toBeVisible();
 
   await page.goto("/admin/bindings");
-  page.once("dialog", (dialog) => dialog.accept("解除绑定"));
   await page.getByRole("button", { name: "解除绑定" }).last().click();
+  const deleteDialog = page.getByRole("alertdialog", {
+    name: "确认执行受审计操作",
+  });
+  await deleteDialog.getByLabel("确认文字").fill("解除绑定");
+  await deleteDialog.getByRole("button", { name: "确认执行" }).click();
   await expect(page.getByText("binding_deleted").first()).toBeVisible();
 
   const createBindingForm = page
-    .locator("form.admin-form-grid")
+    .locator("form")
     .filter({ has: page.getByRole("button", { name: "创建绑定" }) });
   await createBindingForm
     .locator('select[name="user_id"]')

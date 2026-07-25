@@ -45,6 +45,14 @@ function plan(
     target_pal_display_name: "测试目标帕鲁",
     desired_passive_ids: ["swift"],
     desired_passive_display_names: ["神速"],
+    desired_passives: [
+      {
+        passive_skill_id: "swift",
+        display_name: "神速",
+        rank: 3,
+        is_negative: false,
+      },
+    ],
     status,
     current_step_index: 0,
     completed_step_count: 0,
@@ -121,9 +129,7 @@ describe("overview dashboard", () => {
     expect(dashboard.className).toContain("min-w-0");
     expect(dashboard.className).toContain("overflow-x-clip");
     expect(
-      screen
-        .getByTestId("overview-scenery")
-        .getAttribute("data-visual-source"),
+      screen.getByTestId("overview-scenery").getAttribute("data-visual-source"),
     ).toBe("css");
     expect(screen.queryByRole("img")).toBeNull();
   });

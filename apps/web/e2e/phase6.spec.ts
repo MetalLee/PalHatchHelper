@@ -49,7 +49,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
 }) => {
   test.setTimeout(120_000);
   await login(page);
-  await page.getByRole("link", { name: "配种器" }).last().click();
+  await page.getByRole("link", { name: "开始配种" }).first().click();
   await expect(page.getByRole("heading", { name: "配种器" })).toBeVisible();
   await page.waitForFunction(
     () => {

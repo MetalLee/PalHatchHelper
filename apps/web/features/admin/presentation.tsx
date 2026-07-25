@@ -11,6 +11,22 @@ import type { ReactNode } from "react";
 
 import { StatusChip, type StatusTone } from "@/components/status/status-chip";
 
+export const adminPageClasses =
+  "mx-auto grid w-full min-w-0 max-w-[90rem] gap-5";
+export const adminGridClasses = "grid min-w-0 gap-4 md:grid-cols-2";
+export const adminPanelClasses =
+  "min-w-0 rounded-2xl border border-glass-border bg-card/90 p-5 shadow-soft backdrop-blur-md [&>h2]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-foreground [&>h3]:mb-3 [&>h3]:font-bold [&>h3]:text-foreground";
+export const adminDefinitionListClasses =
+  "grid min-w-0 grid-cols-[minmax(7rem,0.7fr)_minmax(0,1fr)] gap-x-4 gap-y-3 [&_dt]:text-muted-foreground [&_dd]:m-0 [&_dd]:min-w-0 [&_dd]:break-words [&_dd]:text-foreground";
+export const adminTableFrameClasses =
+  "max-w-full overflow-x-auto rounded-2xl border border-border bg-white/68 [scrollbar-width:thin] [&>[data-slot=table-container]]:max-w-full";
+export const adminActionsClasses = "flex min-w-0 flex-wrap gap-2";
+export const adminActionStackClasses = "grid min-w-0 gap-2";
+export const adminControlClasses =
+  "min-h-11 min-w-11 max-w-full rounded-lg border border-input bg-white/82 px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35";
+export const adminFormClasses =
+  "grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-3 [&_label]:grid [&_label]:gap-1.5 [&_label]:text-sm [&_label]:font-semibold [&_label]:text-muted-foreground [&_input:not([type=checkbox])]:min-h-11 [&_input:not([type=checkbox])]:min-w-0 [&_input:not([type=checkbox])]:w-full [&_input:not([type=checkbox])]:rounded-lg [&_input:not([type=checkbox])]:border [&_input:not([type=checkbox])]:border-input [&_input:not([type=checkbox])]:bg-white/82 [&_input:not([type=checkbox])]:px-3 [&_input:not([type=checkbox])]:py-2 [&_input:not([type=checkbox])]:text-sm [&_input:not([type=checkbox])]:font-normal [&_input:not([type=checkbox])]:text-foreground [&_select]:min-h-11 [&_select]:min-w-0 [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-input [&_select]:bg-white/82 [&_select]:px-3 [&_select]:py-2 [&_select]:text-sm [&_select]:font-normal [&_select]:text-foreground [&_textarea]:min-h-24 [&_textarea]:min-w-0 [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-input [&_textarea]:bg-white/82 [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-sm [&_textarea]:font-normal [&_textarea]:text-foreground";
+
 export function AdminPageHeader({
   eyebrow,
   title,

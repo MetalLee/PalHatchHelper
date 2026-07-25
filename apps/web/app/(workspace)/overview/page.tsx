@@ -34,8 +34,7 @@ export default async function OverviewPage() {
   }
 
   const planFeed: OverviewPlanFeed = {
-    active:
-      activeResult.status === "fulfilled" ? activeResult.value.items : [],
+    active: activeResult.status === "fulfilled" ? activeResult.value.items : [],
     awaitingConfirmation:
       awaitingResult.status === "fulfilled" ? awaitingResult.value.items : [],
     completed:

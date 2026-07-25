@@ -985,6 +985,8 @@ class BreederPassiveLocalization(BaseModel):
 
     passive_skill_id: BreederStableId
     display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    rank: int
+    is_negative: bool
 
 
 class BreederRouteLocalization(BaseModel):
@@ -1512,6 +1514,15 @@ class PlanEventSummary(BaseModel):
     created_at: AwareDatetime
 
 
+class PlanPassiveSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    passive_skill_id: StableId
+    display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    rank: int
+    is_negative: bool
+
+
 class PlanSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1527,6 +1538,7 @@ class PlanSummary(BaseModel):
         list[Annotated[str, Field(min_length=1), Field(max_length=160)]],
         Field(max_length=4),
     ]
+    desired_passives: Annotated[list[PlanPassiveSummary], Field(max_length=4)]
     status: PlanStatus
     current_step_index: Annotated[int, Field(ge=0)]
     completed_step_count: Annotated[int, Field(ge=0)]

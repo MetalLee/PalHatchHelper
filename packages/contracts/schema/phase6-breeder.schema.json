@@ -112,10 +112,12 @@
     "BreederPassiveLocalization": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["passive_skill_id", "display_name"],
+      "required": ["passive_skill_id", "display_name", "rank", "is_negative"],
       "properties": {
         "passive_skill_id": { "$ref": "#/$defs/BreederStableId" },
-        "display_name": { "type": "string", "minLength": 1, "maxLength": 160 }
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "rank": { "type": "integer" },
+        "is_negative": { "type": "boolean" }
       }
     },
     "BreederRouteLocalization": {
