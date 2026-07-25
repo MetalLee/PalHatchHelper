@@ -14,6 +14,7 @@ const page: PalInventoryPage = {
       pal_instance_uid: "fixture-owned",
       pal_id: "test_parent_a",
       encyclopedia_no: 1,
+      element_types: ["neutral"],
       pal_display_name: "棉悠悠",
       catalog_entry_state: "resolved" as const,
       owner_filter_key: "a".repeat(64),
@@ -37,6 +38,7 @@ const page: PalInventoryPage = {
       pal_instance_uid: "fixture-shared",
       pal_id: "test_parent_b",
       encyclopedia_no: 2,
+      element_types: ["leaf", "water"],
       pal_display_name: "棉绒兽",
       catalog_entry_state: "resolved" as const,
       owner_filter_key: "b".repeat(64),
@@ -60,6 +62,7 @@ const page: PalInventoryPage = {
       pal_instance_uid: "fixture-dimensional-shared",
       pal_id: "test_parent_c",
       encyclopedia_no: 3,
+      element_types: ["dark"],
       pal_display_name: "共享仓库帕鲁",
       catalog_entry_state: "resolved" as const,
       owner_filter_key: "b".repeat(64),
@@ -119,6 +122,7 @@ describe("pal inventory", () => {
         shared: "true",
         page_size: "12",
         page: "3",
+        view: "table",
       }),
     );
 
@@ -133,6 +137,7 @@ describe("pal inventory", () => {
       page_size: 12,
       page: 3,
       context: null,
+      view: "table",
     });
     expect(
       ["all", "mine", "shared"].map(
@@ -168,48 +173,57 @@ describe("pal inventory", () => {
     );
   });
 
-  it("provides previous, next, total pages and a bounded page jump", () => {
+  it("provides standard numbered pagination with ellipses", () => {
     const query = parsePalListQuery(
       new URLSearchParams({
         scope: "mine",
         query: "棉",
         page: "2",
         page_size: "12",
+        view: "table",
       }),
     );
     render(
       <PalPagination
         query={query}
-        page={{ ...page, page_number: 2, total_pages: 4, total_count: 80 }}
+        page={{ ...page, page_number: 6, total_pages: 12, total_count: 140 }}
       />,
     );
 
     expect(
       screen.getByRole("navigation", { name: "帕鲁列表分页" }),
     ).toBeTruthy();
-    expect(screen.getByText("第 2 / 4 页")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "第 6 页" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
     expect(
       screen.getByRole("link", { name: "上一页" }).getAttribute("href"),
-    ).toContain("page=1");
+    ).toContain("page=5");
     expect(
       screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
-    ).toContain("page=3");
+    ).toContain("page=7");
     expect(
       screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
     ).toContain("page_size=12");
     expect(
       screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
     ).toContain("context=");
-    const jump = screen.getByRole("spinbutton", { name: "跳转页码" });
-    expect(jump.getAttribute("min")).toBe("1");
-    expect(jump.getAttribute("max")).toBe("4");
+    expect(
+      screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
+    ).toContain("view=table");
+    expect(screen.getAllByText("更多页面")).toHaveLength(2);
+    expect(screen.queryByRole("spinbutton", { name: "跳转页码" })).toBeNull();
   });
 
-  it("offers sharing controls only for the requester's own pals", () => {
+  it("renders compact cards with icon-only gender and elements", () => {
     const onToggleShare = vi.fn();
     render(
       <PalInventory
         page={page}
+        view="cards"
+        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
         passiveRanks={{
           test_passive_a: 3,
           test_passive_b: 5,
@@ -235,26 +249,17 @@ describe("pal inventory", () => {
     expect(screen.getByText("认真").dataset.rank).toBe("3");
     expect(screen.getByText("工匠精神").dataset.rank).toBe("5");
     expect(screen.queryByText(/Rank/)).toBeNull();
-    expect(
-      screen
-        .getAllByText("雄性")
-        .some((label) =>
-          label.parentElement
-            ?.querySelector("svg")
-            ?.className.baseVal.includes("text-sky-500"),
-        ),
-    ).toBe(true);
-    expect(
-      screen
-        .getAllByText("雌性")
-        .some((label) =>
-          label.parentElement
-            ?.querySelector("svg")
-            ?.className.baseVal.includes("text-rose-400"),
-        ),
-    ).toBe(true);
+    expect(screen.queryByText("雄性")).toBeNull();
+    expect(screen.queryByText("雌性")).toBeNull();
+    expect(screen.getByLabelText("雄性")).toBeTruthy();
+    expect(screen.getAllByLabelText("雌性")).toHaveLength(2);
+    expect(screen.getByRole("img", { name: "一般属性" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "草属性" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "水属性" })).toBeTruthy();
+    expect(screen.queryByText("test_parent_a", { exact: true })).toBeNull();
 
     const portrait = screen.getByRole("img", { name: "棉悠悠头像" });
+    expect(portrait.getAttribute("width")).toBe("56");
     expect(decodeURIComponent(portrait.getAttribute("src") ?? "")).toContain(
       "/pal-assets/872e4a79af5b/pals/test_parent_a.webp",
     );
@@ -262,6 +267,29 @@ describe("pal inventory", () => {
     expect(
       screen.getByRole("img", { name: "棉悠悠头像（暂无本地图标）" }),
     ).toBeTruthy();
+  });
+
+  it("switches to a table that keeps portraits and sharing controls", () => {
+    render(
+      <PalInventory
+        page={page}
+        view="table"
+        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
+        passiveRanks={{ test_passive_a: 3, test_passive_b: 5 }}
+        onToggleShare={vi.fn()}
+      />,
+    );
+
+    const table = screen.getByRole("table", { name: "帕鲁库存表格" });
+    expect(table).toBeTruthy();
+    expect(within(table).getByRole("img", { name: "棉悠悠头像" })).toBeTruthy();
+    expect(within(table).getAllByRole("row")).toHaveLength(4);
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(
+      screen
+        .getByRole("link", { name: "表格视图" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
   });
 
   it("makes missing catalog data and unknown IDs explicit", () => {
@@ -284,6 +312,8 @@ describe("pal inventory", () => {
             },
           ],
         }}
+        view="cards"
+        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
       />,
     );
 
@@ -324,6 +354,8 @@ describe("pal inventory", () => {
           catalog_state: "not_configured",
           game_data_version_id: null,
         }}
+        view="cards"
+        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
       />,
     );
 

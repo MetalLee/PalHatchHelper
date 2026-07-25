@@ -62,6 +62,28 @@ export function GenderIcon({
   );
 }
 
+export function GenderMarker({
+  gender,
+  className,
+  iconClassName,
+}: Readonly<{
+  gender: DisplayGender;
+  className?: string;
+  iconClassName?: string;
+}>) {
+  const label = genderDisplayLabel(gender);
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cn("inline-flex shrink-0 items-center", className)}
+    >
+      <GenderIcon gender={gender} className={iconClassName} />
+    </span>
+  );
+}
+
 export function GenderDisplay({
   gender,
   label,

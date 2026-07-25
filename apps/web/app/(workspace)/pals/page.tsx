@@ -80,6 +80,16 @@ export default async function PalsPage({
 
   const rawParams = toUrlSearchParams(await searchParams);
   const query = parsePalListQuery(rawParams);
+  const cardParams = new URLSearchParams(rawParams);
+  cardParams.delete("view");
+  cardParams.delete("page");
+  cardParams.delete("context");
+  const tableParams = new URLSearchParams(cardParams);
+  tableParams.set("view", "table");
+  const viewHrefs = {
+    cards: `/pals${cardParams.size > 0 ? `?${cardParams.toString()}` : ""}`,
+    table: `/pals?${tableParams.toString()}`,
+  } as const;
 
   let page;
   try {
@@ -182,6 +192,8 @@ export default async function PalsPage({
       <PalInventory
         key={rawParams.toString()}
         page={page}
+        view={query.view}
+        viewHrefs={viewHrefs}
         passiveRanks={passiveRanks}
       />
       {page.items.length > 0 ? (

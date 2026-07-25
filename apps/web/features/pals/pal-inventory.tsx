@@ -1,13 +1,18 @@
 "use client";
 
 import type { PalInventoryPage, Phase5ErrorCode } from "@palhatch/contracts";
-import { ShieldCheck, Warehouse } from "lucide-react";
+import { LayoutGrid, List, ShieldCheck, Warehouse } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { PageEmpty } from "@/components/states/page-empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import { PalInventoryCard } from "./pal-inventory-card";
+import { PalInventoryTable } from "./pal-inventory-table";
+import type { PalInventoryView } from "./query";
 
 type ToggleShare = (
   palInstanceUid: string,
@@ -16,10 +21,14 @@ type ToggleShare = (
 
 export function PalInventory({
   page,
+  view,
+  viewHrefs,
   passiveRanks = {},
   onToggleShare,
 }: Readonly<{
   page: PalInventoryPage;
+  view: PalInventoryView;
+  viewHrefs: Readonly<Record<PalInventoryView, string>>;
   passiveRanks?: Readonly<Record<string, number>>;
   onToggleShare?: ToggleShare;
 }>) {
@@ -85,16 +94,42 @@ export function PalInventory({
         </Alert>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p
           className="text-sm font-medium text-muted-foreground"
           aria-live="polite"
         >
           共 {page.total_count.toLocaleString("zh-CN")} 只可见帕鲁
         </p>
-        <p className="text-xs text-muted-foreground">
-          当前第 {page.page_number} 页
-        </p>
+        <div
+          className="flex items-center rounded-xl border border-border/80 bg-background/80 p-1"
+          aria-label="库存展示形式"
+        >
+          <Link
+            href={viewHrefs.cards}
+            aria-current={view === "cards" ? "page" : undefined}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "min-h-9 rounded-lg px-2.5",
+              view === "cards" && "bg-accent text-accent-foreground shadow-xs",
+            )}
+          >
+            <LayoutGrid aria-hidden="true" className="size-4" />
+            卡片视图
+          </Link>
+          <Link
+            href={viewHrefs.table}
+            aria-current={view === "table" ? "page" : undefined}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "min-h-9 rounded-lg px-2.5",
+              view === "table" && "bg-accent text-accent-foreground shadow-xs",
+            )}
+          >
+            <List aria-hidden="true" className="size-4" />
+            表格视图
+          </Link>
+        </div>
       </div>
 
       {errorCode !== null ? (
@@ -118,8 +153,17 @@ export function PalInventory({
           title="没有匹配的帕鲁"
           description="尝试清空部分筛选，或切换“全部 / 我的帕鲁 / 公会共享”范围。"
         />
+      ) : view === "table" ? (
+        <PalInventoryTable
+          items={items}
+          passiveRanks={passiveRanks}
+          pendingId={pendingId}
+          onToggleShare={(palInstanceUid, enabled) =>
+            void toggle(palInstanceUid, enabled)
+          }
+        />
       ) : (
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {items.map((pal) => (
             <PalInventoryCard
               key={pal.pal_instance_uid}

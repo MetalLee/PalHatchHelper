@@ -82,12 +82,14 @@ function scopeHref(scope: string, query: PalListQuery): string {
   if (query.location) params.set("location", query.location);
   if (query.shared !== null) params.set("shared", String(query.shared));
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));
+  if (query.view !== "cards") params.set("view", query.view);
   return `/pals?${params.toString()}`;
 }
 
 function resetHref(query: PalListQuery): string {
   const params = new URLSearchParams({ scope: query.scope });
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));
+  if (query.view !== "cards") params.set("view", query.view);
   return `/pals?${params.toString()}`;
 }
 
@@ -267,6 +269,9 @@ function FilterFields({
       <input type="hidden" name="scope" value={query.scope} />
       {query.page_size !== 24 ? (
         <input type="hidden" name="page_size" value={query.page_size} />
+      ) : null}
+      {query.view !== "cards" ? (
+        <input type="hidden" name="view" value={query.view} />
       ) : null}
       <div className="grid min-w-0 gap-1.5 lg:col-span-2 xl:col-span-1">
         <Label

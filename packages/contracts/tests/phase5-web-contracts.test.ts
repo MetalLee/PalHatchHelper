@@ -26,6 +26,7 @@ describe("Phase 5 web contracts", () => {
           pal_id: "test_parent_a",
           is_boss: false,
           encyclopedia_no: 1,
+          element_types: ["neutral"],
           pal_display_name: "棉悠悠",
           catalog_entry_state: "resolved",
           owner_filter_key: "a".repeat(64),
@@ -99,5 +100,8 @@ describe("Phase 5 web contracts", () => {
     expectTypeOf<PalInventoryItem["encyclopedia_no"]>().toEqualTypeOf<
       number | null
     >();
+    expectTypeOf<
+      PalInventoryItem["element_types"][number]
+    >().toEqualTypeOf<string>();
   });
 });

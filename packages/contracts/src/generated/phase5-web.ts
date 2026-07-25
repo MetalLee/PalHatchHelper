@@ -54,6 +54,10 @@ export interface PalInventoryItem {
   pal_id: string;
   is_boss: boolean | null;
   encyclopedia_no: number | null;
+  /**
+   * @maxItems 4
+   */
+  element_types: [] | [string] | [string, string] | [string, string, string] | [string, string, string, string];
   pal_display_name: string;
   catalog_entry_state: "resolved" | "unknown" | "not_configured";
   owner_filter_key: string;
@@ -115,6 +119,10 @@ export interface PalInventoryRpcItem {
   pal_id: string;
   is_boss: boolean | null;
   encyclopedia_no: number | null;
+  /**
+   * @maxItems 4
+   */
+  element_types: [] | [string] | [string, string] | [string, string, string] | [string, string, string, string];
   pal_display_name: string;
   catalog_entry_state: "resolved" | "unknown" | "not_configured";
   owner_filter_key: string;

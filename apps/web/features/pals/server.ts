@@ -29,6 +29,7 @@ export function toSafeInventoryItem(
     pal_id: row.pal_id,
     is_boss: row.is_boss,
     encyclopedia_no: row.encyclopedia_no,
+    element_types: [...row.element_types],
     pal_display_name: row.pal_display_name,
     catalog_entry_state: row.catalog_entry_state,
     owner_filter_key: row.owner_filter_key,
@@ -158,6 +159,7 @@ const emptyQuery: PalListQuery = {
   page_size: 1,
   page: 1,
   context: null,
+  view: "cards",
 };
 
 export async function getOverviewSummary(
