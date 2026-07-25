@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { GenderDisplay } from "@/components/pals/gender-display";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { palLocationText } from "@/components/pals/pal-location";
@@ -167,7 +168,10 @@ function CandidateCard({
 
       <dl className="mt-4 grid min-w-0 gap-3 text-sm sm:grid-cols-2">
         <Fact icon={ShieldCheck} label="性别">
-          {palGenderLabel(candidate.gender)}
+          <GenderDisplay
+            gender={candidate.gender}
+            label={palGenderLabel(candidate.gender)}
+          />
         </Fact>
         <Fact icon={UserRound} label="所有者">
           {candidate.owner_display_name}
@@ -182,7 +186,7 @@ function CandidateCard({
 
       <div className="mt-4">
         <p className="text-xs font-semibold text-muted-foreground">
-          候选被动及 Rank（当前安全投影仅含匹配项）
+          候选被动（当前安全投影仅含匹配项）
         </p>
         {candidate.matched_passive_ids.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">无匹配被动</p>
@@ -194,7 +198,6 @@ function CandidateCard({
                 name={passiveNames.get(passiveId) ?? passiveId}
                 rank={passiveFacts.get(passiveId)?.rank ?? null}
                 isNegative={passiveFacts.get(passiveId)?.isNegative ?? null}
-                showRank
                 className="max-w-full"
               />
             ))}

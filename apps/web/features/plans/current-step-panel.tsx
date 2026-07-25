@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
+import { GenderDisplay } from "@/components/pals/gender-display";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { palLocationText } from "@/components/pals/pal-location";
@@ -157,7 +158,10 @@ export function CurrentStepPanel({
 
         <dl className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StepFact icon={ShieldCheck} label="必需性别">
-            {palGenderLabel(step.preferred_gender)}
+            <GenderDisplay
+              gender={step.preferred_gender}
+              label={palGenderLabel(step.preferred_gender)}
+            />
           </StepFact>
           <StepFact icon={Baby} label="候选数量">
             {candidates.length} 个
@@ -179,7 +183,7 @@ export function CurrentStepPanel({
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
             <Dna aria-hidden="true" className="size-3.5" />
-            必需被动及 Rank
+            必需被动
           </p>
           {step.required_passive_ids.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">无指定被动</p>
@@ -191,7 +195,6 @@ export function CurrentStepPanel({
                   name={passiveNames.get(passiveId) ?? passiveId}
                   rank={passiveFacts.get(passiveId)?.rank ?? null}
                   isNegative={passiveFacts.get(passiveId)?.isNegative ?? null}
-                  showRank
                   className="max-w-full"
                 />
               ))}

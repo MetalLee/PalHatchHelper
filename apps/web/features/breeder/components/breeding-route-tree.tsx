@@ -3,6 +3,7 @@ import { ArrowDown, GitBranch, Plus, TriangleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 import {
   BreedingTreeBuildError,
@@ -18,10 +19,6 @@ import {
   type BreedingTreeNodeOverlay,
 } from "./breeding-tree-node";
 
-const cardWidth = 244;
-const columnGap = 72;
-const rowGap = 28;
-
 interface PositionedOccurrence {
   occurrence: BreedingTreeOccurrence;
   column: number;
@@ -34,6 +31,9 @@ interface TreeLayout {
   columnCount: number;
   maxRows: number;
   rowHeight: number;
+  cardWidth: number;
+  columnGap: number;
+  rowGap: number;
   width: number;
   height: number;
 }
@@ -46,6 +46,7 @@ export function BreedingRouteTree({
   passiveNames,
   passiveFacts,
   stepOverlays,
+  compactPreview = false,
   ariaLabel = "当前路线的配种路径树",
   eyebrow = "Breeding route tree",
   title = "当前路线的配种路径",
@@ -59,10 +60,11 @@ export function BreedingRouteTree({
   passiveNames: ReadonlyMap<string, string>;
   passiveFacts?: ReadonlyMap<string, BreedingTreePassiveFact>;
   stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
+  compactPreview?: boolean;
   ariaLabel?: string;
-  eyebrow?: string;
+  eyebrow?: string | null;
   title?: string;
-  description?: string;
+  description?: string | null;
   summary?: string;
 }>) {
   let model: BreedingTreeModel;
@@ -115,7 +117,7 @@ export function BreedingRouteTree({
   const occurrenceById = new Map(
     model.occurrences.map((occurrence) => [occurrence.id, occurrence]),
   );
-  const layout = createTreeLayout(model, entityById);
+  const layout = createTreeLayout(model, entityById, compactPreview);
 
   return (
     <section
@@ -124,11 +126,23 @@ export function BreedingRouteTree({
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 border-b border-border bg-white/70 px-4 py-4 sm:px-6">
         <div>
-          <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-            {eyebrow}
-          </p>
-          <h3 className="mt-1 text-xl font-bold text-foreground">{title}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          {eyebrow === null ? null : (
+            <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
+              {eyebrow}
+            </p>
+          )}
+          <h3
+            className={cn(
+              "text-xl font-bold text-foreground",
+              eyebrow === null && "mt-0",
+              eyebrow !== null && "mt-1",
+            )}
+          >
+            {title}
+          </h3>
+          {description === null ? null : (
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          )}
         </div>
         <p className="rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-muted-foreground">
           {summary ??
@@ -149,6 +163,7 @@ export function BreedingRouteTree({
         palNames={palNames}
         passiveNames={passiveNames}
         stepOverlays={stepOverlays}
+        compactPreview={compactPreview}
       />
       <MobileTree
         model={model}
@@ -157,6 +172,7 @@ export function BreedingRouteTree({
         palNames={palNames}
         passiveNames={passiveNames}
         stepOverlays={stepOverlays}
+        compactPreview={compactPreview}
       />
     </section>
   );
@@ -169,6 +185,7 @@ function DesktopTree({
   palNames,
   passiveNames,
   stepOverlays,
+  compactPreview,
 }: Readonly<{
   model: BreedingTreeModel;
   layout: TreeLayout;
@@ -176,19 +193,20 @@ function DesktopTree({
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
   stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
+  compactPreview: boolean;
 }>) {
   const gridStyle: CSSProperties = {
     width: layout.width,
     minHeight: layout.height,
-    gridTemplateColumns: `repeat(${layout.columnCount}, ${cardWidth}px)`,
+    gridTemplateColumns: `repeat(${layout.columnCount}, ${layout.cardWidth}px)`,
     gridTemplateRows: `repeat(${layout.maxRows}, ${layout.rowHeight}px)`,
-    columnGap,
-    rowGap,
+    columnGap: layout.columnGap,
+    rowGap: layout.rowGap,
   };
   const headerStyle: CSSProperties = {
     width: layout.width,
-    gridTemplateColumns: `repeat(${layout.columnCount}, ${cardWidth}px)`,
-    columnGap,
+    gridTemplateColumns: `repeat(${layout.columnCount}, ${layout.cardWidth}px)`,
+    columnGap: layout.columnGap,
   };
 
   return (
@@ -245,13 +263,15 @@ function DesktopTree({
               );
               const to = layout.positionByOccurrenceId.get(edge.toOccurrenceId);
               if (from === undefined || to === undefined) return null;
-              const startX = from.column * (cardWidth + columnGap) + cardWidth;
-              const endX = to.column * (cardWidth + columnGap);
+              const startX =
+                from.column * (layout.cardWidth + layout.columnGap) +
+                layout.cardWidth;
+              const endX = to.column * (layout.cardWidth + layout.columnGap);
               const startY =
-                (from.row - 1) * (layout.rowHeight + rowGap) +
+                (from.row - 1) * (layout.rowHeight + layout.rowGap) +
                 layout.rowHeight / 2;
               const endY =
-                (to.row - 1) * (layout.rowHeight + rowGap) +
+                (to.row - 1) * (layout.rowHeight + layout.rowGap) +
                 layout.rowHeight / 2;
               const controlX = startX + Math.max(32, (endX - startX) / 2);
               return (
@@ -290,6 +310,7 @@ function DesktopTree({
                   palNames={palNames}
                   passiveNames={passiveNames}
                   overlay={overlayFor(occurrence, stepOverlays)}
+                  compactPreview={compactPreview}
                   className="h-full"
                 />
               </div>
@@ -308,6 +329,7 @@ function MobileTree({
   palNames,
   passiveNames,
   stepOverlays,
+  compactPreview,
 }: Readonly<{
   model: BreedingTreeModel;
   entityById: ReadonlyMap<string, BreedingTreeEntity>;
@@ -315,6 +337,7 @@ function MobileTree({
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
   stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
+  compactPreview: boolean;
 }>) {
   if (model.steps.length === 0 && model.targetOccurrenceId !== null) {
     const targetOccurrence = occurrenceById.get(model.targetOccurrenceId);
@@ -334,6 +357,7 @@ function MobileTree({
           palNames={palNames}
           passiveNames={passiveNames}
           overlay={overlayFor(targetOccurrence, stepOverlays)}
+          compactPreview={compactPreview}
         />
       </div>
     );
@@ -341,7 +365,10 @@ function MobileTree({
 
   return (
     <ol
-      className="grid min-w-0 gap-5 p-4 sm:p-6 lg:hidden"
+      className={cn(
+        "grid min-w-0 p-4 lg:hidden",
+        compactPreview ? "gap-3 sm:p-4" : "gap-5 sm:p-6",
+      )}
       data-tree-layout="mobile-vertical"
     >
       {model.steps.map((step, index) => {
@@ -388,6 +415,7 @@ function MobileTree({
               palNames={palNames}
               passiveNames={passiveNames}
               overlay={overlayFor(parentAOccurrence, stepOverlays)}
+              compactPreview={compactPreview}
             />
             <Connector icon={Plus} label="与" />
             <BreedingTreeNode
@@ -400,6 +428,7 @@ function MobileTree({
               palNames={palNames}
               passiveNames={passiveNames}
               overlay={overlayFor(parentBOccurrence, stepOverlays)}
+              compactPreview={compactPreview}
             />
             <Connector icon={ArrowDown} label="配种产出" />
             <BreedingTreeNode
@@ -409,6 +438,7 @@ function MobileTree({
               palNames={palNames}
               passiveNames={passiveNames}
               overlay={overlayFor(childOccurrence, stepOverlays)}
+              compactPreview={compactPreview}
             />
           </li>
         );
@@ -441,7 +471,11 @@ function overlayFor(
 function createTreeLayout(
   model: BreedingTreeModel,
   entityById: ReadonlyMap<string, BreedingTreeEntity>,
+  compactPreview: boolean,
 ): TreeLayout {
+  const cardWidth = compactPreview ? 224 : 244;
+  const columnGap = compactPreview ? 52 : 72;
+  const rowGap = compactPreview ? 20 : 28;
   const maxGeneration = Math.max(
     0,
     ...model.layers.map((layer) => layer.generation),
@@ -455,12 +489,20 @@ function createTreeLayout(
     0,
     ...model.occurrences.map((occurrence) => {
       const entity = entityById.get(occurrence.entityId);
-      return (
-        (entity?.passives.length ?? 0) + occurrence.requiredPassiveIds.length
-      );
+      if (entity === undefined) return 0;
+      if (compactPreview) {
+        if (entity.kind === "inventory" || entity.kind === "existing_target") {
+          return entity.passives.length;
+        }
+        return entity.requiredPassives.length > 0
+          ? entity.requiredPassives.length
+          : entity.passives.length;
+      }
+      return entity.passives.length + occurrence.requiredPassiveIds.length;
     }),
   );
-  const rowHeight = 300 + Math.ceil(maximumPassiveCount / 2) * 34;
+  const rowHeight =
+    (compactPreview ? 236 : 300) + Math.ceil(maximumPassiveCount / 2) * 34;
   const positioned: PositionedOccurrence[] = [];
 
   for (const layer of model.layers) {
@@ -490,6 +532,9 @@ function createTreeLayout(
     columnCount,
     maxRows,
     rowHeight,
+    cardWidth,
+    columnGap,
+    rowGap,
     width,
     height,
   };

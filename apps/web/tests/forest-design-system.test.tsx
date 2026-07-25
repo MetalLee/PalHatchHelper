@@ -85,13 +85,15 @@ describe("Forest Healing design system", () => {
     );
   });
 
-  it("maps passive ranks without guessing from the passive name", () => {
+  it("keeps passive rank styling without rendering rank text", () => {
     const { rerender } = render(<PassiveBadge name="任意名称" rank={1} />);
     expect(screen.getByText("任意名称").dataset.rank).toBe("1");
+    expect(screen.queryByText(/Rank|R1/)).toBeNull();
 
     for (const rank of [2, 3, 4, 5] as const) {
       rerender(<PassiveBadge name={`被动 ${rank}`} rank={rank} />);
       expect(screen.getByText(`被动 ${rank}`).dataset.rank).toBe(String(rank));
+      expect(screen.queryByText(/Rank/)).toBeNull();
     }
 
     rerender(<PassiveBadge name="负面被动" rank={-1} />);
@@ -100,16 +102,17 @@ describe("Forest Healing design system", () => {
       "负面",
     );
 
-    rerender(
-      <PassiveBadge name="目录负面被动" rank={1} isNegative={true} showRank />,
-    );
+    rerender(<PassiveBadge name="目录负面被动" rank={1} isNegative={true} />);
     expect(
       screen
         .getByText("目录负面被动")
         .closest("[data-rank]")
         ?.getAttribute("data-rank"),
     ).toBe("negative");
-    expect(screen.getByText(/Rank 1/).textContent).toContain("负面");
+    expect(screen.queryByText(/Rank 1/)).toBeNull();
+    expect(
+      screen.getByText("目录负面被动").getAttribute("aria-label"),
+    ).not.toContain("Rank");
 
     rerender(<PassiveBadge name="未知品级" rank={null} />);
     expect(screen.getByText("未知品级").dataset.rank).toBe("unknown");

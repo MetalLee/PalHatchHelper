@@ -1,5 +1,6 @@
 import { Box, MapPin, Sparkles, UserRound } from "lucide-react";
 
+import { GenderDisplay } from "@/components/pals/gender-display";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { palLocationText } from "@/components/pals/pal-location";
@@ -33,6 +34,7 @@ export function BreedingTreeNode({
   palNames,
   passiveNames,
   overlay,
+  compactPreview = false,
   className,
 }: Readonly<{
   entity: BreedingTreeEntity;
@@ -41,6 +43,7 @@ export function BreedingTreeNode({
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
   overlay?: BreedingTreeNodeOverlay;
+  compactPreview?: boolean;
   className?: string;
 }>) {
   const palName =
@@ -67,7 +70,8 @@ export function BreedingTreeNode({
   return (
     <article
       className={cn(
-        "relative flex min-w-0 flex-col rounded-3xl border p-4 shadow-sm",
+        "relative flex min-w-0 flex-col border shadow-sm",
+        compactPreview ? "rounded-2xl p-3" : "rounded-3xl p-4",
         entity.kind === "missing"
           ? "border-orange-300 bg-gradient-to-br from-orange-50 to-rose-50"
           : entity.isTarget
@@ -94,9 +98,14 @@ export function BreedingTreeNode({
       data-occurrence-id={occurrence.id}
       data-plan-step-state={overlay?.tone}
       data-current-step={overlay?.current ? "true" : undefined}
+      data-density={compactPreview ? "compact" : "comfortable"}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <PalPortrait palId={entity.palId} name={palName} size={52} />
+        <PalPortrait
+          palId={entity.palId}
+          name={palName}
+          size={compactPreview ? 44 : 52}
+        />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold tracking-[0.12em] text-primary uppercase">
             {roleLabel}
@@ -107,14 +116,22 @@ export function BreedingTreeNode({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div
+        className={cn(
+          "flex flex-wrap gap-1.5",
+          compactPreview ? "mt-2" : "mt-3",
+        )}
+      >
         <SourceBadge entity={entity} />
         {overlay ? <StepStateBadge overlay={overlay} /> : null}
         <Badge
           variant="outline"
           className="border-border bg-white/78 text-foreground"
         >
-          {genderLabel(entity.gender)}
+          <GenderDisplay
+            gender={entity.gender}
+            label={genderLabel(entity.gender)}
+          />
         </Badge>
         {entity.recipeType === "special" ? (
           <Badge
@@ -142,7 +159,10 @@ export function BreedingTreeNode({
           </p>
           <p>
             <strong>所需性别：</strong>
-            {genderLabel(entity.gender)}
+            <GenderDisplay
+              gender={entity.gender}
+              label={genderLabel(entity.gender)}
+            />
           </p>
           <p>
             <strong>所需被动：</strong>
@@ -174,7 +194,7 @@ export function BreedingTreeNode({
             />
             <span className="min-w-0 break-words">{locationText(entity)}</span>
           </p>
-          {entity.instanceUid !== null ? (
+          {entity.instanceUid !== null && !compactPreview ? (
             <p className="flex min-w-0 items-start gap-2">
               <Box
                 aria-hidden="true"
@@ -186,6 +206,7 @@ export function BreedingTreeNode({
             </p>
           ) : null}
           {entity.existingTargetInstanceUid !== null &&
+          !compactPreview &&
           entity.instanceUid === null ? (
             <p className="flex min-w-0 items-start gap-2">
               <Box
@@ -226,7 +247,7 @@ export function BreedingTreeNode({
           passiveNames={passiveNames}
         />
       ) : null}
-      {showActualPassives && requiredPassives.length > 0 ? (
+      {!compactPreview && showActualPassives && requiredPassives.length > 0 ? (
         <PassiveList
           label="本步骤需保留"
           passives={requiredPassives}
@@ -316,6 +337,8 @@ function PassiveList({
   passives: readonly BreedingTreePassive[];
   passiveNames: ReadonlyMap<string, string>;
 }>) {
+  const fixedGrid = new Set(["库存被动", "需保留被动", "目标被动"]).has(label);
+
   return (
     <div className="mt-3 border-t border-border/80 pt-3">
       <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
@@ -325,15 +348,20 @@ function PassiveList({
       {passives.length === 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">无已提供被动</p>
       ) : (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div
+          className={cn(
+            "mt-2 grid grid-cols-2 items-start gap-1.5",
+            fixedGrid && "min-h-[3.875rem]",
+          )}
+          data-passive-layout={fixedGrid ? "2x2" : undefined}
+        >
           {passives.map((passive) => (
             <PassiveBadge
               key={passive.passiveId}
               name={localizedName(passiveNames, passive.passiveId, "被动")}
               rank={passive.rank}
               isNegative={passive.isNegative}
-              showRank
-              className="max-w-full whitespace-normal"
+              className="w-full min-w-0 justify-start truncate whitespace-nowrap"
             />
           ))}
         </div>

@@ -38,17 +38,17 @@ export function BreedingJobTargetSummary({
 }>) {
   return (
     <section
-      className="min-w-0 rounded-3xl border border-glass-border bg-glass p-5 shadow-soft backdrop-blur-md sm:p-6"
+      className="min-w-0 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-5"
       aria-label="配种目标摘要"
     >
-      <div className="flex min-w-0 items-start gap-4">
-        <PalPortrait palId={targetPalId} name={targetName} size={72} />
+      <div className="flex min-w-0 items-start gap-3">
+        <PalPortrait palId={targetPalId} name={targetName} size={64} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-primary uppercase">
             <Target aria-hidden="true" className="size-4" />
-            Breeding target
+            配种目标
           </p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
             {targetName}
           </h2>
           <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
@@ -60,7 +60,7 @@ export function BreedingJobTargetSummary({
         </div>
       </div>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Sparkles aria-hidden="true" className="size-4 text-primary" />
           期望被动
@@ -75,7 +75,6 @@ export function BreedingJobTargetSummary({
                 name={localizedName(passiveNames, passiveId, "被动")}
                 rank={passiveFacts.get(passiveId)?.rank ?? null}
                 isNegative={passiveFacts.get(passiveId)?.isNegative ?? null}
-                showRank
                 className="max-w-full whitespace-normal"
               />
             ))}
@@ -83,7 +82,7 @@ export function BreedingJobTargetSummary({
         )}
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
         <StatusChip tone="good">
           {optimizationModeLabels[optimizationMode]}
         </StatusChip>

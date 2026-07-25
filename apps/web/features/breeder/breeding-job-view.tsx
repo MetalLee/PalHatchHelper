@@ -25,11 +25,7 @@ import { PinnedVersionDetails } from "./components/pinned-version-details";
 import { RouteAdoptionPanel } from "./components/route-adoption-panel";
 import { RouteComparisonGrid } from "./components/route-comparison-grid";
 import { RouteScoreBreakdown } from "./components/route-score-breakdown";
-import {
-  RouteExplanation,
-  RouteMissingRequirements,
-  RoutePassiveSources,
-} from "./components/route-supporting-details";
+import { RouteMissingRequirements } from "./components/route-supporting-details";
 import { localizedName, localizedNames } from "./presentation";
 
 const terminal = new Set(["completed", "failed", "cancelled"]);
@@ -220,10 +216,10 @@ export function BreedingJobView({
   }
 
   return (
-    <div className="grid min-w-0 max-w-full gap-6 overflow-x-clip">
+    <div className="grid min-w-0 max-w-full gap-4 overflow-x-clip">
       <BreederFlowProgress activeStep={activeStep} />
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
         <BreedingJobTargetSummary
           jobId={result.data.job_id}
           targetPalId={result.data.target_pal_id}
@@ -240,7 +236,6 @@ export function BreedingJobView({
           attemptCount={result.data.attempt_count}
           errorCode={result.data.error_code}
           pollPaused={pollPaused}
-          aiDegraded={plan?.ai.degraded === true}
         />
       </div>
 
@@ -270,45 +265,31 @@ export function BreedingJobView({
         <>
           <BreedingSearchDiagnostics
             hardSearchLimit={hardSearchLimit}
-            heuristicSearchPruned={heuristicSearchPruned}
             explanationCodes={plan.explanation_codes}
           />
           <RouteComparisonGrid
             routes={plan.routes}
             selectedRouteKey={selected?.route_key ?? null}
-            aiDegraded={plan.ai.degraded}
-            palNames={palNames}
-            passiveNames={passiveNames}
             onSelect={setSelectedKey}
           />
 
           {selected === undefined ? null : (
-            <section className="grid min-w-0 gap-5" aria-label="路线详情">
-              <RouteExplanation
-                route={selected}
-                planExplanation={plan.ai.explanation}
-                degraded={plan.ai.degraded}
-              />
-              <RouteMissingRequirements
-                route={selected}
-                palNames={palNames}
-                passiveNames={passiveNames}
-              />
-              <RoutePassiveSources
-                route={selected}
-                historical={
-                  result.data.algorithm_version !==
-                  "inventory-trait-aware-deterministic-v4"
-                }
-                palNames={palNames}
-                passiveNames={passiveNames}
-              />
+            <section className="grid min-w-0 gap-4" aria-label="路线详情">
               <BreedingRouteTree
                 route={selected}
                 targetPalId={result.data.target_pal_id}
                 palNames={palNames}
                 passiveNames={passiveNames}
                 passiveFacts={passiveFacts}
+                compactPreview
+                eyebrow={null}
+                title="配种路径"
+                description={null}
+              />
+              <RouteMissingRequirements
+                route={selected}
+                palNames={palNames}
+                passiveNames={passiveNames}
               />
               <RouteAdoptionPanel
                 route={selected}

@@ -39,6 +39,10 @@ import {
 import { Tabs, TabsList } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
+import {
+  GenderDisplay,
+  type DisplayGender,
+} from "@/components/pals/gender-display";
 import type { PalListQuery } from "./query";
 
 const scopes = [
@@ -63,7 +67,11 @@ const locationLabels = {
   unknown: "未知",
 } as const;
 
-type FilterOption = { value: string; label: string };
+type FilterOption = {
+  value: string;
+  label: string;
+  gender?: DisplayGender;
+};
 
 function scopeHref(scope: string, query: PalListQuery): string {
   const params = new URLSearchParams({ scope });
@@ -118,7 +126,11 @@ function FilterSelect({
           <SelectItem value="__all__">{emptyLabel}</SelectItem>
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              {option.gender === undefined ? (
+                option.label
+              ) : (
+                <GenderDisplay gender={option.gender} label={option.label} />
+              )}
             </SelectItem>
           ))}
         </SelectContent>
@@ -235,6 +247,7 @@ function FilterFields({
   const genders = page.filter_options.genders.map((value) => ({
     value,
     label: genderLabels[value],
+    gender: value,
   }));
   const locations = page.filter_options.locations.map((value) => ({
     value,

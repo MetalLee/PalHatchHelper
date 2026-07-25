@@ -47,11 +47,11 @@ export const jobStagePresentation: Record<
   },
   algorithm_completed: {
     label: "算法计算已完成",
-    description: "合法性、评分和路线事实已完成，正在准备辅助说明。",
+    description: "合法性、评分和路线事实已完成，正在整理结果。",
   },
   ai_enriching: {
-    label: "正在生成辅助说明",
-    description: "AI 只解释已确定的路线，不会修改配方或基础评分。",
+    label: "正在整理结果",
+    description: "确定性路线已经生成，正在完成结果保存。",
   },
   retry_pending: {
     label: "等待安全重试",

@@ -61,29 +61,21 @@ export function NoBreedingRouteState({
 
 export function BreedingSearchDiagnostics({
   hardSearchLimit,
-  heuristicSearchPruned,
   explanationCodes,
 }: Readonly<{
   hardSearchLimit: boolean;
-  heuristicSearchPruned: boolean;
   explanationCodes: readonly string[];
 }>) {
-  if (!hardSearchLimit && !heuristicSearchPruned) return null;
+  if (!hardSearchLimit) return null;
   return (
     <Alert
       role="status"
       className="rounded-3xl border-amber-200 bg-amber-50/94 text-amber-950"
     >
       <TriangleAlert aria-hidden="true" />
-      <AlertTitle>
-        {hardSearchLimit
-          ? "已返回预算内的最优候选"
-          : "已返回确定性剪枝后的候选"}
-      </AlertTitle>
+      <AlertTitle>已返回预算内的最优候选</AlertTitle>
       <AlertDescription className="text-amber-900">
-        {hardSearchLimit
-          ? "搜索受到节点或时间安全预算限制，未穷举全部路线。"
-          : "普通启发式剪枝不等同于硬安全上限。"}
+        搜索受到节点或时间安全预算限制，未穷举全部路线。
         <ExplanationCodes codes={explanationCodes} />
       </AlertDescription>
     </Alert>

@@ -24,12 +24,6 @@ function PassiveMetadata({ skill }: Readonly<{ skill: PassiveOption }>) {
       />
       <Badge
         variant="outline"
-        className="rounded-full border-sky-200 bg-sky-50 text-sky-900"
-      >
-        Rank {skill.rank}
-      </Badge>
-      <Badge
-        variant="outline"
         className={cn(
           "rounded-full",
           skill.is_negative
@@ -111,9 +105,6 @@ export function PassiveSkillPicker({
                   isNegative={skill.is_negative}
                   className="max-w-[13rem] truncate"
                 />
-                <span className="text-xs font-semibold text-muted-foreground">
-                  R{skill.rank}
-                </span>
                 <X aria-hidden="true" className="size-3.5 shrink-0" />
               </button>
             ))}
@@ -156,7 +147,7 @@ export function PassiveSkillPicker({
                 <button
                   type="button"
                   key={skill.passive_skill_id}
-                  aria-label={`${selected ? "移除" : "选择"}${skill.display_name}，Rank ${skill.rank}，${skill.is_negative ? "负面" : "正面"}`}
+                  aria-label={`${selected ? "移除" : "选择"}${skill.display_name}，${skill.is_negative ? "负面" : "正面"}`}
                   aria-pressed={selected}
                   onClick={() => onToggle(skill.passive_skill_id)}
                   className={cn(
