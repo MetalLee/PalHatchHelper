@@ -1,6 +1,5 @@
 import type { BreederJobStatus } from "@palhatch/contracts";
 import {
-  Bot,
   CheckCircle2,
   Clock3,
   LoaderCircle,
@@ -20,7 +19,7 @@ const stageIcons = {
   pending: Clock3,
   processing: LoaderCircle,
   algorithm_completed: CheckCircle2,
-  ai_enriching: Bot,
+  ai_enriching: LoaderCircle,
   retry_pending: RotateCcw,
   completed: CheckCircle2,
   failed: TriangleAlert,
@@ -43,13 +42,11 @@ export function JobStagePanel({
   attemptCount,
   errorCode,
   pollPaused,
-  aiDegraded,
 }: Readonly<{
   status: BreederJobStatus;
   attemptCount: number;
   errorCode: string | null;
   pollPaused: boolean;
-  aiDegraded: boolean;
 }>) {
   const presentation = jobStagePresentation[status];
   const StageIcon = stageIcons[status];
@@ -57,15 +54,15 @@ export function JobStagePanel({
 
   return (
     <section
-      className="min-w-0 rounded-3xl border border-glass-border bg-glass p-5 shadow-soft backdrop-blur-md sm:p-6"
+      className="min-w-0 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-5"
       aria-label="当前任务阶段"
       aria-live="polite"
     >
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span
             className={cn(
-              "grid size-12 shrink-0 place-items-center rounded-2xl border",
+              "grid size-10 shrink-0 place-items-center rounded-xl border",
               status === "failed" || status === "cancelled"
                 ? "border-rose-200 bg-rose-50 text-rose-700"
                 : "border-emerald-200 bg-emerald-50 text-primary",
@@ -74,23 +71,20 @@ export function JobStagePanel({
             <StageIcon
               aria-hidden="true"
               className={cn(
-                "size-5",
+                "size-4",
                 active && "motion-safe:animate-spin motion-reduce:animate-none",
               )}
             />
           </span>
           <div className="min-w-0">
             <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-              Current job stage
+              任务状态
             </p>
             <h2 className="mt-1 text-lg font-bold text-foreground">
               {presentation.label}
             </h2>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              {presentation.description}
-            </p>
             <p
-              className="mt-2 font-mono text-xs text-muted-foreground"
+              className="mt-1 font-mono text-xs text-muted-foreground"
               data-testid="job-stage"
             >
               {status} · 尝试 {attemptCount}
@@ -125,19 +119,6 @@ export function JobStagePanel({
           </AlertDescription>
         </Alert>
       )}
-
-      {aiDegraded ? (
-        <Alert
-          role="status"
-          className="mt-4 rounded-2xl border-sky-200 bg-sky-50/92 text-sky-950"
-        >
-          <Bot aria-hidden="true" className="size-4" />
-          <AlertTitle>解释已降级</AlertTitle>
-          <AlertDescription className="text-sky-900">
-            确定性算法结果与基础评分仍然完整；当前说明来自降级链路。
-          </AlertDescription>
-        </Alert>
-      ) : null}
     </section>
   );
 }

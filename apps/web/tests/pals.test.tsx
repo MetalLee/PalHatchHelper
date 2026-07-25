@@ -159,6 +159,13 @@ describe("pal inventory", () => {
     expect(screen.getByRole("option", { name: "观赏笼" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "次元仓库" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: "未知" })).toBeNull();
+    fireEvent.click(screen.getByRole("option", { name: "观赏笼" }));
+
+    fireEvent.click(screen.getByRole("combobox", { name: "性别" }));
+    const femaleOption = screen.getByRole("option", { name: "雌性" });
+    expect(femaleOption.querySelector("svg")?.className.baseVal).toContain(
+      "text-rose-400",
+    );
   });
 
   it("provides previous, next, total pages and a bounded page jump", () => {
@@ -227,6 +234,25 @@ describe("pal inventory", () => {
     expect(screen.queryByText("Fixture Storage A")).toBeNull();
     expect(screen.getByText("认真").dataset.rank).toBe("3");
     expect(screen.getByText("工匠精神").dataset.rank).toBe("5");
+    expect(screen.queryByText(/Rank/)).toBeNull();
+    expect(
+      screen
+        .getAllByText("雄性")
+        .some((label) =>
+          label.parentElement
+            ?.querySelector("svg")
+            ?.className.baseVal.includes("text-sky-500"),
+        ),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByText("雌性")
+        .some((label) =>
+          label.parentElement
+            ?.querySelector("svg")
+            ?.className.baseVal.includes("text-rose-400"),
+        ),
+    ).toBe(true);
 
     const portrait = screen.getByRole("img", { name: "棉悠悠头像" });
     expect(decodeURIComponent(portrait.getAttribute("src") ?? "")).toContain(

@@ -294,7 +294,7 @@ describe("Phase 6 breeder form", () => {
     expect(summary.textContent).toContain("test_child_pal");
   });
 
-  it("shows passive ranks, enforces four selections and creates the fixed request", async () => {
+  it("shows passive traits, enforces four selections and creates the fixed request", async () => {
     const createJob = vi.fn(async (request: CreateBreedingJobRequest) => {
       void request;
       return {
@@ -313,7 +313,7 @@ describe("Phase 6 breeder form", () => {
       );
     }
     expect(screen.getByRole("alert").textContent).toContain("最多选择四个被动");
-    expect(screen.getByText("Rank 5")).toBeTruthy();
+    expect(screen.queryByText(/Rank|R5/)).toBeNull();
     expect(screen.getByText("负面")).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "最少借用" }));
     fireEvent.change(screen.getByLabelText("最大代数"), {
@@ -531,8 +531,7 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getAllByText("棉悠悠").length).toBeGreaterThan(0);
     expect(screen.getAllByText("捣蛋猫").length).toBeGreaterThan(0);
     expect(screen.getAllByText("认真").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Rank 5").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Rank 未知")).toBeNull();
+    expect(screen.queryByText(/Rank/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
     expect(screen.getByText("路线长度")).toBeTruthy();
     expect(screen.getByText(/综合推荐：80\.00/)).toBeTruthy();
@@ -545,7 +544,7 @@ describe("Phase 6 job comparison", () => {
   it("switches among three mobile-safe routes and separates facts from degraded AI", () => {
     render(<BreedingJobView initialResult={completedJob()} poll={false} />);
 
-    expect(screen.getByText("解释已降级")).toBeTruthy();
+    expect(screen.queryByText("解释已降级")).toBeNull();
     const routeButtons = screen.getAllByRole("button", { name: /路线/ });
     expect(routeButtons).toHaveLength(3);
     expect(
@@ -565,11 +564,10 @@ describe("Phase 6 job comparison", () => {
         .getByRole("button", { name: "可执行路线 2" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
-    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/fixture-parent-a-2/)).toBeNull();
     expect(screen.getAllByText("Fixture Player B").length).toBeGreaterThan(0);
-    expect(screen.getByText("路线 2 模板解释")).toBeTruthy();
-    expect(screen.getByText("词条来源")).toBeTruthy();
-    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("路线 2 模板解释")).toBeNull();
+    expect(screen.queryByText("词条来源")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
     expect(screen.getByText("完整评分明细")).toBeTruthy();
@@ -590,7 +588,9 @@ describe("Phase 6 job comparison", () => {
     expect(firstRoute.textContent).toContain("库存可执行");
     expect(firstRoute.textContent).toContain("库存覆盖");
     expect(firstRoute.textContent).toContain("词条覆盖");
+    expect(firstRoute.textContent).not.toContain("排序第");
     expect(firstRoute.textContent).not.toMatch(/成功率\s*\d/);
+    expect(firstRoute.dataset.density).toBe("compact");
   });
 
   it("keeps the tree text order understandable and draws lightweight SVG connections", () => {
@@ -611,6 +611,23 @@ describe("Phase 6 job comparison", () => {
     expect(mobileText).toContain("Fixture Base · 工作位 8");
     expect(mobileText).toContain("终端 · 第 3 页 · 第 5 格");
     expect(tree.querySelectorAll("path[marker-end]").length).toBe(2);
+    expect(
+      tree.querySelectorAll('[data-passive-layout="2x2"]').length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText("本步骤需保留")).toBeNull();
+    expect(screen.queryByText("Breeding route tree")).toBeNull();
+    expect(screen.queryByText("Route comparison")).toBeNull();
+    expect(screen.queryByText("Breeding target")).toBeNull();
+    expect(screen.queryByText("Current job stage")).toBeNull();
+    expect(
+      screen
+        .getAllByText("雄性")
+        .some((label) =>
+          label.parentElement
+            ?.querySelector("svg")
+            ?.className.baseVal.includes("text-sky-500"),
+        ),
+    ).toBe(true);
   });
 
   it("shows an existing target inventory node on both responsive tree renderers", () => {
@@ -659,7 +676,7 @@ describe("Phase 6 job comparison", () => {
 
     expect(screen.getByText("库存可执行方案")).toBeTruthy();
     expect(screen.getByText(/需补充库存的备选方案/)).toBeTruthy();
-    expect(screen.getAllByText(/fixture-parent-a-2/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/fixture-parent-a-2/)).toBeNull();
     expect(container.querySelector("details")).toBeNull();
     expect(screen.getByRole("button", { name: "采用此方案" })).toBeTruthy();
   });
@@ -761,6 +778,22 @@ describe("Phase 6 job comparison", () => {
     expect(screen.queryByText("搜索达到安全上限")).toBeNull();
   });
 
+  it("does not interrupt valid route comparison with heuristic pruning diagnostics", () => {
+    const value = completedJob();
+    if (value.data.plan === null) throw new Error("fixture plan missing");
+    value.data.plan.explanation_codes = ["SEARCH_PRUNED"];
+    value.data.plan.diagnostics = {
+      search_complete: true,
+      hit_limits: [],
+      pruned_assignment_states: 128,
+    };
+
+    render(<BreedingJobView initialResult={value} poll={false} />);
+
+    expect(screen.queryByText("已返回确定性剪枝后的候选")).toBeNull();
+    expect(screen.getByText("方案比较")).toBeTruthy();
+  });
+
   it("shows actionable advice when a complete search proves there is no legal route", () => {
     const value = completedJob();
     if (value.data.plan === null) throw new Error("fixture plan missing");
@@ -858,8 +891,9 @@ describe("Phase 6 job comparison", () => {
 
     render(<BreedingJobView initialResult={value} poll={false} />);
 
-    expect(screen.getByText("仍需准备 1 只 Pal")).toBeTruthy();
-    expect(screen.getAllByText(/捣蛋猫 · 雌性/).length).toBeGreaterThan(0);
+    expect(screen.getByText("仍需准备 1 只帕鲁")).toBeTruthy();
+    expect(screen.getAllByText("捣蛋猫").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("雌性").length).toBeGreaterThan(0);
     expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
     expect(screen.getAllByText("父本").length).toBeGreaterThan(0);
     expect(screen.getAllByText("母本").length).toBeGreaterThan(0);

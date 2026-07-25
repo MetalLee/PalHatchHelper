@@ -235,9 +235,7 @@ describe("Phase 7 plan list", () => {
     expect(screen.getAllByText("幻色幼崽").length).toBe(4);
     expect(screen.getByText("1 个候选")).toBeTruthy();
     expect(screen.getAllByText("1 / 2").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Rank 5").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Rank 4").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Rank 未知")).toBeNull();
+    expect(screen.queryByText(/Rank/)).toBeNull();
     expect(screen.getByRole("link", { name: "下一页" })).toBeTruthy();
 
     fireEvent.pointerDown(screen.getByRole("button", { name: "更多筛选" }), {
@@ -321,9 +319,16 @@ describe("Phase 7 plan detail", () => {
     expect(candidateDialog.getByText(/实例 phase7…best/)).toBeTruthy();
     expect(candidateDialog.getByText(/系统匹配评分 1\.00/)).toBeTruthy();
     expect(candidateDialog.getByText(/不是遗传概率/)).toBeTruthy();
-    expect(candidateDialog.getAllByText("Rank 5").length).toBeGreaterThan(0);
-    expect(candidateDialog.getAllByText("Rank 4").length).toBeGreaterThan(0);
-    expect(candidateDialog.queryByText("Rank 未知")).toBeNull();
+    expect(candidateDialog.queryByText(/Rank/)).toBeNull();
+    expect(
+      candidateDialog
+        .getAllByText("雌性")
+        .some((label) =>
+          label.parentElement
+            ?.querySelector("svg")
+            ?.className.baseVal.includes("text-rose-400"),
+        ),
+    ).toBe(true);
     expect(
       candidateDialog.getByRole("button", { name: "确认真实子代" }),
     ).toBeTruthy();

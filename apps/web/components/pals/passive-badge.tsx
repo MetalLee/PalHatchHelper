@@ -23,13 +23,11 @@ export function PassiveBadge({
   name,
   rank,
   isNegative = null,
-  showRank = false,
   className,
 }: Readonly<{
   name: string;
   rank: number | null;
   isNegative?: boolean | null;
-  showRank?: boolean;
   className?: string;
 }>) {
   const key = rankKey(rank, isNegative);
@@ -37,33 +35,15 @@ export function PassiveBadge({
     <Badge
       variant="outline"
       data-rank={key}
-      aria-label={
-        key === "negative"
-          ? showRank
-            ? `${name}，Rank ${rank}，负面被动`
-            : `${name}，负面被动`
-          : undefined
-      }
+      title={name}
+      aria-label={key === "negative" ? `${name}，负面被动` : undefined}
       className={cn(
         "min-h-7 rounded-lg px-2.5 py-1 font-semibold",
         rankStyles[key],
         className,
       )}
     >
-      {showRank ? (
-        <>
-          <span className="min-w-0 whitespace-normal">{name}</span>
-          <span className="shrink-0 border-l border-current/20 pl-1.5 text-[0.65rem] opacity-80">
-            {key === "negative"
-              ? `Rank ${rank ?? "未知"} · 负面`
-              : rank === null
-                ? "Rank 未知"
-                : `Rank ${rank}`}
-          </span>
-        </>
-      ) : (
-        name
-      )}
+      {name}
     </Badge>
   );
 }

@@ -4,6 +4,7 @@ import type { PlanStep } from "@palhatch/contracts";
 import { Dna, Fingerprint } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { GenderDisplay } from "@/components/pals/gender-display";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { StatusChip } from "@/components/status/status-chip";
@@ -105,7 +106,10 @@ export function PlanStepList({
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         尝试 {step.attempt_number} 次 ·{" "}
-                        {palGenderLabel(step.preferred_gender)}
+                        <GenderDisplay
+                          gender={step.preferred_gender}
+                          label={palGenderLabel(step.preferred_gender)}
+                        />
                       </span>
                     </span>
                   </span>
@@ -163,7 +167,6 @@ export function PlanStepList({
                               isNegative={
                                 passiveFacts.get(passiveId)?.isNegative ?? null
                               }
-                              showRank
                               className="max-w-full"
                             />
                           ))}

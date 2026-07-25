@@ -1,15 +1,7 @@
 import type { PalInventoryPage } from "@palhatch/contracts";
-import {
-  CircleHelp,
-  CircleOff,
-  Crown,
-  MapPin,
-  Mars,
-  UserRound,
-  Venus,
-  type LucideIcon,
-} from "lucide-react";
+import { Crown, MapPin, UserRound } from "lucide-react";
 
+import { GenderDisplay } from "@/components/pals/gender-display";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { palLocationDisplay } from "@/components/pals/pal-location";
@@ -25,20 +17,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 type PalInventoryItem = PalInventoryPage["items"][number];
-
-const genderLabels = {
-  male: "雄性",
-  female: "雌性",
-  genderless: "无性别",
-  unknown: "未知性别",
-} as const;
-
-const genderIcons: Record<PalInventoryItem["gender"], LucideIcon> = {
-  male: Mars,
-  female: Venus,
-  genderless: CircleOff,
-  unknown: CircleHelp,
-};
 
 function shareLabel(
   pal: PalInventoryItem,
@@ -65,8 +43,6 @@ export function PalInventoryCard({
     pal.location_type === "dimensional_storage" &&
     pal.location_access_scope !== "guild";
   const switchId = `pal-share-${pal.pal_instance_uid}`;
-  const GenderIcon = genderIcons[pal.gender];
-
   return (
     <Card
       role="article"
@@ -133,12 +109,11 @@ export function PalInventoryCard({
             <dt className="text-xs font-semibold text-muted-foreground">
               性别
             </dt>
-            <dd className="mt-1 flex items-center gap-1 font-semibold text-foreground">
-              <GenderIcon
-                aria-hidden="true"
-                className="size-4 shrink-0 text-primary"
+            <dd className="mt-1 font-semibold text-foreground">
+              <GenderDisplay
+                gender={pal.gender}
+                label={pal.gender === "unknown" ? "未知性别" : undefined}
               />
-              {genderLabels[pal.gender]}
             </dd>
           </div>
           <div className="col-span-2 min-w-0 rounded-2xl bg-accent/55 p-3">
