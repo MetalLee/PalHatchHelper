@@ -105,10 +105,6 @@ export default async function AdminJobsPage() {
                       {job.degraded ? " · degraded" : ""}
                       <br />
                       {job.error_code ?? ""}
-                      <br />
-                      {job.execution_plan_id
-                        ? `plan ${job.execution_plan_id}`
-                        : ""}
                     </TableCell>
                     <TableCell>
                       <div className={adminActionsClasses}>

@@ -87,7 +87,6 @@ export interface AdminOverview {
   agent: AdminWorkerStatus;
   save_worker: AdminWorkerStatus;
   job_worker: AdminWorkerStatus;
-  candidate_detector: AdminWorkerStatus;
   latest_successful_snapshot: AdminSnapshotSummary | null;
   parser: AdminParserIdentity;
   catalog: AdminCatalogIdentity;
@@ -218,7 +217,6 @@ export interface AdminJobSummary {
   route_count: number;
   ai_provider: string | null;
   degraded: boolean;
-  execution_plan_id: NullableUuid;
   created_at: Timestamp;
 }
 export interface RuntimeSettings {

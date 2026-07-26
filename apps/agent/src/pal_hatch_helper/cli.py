@@ -51,11 +51,9 @@ from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.observability.logging import configure_logging, get_logger
 from pal_hatch_helper.parsers.subprocess import SubprocessParserAdapter
-from pal_hatch_helper.plans.processor import CandidateDetectionProcessor
 from pal_hatch_helper.repositories.breeding import SupabaseBreedingRuntimeRepository
 from pal_hatch_helper.repositories.breeding_results import SupabaseBreedingResultRepository
 from pal_hatch_helper.repositories.database import JSONValue, SupabaseDatabaseClient
-from pal_hatch_helper.repositories.execution_plans import SupabaseExecutionPlanRepository
 from pal_hatch_helper.repositories.inventory import SupabaseInventoryRepository
 from pal_hatch_helper.repositories.jobs import SupabaseJobRepository
 from pal_hatch_helper.runtime_settings import load_agent_runtime_settings
@@ -95,11 +93,6 @@ def build_parser() -> argparse.ArgumentParser:
     command_worker_parser.add_argument(
         "--once", action="store_true", help="process at most one command before exiting"
     )
-    candidate_parser = subparsers.add_parser(
-        "candidate-detector",
-        help="idempotently process one already-published normalized snapshot",
-    )
-    candidate_parser.add_argument("--snapshot-id", required=True, type=UUID)
     catalog_parser = subparsers.add_parser("catalog", help="manage immutable game catalog versions")
     catalog_commands = catalog_parser.add_subparsers(dest="catalog_command", required=True)
 
@@ -166,19 +159,6 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 "save_worker_start_failed",
                 extra={
                     "event": "save_worker_start_failed",
-                    "error_code": error.code.value,
-                },
-            )
-            return 2
-        return 0
-    if parsed.command == "candidate-detector":
-        try:
-            asyncio.run(run_candidate_detector(settings, parsed.snapshot_id))
-        except StructuredError as error:
-            get_logger(__name__).error(
-                "candidate_detector_failed",
-                extra={
-                    "event": "candidate_detector_failed",
                     "error_code": error.code.value,
                 },
             )
@@ -495,30 +475,6 @@ async def run_job_worker(
         await database.close()
 
 
-async def run_candidate_detector(settings: Settings, snapshot_id: UUID) -> None:
-    if not settings.database_configured:
-        raise StructuredError(
-            code=ErrorCode.DATABASE_UNAVAILABLE,
-            summary="Candidate detector database configuration is incomplete.",
-            retryable=False,
-        )
-    assert settings.supabase_url is not None
-    assert settings.supabase_service_role_key is not None
-    database = SupabaseDatabaseClient(
-        base_url=settings.supabase_url,
-        service_role_key=settings.supabase_service_role_key,
-        request_timeout_seconds=settings.database_request_timeout_seconds,
-    )
-    try:
-        await _record_worker_heartbeat(database, settings, "candidate_detector")
-        await CandidateDetectionProcessor(
-            SupabaseExecutionPlanRepository(database)
-        ).process_snapshot(snapshot_id)
-        await _record_worker_heartbeat(database, settings, "candidate_detector")
-    finally:
-        await database.close()
-
-
 async def run_command_worker(settings: Settings, *, run_once: bool = False) -> None:
     if not settings.database_configured:
         raise StructuredError(
@@ -826,9 +782,6 @@ async def _build_inventory_sync_service(
         registry=SnapshotRegistry(
             settings.palhatch_data_dir / "snapshots",
             successful_count=runtime.snapshot_retention_count,
-        ),
-        published_snapshot_processor=CandidateDetectionProcessor(
-            SupabaseExecutionPlanRepository(database)
         ),
     )
 

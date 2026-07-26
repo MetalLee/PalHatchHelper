@@ -9,7 +9,6 @@
     "agent",
     "save_worker",
     "job_worker",
-    "candidate_detector",
     "latest_successful_snapshot",
     "parser",
     "catalog",
@@ -24,7 +23,6 @@
     "agent": { "$ref": "#/$defs/AdminWorkerStatus" },
     "save_worker": { "$ref": "#/$defs/AdminWorkerStatus" },
     "job_worker": { "$ref": "#/$defs/AdminWorkerStatus" },
-    "candidate_detector": { "$ref": "#/$defs/AdminWorkerStatus" },
     "latest_successful_snapshot": {
       "anyOf": [{ "$ref": "#/$defs/AdminSnapshotSummary" }, { "type": "null" }]
     },
@@ -361,7 +359,6 @@
         "route_count",
         "ai_provider",
         "degraded",
-        "execution_plan_id",
         "created_at"
       ],
       "properties": {
@@ -383,7 +380,6 @@
         "route_count": { "type": "integer", "minimum": 0 },
         "ai_provider": { "type": ["string", "null"], "maxLength": 80 },
         "degraded": { "type": "boolean" },
-        "execution_plan_id": { "$ref": "#/$defs/NullableUuid" },
         "created_at": { "$ref": "#/$defs/Timestamp" }
       }
     },

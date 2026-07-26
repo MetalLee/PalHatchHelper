@@ -9,7 +9,6 @@ from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.stable_id import normalize_parser_snapshot_payload
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import ParserAdapter
-from pal_hatch_helper.plans.processor import PublishedSnapshotProcessor
 from pal_hatch_helper.repositories.inventory import (
     InventoryCleanupResult,
     InventoryFailureRequest,
@@ -44,7 +43,6 @@ class InventorySyncService:
         repository: InventoryRepository,
         drop_guard: InventoryDropGuard | None = None,
         registry: SnapshotRegistry | None = None,
-        published_snapshot_processor: PublishedSnapshotProcessor | None = None,
     ) -> None:
         self._world_id = world_id
         self._source_root = source_root
@@ -55,7 +53,6 @@ class InventorySyncService:
         self._repository = repository
         self._drop_guard = drop_guard or InventoryDropGuard()
         self._registry = registry or SnapshotRegistry(copier.snapshot_root)
-        self._published_snapshot_processor = published_snapshot_processor
 
     async def cleanup_expired_payloads(self) -> InventoryCleanupResult:
         return await self._repository.cleanup_expired_payloads()
@@ -75,8 +72,6 @@ class InventorySyncService:
             previous_content_hash=previous_content_hash,
         )
         if outcome.duplicate:
-            if self._published_snapshot_processor is not None and latest is not None:
-                await self._published_snapshot_processor.process_snapshot(latest.snapshot_id)
             return InventorySyncResult(
                 status="duplicate",
                 content_hash=outcome.content_hash,
@@ -147,8 +142,6 @@ class InventorySyncService:
             source_modified_at=outcome.source_modified_at,
         )
         self._registry.enforce_retention()
-        if self._published_snapshot_processor is not None:
-            await self._published_snapshot_processor.process_snapshot(snapshot_id)
         return InventorySyncResult(
             status="published",
             content_hash=outcome.content_hash,
@@ -197,8 +190,6 @@ class InventorySyncService:
             content_hash=record.content_hash,
             source_modified_at=record.source_modified_at,
         )
-        if self._published_snapshot_processor is not None:
-            await self._published_snapshot_processor.process_snapshot(published_id)
         return InventorySyncResult(
             status="published",
             content_hash=record.content_hash,

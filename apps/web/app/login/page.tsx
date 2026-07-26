@@ -28,7 +28,7 @@ export default function LoginPage() {
           <p className="mt-10 max-w-xl text-4xl font-bold tracking-[-0.04em] text-forest">
             安全同步库存，
             <br />
-            清楚推进每一代计划。
+            清楚比较并收藏每一条路线。
           </p>
           <p className="mt-5 max-w-lg text-base leading-8 text-muted-foreground">
             用固定数据版本计算确定性路线，与公会伙伴协作，并由你亲自确认每一步真实结果。

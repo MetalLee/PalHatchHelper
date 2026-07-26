@@ -20,7 +20,7 @@ const legacyComponents = [
 
 const legacyRoute = {
   route_id: "62000000-0000-4000-8000-000000000001",
-  execution_plan_id: null,
+  saved_plan_at: null,
   route_key: "7".repeat(64),
   rank: 1,
   optimization_mode: "balanced",

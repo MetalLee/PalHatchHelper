@@ -1,14 +1,16 @@
 import {
   parsePlanDetailRpcResult,
   parsePlanListRpcResult,
+  type BreedingJobDetailRpcSuccess,
+  type BreedingRoute,
   type Database,
-  type PlanDetail,
+  type PlanDetailReference,
   type PlanListPage,
-  type PlanStatus,
 } from "@palhatch/contracts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { unstable_noStore as noStore } from "next/cache";
 
+import { loadBreedingJob } from "@/features/breeder/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export class PlanDataError extends Error {
@@ -17,9 +19,13 @@ export class PlanDataError extends Error {
   }
 }
 
-export type PlanStatusFilter = "all" | PlanStatus;
+export interface SavedPlanDetail {
+  reference: PlanDetailReference;
+  job: BreedingJobDetailRpcSuccess["data"];
+  route: BreedingRoute;
+}
 
-type Cursor = { createdAt: string; id: string };
+type Cursor = { savedAt: string; routeId: string };
 
 export function encodePlanCursor(cursor: Cursor): string {
   return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
@@ -34,35 +40,29 @@ export function decodePlanCursor(value: string | undefined): Cursor | null {
     if (
       typeof parsed === "object" &&
       parsed !== null &&
-      "createdAt" in parsed &&
-      typeof parsed.createdAt === "string" &&
-      "id" in parsed &&
-      typeof parsed.id === "string" &&
-      /^[0-9a-f-]{36}$/i.test(parsed.id) &&
-      !Number.isNaN(Date.parse(parsed.createdAt))
+      "savedAt" in parsed &&
+      typeof parsed.savedAt === "string" &&
+      "routeId" in parsed &&
+      typeof parsed.routeId === "string" &&
+      /^[0-9a-f-]{36}$/i.test(parsed.routeId) &&
+      !Number.isNaN(Date.parse(parsed.savedAt))
     )
-      return { createdAt: parsed.createdAt, id: parsed.id };
+      return { savedAt: parsed.savedAt, routeId: parsed.routeId };
   } catch {}
   throw new PlanDataError("PLAN_CURSOR_INVALID");
 }
 
 export async function loadPlans(
-  options: {
-    status?: PlanStatusFilter;
-    cursor?: string;
-    boundary?: string;
-    limit?: number;
-  } = {},
+  options: { cursor?: string; boundary?: string; limit?: number } = {},
   client?: SupabaseClient<Database>,
 ): Promise<PlanListPage> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
   const cursor = decodePlanCursor(options.cursor);
-  const { data, error } = await supabase.rpc("list_execution_plans", {
-    p_status: options.status ?? "all",
+  const { data, error } = await supabase.rpc("list_saved_breeding_plans", {
     p_limit: options.limit ?? 20,
-    p_cursor_created_at: cursor?.createdAt ?? undefined,
-    p_cursor_id: cursor?.id ?? undefined,
+    p_cursor_saved_at: cursor?.savedAt ?? undefined,
+    p_cursor_route_id: cursor?.routeId ?? undefined,
     p_query_boundary: options.boundary ?? undefined,
   });
   if (error !== null) throw new PlanDataError("DATA_UNAVAILABLE");
@@ -75,45 +75,37 @@ export async function loadPlans(
   return {
     ...result.data,
     next_cursor: encodePlanCursor({
-      createdAt: rawCursor.slice(0, separator),
-      id: rawCursor.slice(separator + 1),
+      savedAt: rawCursor.slice(0, separator),
+      routeId: rawCursor.slice(separator + 1),
     }),
   };
 }
 
 export async function loadPlanDetail(
-  planId: string,
+  routeId: string,
   client?: SupabaseClient<Database>,
-): Promise<PlanDetail> {
+): Promise<SavedPlanDetail> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
-  const { data, error } = await supabase.rpc("get_execution_plan_detail", {
-    p_plan_id: planId,
+  const { data, error } = await supabase.rpc("get_saved_breeding_plan_detail", {
+    p_route_id: routeId,
   });
   if (error !== null) throw new PlanDataError("DATA_UNAVAILABLE");
   const result = parsePlanDetailRpcResult(data);
   if (!result.ok) throw new PlanDataError(result.error_code);
-  return result.data;
+  const job = await loadBreedingJob(result.data.source_job_id, supabase);
+  const route = job.data.plan?.routes.find(
+    (candidate) => candidate.route_id === routeId,
+  );
+  if (route === undefined) throw new PlanDataError("PLAN_NOT_FOUND");
+  return { reference: result.data, job: job.data, route };
 }
 
 const safeCodes = new Set([
-  "ROUTE_NOT_ADOPTABLE",
+  "AUTH_REQUIRED",
   "PLAN_NOT_FOUND",
   "PLAN_ACCESS_DENIED",
-  "PLAN_VERSION_CONFLICT",
-  "PLAN_INVALID_STATE_TRANSITION",
-  "PLAN_NOT_CURRENT_STEP",
-  "PLAN_PAUSED",
-  "STEP_PREREQUISITE_INCOMPLETE",
-  "CANDIDATE_NOT_FOUND",
-  "CANDIDATE_ALREADY_USED",
-  "CANDIDATE_SPECIES_MISMATCH",
-  "CANDIDATE_CONFIRMATION_REQUIRED",
-  "EXISTING_PAL_NOT_ELIGIBLE",
-  "PLAN_DEPENDENCY_UNAVAILABLE",
-  "PLAN_RECALCULATION_REQUIRED",
-  "PLAN_FIXED_VERSION_UNAVAILABLE",
-  "SNAPSHOT_DELTA_UNAVAILABLE",
+  "ROUTE_NOT_FOUND",
 ]);
 
 export function safePlanErrorCode(error: {
@@ -128,8 +120,7 @@ export function safePlanErrorCode(error: {
 export function planHttpStatus(code: string): number {
   if (code === "AUTH_REQUIRED") return 401;
   if (code === "PLAN_ACCESS_DENIED") return 403;
-  if (code === "PLAN_NOT_FOUND" || code === "CANDIDATE_NOT_FOUND") return 404;
-  if (code === "PLAN_VERSION_CONFLICT") return 409;
+  if (code === "PLAN_NOT_FOUND" || code === "ROUTE_NOT_FOUND") return 404;
   if (code === "DATA_UNAVAILABLE") return 503;
   return 422;
 }

@@ -1,6 +1,6 @@
 import {
-  parseAdoptRouteRequest,
-  parseAdoptRouteResponse,
+  parseSavePlanRequest,
+  parseSavePlanResponse,
 } from "@palhatch/contracts";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -24,16 +24,15 @@ export async function POST(request: NextRequest) {
     );
   let input;
   try {
-    input = parseAdoptRouteRequest(await request.json());
+    input = parseSavePlanRequest(await request.json());
   } catch {
     return NextResponse.json(
-      { error_code: "ROUTE_NOT_ADOPTABLE" },
+      { error_code: "ROUTE_NOT_FOUND" },
       { status: 400, headers: privateHeaders },
     );
   }
-  const { data, error } = await supabase.rpc("adopt_breeding_route", {
+  const { data, error } = await supabase.rpc("save_breeding_plan", {
     p_route_id: input.route_id,
-    p_idempotency_key: input.idempotency_key,
   });
   if (error !== null) {
     const code = safePlanErrorCode(error);
@@ -43,13 +42,10 @@ export async function POST(request: NextRequest) {
     );
   }
   try {
-    return NextResponse.json(
-      parseAdoptRouteResponse(Array.isArray(data) ? data[0] : data),
-      {
-        status: 201,
-        headers: privateHeaders,
-      },
-    );
+    return NextResponse.json(parseSavePlanResponse(data), {
+      status: 201,
+      headers: privateHeaders,
+    });
   } catch {
     return NextResponse.json(
       { error_code: "DATA_UNAVAILABLE" },

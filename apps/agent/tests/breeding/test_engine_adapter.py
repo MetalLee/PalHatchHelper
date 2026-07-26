@@ -103,7 +103,7 @@ def test_claim_adapter_validates_registry_before_calling_the_engine() -> None:
 
         assert result.routes
         assert result.algorithm_version == ALGORITHM_VERSION
-        assert result.scoring_profile_version == "balanced-v5"
+        assert result.scoring_profile_version == "balanced-v6"
         assert result.game_data_version_id == claim.job.game_data_version_id
 
     asyncio.run(scenario())

@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(41);
+select plan(39);
 
 create temporary table test_lease_tokens (
   name text primary key,
@@ -219,36 +219,6 @@ select throws_ok(
   'P0001',
   'INVALID_PAL_SCOPE',
   'pal query rejects scope bypass attempts'
-);
-
-select is(
-  public.update_breeding_step_status(
-    '63000000-0000-4000-8000-000000000002',
-    'breeding'
-  ),
-  'breeding'::public.breeding_step_status,
-  'a player can apply an allowed status transition to an owned plan step'
-);
-
-select public.confirm_step_offspring(
-  '63000000-0000-4000-8000-000000000003',
-  'fixture-pal-a-owned-002',
-  '40000000-0000-4000-8000-000000000002'
-);
-
-select results_eq(
-  $$
-    select selected_child_instance_uid, status
-      from public.breeding_steps
-     where id = '63000000-0000-4000-8000-000000000003'
-  $$,
-  $$
-    values (
-      'fixture-pal-a-owned-002'::text,
-      'completed'::public.breeding_step_status
-    )
-  $$,
-  'a player can confirm a real candidate belonging to an owned plan'
 );
 
 reset role;

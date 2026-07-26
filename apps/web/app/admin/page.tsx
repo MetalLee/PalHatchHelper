@@ -36,7 +36,6 @@ export default async function AdminOverviewPage() {
     ["Agent", overview.agent],
     ["Save Worker", overview.save_worker],
     ["Job Worker", overview.job_worker],
-    ["Candidate Detector", overview.candidate_detector],
   ] as const;
   return (
     <div className={adminPageClasses}>

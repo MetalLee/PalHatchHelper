@@ -292,6 +292,6 @@ test("stale data status stays explicit on iPhone width", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText("确定性算法版本")).toBeVisible();
   await expect(
-    page.getByText("inventory-trait-aware-deterministic-v4"),
+    page.getByText("inventory-trait-aware-deterministic-v5"),
   ).toBeVisible();
 });

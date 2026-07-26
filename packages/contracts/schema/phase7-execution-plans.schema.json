@@ -1,14 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://palhatch.local/schemas/phase7-execution-plans.schema.json",
-  "title": "AdoptRouteRequest",
-  "description": "Phase 7 route adoption, manual execution, candidate detection, history, and optimistic concurrency contracts.",
+  "title": "SavePlanRequest",
+  "description": "Phase 7 read-only My Plans route-save contracts.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["route_id", "idempotency_key"],
+  "required": ["route_id"],
   "properties": {
-    "route_id": { "type": "string", "format": "uuid" },
-    "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
+    "route_id": { "type": "string", "format": "uuid" }
   },
   "$defs": {
     "StableId": {
@@ -17,355 +16,29 @@
       "maxLength": 120,
       "pattern": "^[a-z0-9][a-z0-9._-]*$"
     },
-    "InstanceUid": { "type": "string", "minLength": 1, "maxLength": 160 },
-    "IdempotencyKey": {
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "OptimizationMode": {
       "type": "string",
-      "minLength": 8,
-      "maxLength": 160,
-      "pattern": "^[A-Za-z0-9._:-]+$"
+      "enum": ["balanced", "fastest", "highest_success", "least_borrowing"]
     },
-    "PlanStatus": {
+    "FeasibilityStatus": {
       "type": "string",
-      "enum": [
-        "active",
-        "awaiting_confirmation",
-        "paused",
-        "completed",
-        "invalidated",
-        "cancelled"
-      ]
+      "enum": ["ready", "needs_inventory"]
     },
-    "PlanStepStatus": {
+    "PlanDifficulty": {
       "type": "string",
-      "enum": [
-        "not_started",
-        "breeding",
-        "candidate_detected",
-        "completed",
-        "retrying",
-        "skipped",
-        "invalidated"
-      ]
+      "enum": ["low", "medium", "high"]
     },
     "Phase7ErrorCode": {
       "type": "string",
       "enum": [
-        "ROUTE_NOT_ADOPTABLE",
+        "AUTH_REQUIRED",
+        "PLAYER_BINDING_REQUIRED",
         "PLAN_NOT_FOUND",
         "PLAN_ACCESS_DENIED",
-        "PLAN_VERSION_CONFLICT",
-        "PLAN_INVALID_STATE_TRANSITION",
-        "PLAN_NOT_CURRENT_STEP",
-        "PLAN_PAUSED",
-        "STEP_PREREQUISITE_INCOMPLETE",
-        "CANDIDATE_NOT_FOUND",
-        "CANDIDATE_ALREADY_USED",
-        "CANDIDATE_SPECIES_MISMATCH",
-        "CANDIDATE_CONFIRMATION_REQUIRED",
-        "EXISTING_PAL_NOT_ELIGIBLE",
-        "PLAN_DEPENDENCY_UNAVAILABLE",
-        "PLAN_RECALCULATION_REQUIRED",
-        "PLAN_FIXED_VERSION_UNAVAILABLE",
-        "SNAPSHOT_DELTA_UNAVAILABLE"
+        "ROUTE_NOT_FOUND",
+        "DATA_UNAVAILABLE"
       ]
-    },
-    "PlanParentSourceKind": {
-      "type": "string",
-      "enum": ["inventory", "prior_step"]
-    },
-    "PalGender": {
-      "type": "string",
-      "enum": ["male", "female", "genderless", "unknown"]
-    },
-    "PalLocationType": {
-      "type": "string",
-      "enum": [
-        "player_party",
-        "player_storage",
-        "base",
-        "dimensional_storage",
-        "viewing_cage",
-        "unknown"
-      ]
-    },
-    "InvalidationReasonCode": {
-      "type": "string",
-      "enum": [
-        "DEPENDENCY_DISAPPEARED",
-        "OWNER_CHANGED",
-        "SHARING_DISABLED",
-        "GUILD_ACCESS_LOST",
-        "GENDER_INCOMPATIBLE",
-        "CONFIRMED_RESULT_DIVERGED",
-        "FIXED_CATALOG_UNAVAILABLE",
-        "FIXED_CONTENT_HASH_MISMATCH"
-      ]
-    },
-    "InvalidationReason": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["code", "step_index", "instance_uid", "details"],
-      "properties": {
-        "code": { "$ref": "#/$defs/InvalidationReasonCode" },
-        "step_index": { "type": ["integer", "null"], "minimum": 0 },
-        "instance_uid": {
-          "anyOf": [{ "$ref": "#/$defs/InstanceUid" }, { "type": "null" }]
-        },
-        "details": { "type": "object", "additionalProperties": true }
-      }
-    },
-    "PlanVersionPin": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "inventory_snapshot_id",
-        "game_data_version_id",
-        "content_hash",
-        "algorithm_version",
-        "scoring_profile_version"
-      ],
-      "properties": {
-        "inventory_snapshot_id": { "type": "string", "format": "uuid" },
-        "game_data_version_id": { "type": "string", "format": "uuid" },
-        "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "algorithm_version": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-        },
-        "scoring_profile_version": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-        }
-      }
-    },
-    "PlanStep": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "step_id",
-        "step_index",
-        "parent_a_source_kind",
-        "parent_a_instance_uid",
-        "parent_a_step_index",
-        "parent_a_location_type",
-        "parent_a_location_name",
-        "parent_a_location_slot_index",
-        "parent_b_source_kind",
-        "parent_b_instance_uid",
-        "parent_b_step_index",
-        "parent_b_location_type",
-        "parent_b_location_name",
-        "parent_b_location_slot_index",
-        "expected_child_pal_id",
-        "required_passive_ids",
-        "preferred_gender",
-        "selected_child_instance_uid",
-        "baseline_snapshot_id",
-        "candidate_detection_started_at",
-        "attempt_number",
-        "status",
-        "concurrency_version",
-        "skip_reason",
-        "invalidation_reasons",
-        "completed_at"
-      ],
-      "properties": {
-        "step_id": { "type": "string", "format": "uuid" },
-        "step_index": { "type": "integer", "minimum": 0 },
-        "parent_a_source_kind": { "$ref": "#/$defs/PlanParentSourceKind" },
-        "parent_a_instance_uid": {
-          "anyOf": [{ "$ref": "#/$defs/InstanceUid" }, { "type": "null" }]
-        },
-        "parent_a_step_index": { "type": ["integer", "null"], "minimum": 0 },
-        "parent_a_location_type": {
-          "anyOf": [{ "$ref": "#/$defs/PalLocationType" }, { "type": "null" }]
-        },
-        "parent_a_location_name": {
-          "type": ["string", "null"],
-          "maxLength": 160
-        },
-        "parent_a_location_slot_index": {
-          "type": ["integer", "null"],
-          "minimum": 0,
-          "maximum": 100000
-        },
-        "parent_b_source_kind": { "$ref": "#/$defs/PlanParentSourceKind" },
-        "parent_b_instance_uid": {
-          "anyOf": [{ "$ref": "#/$defs/InstanceUid" }, { "type": "null" }]
-        },
-        "parent_b_step_index": { "type": ["integer", "null"], "minimum": 0 },
-        "parent_b_location_type": {
-          "anyOf": [{ "$ref": "#/$defs/PalLocationType" }, { "type": "null" }]
-        },
-        "parent_b_location_name": {
-          "type": ["string", "null"],
-          "maxLength": 160
-        },
-        "parent_b_location_slot_index": {
-          "type": ["integer", "null"],
-          "minimum": 0,
-          "maximum": 100000
-        },
-        "expected_child_pal_id": { "$ref": "#/$defs/StableId" },
-        "required_passive_ids": {
-          "type": "array",
-          "maxItems": 4,
-          "uniqueItems": true,
-          "items": { "$ref": "#/$defs/StableId" }
-        },
-        "preferred_gender": {
-          "anyOf": [
-            { "type": "string", "enum": ["male", "female"] },
-            { "type": "null" }
-          ]
-        },
-        "selected_child_instance_uid": {
-          "anyOf": [{ "$ref": "#/$defs/InstanceUid" }, { "type": "null" }]
-        },
-        "baseline_snapshot_id": {
-          "type": ["string", "null"],
-          "format": "uuid"
-        },
-        "candidate_detection_started_at": {
-          "type": ["string", "null"],
-          "format": "date-time"
-        },
-        "attempt_number": { "type": "integer", "minimum": 0 },
-        "status": { "$ref": "#/$defs/PlanStepStatus" },
-        "concurrency_version": { "type": "integer", "minimum": 1 },
-        "skip_reason": { "type": ["string", "null"], "maxLength": 500 },
-        "invalidation_reasons": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/InvalidationReason" }
-        },
-        "completed_at": { "type": ["string", "null"], "format": "date-time" }
-      }
-    },
-    "CandidateMatchBreakdown": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "species",
-        "passive_overlap",
-        "gender",
-        "accessibility",
-        "first_appearance"
-      ],
-      "properties": {
-        "species": { "type": "number", "minimum": 0, "maximum": 1 },
-        "passive_overlap": { "type": "number", "minimum": 0, "maximum": 1 },
-        "gender": { "type": "number", "minimum": 0, "maximum": 1 },
-        "accessibility": { "type": "number", "minimum": 0, "maximum": 1 },
-        "first_appearance": { "type": "number", "minimum": 0, "maximum": 1 }
-      }
-    },
-    "OffspringCandidate": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "candidate_key",
-        "step_id",
-        "pal_instance_uid",
-        "detected_snapshot_id",
-        "pal_id",
-        "pal_display_name",
-        "species_match",
-        "matched_passive_ids",
-        "required_passive_count",
-        "gender",
-        "level",
-        "owner_display_name",
-        "location_type",
-        "location_name",
-        "location_slot_index",
-        "accessible",
-        "match_score",
-        "match_breakdown",
-        "first_detected_at",
-        "confirmed",
-        "rejected_at",
-        "rejection_reason"
-      ],
-      "properties": {
-        "candidate_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "step_id": { "type": "string", "format": "uuid" },
-        "pal_instance_uid": { "$ref": "#/$defs/InstanceUid" },
-        "detected_snapshot_id": { "type": "string", "format": "uuid" },
-        "pal_id": { "$ref": "#/$defs/StableId" },
-        "pal_display_name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
-        "species_match": { "type": "boolean" },
-        "matched_passive_ids": {
-          "type": "array",
-          "maxItems": 4,
-          "uniqueItems": true,
-          "items": { "$ref": "#/$defs/StableId" }
-        },
-        "required_passive_count": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 4
-        },
-        "gender": { "$ref": "#/$defs/PalGender" },
-        "level": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
-        "owner_display_name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
-        "location_type": { "$ref": "#/$defs/PalLocationType" },
-        "location_name": { "type": ["string", "null"], "maxLength": 160 },
-        "location_slot_index": {
-          "type": ["integer", "null"],
-          "minimum": 0,
-          "maximum": 100000
-        },
-        "accessible": { "type": "boolean" },
-        "match_score": { "type": "number", "minimum": 0, "maximum": 1 },
-        "match_breakdown": { "$ref": "#/$defs/CandidateMatchBreakdown" },
-        "first_detected_at": { "type": "string", "format": "date-time" },
-        "confirmed": { "type": "boolean" },
-        "rejected_at": { "type": ["string", "null"], "format": "date-time" },
-        "rejection_reason": { "type": ["string", "null"], "maxLength": 500 }
-      }
-    },
-    "PlanEventSummary": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "event_id",
-        "step_id",
-        "event_type",
-        "actor_kind",
-        "actor_display_name",
-        "from_status",
-        "to_status",
-        "safe_metadata",
-        "created_at"
-      ],
-      "properties": {
-        "event_id": { "type": "string", "format": "uuid" },
-        "step_id": { "type": ["string", "null"], "format": "uuid" },
-        "event_type": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
-        "actor_kind": {
-          "type": "string",
-          "enum": ["player", "admin", "agent", "system"]
-        },
-        "actor_display_name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
-        "from_status": { "type": ["string", "null"], "maxLength": 40 },
-        "to_status": { "type": ["string", "null"], "maxLength": 40 },
-        "safe_metadata": { "type": "object", "additionalProperties": true },
-        "created_at": { "type": "string", "format": "date-time" }
-      }
     },
     "PlanPassiveSummary": {
       "type": "object",
@@ -373,37 +46,65 @@
       "required": ["passive_skill_id", "display_name", "rank", "is_negative"],
       "properties": {
         "passive_skill_id": { "$ref": "#/$defs/StableId" },
-        "display_name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
-        "rank": { "type": "integer" },
-        "is_negative": { "type": "boolean" }
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "rank": { "type": ["integer", "null"], "minimum": -20, "maximum": 20 },
+        "is_negative": { "type": ["boolean", "null"] }
+      }
+    },
+    "SavePlanRequest": { "$ref": "#/$defs/SavePlanRequestBody" },
+    "SavePlanRequestBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route_id"],
+      "properties": {
+        "route_id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "SavePlanResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route_id", "saved_at", "reused"],
+      "properties": {
+        "route_id": { "type": "string", "format": "uuid" },
+        "saved_at": { "$ref": "#/$defs/Timestamp" },
+        "reused": { "type": "boolean" }
+      }
+    },
+    "RemovePlanResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route_id", "removed"],
+      "properties": {
+        "route_id": { "type": "string", "format": "uuid" },
+        "removed": { "type": "boolean" }
       }
     },
     "PlanSummary": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "plan_id",
+        "route_id",
+        "source_job_id",
         "target_pal_id",
         "target_pal_display_name",
         "desired_passive_ids",
         "desired_passive_display_names",
         "desired_passives",
-        "status",
-        "current_step_index",
-        "completed_step_count",
-        "total_step_count",
-        "pending_candidate_count",
-        "version_pin",
-        "concurrency_version",
-        "created_at",
-        "updated_at"
+        "optimization_mode",
+        "feasibility_status",
+        "generation_count",
+        "step_count",
+        "borrowed_pal_count",
+        "missing_pal_count",
+        "estimated_attempts_min",
+        "estimated_attempts_max",
+        "difficulty",
+        "total_score",
+        "saved_at"
       ],
       "properties": {
-        "plan_id": { "type": "string", "format": "uuid" },
+        "route_id": { "type": "string", "format": "uuid" },
+        "source_job_id": { "type": "string", "format": "uuid" },
         "target_pal_id": { "$ref": "#/$defs/StableId" },
         "target_pal_display_name": {
           "type": "string",
@@ -426,174 +127,27 @@
           "maxItems": 4,
           "items": { "$ref": "#/$defs/PlanPassiveSummary" }
         },
-        "status": { "$ref": "#/$defs/PlanStatus" },
-        "current_step_index": { "type": "integer", "minimum": 0 },
-        "completed_step_count": { "type": "integer", "minimum": 0 },
-        "total_step_count": { "type": "integer", "minimum": 0 },
-        "pending_candidate_count": { "type": "integer", "minimum": 0 },
-        "version_pin": { "$ref": "#/$defs/PlanVersionPin" },
-        "concurrency_version": { "type": "integer", "minimum": 1 },
-        "created_at": { "type": "string", "format": "date-time" },
-        "updated_at": { "type": "string", "format": "date-time" }
+        "optimization_mode": { "$ref": "#/$defs/OptimizationMode" },
+        "feasibility_status": { "$ref": "#/$defs/FeasibilityStatus" },
+        "generation_count": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "step_count": { "type": "integer", "minimum": 0 },
+        "borrowed_pal_count": { "type": "integer", "minimum": 0 },
+        "missing_pal_count": { "type": "integer", "minimum": 0 },
+        "estimated_attempts_min": { "type": "integer", "minimum": 0 },
+        "estimated_attempts_max": { "type": "integer", "minimum": 0 },
+        "difficulty": { "$ref": "#/$defs/PlanDifficulty" },
+        "total_score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "saved_at": { "$ref": "#/$defs/Timestamp" }
       }
     },
-    "PlanDetail": {
+    "PlanDetailReference": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "summary",
-        "adopted_route_id",
-        "invalidation_reasons",
-        "steps",
-        "candidates",
-        "events"
-      ],
-      "properties": {
-        "summary": { "$ref": "#/$defs/PlanSummary" },
-        "adopted_route_id": { "type": "string", "format": "uuid" },
-        "invalidation_reasons": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/InvalidationReason" }
-        },
-        "steps": { "type": "array", "items": { "$ref": "#/$defs/PlanStep" } },
-        "candidates": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/OffspringCandidate" }
-        },
-        "events": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/PlanEventSummary" }
-        }
-      }
-    },
-    "AdoptRouteRequest": { "$ref": "#/$defs/AdoptRouteRequestBody" },
-    "AdoptRouteRequestBody": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["route_id", "idempotency_key"],
+      "required": ["route_id", "source_job_id", "saved_at"],
       "properties": {
         "route_id": { "type": "string", "format": "uuid" },
-        "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
-      }
-    },
-    "AdoptRouteResponse": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["plan_id", "reused", "status", "concurrency_version"],
-      "properties": {
-        "plan_id": { "type": "string", "format": "uuid" },
-        "reused": { "type": "boolean" },
-        "status": { "$ref": "#/$defs/PlanStatus" },
-        "concurrency_version": { "type": "integer", "minimum": 1 }
-      }
-    },
-    "UpdateStepStatusRequest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["expected_concurrency_version", "idempotency_key"],
-      "properties": {
-        "expected_concurrency_version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
-      }
-    },
-    "StartBreedingRequest": { "$ref": "#/$defs/UpdateStepStatusRequest" },
-    "ContinueAttemptRequest": { "$ref": "#/$defs/UpdateStepStatusRequest" },
-    "PausePlanRequest": { "$ref": "#/$defs/UpdateStepStatusRequest" },
-    "ResumePlanRequest": { "$ref": "#/$defs/UpdateStepStatusRequest" },
-    "SelectExistingPalRequest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "pal_instance_uid",
-        "allow_passive_mismatch",
-        "expected_concurrency_version",
-        "idempotency_key"
-      ],
-      "properties": {
-        "pal_instance_uid": { "$ref": "#/$defs/InstanceUid" },
-        "allow_passive_mismatch": { "type": "boolean" },
-        "expected_concurrency_version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
-      }
-    },
-    "ConfirmOffspringRequest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "candidate_key",
-        "expected_concurrency_version",
-        "idempotency_key"
-      ],
-      "properties": {
-        "candidate_key": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "expected_concurrency_version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
-      }
-    },
-    "RejectCandidateRequest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["reason", "expected_concurrency_version", "idempotency_key"],
-      "properties": {
-        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "expected_concurrency_version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
-      }
-    },
-    "SkipStepRequest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["reason", "expected_concurrency_version", "idempotency_key"],
-      "properties": {
-        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "expected_concurrency_version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
-      }
-    },
-    "RecalculatePlanRequest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["reason", "expected_concurrency_version", "idempotency_key"],
-      "properties": {
-        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "expected_concurrency_version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "$ref": "#/$defs/IdempotencyKey" }
-      }
-    },
-    "OptimisticConcurrencyConflict": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["error_code", "expected_version", "actual_version"],
-      "properties": {
-        "error_code": { "const": "PLAN_VERSION_CONFLICT" },
-        "expected_version": { "type": "integer", "minimum": 1 },
-        "actual_version": { "type": "integer", "minimum": 1 }
-      }
-    },
-    "PlanMutationResponse": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "plan_id",
-        "status",
-        "current_step_index",
-        "concurrency_version"
-      ],
-      "properties": {
-        "plan_id": { "type": "string", "format": "uuid" },
-        "status": { "$ref": "#/$defs/PlanStatus" },
-        "current_step_index": { "type": "integer", "minimum": 0 },
-        "concurrency_version": { "type": "integer", "minimum": 1 }
-      }
-    },
-    "RecalculatePlanResponse": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["source_plan_id", "job_id", "reused"],
-      "properties": {
-        "source_plan_id": { "type": "string", "format": "uuid" },
-        "job_id": { "type": "string", "format": "uuid" },
-        "reused": { "type": "boolean" }
+        "source_job_id": { "type": "string", "format": "uuid" },
+        "saved_at": { "$ref": "#/$defs/Timestamp" }
       }
     },
     "PlanListPage": {
@@ -603,10 +157,11 @@
       "properties": {
         "items": {
           "type": "array",
+          "maxItems": 100,
           "items": { "$ref": "#/$defs/PlanSummary" }
         },
-        "next_cursor": { "type": ["string", "null"], "maxLength": 500 },
-        "query_boundary": { "type": "string", "format": "date-time" }
+        "next_cursor": { "type": ["string", "null"], "maxLength": 300 },
+        "query_boundary": { "$ref": "#/$defs/Timestamp" }
       }
     },
     "PlanRpcFailure": {
@@ -615,7 +170,7 @@
       "required": ["ok", "error_code"],
       "properties": {
         "ok": { "const": false },
-        "error_code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+        "error_code": { "$ref": "#/$defs/Phase7ErrorCode" }
       }
     },
     "PlanListRpcSuccess": {
@@ -639,7 +194,7 @@
       "required": ["ok", "data"],
       "properties": {
         "ok": { "const": true },
-        "data": { "$ref": "#/$defs/PlanDetail" }
+        "data": { "$ref": "#/$defs/PlanDetailReference" }
       }
     },
     "PlanDetailRpcResult": {
@@ -647,62 +202,6 @@
         { "$ref": "#/$defs/PlanDetailRpcSuccess" },
         { "$ref": "#/$defs/PlanRpcFailure" }
       ]
-    },
-    "DetectionStepContext": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "step_id",
-        "plan_id",
-        "world_id",
-        "baseline_snapshot_id",
-        "expected_child_pal_id",
-        "required_passive_ids",
-        "preferred_gender"
-      ],
-      "properties": {
-        "step_id": { "type": "string", "format": "uuid" },
-        "plan_id": { "type": "string", "format": "uuid" },
-        "world_id": { "type": "string", "format": "uuid" },
-        "baseline_snapshot_id": { "type": "string", "format": "uuid" },
-        "expected_child_pal_id": { "$ref": "#/$defs/StableId" },
-        "required_passive_ids": {
-          "type": "array",
-          "maxItems": 4,
-          "uniqueItems": true,
-          "items": { "$ref": "#/$defs/StableId" }
-        },
-        "preferred_gender": {
-          "anyOf": [
-            { "type": "string", "enum": ["male", "female"] },
-            { "type": "null" }
-          ]
-        }
-      }
-    },
-    "CandidateDetectionWrite": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["pal_instance_uid", "match_score", "match_breakdown"],
-      "properties": {
-        "pal_instance_uid": { "$ref": "#/$defs/InstanceUid" },
-        "match_score": { "type": "number", "minimum": 0, "maximum": 1 },
-        "match_breakdown": { "$ref": "#/$defs/CandidateMatchBreakdown" }
-      }
-    },
-    "CandidateDetectionBatchRequest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["step_id", "detected_snapshot_id", "candidates"],
-      "properties": {
-        "step_id": { "type": "string", "format": "uuid" },
-        "detected_snapshot_id": { "type": "string", "format": "uuid" },
-        "candidates": {
-          "type": "array",
-          "maxItems": 500,
-          "items": { "$ref": "#/$defs/CandidateDetectionWrite" }
-        }
-      }
     }
   }
 }

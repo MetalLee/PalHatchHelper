@@ -186,3 +186,74 @@ def test_four_passives_five_generations_find_routes_before_distractor_frontier()
     assert all(route.inventory_passive_coverage == 1 for route in result.routes[:3])
     assert not result.diagnostics.hit_limits
     assert elapsed < 5
+
+
+def test_2048_inventory_semantic_duplicates_remain_within_default_search_budget() -> None:
+    desired_passives = ("p1", "p2", "p3", "p4")
+    inventory: list[BreedingEngineInventoryPal] = []
+    recipes: list[CatalogBreedingRecipe] = []
+    expected_parent_pairs: set[tuple[str, str]] = set()
+
+    for route_index in range(3):
+        male_pal_id = f"source-{route_index}-male"
+        female_pal_id = f"source-{route_index}-female"
+        expected_parent_pairs.add(tuple(sorted((male_pal_id, female_pal_id))))
+        recipes.append(recipe(male_pal_id, female_pal_id, "pal-target"))
+        for instance_index in range(341):
+            noisy = () if instance_index == 0 else ("interference-a", "interference-b")
+            inventory.extend(
+                (
+                    inventory_pal(
+                        f"route-{route_index}-male-{instance_index:03d}",
+                        male_pal_id,
+                        "male",
+                        passives=("p1", "p2", *noisy),
+                    ),
+                    inventory_pal(
+                        f"route-{route_index}-female-{instance_index:03d}",
+                        female_pal_id,
+                        "female",
+                        passives=("p3", "p4", *noisy),
+                    ),
+                )
+            )
+    inventory.extend(
+        (
+            inventory_pal("unrelated-male", "unrelated", "male"),
+            inventory_pal("unrelated-female", "unrelated", "female"),
+        )
+    )
+
+    started = perf_counter()
+    result = search(
+        DeterministicBreedingEngine(),
+        request(
+            "pal-target",
+            inventory,
+            desired_passive_ids=desired_passives,
+            search_limits=limits(
+                max_generations=5,
+                max_expanded_nodes=200_000,
+                timeout_ms=30_000,
+                max_species_routes_per_pal=512,
+                max_assignment_states_per_mask=64,
+                max_candidate_routes=1_000,
+                max_results=24,
+            ),
+        ),
+        recipes,
+    )
+    elapsed = perf_counter() - started
+
+    assert len(inventory) == 2_048
+    assert len(result.routes) == 3
+    assert {
+        tuple(sorted((route.steps[0].parent_a.pal_id, route.steps[0].parent_b.pal_id)))
+        for route in result.routes
+    } == expected_parent_pairs
+    assert all(
+        route.score_breakdown.raw_metrics.extra_passive_count == 0 for route in result.routes
+    )
+    assert result.diagnostics.expanded_nodes < 100
+    assert not result.diagnostics.hit_limits
+    assert elapsed < 5

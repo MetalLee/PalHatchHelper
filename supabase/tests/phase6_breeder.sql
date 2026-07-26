@@ -116,8 +116,8 @@ select results_eq(
       '40000000-0000-4000-8000-000000000002'::uuid,
       '51000000-0000-4000-8000-000000000001'::uuid,
       repeat('c', 64)::text,
-      'inventory-trait-aware-deterministic-v4'::text,
-      'balanced-v5'::text
+      'inventory-trait-aware-deterministic-v5'::text,
+      'balanced-v6'::text
     )
   $$,
   'create fixes snapshot, published catalog, hash, algorithm and scoring in one transaction'

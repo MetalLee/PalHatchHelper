@@ -1,245 +1,85 @@
 "use client";
 
-import type {
-  InvalidationReason,
-  PlanListPage,
-  PlanStatus,
-  PlanSummary,
-} from "@palhatch/contracts";
-import {
-  Activity,
-  BadgeCheck,
-  ChevronDown,
-  ChevronRight,
-  CircleAlert,
-  Clock3,
-  PauseCircle,
-  Sparkles,
-} from "lucide-react";
+import type { PlanListPage, PlanSummary } from "@palhatch/contracts";
+import { Bookmark, ChevronRight, GitBranch, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-import { MetricCard } from "@/components/dashboard/metric-card";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { StatusChip } from "@/components/status/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import {
-  formatPlanDateTime,
-  invalidationReasonDescriptions,
-  nextPlanActionLabel,
-  planStatusLabels,
-  planStatusTone,
-} from "./presentation";
-import type { PlanStatusFilter } from "./server";
-
-const filters: readonly [PlanStatusFilter, string][] = [
-  ["all", "全部"],
-  ["active", "进行中"],
-  ["awaiting_confirmation", "待确认"],
-  ["completed", "已完成"],
-  ["paused", "已暂停"],
-  ["invalidated", "已失效"],
-];
-const filterContentValues: readonly PlanStatusFilter[] = [
-  ...filters.map(([value]) => value),
-  "cancelled",
-];
-
-type InvalidationReasonMap = Readonly<
-  Record<string, readonly InvalidationReason[]>
->;
-
-export function PlanList({
-  page,
-  status,
-  invalidationReasons = {},
-}: Readonly<{
-  page: PlanListPage;
-  status: PlanStatusFilter;
-  invalidationReasons?: InvalidationReasonMap;
-}>) {
-  const counts = countStatuses(page.items);
-
+export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
   return (
     <div className="grid min-w-0 max-w-full gap-6 overflow-x-clip">
       <section
-        className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="当前查询页计划指标"
+        className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-3xl border border-glass-border bg-white/74 p-4 shadow-soft sm:p-5"
+        aria-label="收藏计划摘要"
       >
-        <div aria-label="进行中计划数量">
-          <MetricCard
-            label="进行中"
-            value={counts.active}
-            detail="当前查询页真实返回"
-            icon={Activity}
-            tone="forest"
-          />
+        <div className="flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Bookmark aria-hidden="true" className="size-5" />
+          </span>
+          <div>
+            <p className="font-bold text-foreground">
+              当前页已收藏 {page.items.length} 条计划
+            </p>
+            <p className="text-sm text-muted-foreground">
+              仅展示保存时的确定性路线，不维护执行进度。
+            </p>
+          </div>
         </div>
-        <div aria-label="待确认计划数量">
-          <MetricCard
-            label="待确认"
-            value={counts.awaiting_confirmation}
-            detail="等待人工确认真实子代"
-            icon={CircleAlert}
-            tone="sky"
-          />
-        </div>
-        <div aria-label="已完成计划数量">
-          <MetricCard
-            label="已完成"
-            value={counts.completed}
-            detail="当前查询页历史记录"
-            icon={BadgeCheck}
-            tone="leaf"
-          />
-        </div>
-        <div aria-label="已暂停或已失效计划数量">
-          <MetricCard
-            label="已暂停或已失效"
-            value={counts.paused + counts.invalidated}
-            detail="需要恢复或处理失效"
-            icon={PauseCircle}
-            tone="sky"
-          />
-        </div>
+        <Button asChild>
+          <Link href="/breeder">打开配种器</Link>
+        </Button>
       </section>
 
-      <Tabs value={status} className="min-w-0 gap-6">
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <nav
-            className="min-w-0 max-w-full overflow-x-auto pb-1"
-            aria-label="计划状态筛选"
-          >
-            <TabsList variant="line" className="w-max min-w-full justify-start">
-              {filters.map(([value, label]) => (
-                <TabsTrigger key={value} value={value} asChild>
-                  <Link
-                    href={value === "all" ? "/plans" : `/plans?status=${value}`}
-                    aria-current={status === value ? "page" : undefined}
-                    className="no-underline"
-                  >
-                    {label}
-                  </Link>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </nav>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline">
-                更多筛选
-                <ChevronDown aria-hidden="true" className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-40">
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/plans?status=cancelled"
-                  aria-current={status === "cancelled" ? "page" : undefined}
-                  className="w-full no-underline"
-                >
-                  已取消
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      {page.items.length === 0 ? (
+        <Card className="border-dashed border-glass-border bg-white/78 shadow-soft">
+          <CardContent className="grid justify-items-start gap-3 p-6 sm:p-8">
+            <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Sparkles aria-hidden="true" className="size-6" />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">
+                暂无收藏计划
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                在配种结果页保存一条路线后，它会出现在这里。
+              </p>
+            </div>
+            <Button asChild>
+              <Link href="/breeder">打开配种器</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <section
+          className="grid min-w-0 gap-4 lg:grid-cols-2"
+          aria-label="计划列表"
+        >
+          {page.items.map((plan) => (
+            <PlanCard key={plan.route_id} plan={plan} />
+          ))}
+        </section>
+      )}
 
-        {filterContentValues.map((value) => (
-          <TabsContent
-            key={value}
-            value={value}
-            forceMount
-            className="grid min-w-0 gap-6 data-[state=inactive]:hidden"
+      {page.next_cursor === null ? null : (
+        <Button variant="outline" asChild className="justify-self-center">
+          <Link
+            href={`/plans?cursor=${encodeURIComponent(page.next_cursor)}&boundary=${encodeURIComponent(page.query_boundary)}`}
           >
-            {status !== value ? null : (
-              <>
-                {page.items.length === 0 ? (
-                  <Card className="border-dashed border-glass-border bg-white/78 shadow-soft">
-                    <CardContent className="grid justify-items-start gap-3 p-6 sm:p-8">
-                      <span className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                        <Sparkles aria-hidden="true" className="size-6" />
-                      </span>
-                      <div>
-                        <h2 className="text-xl font-bold text-foreground">
-                          暂无执行计划
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                          在配种结果页采用一条库存完整的确定性路线后，它会出现在这里。
-                        </p>
-                      </div>
-                      <Button asChild>
-                        <Link href="/breeder">打开配种器</Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <section
-                    className="grid min-w-0 gap-4 lg:grid-cols-2"
-                    aria-label="计划列表"
-                  >
-                    {page.items.map((plan) => (
-                      <PlanCard
-                        key={plan.plan_id}
-                        plan={plan}
-                        invalidationReasons={
-                          invalidationReasons[plan.plan_id] ?? []
-                        }
-                      />
-                    ))}
-                  </section>
-                )}
-
-                {page.next_cursor === null ? null : (
-                  <Button
-                    variant="outline"
-                    asChild
-                    className="justify-self-center"
-                  >
-                    <Link
-                      href={`/plans?status=${status}&cursor=${encodeURIComponent(page.next_cursor)}&boundary=${encodeURIComponent(page.query_boundary)}`}
-                    >
-                      下一页
-                      <ChevronRight aria-hidden="true" className="size-4" />
-                    </Link>
-                  </Button>
-                )}
-              </>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+            下一页
+            <ChevronRight aria-hidden="true" className="size-4" />
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }
 
-function PlanCard({
-  plan,
-  invalidationReasons,
-}: Readonly<{
-  plan: PlanSummary;
-  invalidationReasons: readonly InvalidationReason[];
-}>) {
-  const totalSteps = Math.max(0, plan.total_step_count);
-  const progress =
-    totalSteps === 0
-      ? 0
-      : Math.min(100, (plan.completed_step_count / totalSteps) * 100);
-  const currentStep =
-    totalSteps === 0
-      ? "无执行步骤"
-      : `${Math.min(plan.current_step_index + 1, totalSteps)} / ${totalSteps}`;
-
+function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
   return (
     <Card className="min-w-0 gap-0 overflow-hidden border-glass-border bg-card/92 py-0 shadow-soft transition-colors hover:border-primary/25">
       <CardContent className="grid min-w-0 gap-5 p-5 sm:p-6">
@@ -251,20 +91,24 @@ function PlanCard({
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusChip tone={planStatusTone(plan.status)}>
-                {planStatusLabels[plan.status]}
+              <StatusChip
+                tone={plan.feasibility_status === "ready" ? "good" : "warning"}
+              >
+                {plan.feasibility_status === "ready"
+                  ? "库存可执行"
+                  : "需补库存"}
               </StatusChip>
-              {plan.pending_candidate_count > 0 ? (
-                <StatusChip tone="warning">
-                  {plan.pending_candidate_count} 个候选
-                </StatusChip>
-              ) : null}
+              <span className="text-xs text-muted-foreground">
+                保存于 {formatDateTime(plan.saved_at)}
+              </span>
             </div>
-            <h2 className="mt-2 break-words text-xl font-bold text-foreground">
+            <h2 className="mt-2 truncate text-lg font-bold text-foreground">
               {plan.target_pal_display_name}
             </h2>
-            <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-              {plan.target_pal_id}
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <GitBranch aria-hidden="true" className="size-4" />
+              {plan.generation_count} 代 · {plan.step_count} 步 · 借用{" "}
+              {plan.borrowed_pal_count} 只
             </p>
           </div>
         </div>
@@ -277,7 +121,7 @@ function PlanCard({
             <p className="mt-2 text-sm text-muted-foreground">无指定被动</p>
           ) : (
             <div
-              className="mt-2 grid min-h-[3.875rem] grid-cols-2 gap-1.5"
+              className="mt-2 grid grid-cols-2 gap-1.5"
               data-passive-layout="2x2"
             >
               {plan.desired_passives.map((passive) => (
@@ -293,74 +137,19 @@ function PlanCard({
           )}
         </div>
 
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">计划进度</span>
-            <strong className="tabular-nums text-foreground">
-              {plan.completed_step_count} / {totalSteps} ·{" "}
-              {Math.round(progress)}%
-            </strong>
-          </div>
-          <Progress
-            value={progress}
-            aria-label={`${plan.target_pal_display_name}计划进度`}
+        <dl className="grid grid-cols-2 gap-3 rounded-2xl bg-muted/55 p-4 text-sm sm:grid-cols-4">
+          <Metric label="总分" value={plan.total_score.toFixed(2)} />
+          <Metric
+            label="尝试"
+            value={`${plan.estimated_attempts_min}–${plan.estimated_attempts_max} 次`}
           />
-        </div>
-
-        <dl className="grid min-w-0 gap-3 rounded-2xl bg-muted/55 p-4 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-muted-foreground">当前步骤</dt>
-            <dd className="mt-1 font-semibold tabular-nums text-foreground">
-              {currentStep}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">总步骤数</dt>
-            <dd className="mt-1 font-semibold tabular-nums text-foreground">
-              {totalSteps}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">下一步操作</dt>
-            <dd className="mt-1 font-semibold text-foreground">
-              {nextPlanActionLabel(plan.status)}
-            </dd>
-          </div>
-          <div>
-            <dt className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock3 aria-hidden="true" className="size-3.5" />
-              更新时间
-            </dt>
-            <dd className="mt-1 font-semibold text-foreground">
-              {formatPlanDateTime(plan.updated_at)}
-            </dd>
-          </div>
+          <Metric label="难度" value={difficultyLabel(plan.difficulty)} />
+          <Metric label="缺口" value={`${plan.missing_pal_count} 只`} />
         </dl>
 
-        {plan.status === "invalidated" ? (
-          <div
-            className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950"
-            role="note"
-          >
-            <p className="font-semibold">失效原因</p>
-            {invalidationReasons.length === 0 ? (
-              <p className="mt-1">打开详情读取已物化的失效原因。</p>
-            ) : (
-              <ul className="mt-2 grid gap-1.5">
-                {invalidationReasons.map((reason, index) => (
-                  <li key={`${reason.code}-${index}`}>
-                    {invalidationReasonDescriptions[reason.code]}{" "}
-                    <code className="text-xs">{reason.code}</code>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : null}
-
-        <Button variant="outline" asChild className="w-full sm:w-fit">
-          <Link href={`/plans/${plan.plan_id}`}>
-            打开详情
+        <Button asChild className="w-full">
+          <Link href={`/plans/${plan.route_id}`}>
+            查看收藏路线
             <ChevronRight aria-hidden="true" className="size-4" />
           </Link>
         </Button>
@@ -369,17 +158,22 @@ function PlanCard({
   );
 }
 
-function countStatuses(
-  plans: readonly PlanSummary[],
-): Record<PlanStatus, number> {
-  const counts: Record<PlanStatus, number> = {
-    active: 0,
-    awaiting_confirmation: 0,
-    paused: 0,
-    completed: 0,
-    invalidated: 0,
-    cancelled: 0,
-  };
-  for (const plan of plans) counts[plan.status] += 1;
-  return counts;
+function Metric({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-bold text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("zh-CN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function difficultyLabel(value: PlanSummary["difficulty"]): string {
+  return { low: "低", medium: "中", high: "高" }[value];
 }

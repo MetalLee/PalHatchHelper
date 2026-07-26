@@ -113,7 +113,7 @@ const modeScores: RouteModeScore[] = [
 function route(rank: number): BreedingRoute {
   return {
     route_id: `62000000-0000-4000-8000-${String(rank).padStart(12, "0")}`,
-    execution_plan_id: null,
+    saved_plan_at: null,
     route_key: String(rank).repeat(64),
     rank,
     optimization_mode: "balanced",
@@ -683,7 +683,7 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getByText(/需补充库存的备选方案/)).toBeTruthy();
     expect(screen.queryByText(/fixture-parent-a-2/)).toBeNull();
     expect(container.querySelector("details")).toBeNull();
-    expect(screen.getByRole("button", { name: "采用此方案" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "保存到我的计划" })).toBeTruthy();
   });
 
   it("shows inventory-wide missing passive sources independently", () => {
@@ -706,7 +706,7 @@ describe("Phase 6 job comparison", () => {
     expect(
       screen.getAllByText("未翻译被动（test_passive_b）").length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
+    expect(screen.getByRole("button", { name: "保存到我的计划" })).toBeTruthy();
   });
 
   it("keeps route details shrinkable at a phone viewport", () => {
@@ -813,17 +813,16 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getByText(/可减少期望被动/)).toBeTruthy();
   });
 
-  it("adopts a completed route idempotently and navigates to its execution plan", async () => {
+  it("saves a completed route idempotently without creating execution progress", async () => {
     let captured: { input: RequestInfo | URL; init?: RequestInit } | undefined;
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         captured = { input, init };
         return new Response(
           JSON.stringify({
-            plan_id: "71000000-0000-4000-8000-000000000001",
+            route_id: "62000000-0000-4000-8000-000000000001",
+            saved_at: "2026-07-27T01:00:00Z",
             reused: true,
-            status: "active",
-            concurrency_version: 1,
           }),
           { status: 201, headers: { "content-type": "application/json" } },
         );
@@ -832,35 +831,35 @@ describe("Phase 6 job comparison", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<BreedingJobView initialResult={completedJob()} poll={false} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "采用此方案" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存到我的计划" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(captured?.input).toBe("/api/plans/adopt");
+    expect(captured?.input).toBe("/api/plans");
     expect(JSON.parse(String(captured?.init?.body))).toMatchObject({
       route_id: "62000000-0000-4000-8000-000000000001",
-      idempotency_key: "adopt:62000000-0000-4000-8000-000000000001",
     });
-    expect(routerPush).toHaveBeenCalledWith(
-      "/plans/71000000-0000-4000-8000-000000000001",
-    );
+    expect(
+      screen.getByRole("link", { name: "查看我的计划" }).getAttribute("href"),
+    ).toBe("/plans/62000000-0000-4000-8000-000000000001");
+    expect(routerPush).not.toHaveBeenCalled();
   });
 
-  it("links directly to an execution plan when the route was already adopted", () => {
+  it("links directly to My Plans when the route was already saved", () => {
     const value = completedJob();
     if (value.data.plan === null) throw new Error("fixture plan missing");
-    const adopted = value.data.plan.routes.at(0);
-    if (adopted === undefined) throw new Error("fixture route missing");
-    adopted.execution_plan_id = "71000000-0000-4000-8000-000000000001";
+    const saved = value.data.plan.routes.at(0);
+    if (saved === undefined) throw new Error("fixture route missing");
+    saved.saved_plan_at = "2026-07-27T01:00:00Z";
 
     render(<BreedingJobView initialResult={value} poll={false} />);
 
     expect(
-      screen.getByRole("link", { name: "查看执行计划" }).getAttribute("href"),
-    ).toBe("/plans/71000000-0000-4000-8000-000000000001");
-    expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
+      screen.getByRole("link", { name: "查看我的计划" }).getAttribute("href"),
+    ).toBe("/plans/62000000-0000-4000-8000-000000000001");
+    expect(screen.queryByRole("button", { name: "保存到我的计划" })).toBeNull();
   });
 
-  it("shows missing father and mother requirements and prevents adoption", () => {
+  it("shows missing father and mother requirements while allowing route saving", () => {
     const value = completedJob();
     if (value.data.plan === null) throw new Error("fixture plan missing");
     const missing = route(1);
@@ -902,7 +901,7 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
     expect(screen.getAllByText("父本").length).toBeGreaterThan(0);
     expect(screen.getAllByText("母本").length).toBeGreaterThan(0);
-    expect(screen.getByText("补齐库存后才可采用此方案")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "采用此方案" })).toBeNull();
+    expect(screen.getByText("收藏不会推进配种进度")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "保存到我的计划" })).toBeTruthy();
   });
 });

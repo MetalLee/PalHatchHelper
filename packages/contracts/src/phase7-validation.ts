@@ -3,12 +3,11 @@ import addFormats from "ajv-formats";
 
 import schema from "../schema/phase7-execution-plans.schema.json";
 import type {
-  AdoptRouteRequest,
-  AdoptRouteResponse,
   PlanDetailRpcResult,
   PlanListRpcResult,
-  PlanMutationResponse,
-  RecalculatePlanResponse,
+  RemovePlanResponse,
+  SavePlanRequest,
+  SavePlanResponse,
 } from "./generated/phase7-execution-plans";
 
 export class Phase7ContractError extends Error {
@@ -37,24 +36,19 @@ function parse<T>(validate: ValidateFunction, value: unknown): T {
   return value as T;
 }
 
-const validateAdoptRequest = validator();
-const validateAdoptResponse = validator("AdoptRouteResponse");
+const validateSaveRequest = validator();
+const validateSaveResponse = validator("SavePlanResponse");
+const validateRemoveResponse = validator("RemovePlanResponse");
 const validatePlanList = validator("PlanListRpcResult");
 const validatePlanDetail = validator("PlanDetailRpcResult");
-const validateMutation = validator("PlanMutationResponse");
-const validateRecalculation = validator("RecalculatePlanResponse");
 
-export const parseAdoptRouteRequest = (value: unknown): AdoptRouteRequest =>
-  parse(validateAdoptRequest, value);
-export const parseAdoptRouteResponse = (value: unknown): AdoptRouteResponse =>
-  parse(validateAdoptResponse, value);
+export const parseSavePlanRequest = (value: unknown): SavePlanRequest =>
+  parse(validateSaveRequest, value);
+export const parseSavePlanResponse = (value: unknown): SavePlanResponse =>
+  parse(validateSaveResponse, value);
+export const parseRemovePlanResponse = (value: unknown): RemovePlanResponse =>
+  parse(validateRemoveResponse, value);
 export const parsePlanListRpcResult = (value: unknown): PlanListRpcResult =>
   parse(validatePlanList, value);
 export const parsePlanDetailRpcResult = (value: unknown): PlanDetailRpcResult =>
   parse(validatePlanDetail, value);
-export const parsePlanMutationResponse = (
-  value: unknown,
-): PlanMutationResponse => parse(validateMutation, value);
-export const parseRecalculatePlanResponse = (
-  value: unknown,
-): RecalculatePlanResponse => parse(validateRecalculation, value);

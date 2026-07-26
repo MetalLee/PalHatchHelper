@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import Literal, cast
 from uuid import UUID
@@ -43,8 +44,6 @@ def search_trait_routes(
     passive_bits = {passive_id: 1 << index for index, passive_id in enumerate(desired_passive_ids)}
     relevant, distance_to_target = _relevant_recipes(index, target_pal_id, max_generations)
     buckets: dict[StateKey, list[AssignedRoute]] = {}
-    bucket_signatures: dict[StateKey, set[str]] = {}
-    costs_by_signature: dict[str, tuple[int, ...]] = {}
     pruned_states = 0
     duplicate_states = 0
     stopped_by: BreedingSearchLimit | None = None
@@ -55,18 +54,28 @@ def search_trait_routes(
         assert state.output_gender is not None
         key: StateKey = (state.route.pal_id, state.coverage_mask, state.output_gender)
         bucket = buckets.setdefault(key, [])
-        signatures = bucket_signatures.setdefault(key, set())
-        if state.signature in signatures:
+        semantic_match = next(
+            (
+                (index, existing)
+                for index, existing in enumerate(bucket)
+                if existing.semantic_signature == state.semantic_signature
+            ),
+            None,
+        )
+        if semantic_match is not None:
             duplicate_states += 1
+            index, existing = semantic_match
+            if _representative_rank(state, desired_passive_ids) < _representative_rank(
+                existing, desired_passive_ids
+            ):
+                bucket[index] = state
             return
         state_cost = _pareto_cost(state, desired_passive_ids)
-        costs_by_signature[state.signature] = state_cost
         if len(bucket) < max_states_per_state:
             bucket.append(state)
-            signatures.add(state.signature)
             return
 
-        existing_costs = [costs_by_signature[item.signature] for item in bucket]
+        existing_costs = [_pareto_cost(item, desired_passive_ids) for item in bucket]
         dominated_indexes = [
             index
             for index, existing_cost in enumerate(existing_costs)
@@ -76,7 +85,6 @@ def search_trait_routes(
             _dominates(existing_cost, state_cost) for existing_cost in existing_costs
         ):
             pruned_states += 1
-            costs_by_signature.pop(state.signature, None)
             return
         if dominated_indexes:
             victim_index = max(
@@ -87,18 +95,13 @@ def search_trait_routes(
             ranked = [*bucket, state]
             victim = max(
                 ranked,
-                key=lambda item: (costs_by_signature[item.signature], item.signature),
+                key=lambda item: (_pareto_cost(item, desired_passive_ids), item.signature),
             )
             if victim is state:
                 pruned_states += 1
-                costs_by_signature.pop(state.signature, None)
                 return
             victim_index = bucket.index(victim)
-        victim = bucket[victim_index]
-        signatures.remove(victim.signature)
-        costs_by_signature.pop(victim.signature, None)
         bucket[victim_index] = state
-        signatures.add(state.signature)
         pruned_states += 1
 
     for pal_id in sorted(inventory_by_species):
@@ -125,6 +128,11 @@ def search_trait_routes(
                     ),
                     missing_leaf_count=0,
                     signature=f"inventory:{pal_id}:{instance.instance_uid}:{gender}",
+                    semantic_signature=_semantic_digest(
+                        "leaf",
+                        pal_id,
+                        str(coverage_mask),
+                    ),
                 )
             )
 
@@ -149,6 +157,7 @@ def search_trait_routes(
                         borrowed_instance_uids=frozenset(),
                         missing_leaf_count=1,
                         signature=f"missing:{pal_id}:{gender}",
+                        semantic_signature=_semantic_digest("leaf", pal_id, "0"),
                     )
                 )
 
@@ -255,6 +264,16 @@ def search_trait_routes(
                                             f"trait:{recipe.signature}:{output_gender}"
                                             f"[{parent_a.signature}][{parent_b.signature}]"
                                         ),
+                                        semantic_signature=_semantic_digest(
+                                            "recipe",
+                                            _semantic_recipe_signature(recipe),
+                                            *sorted(
+                                                (
+                                                    parent_a.semantic_signature,
+                                                    parent_b.semantic_signature,
+                                                )
+                                            ),
+                                        ),
                                     )
                                 )
                             if recipe.child_pal_id == target_pal_id and _target_goal_met(
@@ -340,7 +359,8 @@ def _target_goal_met(
         if pal_id == target_pal_id and mask & required_mask == required_mask
         for state in states
     ]
-    return len(target_states) >= max(1, target_state_goal) and any(
+    semantic_signatures = {state.semantic_signature for state in target_states}
+    return len(semantic_signatures) >= max(1, target_state_goal) and any(
         state.missing_leaf_count == 0 and not state.borrowed_instance_uids
         for state in target_states
     )
@@ -393,6 +413,7 @@ def _as_final_output(state: AssignedRoute) -> AssignedRoute:
         borrowed_instance_uids=state.borrowed_instance_uids,
         missing_leaf_count=state.missing_leaf_count,
         signature=f"final:{state.signature}",
+        semantic_signature=state.semantic_signature,
     )
 
 
@@ -416,6 +437,39 @@ def _pareto_cost(
         extra_passives,
         checkpoint_estimate,
         len(state.used_instance_uids),
+    )
+
+
+def _representative_rank(
+    state: AssignedRoute,
+    desired_passive_ids: tuple[str, ...],
+) -> tuple[int, int, int, int, int, str]:
+    desired = frozenset(desired_passive_ids)
+    instances = {instance.instance_uid: instance for instance in iter_inventory_instances(state)}
+    extra_passives = sum(
+        len(set(instance.passive_skill_ids) - desired) for instance in instances.values()
+    )
+    return (
+        state.missing_leaf_count,
+        extra_passives,
+        len(state.borrowed_instance_uids),
+        state.route.generation_count,
+        state.route.step_count,
+        state.signature,
+    )
+
+
+def _semantic_digest(*parts: str) -> str:
+    return hashlib.sha256("\0".join(parts).encode()).hexdigest()
+
+
+def _semantic_recipe_signature(recipe: EffectiveBreedingRecipe) -> str:
+    return "\0".join(
+        (
+            recipe.recipe_type,
+            *sorted((recipe.parent_a_pal_id, recipe.parent_b_pal_id)),
+            recipe.child_pal_id,
+        )
     )
 
 

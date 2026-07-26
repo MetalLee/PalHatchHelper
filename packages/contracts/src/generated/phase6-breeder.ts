@@ -344,7 +344,7 @@ export interface AIExplanationResult {
 }
 export interface BreedingRoute {
   route_id: string;
-  execution_plan_id: string | null;
+  saved_plan_at: string | null;
   route_key: BreederSha256;
   rank: number;
   optimization_mode: BreederOptimizationMode;

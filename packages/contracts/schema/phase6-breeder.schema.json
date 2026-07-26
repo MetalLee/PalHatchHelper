@@ -681,7 +681,7 @@
       "additionalProperties": false,
       "required": [
         "route_id",
-        "execution_plan_id",
+        "saved_plan_at",
         "route_key",
         "rank",
         "optimization_mode",
@@ -709,7 +709,7 @@
       ],
       "properties": {
         "route_id": { "type": "string", "format": "uuid" },
-        "execution_plan_id": { "type": ["string", "null"], "format": "uuid" },
+        "saved_plan_at": { "type": ["string", "null"], "format": "date-time" },
         "route_key": { "$ref": "#/$defs/BreederSha256" },
         "rank": { "type": "integer", "minimum": 1, "maximum": 3 },
         "optimization_mode": { "$ref": "#/$defs/BreederOptimizationMode" },

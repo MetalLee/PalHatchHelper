@@ -1243,7 +1243,7 @@ class BreedingRoute(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     route_id: UUID
-    execution_plan_id: UUID | None
+    saved_plan_at: AwareDatetime | None
     route_key: BreederSha256
     rank: Annotated[int, Field(ge=1), Field(le=3)]
     optimization_mode: BreederOptimizationMode
@@ -1347,179 +1347,27 @@ class BreedingJobDetailRpcFailure(BaseModel):
 type BreedingJobDetailRpcResult = BreedingJobDetailRpcSuccess | BreedingJobDetailRpcFailure
 
 
-type InstanceUid = Annotated[str, Field(min_length=1), Field(max_length=160)]
+type Timestamp = AwareDatetime
 
 
-type IdempotencyKey = Annotated[
-    str,
-    Field(min_length=8),
-    Field(max_length=160),
-    Field(pattern="^[A-Za-z0-9._:-]+$"),
-]
+class FeasibilityStatus(StrEnum):
+    READY = "ready"
+    NEEDS_INVENTORY = "needs_inventory"
 
 
-class PlanStatus(StrEnum):
-    ACTIVE = "active"
-    AWAITING_CONFIRMATION = "awaiting_confirmation"
-    PAUSED = "paused"
-    COMPLETED = "completed"
-    INVALIDATED = "invalidated"
-    CANCELLED = "cancelled"
-
-
-class PlanStepStatus(StrEnum):
-    NOT_STARTED = "not_started"
-    BREEDING = "breeding"
-    CANDIDATE_DETECTED = "candidate_detected"
-    COMPLETED = "completed"
-    RETRYING = "retrying"
-    SKIPPED = "skipped"
-    INVALIDATED = "invalidated"
+class PlanDifficulty(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 
 class Phase7ErrorCode(StrEnum):
-    ROUTE_NOT_ADOPTABLE = "ROUTE_NOT_ADOPTABLE"
+    AUTH_REQUIRED = "AUTH_REQUIRED"
+    PLAYER_BINDING_REQUIRED = "PLAYER_BINDING_REQUIRED"
     PLAN_NOT_FOUND = "PLAN_NOT_FOUND"
     PLAN_ACCESS_DENIED = "PLAN_ACCESS_DENIED"
-    PLAN_VERSION_CONFLICT = "PLAN_VERSION_CONFLICT"
-    PLAN_INVALID_STATE_TRANSITION = "PLAN_INVALID_STATE_TRANSITION"
-    PLAN_NOT_CURRENT_STEP = "PLAN_NOT_CURRENT_STEP"
-    PLAN_PAUSED = "PLAN_PAUSED"
-    STEP_PREREQUISITE_INCOMPLETE = "STEP_PREREQUISITE_INCOMPLETE"
-    CANDIDATE_NOT_FOUND = "CANDIDATE_NOT_FOUND"
-    CANDIDATE_ALREADY_USED = "CANDIDATE_ALREADY_USED"
-    CANDIDATE_SPECIES_MISMATCH = "CANDIDATE_SPECIES_MISMATCH"
-    CANDIDATE_CONFIRMATION_REQUIRED = "CANDIDATE_CONFIRMATION_REQUIRED"
-    EXISTING_PAL_NOT_ELIGIBLE = "EXISTING_PAL_NOT_ELIGIBLE"
-    PLAN_DEPENDENCY_UNAVAILABLE = "PLAN_DEPENDENCY_UNAVAILABLE"
-    PLAN_RECALCULATION_REQUIRED = "PLAN_RECALCULATION_REQUIRED"
-    PLAN_FIXED_VERSION_UNAVAILABLE = "PLAN_FIXED_VERSION_UNAVAILABLE"
-    SNAPSHOT_DELTA_UNAVAILABLE = "SNAPSHOT_DELTA_UNAVAILABLE"
-
-
-class PlanParentSourceKind(StrEnum):
-    INVENTORY = "inventory"
-    PRIOR_STEP = "prior_step"
-
-
-class InvalidationReasonCode(StrEnum):
-    DEPENDENCY_DISAPPEARED = "DEPENDENCY_DISAPPEARED"
-    OWNER_CHANGED = "OWNER_CHANGED"
-    SHARING_DISABLED = "SHARING_DISABLED"
-    GUILD_ACCESS_LOST = "GUILD_ACCESS_LOST"
-    GENDER_INCOMPATIBLE = "GENDER_INCOMPATIBLE"
-    CONFIRMED_RESULT_DIVERGED = "CONFIRMED_RESULT_DIVERGED"
-    FIXED_CATALOG_UNAVAILABLE = "FIXED_CATALOG_UNAVAILABLE"
-    FIXED_CONTENT_HASH_MISMATCH = "FIXED_CONTENT_HASH_MISMATCH"
-
-
-class InvalidationReason(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    code: InvalidationReasonCode
-    step_index: Annotated[int, Field(ge=0)] | None
-    instance_uid: InstanceUid | None
-    details: dict[str, object]
-
-
-class PlanVersionPin(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    inventory_snapshot_id: UUID
-    game_data_version_id: UUID
-    content_hash: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
-    algorithm_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
-    scoring_profile_version: Annotated[str, Field(min_length=1), Field(max_length=100)]
-
-
-class PlanStep(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    step_id: UUID
-    step_index: Annotated[int, Field(ge=0)]
-    parent_a_source_kind: PlanParentSourceKind
-    parent_a_instance_uid: InstanceUid | None
-    parent_a_step_index: Annotated[int, Field(ge=0)] | None
-    parent_a_location_type: PalLocationType | None
-    parent_a_location_name: Annotated[str, Field(max_length=160)] | None
-    parent_a_location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
-    parent_b_source_kind: PlanParentSourceKind
-    parent_b_instance_uid: InstanceUid | None
-    parent_b_step_index: Annotated[int, Field(ge=0)] | None
-    parent_b_location_type: PalLocationType | None
-    parent_b_location_name: Annotated[str, Field(max_length=160)] | None
-    parent_b_location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
-    expected_child_pal_id: StableId
-    required_passive_ids: Annotated[
-        list[StableId],
-        Field(max_length=4),
-        AfterValidator(_ensure_unique),
-    ]
-    preferred_gender: Literal["male", "female"] | None
-    selected_child_instance_uid: InstanceUid | None
-    baseline_snapshot_id: UUID | None
-    candidate_detection_started_at: AwareDatetime | None
-    attempt_number: Annotated[int, Field(ge=0)]
-    status: PlanStepStatus
-    concurrency_version: Annotated[int, Field(ge=1)]
-    skip_reason: Annotated[str, Field(max_length=500)] | None
-    invalidation_reasons: list[InvalidationReason]
-    completed_at: AwareDatetime | None
-
-
-class CandidateMatchBreakdown(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    species: Annotated[float, Field(ge=0), Field(le=1)]
-    passive_overlap: Annotated[float, Field(ge=0), Field(le=1)]
-    gender: Annotated[float, Field(ge=0), Field(le=1)]
-    accessibility: Annotated[float, Field(ge=0), Field(le=1)]
-    first_appearance: Annotated[float, Field(ge=0), Field(le=1)]
-
-
-class OffspringCandidate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    candidate_key: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
-    step_id: UUID
-    pal_instance_uid: InstanceUid
-    detected_snapshot_id: UUID
-    pal_id: StableId
-    pal_display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
-    species_match: bool
-    matched_passive_ids: Annotated[
-        list[StableId],
-        Field(max_length=4),
-        AfterValidator(_ensure_unique),
-    ]
-    required_passive_count: Annotated[int, Field(ge=0), Field(le=4)]
-    gender: PalGender
-    level: Annotated[int, Field(ge=1), Field(le=100)] | None
-    owner_display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
-    location_type: PalLocationType
-    location_name: Annotated[str, Field(max_length=160)] | None
-    location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
-    accessible: bool
-    match_score: Annotated[float, Field(ge=0), Field(le=1)]
-    match_breakdown: CandidateMatchBreakdown
-    first_detected_at: AwareDatetime
-    confirmed: bool
-    rejected_at: AwareDatetime | None
-    rejection_reason: Annotated[str, Field(max_length=500)] | None
-
-
-class PlanEventSummary(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    event_id: UUID
-    step_id: UUID | None
-    event_type: Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]
-    actor_kind: Literal["player", "admin", "agent", "system"]
-    actor_display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
-    from_status: Annotated[str, Field(max_length=40)] | None
-    to_status: Annotated[str, Field(max_length=40)] | None
-    safe_metadata: dict[str, object]
-    created_at: AwareDatetime
+    ROUTE_NOT_FOUND = "ROUTE_NOT_FOUND"
+    DATA_UNAVAILABLE = "DATA_UNAVAILABLE"
 
 
 class PlanPassiveSummary(BaseModel):
@@ -1527,14 +1375,39 @@ class PlanPassiveSummary(BaseModel):
 
     passive_skill_id: StableId
     display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
-    rank: int
-    is_negative: bool
+    rank: Annotated[int, Field(ge=-20), Field(le=20)] | None
+    is_negative: bool | None
+
+
+type SavePlanRequest = SavePlanRequestBody
+
+
+class SavePlanRequestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_id: UUID
+
+
+class SavePlanResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_id: UUID
+    saved_at: Timestamp
+    reused: bool
+
+
+class RemovePlanResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_id: UUID
+    removed: bool
 
 
 class PlanSummary(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    plan_id: UUID
+    route_id: UUID
+    source_job_id: UUID
     target_pal_id: StableId
     target_pal_display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
     desired_passive_ids: Annotated[
@@ -1547,145 +1420,40 @@ class PlanSummary(BaseModel):
         Field(max_length=4),
     ]
     desired_passives: Annotated[list[PlanPassiveSummary], Field(max_length=4)]
-    status: PlanStatus
-    current_step_index: Annotated[int, Field(ge=0)]
-    completed_step_count: Annotated[int, Field(ge=0)]
-    total_step_count: Annotated[int, Field(ge=0)]
-    pending_candidate_count: Annotated[int, Field(ge=0)]
-    version_pin: PlanVersionPin
-    concurrency_version: Annotated[int, Field(ge=1)]
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
+    optimization_mode: OptimizationMode
+    feasibility_status: FeasibilityStatus
+    generation_count: Annotated[int, Field(ge=0), Field(le=8)]
+    step_count: Annotated[int, Field(ge=0)]
+    borrowed_pal_count: Annotated[int, Field(ge=0)]
+    missing_pal_count: Annotated[int, Field(ge=0)]
+    estimated_attempts_min: Annotated[int, Field(ge=0)]
+    estimated_attempts_max: Annotated[int, Field(ge=0)]
+    difficulty: PlanDifficulty
+    total_score: Annotated[float, Field(ge=0), Field(le=100)]
+    saved_at: Timestamp
 
 
-class PlanDetail(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    summary: PlanSummary
-    adopted_route_id: UUID
-    invalidation_reasons: list[InvalidationReason]
-    steps: list[PlanStep]
-    candidates: list[OffspringCandidate]
-    events: list[PlanEventSummary]
-
-
-type AdoptRouteRequest = AdoptRouteRequestBody
-
-
-class AdoptRouteRequestBody(BaseModel):
+class PlanDetailReference(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     route_id: UUID
-    idempotency_key: IdempotencyKey
-
-
-class AdoptRouteResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    plan_id: UUID
-    reused: bool
-    status: PlanStatus
-    concurrency_version: Annotated[int, Field(ge=1)]
-
-
-class UpdateStepStatusRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    expected_concurrency_version: Annotated[int, Field(ge=1)]
-    idempotency_key: IdempotencyKey
-
-
-type StartBreedingRequest = UpdateStepStatusRequest
-
-
-type ContinueAttemptRequest = UpdateStepStatusRequest
-
-
-type PausePlanRequest = UpdateStepStatusRequest
-
-
-type ResumePlanRequest = UpdateStepStatusRequest
-
-
-class SelectExistingPalRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    pal_instance_uid: InstanceUid
-    allow_passive_mismatch: bool
-    expected_concurrency_version: Annotated[int, Field(ge=1)]
-    idempotency_key: IdempotencyKey
-
-
-class ConfirmOffspringRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    candidate_key: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
-    expected_concurrency_version: Annotated[int, Field(ge=1)]
-    idempotency_key: IdempotencyKey
-
-
-class RejectCandidateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reason: Annotated[str, Field(min_length=1), Field(max_length=500)]
-    expected_concurrency_version: Annotated[int, Field(ge=1)]
-    idempotency_key: IdempotencyKey
-
-
-class SkipStepRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reason: Annotated[str, Field(min_length=1), Field(max_length=500)]
-    expected_concurrency_version: Annotated[int, Field(ge=1)]
-    idempotency_key: IdempotencyKey
-
-
-class RecalculatePlanRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reason: Annotated[str, Field(min_length=1), Field(max_length=500)]
-    expected_concurrency_version: Annotated[int, Field(ge=1)]
-    idempotency_key: IdempotencyKey
-
-
-class OptimisticConcurrencyConflict(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    error_code: Literal["PLAN_VERSION_CONFLICT"]
-    expected_version: Annotated[int, Field(ge=1)]
-    actual_version: Annotated[int, Field(ge=1)]
-
-
-class PlanMutationResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    plan_id: UUID
-    status: PlanStatus
-    current_step_index: Annotated[int, Field(ge=0)]
-    concurrency_version: Annotated[int, Field(ge=1)]
-
-
-class RecalculatePlanResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    source_plan_id: UUID
-    job_id: UUID
-    reused: bool
+    source_job_id: UUID
+    saved_at: Timestamp
 
 
 class PlanListPage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    items: list[PlanSummary]
-    next_cursor: Annotated[str, Field(max_length=500)] | None
-    query_boundary: AwareDatetime
+    items: Annotated[list[PlanSummary], Field(max_length=100)]
+    next_cursor: Annotated[str, Field(max_length=300)] | None
+    query_boundary: Timestamp
 
 
 class PlanRpcFailure(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ok: Literal[False]
-    error_code: Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]
+    error_code: Phase7ErrorCode
 
 
 class PlanListRpcSuccess(BaseModel):
@@ -1702,51 +1470,16 @@ class PlanDetailRpcSuccess(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ok: Literal[True]
-    data: PlanDetail
+    data: PlanDetailReference
 
 
 type PlanDetailRpcResult = PlanDetailRpcSuccess | PlanRpcFailure
-
-
-class DetectionStepContext(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    step_id: UUID
-    plan_id: UUID
-    world_id: UUID
-    baseline_snapshot_id: UUID
-    expected_child_pal_id: StableId
-    required_passive_ids: Annotated[
-        list[StableId],
-        Field(max_length=4),
-        AfterValidator(_ensure_unique),
-    ]
-    preferred_gender: Literal["male", "female"] | None
-
-
-class CandidateDetectionWrite(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    pal_instance_uid: InstanceUid
-    match_score: Annotated[float, Field(ge=0), Field(le=1)]
-    match_breakdown: CandidateMatchBreakdown
-
-
-class CandidateDetectionBatchRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    step_id: UUID
-    detected_snapshot_id: UUID
-    candidates: Annotated[list[CandidateDetectionWrite], Field(max_length=500)]
 
 
 type Uuid = UUID
 
 
 type NullableUuid = UUID | None
-
-
-type Timestamp = AwareDatetime
 
 
 type NullableTimestamp = AwareDatetime | None
@@ -1760,6 +1493,14 @@ type StableErrorCode = Annotated[
     Field(min_length=1),
     Field(max_length=100),
     Field(pattern="^[A-Z][A-Z0-9_]*$"),
+]
+
+
+type IdempotencyKey = Annotated[
+    str,
+    Field(min_length=8),
+    Field(max_length=160),
+    Field(pattern="^[A-Za-z0-9._:-]+$"),
 ]
 
 
@@ -1939,7 +1680,6 @@ class AdminJobSummary(BaseModel):
     route_count: Annotated[int, Field(ge=0)]
     ai_provider: Annotated[str, Field(max_length=80)] | None
     degraded: bool
-    execution_plan_id: NullableUuid
     created_at: Timestamp
 
 
@@ -2235,7 +1975,6 @@ class AdminOverview(BaseModel):
     agent: AdminWorkerStatus
     save_worker: AdminWorkerStatus
     job_worker: AdminWorkerStatus
-    candidate_detector: AdminWorkerStatus
     latest_successful_snapshot: AdminSnapshotSummary | None
     parser: AdminParserIdentity
     catalog: AdminCatalogIdentity

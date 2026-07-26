@@ -13,6 +13,7 @@ from pal_hatch_helper.breeding.limits import SearchBudget
 from pal_hatch_helper.breeding.planning import (
     physical_plan_signature,
     plan_passive_retention,
+    semantic_plan_signature,
     serialize_plan,
     trace_passive_sources,
 )
@@ -37,7 +38,7 @@ from pal_hatch_helper.generated import (
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
-ALGORITHM_VERSION: Final = "inventory-trait-aware-deterministic-v4"
+ALGORITHM_VERSION: Final = "inventory-trait-aware-deterministic-v5"
 
 
 class DeterministicBreedingEngine:
@@ -104,15 +105,15 @@ class DeterministicBreedingEngine:
 
         physical_plan_keys: set[str] = set()
         pruned_physical_duplicates = 0
+        candidates: dict[str, tuple[str, BreedingRouteCandidate]] = {}
 
         def collect_candidates(
             assignments: tuple[AssignedRoute, ...],
             *,
             required_mask: int,
             fallback: bool,
-        ) -> dict[str, BreedingRouteCandidate]:
+        ) -> None:
             nonlocal pruned_physical_duplicates
-            candidates: dict[str, BreedingRouteCandidate] = {}
             for assignment in assignments:
                 is_fallback = bool(assignment.missing_leaf_count or missing_passive_ids)
                 if is_fallback != fallback:
@@ -136,8 +137,8 @@ class DeterministicBreedingEngine:
                 if physical_key in physical_plan_keys:
                     pruned_physical_duplicates += 1
                     continue
-                if len(candidates) >= request.limits.max_candidate_routes:
-                    break
+                physical_plan_keys.add(physical_key)
+                semantic_key = semantic_plan_signature(serialized)
                 _validate_serialized_relations(index, serialized.steps)
                 passive_sources = trace_passive_sources(serialized, desired_passive_ids)
                 inventory_passive_coverage = (
@@ -155,9 +156,8 @@ class DeterministicBreedingEngine:
                     inventory_passive_coverage=inventory_passive_coverage,
                     missing_passive_count=len(missing_passive_ids),
                 )
-                route_key = _route_key(request, physical_key)
-                physical_plan_keys.add(physical_key)
-                candidates[route_key] = BreedingRouteCandidate(
+                route_key = _route_key(request, semantic_key)
+                candidate = BreedingRouteCandidate(
                     route_key=route_key,
                     rank=1,
                     optimization_mode=request.optimization_mode,
@@ -187,17 +187,36 @@ class DeterministicBreedingEngine:
                     score_breakdown=scored.breakdown,
                     steps=list(serialized.steps),
                 )
-            return candidates
+                existing = candidates.get(semantic_key)
+                if existing is not None:
+                    pruned_physical_duplicates += 1
+                    if _representative_candidate_rank(
+                        candidate, physical_key, request.optimization_mode
+                    ) >= _representative_candidate_rank(
+                        existing[1], existing[0], request.optimization_mode
+                    ):
+                        continue
+                elif len(candidates) >= request.limits.max_candidate_routes:
+                    continue
+                candidates[semantic_key] = (physical_key, candidate)
 
-        ready_candidates = collect_candidates(
+        collect_candidates(
             ready_result.assignments,
             required_mask=full_mask,
             fallback=False,
         )
+        ready_candidate_count = sum(
+            candidate.feasibility_status is BreedingFeasibilityStatus.READY
+            for _, candidate in candidates.values()
+        )
+        fallback_target = min(
+            3,
+            request.limits.max_candidate_routes,
+            request.limits.max_results,
+        )
         fallback_result = TraitSearchResult((), 0, 0, None, False)
-        fallback_candidates: dict[str, BreedingRouteCandidate] = {}
         if (
-            len(ready_candidates) < request.limits.max_results
+            ready_candidate_count < fallback_target
             and ready_result.stopped_by is None
             and not ready_result.target_goal_reached
         ):
@@ -215,14 +234,13 @@ class DeterministicBreedingEngine:
                 include_missing_leaves=True,
                 budget=budget,
             )
-            fallback_candidates = collect_candidates(
+            collect_candidates(
                 fallback_result.assignments,
                 required_mask=available_mask,
                 fallback=True,
             )
 
-        candidates_by_key = {**ready_candidates, **fallback_candidates}
-        all_candidates = tuple(candidates_by_key.values())
+        all_candidates = tuple(candidate for _, candidate in candidates.values())
         stopped_by = ready_result.stopped_by or fallback_result.stopped_by
         requested_order = sorted(
             all_candidates,
@@ -256,9 +274,7 @@ class DeterministicBreedingEngine:
         search_complete = not hit_limits and stopped_by is None
         pruned_trait_states = ready_result.pruned_states + fallback_result.pruned_states
         soft_pruned = bool(
-            pruned_trait_states
-            or len(ready_candidates) >= request.limits.max_candidate_routes
-            or len(fallback_candidates) >= request.limits.max_candidate_routes
+            pruned_trait_states or len(candidates) >= request.limits.max_candidate_routes
         )
         returned_all = (
             search_complete
@@ -431,6 +447,22 @@ def _candidate_rank(
         candidate.step_count,
         candidate.borrowed_pal_count,
         candidate.route_key,
+    )
+
+
+def _representative_candidate_rank(
+    candidate: BreedingRouteCandidate,
+    physical_key: str,
+    mode: OptimizationMode,
+) -> tuple[int, int, int, int, int, float, str]:
+    return (
+        0 if candidate.feasibility_status is BreedingFeasibilityStatus.READY else 1,
+        candidate.missing_pal_count,
+        candidate.score_breakdown.raw_metrics.extra_passive_count,
+        candidate.borrowed_pal_count,
+        candidate.estimated_attempts_max,
+        -mode_score(candidate.score_breakdown, mode),
+        physical_key,
     )
 
 

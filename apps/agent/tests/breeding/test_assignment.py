@@ -37,7 +37,7 @@ def test_distributed_passives_are_carried_through_the_required_intermediate() ->
     assert set(steps[1].required_passive_ids) == {"p1", "p2", "p3", "p4"}
 
 
-def test_extra_non_target_passives_increase_the_strategy_cost() -> None:
+def test_semantic_duplicate_prefers_the_instance_with_fewer_non_target_passives() -> None:
     result = search(
         DeterministicBreedingEngine(),
         request(
@@ -65,13 +65,8 @@ def test_extra_non_target_passives_increase_the_strategy_cost() -> None:
         ): route
         for route in result.routes
     }
-    exact = by_parent["a-exact"]
-    noisy = by_parent["a-noisy"]
-    assert exact.estimated_attempts_max < noisy.estimated_attempts_max
-    assert (
-        exact.score_breakdown.raw_metrics.extra_passive_count
-        < noisy.score_breakdown.raw_metrics.extra_passive_count
-    )
+    assert set(by_parent) == {"a-exact"}
+    assert by_parent["a-exact"].score_breakdown.raw_metrics.extra_passive_count == 0
 
 
 def test_inventory_filtering_keeps_owned_and_enabled_guild_shared_instances_only() -> None:
@@ -214,24 +209,39 @@ def test_same_species_pair_uses_distinct_opposite_gender_instances() -> None:
     assert {step.parent_a.gender, step.parent_b.gender} == {"male", "female"}
 
 
-def test_same_species_candidates_equal_unique_unordered_instance_pairs() -> None:
+def test_same_species_candidates_collapse_to_one_semantic_route() -> None:
     result = search(
         DeterministicBreedingEngine(),
         request(
             "pal-target",
             (
-                inventory_pal("same-m-1", "pal-same", "male"),
-                inventory_pal("same-m-2", "pal-same", "male"),
-                inventory_pal("same-f-1", "pal-same", "female"),
-                inventory_pal("same-f-2", "pal-same", "female"),
+                inventory_pal("same-m-clean", "pal-same", "male"),
+                inventory_pal(
+                    "same-m-noisy",
+                    "pal-same",
+                    "male",
+                    passives=("interference-a", "interference-b"),
+                ),
+                inventory_pal("same-f-clean", "pal-same", "female"),
+                inventory_pal(
+                    "same-f-noisy",
+                    "pal-same",
+                    "female",
+                    passives=("interference-c",),
+                ),
             ),
         ),
         (recipe("pal-same", "pal-same", "pal-target"),),
     )
 
     ready = [route for route in result.routes if route.adoptable]
-    assert len(ready) == 4
-    assert len({route.route_key for route in ready}) == 4
+    assert len(ready) == 1
+    step = ready[0].steps[0]
+    assert {step.parent_a.instance_uid, step.parent_b.instance_uid} == {
+        "same-m-clean",
+        "same-f-clean",
+    }
+    assert ready[0].score_breakdown.raw_metrics.extra_passive_count == 0
 
 
 def test_gender_specific_recipe_rejects_the_opposite_parent_orientation() -> None:

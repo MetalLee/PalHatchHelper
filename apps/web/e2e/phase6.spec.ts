@@ -118,7 +118,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   await expect(page.getByText("解释已降级")).toHaveCount(0);
   await page.getByRole("button", { name: "展开固定版本" }).click();
   await expect(
-    page.getByText("inventory-trait-aware-deterministic-v4"),
+    page.getByText("inventory-trait-aware-deterministic-v5"),
   ).toBeVisible();
 
   const response = await page.request.get(`/api/breeder/jobs/${jobId}`);

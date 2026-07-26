@@ -142,38 +142,16 @@ const bundledContractModels = {
     "BreedingJobDetailRpcResult",
   ],
   "phase7-execution-plans": [
-    "AdoptRouteRequest",
-    "AdoptRouteResponse",
+    "SavePlanRequest",
+    "SavePlanResponse",
+    "RemovePlanResponse",
     "PlanSummary",
-    "PlanDetail",
-    "PlanVersionPin",
-    "PlanStep",
-    "PlanStepStatus",
-    "PlanStatus",
     "Phase7ErrorCode",
-    "OffspringCandidate",
-    "CandidateMatchBreakdown",
-    "UpdateStepStatusRequest",
-    "StartBreedingRequest",
-    "ContinueAttemptRequest",
-    "SelectExistingPalRequest",
-    "ConfirmOffspringRequest",
-    "RejectCandidateRequest",
-    "PausePlanRequest",
-    "ResumePlanRequest",
-    "SkipStepRequest",
-    "RecalculatePlanRequest",
-    "InvalidationReason",
-    "PlanEventSummary",
-    "OptimisticConcurrencyConflict",
-    "PlanMutationResponse",
-    "RecalculatePlanResponse",
+    "PlanPassiveSummary",
     "PlanListPage",
     "PlanListRpcResult",
+    "PlanDetailReference",
     "PlanDetailRpcResult",
-    "DetectionStepContext",
-    "CandidateDetectionWrite",
-    "CandidateDetectionBatchRequest",
   ],
   "phase8-admin": [
     "AdminOverview",
@@ -424,6 +402,26 @@ function pythonAliasLines(name, type) {
   return [`${prefix}(`, `    ${type}`, ")", "", ""];
 }
 
+function runPythonFormatter(argumentsList) {
+  const uvResult = spawnSync(
+    "uv",
+    [
+      "run",
+      "--project",
+      resolve(repositoryRoot, "apps/agent"),
+      "ruff",
+      ...argumentsList,
+    ],
+    { encoding: "utf8" },
+  );
+  if (uvResult.error?.code !== "ENOENT") return uvResult;
+  return spawnSync(
+    resolve(repositoryRoot, "apps/agent/.venv/bin/ruff"),
+    argumentsList,
+    { encoding: "utf8" },
+  );
+}
+
 async function generatePythonContracts() {
   const schemas = await Promise.all(
     pythonContracts.map(async (contract) => {
@@ -520,38 +518,18 @@ async function generatePythonContracts() {
   }
   await writeFile(contractsPath, `${lines.join("\n")}\n`, "utf8");
   await writeFile(initPath, initLines.join("\n"), "utf8");
-  const lintFixer = spawnSync(
-    "uv",
-    [
-      "run",
-      "--project",
-      resolve(repositoryRoot, "apps/agent"),
-      "ruff",
-      "check",
-      "--fix",
-      contractsPath,
-      initPath,
-    ],
-    { encoding: "utf8" },
-  );
+  const lintFixer = runPythonFormatter([
+    "check",
+    "--fix",
+    contractsPath,
+    initPath,
+  ]);
   if (lintFixer.status !== 0) {
     throw new Error(
       `Unable to lint generated Python contracts: ${lintFixer.stderr}`,
     );
   }
-  const formatter = spawnSync(
-    "uv",
-    [
-      "run",
-      "--project",
-      resolve(repositoryRoot, "apps/agent"),
-      "ruff",
-      "format",
-      contractsPath,
-      initPath,
-    ],
-    { encoding: "utf8" },
-  );
+  const formatter = runPythonFormatter(["format", contractsPath, initPath]);
   if (formatter.status !== 0) {
     throw new Error(
       `Unable to format generated Python contracts: ${formatter.stderr}`,

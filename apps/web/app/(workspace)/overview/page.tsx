@@ -14,14 +14,10 @@ export default async function OverviewPage() {
   if (context.binding === null)
     return <ErrorState code="PLAYER_BINDING_REQUIRED" />;
 
-  const [summaryResult, activeResult, awaitingResult, completedResult] =
-    await Promise.allSettled([
-      getOverviewSummary(),
-      loadPlans({ status: "active", limit: 3 }),
-      loadPlans({ status: "awaiting_confirmation", limit: 3 }),
-      loadPlans({ status: "completed", limit: 4 }),
-    ]);
-
+  const [summaryResult, plansResult] = await Promise.allSettled([
+    getOverviewSummary(),
+    loadPlans({ limit: 4 }),
+  ]);
   if (summaryResult.status === "rejected") {
     const error = summaryResult.reason;
     return (
@@ -32,18 +28,10 @@ export default async function OverviewPage() {
       />
     );
   }
-
   const planFeed: OverviewPlanFeed = {
-    active: activeResult.status === "fulfilled" ? activeResult.value.items : [],
-    awaitingConfirmation:
-      awaitingResult.status === "fulfilled" ? awaitingResult.value.items : [],
-    completed:
-      completedResult.status === "fulfilled" ? completedResult.value.items : [],
-    unavailable: [activeResult, awaitingResult, completedResult].some(
-      (result) => result.status === "rejected",
-    ),
+    items: plansResult.status === "fulfilled" ? plansResult.value.items : [],
+    unavailable: plansResult.status === "rejected",
   };
-
   return (
     <OverviewDashboard
       playerNickname={context.binding.player_nickname}

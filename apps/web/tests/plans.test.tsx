@@ -1,189 +1,234 @@
-import type { PlanDetail, PlanListPage } from "@palhatch/contracts";
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import type {
+  BreedingJobDetailRpcSuccess,
+  BreedingRoute,
+  PlanListPage,
+} from "@palhatch/contracts";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildPlanBreedingTree } from "../features/plans/build-plan-breeding-tree";
-import { PlanDetail as PlanDetailView } from "../features/plans/plan-detail";
-import { PlanError } from "../features/plans/plan-error";
+import { PlanDetail } from "../features/plans/plan-detail";
 import { PlanList } from "../features/plans/plan-list";
+import type { SavedPlanDetail } from "../features/plans/server";
 
 const routerPush = vi.fn();
 const routerRefresh = vi.fn();
-
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
 }));
 
-const planId = "71000000-0000-4000-8000-000000000001";
-const stepId = "72000000-0000-4000-8000-000000000001";
+const routeId = "62000000-0000-4000-8000-000000000001";
+const jobId = "60000000-0000-4000-8000-000000000001";
+const scoreComponents = [
+  "route_length",
+  "inventory_coverage",
+  "passive_concentration",
+  "borrowing",
+  "intermediate_cost",
+  "attempt_cost",
+  "stability",
+  "acquisition_cost",
+] as const;
 
-function summary(
-  status: PlanDetail["summary"]["status"] = "awaiting_confirmation",
-) {
+function route(): BreedingRoute {
   return {
-    plan_id: planId,
-    target_pal_id: "test_child_pal",
-    target_pal_display_name: "幻色幼崽",
-    desired_passive_ids: ["test_passive_a", "test_passive_b"],
-    desired_passive_display_names: ["稀有", "工匠精神"],
-    desired_passives: [
+    route_id: routeId,
+    saved_plan_at: "2026-07-27T08:00:00Z",
+    route_key: "a".repeat(64),
+    rank: 1,
+    optimization_mode: "balanced",
+    total_score: 88,
+    generation_count: 1,
+    step_count: 1,
+    estimated_attempts_min: 1,
+    estimated_attempts_max: 3,
+    difficulty: "low",
+    borrowed_pal_count: 0,
+    inventory_coverage: 1,
+    inventory_passive_coverage: 1,
+    inheritance_score: 0.9,
+    feasibility_status: "ready",
+    adoptable: true,
+    missing_pal_count: 0,
+    missing_passive_ids: [],
+    missing_requirements: [],
+    passive_sources: [
       {
-        passive_skill_id: "test_passive_a",
-        display_name: "稀有",
-        rank: 5,
-        is_negative: false,
-      },
-      {
-        passive_skill_id: "test_passive_b",
-        display_name: "工匠精神",
-        rank: 4,
-        is_negative: false,
+        passive_id: "swift",
+        source_instance_uid: "parent-a",
+        source_pal_id: "parent_a",
+        first_required_step_index: 0,
       },
     ],
-    status,
-    current_step_index: 0,
-    completed_step_count: 0,
-    total_step_count: 2,
-    pending_candidate_count: 1,
-    version_pin: {
-      inventory_snapshot_id: "40000000-0000-4000-8000-000000000002",
-      game_data_version_id: "51000000-0000-4000-8000-000000000001",
-      content_hash: "c".repeat(64),
-      algorithm_version: "phase4b-deterministic-v1",
-      scoring_profile_version: "balanced-v2",
+    existing_target_instance_uid: null,
+    score_breakdown: {
+      scoring_profile_version: "balanced-v6",
+      estimate_basis: "strategy_heuristic_no_verified_probability",
+      raw_metrics: {
+        generation_count: 1,
+        step_count: 1,
+        unique_starting_instance_count: 2,
+        starting_requirement_count: 2,
+        missing_pal_count: 0,
+        missing_passive_requirement_count: 0,
+        missing_passive_count: 0,
+        borrowed_pal_count: 0,
+        inventory_coverage: 1,
+        inventory_passive_coverage: 1,
+        passive_carrier_count: 1,
+        passive_concentration: 1,
+        extra_passive_count: 0,
+        intermediate_pal_count: 0,
+        intermediate_passive_checkpoint_count: 0,
+        required_gender_checkpoint_count: 0,
+        estimated_attempts_min: 1,
+        estimated_attempts_max: 3,
+        difficulty: "low",
+      },
+      mode_scores: [
+        "balanced",
+        "fastest",
+        "highest_success",
+        "least_borrowing",
+      ].map((optimization_mode) => ({
+        optimization_mode,
+        scoring_profile_version: `${optimization_mode}-v6`,
+        total_score: 88,
+        components: scoreComponents.map((component) => ({
+          component,
+          raw_value: 1,
+          normalized_score: 88,
+          weight: 0.125,
+          weighted_score: 11,
+        })),
+      })) as BreedingRoute["score_breakdown"]["mode_scores"],
     },
-    concurrency_version: 5,
-    created_at: "2026-07-16T04:00:00Z",
-    updated_at: "2026-07-16T04:10:00Z",
-  } satisfies PlanDetail["summary"];
-}
-
-function detail(
-  status: PlanDetail["summary"]["status"] = "awaiting_confirmation",
-): PlanDetail {
-  return {
-    summary: summary(status),
-    adopted_route_id: "62000000-0000-4000-8000-000000000001",
-    invalidation_reasons:
-      status === "invalidated"
-        ? [
-            {
-              code: "DEPENDENCY_DISAPPEARED",
-              step_index: 1,
-              instance_uid: "fixture-parent-a",
-              details: { snapshot_id: "fixture-next" },
-            },
-          ]
-        : [],
     steps: [
       {
-        step_id: stepId,
         step_index: 0,
-        parent_a_source_kind: "inventory",
-        parent_a_instance_uid: "fixture-parent-a",
-        parent_a_step_index: null,
-        parent_a_location_type: "player_party",
-        parent_a_location_name: null,
-        parent_a_location_slot_index: 2,
-        parent_b_source_kind: "inventory",
-        parent_b_instance_uid: "fixture-parent-b",
-        parent_b_step_index: null,
-        parent_b_location_type: "dimensional_storage",
-        parent_b_location_name: null,
-        parent_b_location_slot_index: 31,
-        expected_child_pal_id: "test_child_pal",
-        required_passive_ids: ["test_passive_a", "test_passive_b"],
-        preferred_gender: "female",
-        selected_child_instance_uid: null,
-        baseline_snapshot_id: "40000000-0000-4000-8000-000000000002",
-        candidate_detection_started_at: "2026-07-16T04:01:00Z",
-        attempt_number: 1,
-        status: "candidate_detected",
-        concurrency_version: 3,
-        skip_reason: null,
-        invalidation_reasons: [],
-        completed_at: null,
-      },
-      {
-        step_id: "72000000-0000-4000-8000-000000000002",
-        step_index: 1,
-        parent_a_source_kind: "prior_step",
-        parent_a_instance_uid: null,
-        parent_a_step_index: 0,
-        parent_a_location_type: null,
-        parent_a_location_name: null,
-        parent_a_location_slot_index: null,
-        parent_b_source_kind: "inventory",
-        parent_b_instance_uid: "fixture-parent-c",
-        parent_b_step_index: null,
-        parent_b_location_type: "base",
-        parent_b_location_name: "Fixture Plan Base",
-        parent_b_location_slot_index: 4,
-        expected_child_pal_id: "test_child_pal",
-        required_passive_ids: ["test_passive_a"],
-        preferred_gender: null,
-        selected_child_instance_uid: null,
-        baseline_snapshot_id: null,
-        candidate_detection_started_at: null,
-        attempt_number: 0,
-        status: status === "invalidated" ? "invalidated" : "not_started",
-        concurrency_version: 1,
-        skip_reason: null,
-        invalidation_reasons: [],
-        completed_at: null,
-      },
-    ],
-    candidates: [
-      {
-        candidate_key: "d".repeat(64),
-        step_id: stepId,
-        pal_instance_uid: "phase7-child-best",
-        detected_snapshot_id: "40000000-0000-4000-8000-000000000003",
-        pal_id: "test_child_pal",
-        pal_display_name: "幻色幼崽",
-        species_match: true,
-        matched_passive_ids: ["test_passive_a", "test_passive_b"],
-        required_passive_count: 2,
-        gender: "female",
-        level: 1,
-        owner_display_name: "Fixture Player A",
-        location_type: "player_storage",
-        location_name: null,
-        location_slot_index: 64,
-        accessible: true,
-        match_score: 1,
-        match_breakdown: {
-          species: 1,
-          passive_overlap: 1,
-          gender: 1,
-          accessibility: 1,
-          first_appearance: 1,
+        generation: 1,
+        recipe_type: "normal",
+        parent_a: {
+          source_type: "inventory",
+          pal_id: "parent_a",
+          instance_uid: "parent-a",
+          owner_display_name: "玩家 A",
+          gender: "male",
+          passive_skill_ids: ["swift"],
+          required_passive_ids: ["swift"],
+          borrowed: false,
+          produced_by_step_index: null,
+          location_type: "base",
+          location_name: "第一据点",
+          location_slot_index: 1,
         },
-        first_detected_at: "2026-07-16T04:05:00Z",
-        confirmed: false,
-        rejected_at: null,
-        rejection_reason: null,
+        parent_b: {
+          source_type: "inventory",
+          pal_id: "parent_b",
+          instance_uid: "parent-b",
+          owner_display_name: "玩家 A",
+          gender: "female",
+          passive_skill_ids: [],
+          required_passive_ids: [],
+          borrowed: false,
+          produced_by_step_index: null,
+          location_type: "player_storage",
+          location_name: null,
+          location_slot_index: 2,
+        },
+        child_pal_id: "target_pal",
+        child_required_gender: null,
+        required_passive_ids: ["swift"],
       },
     ],
-    events: [
+    ai_explanation: null,
+    ai_labels: [],
+  };
+}
+
+function job(): BreedingJobDetailRpcSuccess["data"] {
+  const savedRoute = route();
+  return {
+    job_id: jobId,
+    status: "completed",
+    target_pal_id: "target_pal",
+    desired_passive_ids: ["swift"],
+    optimization_mode: "balanced",
+    allow_guild_shared: false,
+    max_generations: 5,
+    inventory_snapshot_id: "40000000-0000-4000-8000-000000000001",
+    game_data_version_id: "51000000-0000-4000-8000-000000000001",
+    game_data_content_hash: "c".repeat(64),
+    algorithm_version: "inventory-trait-aware-deterministic-v5",
+    scoring_profile_version: "balanced-v6",
+    localization: {
+      locale: "zh-CN",
+      pals: [
+        { pal_id: "parent_a", display_name: "棉悠悠" },
+        { pal_id: "parent_b", display_name: "捣蛋猫" },
+        { pal_id: "target_pal", display_name: "幻色幼崽" },
+      ],
+      passive_skills: [
+        {
+          passive_skill_id: "swift",
+          display_name: "神速",
+          rank: 3,
+          is_negative: false,
+        },
+      ],
+    },
+    attempt_count: 1,
+    error_code: null,
+    created_at: "2026-07-27T07:59:00Z",
+    completed_at: "2026-07-27T08:00:00Z",
+    plan: {
+      plan_id: "61000000-0000-4000-8000-000000000001",
+      result_digest: "d".repeat(64),
+      route_count: 1,
+      missing_passive_ids: [],
+      explanation_codes: [],
+      diagnostics: { search_complete: true },
+      ai: {
+        provider: "template",
+        model: null,
+        explanation: "",
+        degraded: true,
+      },
+      routes: [savedRoute],
+    },
+  };
+}
+
+function listPage(items = [summary()]): PlanListPage {
+  return { items, next_cursor: null, query_boundary: "2026-07-27T08:10:00Z" };
+}
+
+function summary(): PlanListPage["items"][number] {
+  return {
+    route_id: routeId,
+    source_job_id: jobId,
+    target_pal_id: "target_pal",
+    target_pal_display_name: "幻色幼崽",
+    desired_passive_ids: ["swift"],
+    desired_passive_display_names: ["神速"],
+    desired_passives: [
       {
-        event_id: "73000000-0000-4000-8000-000000000001",
-        step_id: stepId,
-        event_type: "OFFSPRING_CANDIDATES_DETECTED",
-        actor_kind: "agent",
-        actor_display_name: "Agent",
-        from_status: "breeding",
-        to_status: "candidate_detected",
-        safe_metadata: { candidate_count: 1 },
-        created_at: "2026-07-16T04:05:00Z",
+        passive_skill_id: "swift",
+        display_name: "神速",
+        rank: 3,
+        is_negative: false,
       },
     ],
+    optimization_mode: "balanced",
+    feasibility_status: "ready",
+    generation_count: 1,
+    step_count: 1,
+    borrowed_pal_count: 0,
+    missing_pal_count: 0,
+    estimated_attempts_min: 1,
+    estimated_attempts_max: 3,
+    difficulty: "low",
+    total_score: 88,
+    saved_at: "2026-07-27T08:00:00Z",
   };
 }
 
@@ -193,216 +238,63 @@ beforeEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Phase 7 plan list", () => {
-  it("renders status tabs, real query metrics, progress and candidate count", () => {
-    const page: PlanListPage = {
-      items: [
-        {
-          ...summary("active"),
-          plan_id: "71000000-0000-4000-8000-000000000002",
-          pending_candidate_count: 0,
-        },
-        summary(),
-        {
-          ...summary("completed"),
-          plan_id: "71000000-0000-4000-8000-000000000003",
-          completed_step_count: 2,
-          pending_candidate_count: 0,
-        },
-        {
-          ...summary("invalidated"),
-          plan_id: "71000000-0000-4000-8000-000000000004",
-          pending_candidate_count: 0,
-        },
-      ],
-      next_cursor: "fixture-cursor",
-      query_boundary: "2026-07-16T04:10:00Z",
-    };
-    render(<PlanList page={page} status="awaiting_confirmation" />);
-
+describe("My Plans route saves", () => {
+  it("renders saved route facts without execution progress", () => {
+    render(<PlanList page={listPage()} />);
+    expect(screen.getByText("幻色幼崽")).toBeTruthy();
+    expect(screen.getByText("库存可执行")).toBeTruthy();
+    expect(screen.getByText("神速")).toBeTruthy();
     expect(
-      screen.getByRole("navigation", { name: "计划状态筛选" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("tab", { name: "待确认" }).getAttribute("aria-current"),
-    ).toBe("page");
-    expect(screen.getByLabelText("进行中计划数量").textContent).toContain("1");
-    expect(screen.getByLabelText("待确认计划数量").textContent).toContain("1");
-    expect(screen.getByLabelText("已完成计划数量").textContent).toContain("1");
-    expect(
-      screen.getByLabelText("已暂停或已失效计划数量").textContent,
-    ).toContain("1");
-    expect(screen.getAllByText("幻色幼崽").length).toBe(4);
-    expect(screen.getByText("1 个候选")).toBeTruthy();
-    expect(screen.getAllByText("1 / 2").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Rank/)).toBeNull();
-    expect(screen.getByRole("link", { name: "下一页" })).toBeTruthy();
-
-    fireEvent.pointerDown(screen.getByRole("button", { name: "更多筛选" }), {
-      button: 0,
-      ctrlKey: false,
-    });
-    expect(screen.getByRole("menuitem", { name: "已取消" })).toBeTruthy();
+      screen.getByRole("link", { name: /查看收藏路线/ }).getAttribute("href"),
+    ).toBe(`/plans/${routeId}`);
+    expect(screen.queryByText(/当前步骤|候选子代|计划进度/)).toBeNull();
   });
 
-  it("has an actionable empty state", () => {
-    render(
-      <PlanList
-        page={{
-          items: [],
-          next_cursor: null,
-          query_boundary: "2026-07-16T04:10:00Z",
-        }}
-        status="all"
-      />,
-    );
-    expect(screen.getByRole("heading", { name: "暂无执行计划" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "打开配种器" })).toBeTruthy();
-  });
-});
-
-describe("Phase 7 plan detail", () => {
-  it("keeps actual candidate passives separate from route requirements", () => {
-    const plan = detail();
-    plan.candidates[0]!.matched_passive_ids = ["test_passive_a"];
-    plan.candidates[0]!.confirmed = true;
-    plan.steps[0]!.selected_child_instance_uid =
-      plan.candidates[0]!.pal_instance_uid;
-
-    const tree = buildPlanBreedingTree(plan);
-    const child = tree.entities.find((entity) => entity.id === "step:0:child");
-
-    expect(child?.passiveSkillIds).toEqual(["test_passive_a"]);
-    expect(child?.requiredPassiveIds).toEqual([
-      "test_passive_a",
-      "test_passive_b",
-    ]);
-  });
-
-  it("prioritizes the current step in the shared route tree and keeps a vertical mobile tree", () => {
-    const { container } = render(<PlanDetailView detail={detail()} />);
-
-    expect(screen.getByText(/系统只检测候选，必须由玩家确认/)).toBeTruthy();
-    expect(screen.getByRole("region", { name: "完整配种路径树" })).toBeTruthy();
+  it("keeps an actionable empty state", () => {
+    render(<PlanList page={listPage([])} />);
+    expect(screen.getByRole("heading", { name: "暂无收藏计划" })).toBeTruthy();
     expect(
-      container.querySelectorAll('[data-current-step="true"]').length,
-    ).toBeGreaterThan(0);
-    const mobileTree = container.querySelector(
-      'ol[data-tree-layout="mobile-vertical"]',
-    );
-    expect(mobileTree).toBeTruthy();
-    expect(mobileTree?.className).toContain("lg:hidden");
-    expect(container.firstElementChild?.className).toContain("overflow-x-clip");
-    expect(container.firstElementChild?.className).toContain("max-w-full");
-    expect(screen.getByRole("button", { name: "继续尝试" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "查看候选子代" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "更多步骤操作" })).toBeTruthy();
-    expect(screen.getByText("OFFSPRING_CANDIDATES_DETECTED")).toBeTruthy();
-    expect(screen.getAllByText("队伍 · 队伍第 3 位").length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText("次元仓库 · 第 2 页 · 第 2 格").length,
+      screen.getAllByRole("link", { name: "打开配种器" }).length,
     ).toBeGreaterThan(0);
   });
 
-  it("shows real candidate facts in a dialog and labels match score as a system score", () => {
-    render(<PlanDetailView detail={detail()} />);
-
-    expect(screen.queryByTestId("offspring-candidate")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "查看候选子代" }));
-
-    const dialog = screen.getByRole("dialog", { name: "候选子代" });
-    const candidateDialog = within(dialog);
-    expect(dialog).toBeTruthy();
-    expect(candidateDialog.getByTestId("offspring-candidate")).toBeTruthy();
-    expect(candidateDialog.getByText("Fixture Player A")).toBeTruthy();
-    expect(candidateDialog.getByText("终端 · 第 3 页 · 第 5 格")).toBeTruthy();
-    expect(candidateDialog.getByText(/实例 phase7…best/)).toBeTruthy();
-    expect(candidateDialog.getByText(/系统匹配评分 1\.00/)).toBeTruthy();
-    expect(candidateDialog.getByText(/不是遗传概率/)).toBeTruthy();
-    expect(candidateDialog.queryByText(/Rank/)).toBeNull();
-    expect(
-      candidateDialog
-        .getAllByText("雌性")
-        .some((label) =>
-          label.parentElement
-            ?.querySelector("svg")
-            ?.className.baseVal.includes("text-rose-400"),
-        ),
-    ).toBe(true);
-    expect(
-      candidateDialog.getByRole("button", { name: "确认真实子代" }),
-    ).toBeTruthy();
-  });
-
-  it("confirms only through the action endpoint with the displayed optimistic version", async () => {
-    let captured: { input: RequestInfo | URL; init?: RequestInit } | undefined;
-    const fetchMock = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        captured = { input, init };
-        return new Response(
-          JSON.stringify({
-            plan_id: planId,
-            status: "active",
-            current_step_index: 1,
-            concurrency_version: 6,
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
+  it("shows the immutable route and removes only the save", async () => {
+    const savedRoute = route();
+    const detail: SavedPlanDetail = {
+      reference: {
+        route_id: routeId,
+        source_job_id: jobId,
+        saved_at: "2026-07-27T08:00:00Z",
       },
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    render(<PlanDetailView detail={detail()} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "查看候选子代" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认真实子代" }));
-    fireEvent.click(screen.getByRole("button", { name: "确认并推进计划" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(captured?.input).toBe(`/api/plans/${planId}/actions`);
-    expect(JSON.parse(String(captured?.init?.body))).toMatchObject({
-      action: "confirm",
-      step_id: stepId,
-      candidate_key: "d".repeat(64),
-      expected_concurrency_version: 5,
+      job: job(),
+      route: savedRoute,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ route_id: routeId, removed: true }),
     });
-    expect(routerRefresh).toHaveBeenCalledTimes(1);
-  });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<PlanDetail detail={detail} />);
 
-  it("shows optimistic conflicts without changing the visible plan", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({ error_code: "PLAN_VERSION_CONFLICT" }),
-            {
-              status: 409,
-              headers: { "content-type": "application/json" },
-            },
-          ),
-      ),
-    );
-    render(<PlanDetailView detail={detail()} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "暂停计划" }));
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "PLAN_VERSION_CONFLICT",
-    );
-    expect(screen.getByRole("button", { name: "暂停计划" })).toBeTruthy();
-  });
-
-  it("keeps structured invalidation history and offers recalculation", () => {
-    render(<PlanDetailView detail={detail("invalidated")} />);
-    expect(screen.getByText("DEPENDENCY_DISAPPEARED")).toBeTruthy();
-    expect(screen.getByText(/依赖的 Pal 已从最新库存消失/)).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "基于最新库存重新计算" }),
+      screen.getByRole("heading", { name: "幻色幼崽", level: 1 }),
     ).toBeTruthy();
-  });
+    expect(
+      screen.getByRole("region", { name: "收藏路线的完整配种路径树" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("移除只会删除“我的计划”收藏，不会删除原配种任务。"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/当前步骤|候选子代|计划进度/)).toBeNull();
 
-  it("renders stable permission and fixed-version failures", () => {
-    const { rerender } = render(<PlanError code="PLAN_ACCESS_DENIED" />);
-    expect(screen.getByText("权限不足")).toBeTruthy();
-    rerender(<PlanError code="PLAN_FIXED_VERSION_UNAVAILABLE" />);
-    expect(screen.getByText("固定版本不可用")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "移除收藏" }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(`/api/plans/${routeId}`, {
+        method: "DELETE",
+        cache: "no-store",
+      }),
+    );
+    expect(routerPush).toHaveBeenCalledWith("/plans");
+    expect(routerRefresh).toHaveBeenCalled();
   });
 });

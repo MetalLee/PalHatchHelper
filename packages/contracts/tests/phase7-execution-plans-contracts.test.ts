@@ -11,50 +11,45 @@ const schema = JSON.parse(
   ),
 ) as { $defs: Record<string, unknown> };
 
-describe("Phase 7 execution plan contracts", () => {
-  it("defines every browser and Agent boundary from one schema", () => {
+describe("Phase 7 saved plan contracts", () => {
+  it("defines route-save boundaries without execution progress models", () => {
     expect(Object.keys(schema.$defs)).toEqual(
       expect.arrayContaining([
-        "AdoptRouteRequest",
-        "AdoptRouteResponse",
+        "SavePlanRequest",
+        "SavePlanResponse",
+        "RemovePlanResponse",
         "PlanSummary",
-        "PlanDetail",
-        "PlanVersionPin",
+        "PlanListPage",
+        "PlanListRpcResult",
+        "PlanDetailReference",
+        "PlanDetailRpcResult",
+      ]),
+    );
+    expect(Object.keys(schema.$defs)).not.toEqual(
+      expect.arrayContaining([
         "PlanStep",
-        "PlanStepStatus",
-        "PlanStatus",
         "OffspringCandidate",
-        "CandidateMatchBreakdown",
         "UpdateStepStatusRequest",
-        "StartBreedingRequest",
-        "ContinueAttemptRequest",
-        "SelectExistingPalRequest",
         "ConfirmOffspringRequest",
-        "RejectCandidateRequest",
-        "PausePlanRequest",
-        "ResumePlanRequest",
-        "SkipStepRequest",
-        "RecalculatePlanRequest",
-        "InvalidationReason",
-        "PlanEventSummary",
-        "OptimisticConcurrencyConflict",
       ]),
     );
   });
 
-  it("rejects a browser attempt to choose an arbitrary step status", () => {
+  it("accepts one route id and rejects execution-state fields", () => {
     const ajv = new Ajv2020({ strict: true });
     addFormats(ajv);
     const validate = ajv.compile({
       $schema: "https://json-schema.org/draft/2020-12/schema",
       $defs: schema.$defs,
-      $ref: "#/$defs/StartBreedingRequest",
+      $ref: "#/$defs/SavePlanRequest",
     });
+    expect(validate({ route_id: "62000000-0000-4000-8000-000000000001" })).toBe(
+      true,
+    );
     expect(
       validate({
-        expected_concurrency_version: 2,
-        idempotency_key: "fixture-start-1",
-        status: "completed",
+        route_id: "62000000-0000-4000-8000-000000000001",
+        status: "breeding",
       }),
     ).toBe(false);
   });

@@ -109,7 +109,7 @@ set local role authenticated;
 
 select ok(
   public.get_admin_overview() ?& array[
-    'agent', 'save_worker', 'job_worker', 'candidate_detector',
+    'agent', 'save_worker', 'job_worker',
     'latest_successful_snapshot', 'parser', 'catalog', 'job_counts',
     'ai_provider', 'recent_failure', 'disk', 'deployment_version', 'stale'
   ],

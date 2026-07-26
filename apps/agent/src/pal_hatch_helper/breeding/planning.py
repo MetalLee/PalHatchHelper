@@ -77,6 +77,40 @@ def physical_plan_signature(plan: SerializedPlan) -> str:
     return json.dumps(step_signature(root), sort_keys=True, separators=(",", ":"))
 
 
+def semantic_plan_signature(plan: SerializedPlan) -> str:
+    """Identify a route by species topology and target-passive checkpoints only."""
+
+    if not plan.steps:
+        return json.dumps(
+            {"existing_target": plan.existing_target_instance_uid is not None},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    steps = {step.step_index: step for step in plan.steps}
+
+    def source_signature(source: BreedingParentSource) -> object:
+        if source.source_type.value == "intermediate":
+            assert source.produced_by_step_index is not None
+            return step_signature(steps[source.produced_by_step_index])
+        return {
+            "pal_id": source.pal_id,
+            "required_passive_ids": sorted(source.required_passive_ids),
+        }
+
+    def step_signature(step: BreedingRouteStep) -> object:
+        parents = [source_signature(step.parent_a), source_signature(step.parent_b)]
+        parents.sort(key=lambda value: json.dumps(value, sort_keys=True, separators=(",", ":")))
+        return {
+            "child_pal_id": step.child_pal_id,
+            "parents": parents,
+            "recipe_type": step.recipe_type,
+            "required_passive_ids": sorted(step.required_passive_ids),
+        }
+
+    root = max(plan.steps, key=lambda step: step.step_index)
+    return json.dumps(step_signature(root), sort_keys=True, separators=(",", ":"))
+
+
 def plan_passive_retention(
     assigned: AssignedRoute,
     desired_passive_ids: tuple[str, ...],

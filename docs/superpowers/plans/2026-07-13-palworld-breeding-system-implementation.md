@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
+- 状态：2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=not_started；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -605,77 +605,94 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 5. 运行端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "breeding job" && pnpm check`
 
-## Phase 7：执行计划、候选子代和历史计划
+## Phase 7：“我的计划”路线收藏
 
 ### 阶段目标
 
-把计算结果转为可人工执行和追踪的计划，用新快照提示候选子代，由玩家确认真实实例后重新校验后续步骤。
+把计算结果中的任意路线保存到“我的计划”，提供只读路线列表和详情，并可幂等移除收藏。
 
 ### 前置依赖
 
-- Phase 3 快照差异、Phase 6 路线结果和用户权限可用。
+- Phase 6 路线结果和用户权限可用。
 
 ### 明确范围
 
-- `/plans`、`/plans/[planId]`，统一状态筛选与当前步骤优先布局。
-- 采用路线、生成步骤、手动状态、候选检测、玩家确认、暂停/跳过/重试、失效与重算。
-- 计划固定快照/配种/算法/评分/AI 版本，历史只读可解释。
-- 采用时固化最小依赖状态；候选检测使用实例生命周期，不扫描已过期的全量快照。
+- `/plans`、`/plans/[routeId]`，保持前后端“我的计划”语义。
+- 在配种结果页保存或移除 `ready`、`needs_inventory` 路线。
+- 列表展示目标、被动、可行性、路线指标和保存时间；详情复用完整配种路线展示。
+- 收藏只关联已物化路线，不复制或改写固定快照/游戏数据/算法/评分/AI 版本。
 
 ### 明确不实现的内容
 
-- 自动确认子代、自动操作游戏或修改存档。
-- 个体值和非规格遗传维度优化。
+- 执行步骤、状态推进、实例锁定、候选子代检测与确认。
+- 自动操作游戏或修改存档、个体值和非规格遗传维度优化。
 
 ### 预计新增或修改的文件
 
-- `apps/web/app/plans/**`、`features/plans/**`。
-- Agent 候选检测与计划校验模块、契约、迁移和测试。
+- `apps/web/app/plans/**`、`features/plans/**`、配种结果页收藏入口。
+- 简化后的共享计划契约、前向数据库迁移和权限测试。
 
 ### 数据库迁移
 
-补充受 RLS 保护的步骤状态转换、候选写入/确认 RPC、失效原因、执行计划依赖和审计约束；
-解除候选历史对待清理快照明细的外键依赖，禁止客户端直接绕过状态机。
+追加前向迁移，删除无需保留的旧执行计划、步骤进度、候选和事件数据，移除旧执行 RPC；旧表只为
+库存快照保留外键兼容而保留。建立
+`saved_breeding_plans(requester_user_id, route_id, saved_at)`，保存、移除、列表和详情 RPC 使用当前
+用户身份并受 RLS/所有权校验保护。
 
 ### API 和契约
 
-- AdoptRoute、PlanSummary、PlanStep、OffspringCandidate、ConfirmOffspring、InvalidationReason Schema。
-- 状态转换使用稳定错误码和乐观并发版本。
+- SavePlan、RemovePlan、PlanSummary、PlanDetail Schema。
+- 重复保存和重复移除保持幂等；错误使用稳定错误码。
 
 ### 测试要求
 
-- 各合法/非法状态转换、候选匹配、误候选不自动完成、确认后的性别/可行性复核、
-  依赖消失、快照明细清理后候选检测和物化历史读取。
-- 浏览器覆盖采用、推进、确认、暂停和重算。
+- 保存/移除幂等、跨用户隔离、非本人路线不可收藏、`ready`/`needs_inventory` 均可收藏、
+  快照明细清理后物化路线仍可读取。
+- 浏览器覆盖保存、列表、详情、移除和返回原任务。
 
 ### 验收标准
 
-- 新快照只能创建候选；玩家确认前步骤不完成。
-- 确认保存真实 instance UID，下一步不满足时给出明确失效或替代动作。
-- 历史计划保留原版本，不因发布新数据而改变。
-- 原库存明细过期后不支持按旧库存精确重算；重新计算固定最新库存，旧计划物化结果保持可读。
+- “我的计划”不显示人工进度、候选确认或执行状态操作。
+- 同一路线重复保存只有一条收藏，移除不删除原任务和路线。
+- 列表和详情只返回当前用户收藏，路线版本与物化结果不因新数据发布而改变。
+- 原库存明细过期后不支持按旧库存精确重算，但收藏路线保持可读。
 
 ### 风险
 
-- 快照差异产生误匹配；种类、时间、被动和实例新出现多条件评分，并要求人工确认。
-- 并发更新覆盖；RPC 乐观锁和不可逆转换审计。
+- 路线载荷较大；列表使用摘要投影，详情按单路线读取。
+- 重复点击产生重复收藏；复合主键和幂等 RPC 消除竞态。
 
 ### 回滚方式
 
-停止候选检测 Worker，保留计划与步骤；通过补偿 RPC 恢复到上一个合法人工状态，不删除审计历史。
+应用回滚可保留收藏表；旧执行计划数据已明确无需保留，不提供恢复或迁移。
 
 ### 可独立执行的任务列表
 
-1. 实现采用路线和步骤状态机。
-   - 验证：`supabase test db --file supabase/tests/plan_state_machine.sql`
-2. 实现候选检测。
-   - 验证：`cd apps/agent && uv run pytest tests/plans/test_candidate_detection.py`
-3. 实现确认与后续复核。
-   - 验证：`cd apps/agent && uv run pytest tests/plans/test_confirmation.py`
-4. 实现计划列表和详情。
-   - 验证：`pnpm --filter @palhatch/web test -- plans`
-5. 运行计划端到端回归。
-   - 验证：`pnpm --filter @palhatch/web test:e2e --grep "execution plan" && pnpm check`
+1. 先写数据库和契约失败测试，覆盖收藏权限与幂等语义。
+   - 验证：`supabase test db supabase/tests/phase7_saved_plans.sql`
+2. 追加前向迁移并生成两端共享类型，删除旧执行计划运行链。
+   - 验证：`pnpm --filter @palhatch/contracts test -- phase7`
+3. 实现配种结果页保存入口、计划列表和只读详情。
+   - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
+4. 运行收藏端到端回归。
+   - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-27 跨阶段修订：路线语义去重与 2000+ 库存容量
+
+### 交付顺序
+
+1. 先更新正式规格和本计划，固定最终路线等价关系、代表选择顺序和容量门槛。
+2. 增加失败测试：同种不同实例/性别朝向只返回一条路线，优先额外被动更少的实例；软目标按语义路线计数；2048 个以上库存不触发默认节点或时间上限。
+3. 在库存叶子入队和中间状态组合前按固定长度语义签名压缩；最终序列化后再执行一次路线级语义去重作为边界保护。
+4. 语义重复代表先比较可行性与缺口，再比较非目标被动数量、借用、尝试成本、模式评分和稳定物理签名；不改变配方合法性与基础评分公式。
+5. 得到至少三条 `ready` 语义路线后停止缺库存补充搜索；保留默认 200,000 节点和 30 秒硬限制并升级算法/评分版本。
+6. 开发中只运行一次最小失败测试和一次受影响局部验证；最终状态运行一次根 `pnpm check`、完整 Supabase 测试及 `git diff --check`，不重复聚合命令已覆盖的检查。
+
+### 回滚与生产约束
+
+- 算法与评分版本前向新增，历史任务继续固定旧版本；应用回滚不会重写历史结果。
+- 压力测试只使用合成库存和本地目录，不读取生产数据库、真实存档或凭证。
+- 本修订不修改 `/opt/palworld`、不部署生产、不推送远程仓库。
 
 ## 2026-07-24 跨阶段修订：数据库库存快照 24 小时保留
 
@@ -706,8 +723,8 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    后缀，保留原始内部名；库存校验同时接受当前版本 `catalog_pals` 和受审计
    `pal_name.PAL_NAME_*` 本地化事实，但配种计算仍只接受 `catalog_pals`。新增
    `player/guild/unresolved` 所有权契约并追加数据库迁移。
-4. 统一库存列表、配种运行事实、路线展示、候选检测和计划失效检查；历史不可变快照不原地修改，
-   旧 Boss 映射继续作为兼容保护。
+4. 统一库存列表、配种运行事实和路线展示；历史不可变快照不原地修改，旧 Boss 映射继续作为
+   兼容保护。
 5. 升级 Parser 身份并对 Agent 自有只读快照执行 reparse，生成新的不可变 latest 快照。
 6. 局部验证后仅对最终状态运行一次根目录聚合检查、完整 Supabase 测试和部署前检查。
 

@@ -1,13 +1,12 @@
 "use client";
 
 import type {
-  AdoptRouteResponse,
   BreedingJobDetailRpcResult,
   BreedingJobDetailRpcSuccess,
   BreedingRoute,
+  SavePlanResponse,
 } from "@palhatch/contracts";
 import { AlertTriangle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -22,7 +21,7 @@ import {
 import { BreedingJobTargetSummary } from "./components/breeding-job-target-summary";
 import { JobStagePanel } from "./components/job-stage-panel";
 import { PinnedVersionDetails } from "./components/pinned-version-details";
-import { RouteAdoptionPanel } from "./components/route-adoption-panel";
+import { RouteSavePanel } from "./components/route-save-panel";
 import { RouteComparisonGrid } from "./components/route-comparison-grid";
 import { RouteScoreBreakdown } from "./components/route-score-breakdown";
 import { RouteMissingRequirements } from "./components/route-supporting-details";
@@ -56,31 +55,28 @@ function parsePolledJob(value: unknown): BreedingJobDetailRpcResult {
   return value as BreedingJobDetailRpcResult;
 }
 
-function parseAdoption(value: unknown): AdoptRouteResponse {
+function parseSavedPlan(value: unknown): SavePlanResponse {
   if (
     typeof value !== "object" ||
     value === null ||
-    !("plan_id" in value) ||
-    typeof value.plan_id !== "string" ||
-    !uuidPattern.test(value.plan_id) ||
+    !("route_id" in value) ||
+    typeof value.route_id !== "string" ||
+    !uuidPattern.test(value.route_id) ||
     !("reused" in value) ||
     typeof value.reused !== "boolean" ||
-    !("status" in value) ||
-    typeof value.status !== "string" ||
-    !("concurrency_version" in value) ||
-    !Number.isInteger(value.concurrency_version) ||
-    Number(value.concurrency_version) < 1
+    !("saved_at" in value) ||
+    typeof value.saved_at !== "string" ||
+    Number.isNaN(Date.parse(value.saved_at))
   ) {
-    throw new Error("ROUTE_NOT_ADOPTABLE");
+    throw new Error("DATA_UNAVAILABLE");
   }
-  return value as AdoptRouteResponse;
+  return value as SavePlanResponse;
 }
 
 export function BreedingJobView({
   initialResult,
   poll = true,
 }: Readonly<{ initialResult: BreedingJobDetailRpcSuccess; poll?: boolean }>) {
-  const router = useRouter();
   const [result, setResult] = useState(initialResult);
   const [selectedKey, setSelectedKey] = useState(
     initialResult.data.plan?.routes.find(
@@ -90,8 +86,16 @@ export function BreedingJobView({
       null,
   );
   const [pollPaused, setPollPaused] = useState(false);
-  const [adoptingRouteId, setAdoptingRouteId] = useState<string | null>(null);
-  const [adoptionError, setAdoptionError] = useState<string | null>(null);
+  const [busyRouteId, setBusyRouteId] = useState<string | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [savedRouteIds, setSavedRouteIds] = useState(
+    () =>
+      new Set(
+        initialResult.data.plan?.routes
+          .filter((route) => route.saved_plan_at !== null)
+          .map((route) => route.route_id) ?? [],
+      ),
+  );
 
   useEffect(() => {
     if (!poll || terminal.has(result.data.status)) return;
@@ -180,17 +184,16 @@ export function BreedingJobView({
   const activeStep = plan !== null && plan.routes.length > 0 ? 3 : 2;
   const targetName = localizedName(palNames, result.data.target_pal_id, "Pal");
 
-  async function adoptSelectedRoute(route: BreedingRoute): Promise<void> {
-    setAdoptingRouteId(route.route_id);
-    setAdoptionError(null);
+  async function saveSelectedRoute(route: BreedingRoute): Promise<void> {
+    setBusyRouteId(route.route_id);
+    setPlanError(null);
     try {
-      const response = await fetch("/api/plans/adopt", {
+      const response = await fetch("/api/plans", {
         method: "POST",
         headers: { "content-type": "application/json" },
         cache: "no-store",
         body: JSON.stringify({
           route_id: route.route_id,
-          idempotency_key: `adopt:${route.route_id}`,
         }),
       });
       const payload: unknown = await response.json();
@@ -201,17 +204,46 @@ export function BreedingJobView({
           "error_code" in payload &&
           typeof payload.error_code === "string"
             ? payload.error_code
-            : "ROUTE_NOT_ADOPTABLE";
+            : "DATA_UNAVAILABLE";
         throw new Error(code);
       }
-      const adopted = parseAdoption(payload);
-      router.push(`/plans/${adopted.plan_id}`);
+      const saved = parseSavedPlan(payload);
+      setSavedRouteIds((current) => new Set(current).add(saved.route_id));
     } catch (error) {
-      setAdoptionError(
-        error instanceof Error ? error.message : "ROUTE_NOT_ADOPTABLE",
-      );
+      setPlanError(error instanceof Error ? error.message : "DATA_UNAVAILABLE");
     } finally {
-      setAdoptingRouteId(null);
+      setBusyRouteId(null);
+    }
+  }
+
+  async function removeSelectedRoute(route: BreedingRoute): Promise<void> {
+    setBusyRouteId(route.route_id);
+    setPlanError(null);
+    try {
+      const response = await fetch(`/api/plans/${route.route_id}`, {
+        method: "DELETE",
+        cache: "no-store",
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const code =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error_code" in payload &&
+          typeof payload.error_code === "string"
+            ? payload.error_code
+            : "DATA_UNAVAILABLE";
+        throw new Error(code);
+      }
+      setSavedRouteIds((current) => {
+        const next = new Set(current);
+        next.delete(route.route_id);
+        return next;
+      });
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : "DATA_UNAVAILABLE");
+    } finally {
+      setBusyRouteId(null);
     }
   }
 
@@ -291,12 +323,14 @@ export function BreedingJobView({
                 palNames={palNames}
                 passiveNames={passiveNames}
               />
-              <RouteAdoptionPanel
+              <RouteSavePanel
                 route={selected}
                 jobStatus={result.data.status}
-                adopting={adoptingRouteId !== null}
-                adoptionError={adoptionError}
-                onAdopt={() => void adoptSelectedRoute(selected)}
+                saved={savedRouteIds.has(selected.route_id)}
+                busy={busyRouteId === selected.route_id}
+                error={planError}
+                onSave={() => void saveSelectedRoute(selected)}
+                onRemove={() => void removeSelectedRoute(selected)}
               />
               <RouteScoreBreakdown route={selected} />
             </section>

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
+from pal_hatch_helper.breeding.index import EffectiveBreedingRecipe
 from pal_hatch_helper.breeding.limits import SearchBudget
 from pal_hatch_helper.breeding.search import SpeciesRoute
 from pal_hatch_helper.generated import BreedingEngineInventoryPal
@@ -24,6 +26,7 @@ class AssignedRoute:
     borrowed_instance_uids: frozenset[str]
     missing_leaf_count: int
     signature: str
+    semantic_signature: str
 
     @property
     def is_leaf(self) -> bool:
@@ -54,7 +57,12 @@ def assign_species_route(
         nonlocal pruned_states
         grouped: dict[int, dict[str, AssignedRoute]] = defaultdict(dict)
         for state in states:
-            grouped[state.coverage_mask].setdefault(state.signature, state)
+            semantic_group = grouped[state.coverage_mask]
+            existing = semantic_group.get(state.semantic_signature)
+            if existing is None or _assignment_rank(state, desired_passive_ids) < _assignment_rank(
+                existing, desired_passive_ids
+            ):
+                semantic_group[state.semantic_signature] = state
         retained: list[AssignedRoute] = []
         for mask in sorted(grouped):
             ordered = sorted(
@@ -102,6 +110,11 @@ def assign_species_route(
                             f"inventory:{node.pal_id}:{instance.instance_uid}:"
                             f"{output_gender or 'unused'}"
                         ),
+                        semantic_signature=_semantic_digest(
+                            "leaf",
+                            node.pal_id,
+                            str(coverage_mask),
+                        ),
                     )
                 )
             budget.consume_assignment()
@@ -117,6 +130,7 @@ def assign_species_route(
                     borrowed_instance_uids=frozenset(),
                     missing_leaf_count=1,
                     signature=(f"missing:{node.pal_id}:{output_gender or 'unspecified'}"),
+                    semantic_signature=_semantic_digest("leaf", node.pal_id, "0"),
                 )
             )
             result = retain(states)
@@ -167,6 +181,11 @@ def assign_species_route(
                                 f"assigned:{node.recipe.signature}:"
                                 f"{output_gender or 'final'}[{left.signature}][{right.signature}]"
                             ),
+                            semantic_signature=_semantic_digest(
+                                "recipe",
+                                _semantic_recipe_signature(node.recipe),
+                                *sorted((left.semantic_signature, right.semantic_signature)),
+                            ),
                         )
                     )
         result = retain(combined)
@@ -206,8 +225,22 @@ def _assignment_rank(
     )
     return (
         state.missing_leaf_count,
-        len(state.borrowed_instance_uids),
         extra_passives,
+        len(state.borrowed_instance_uids),
         len(state.used_instance_uids),
         state.signature,
+    )
+
+
+def _semantic_digest(*parts: str) -> str:
+    return hashlib.sha256("\0".join(parts).encode()).hexdigest()
+
+
+def _semantic_recipe_signature(recipe: EffectiveBreedingRecipe) -> str:
+    return "\0".join(
+        (
+            recipe.recipe_type,
+            *sorted((recipe.parent_a_pal_id, recipe.parent_b_pal_id)),
+            recipe.child_pal_id,
+        )
     )
