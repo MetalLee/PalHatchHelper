@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订已批准；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
+- 文档状态：已完成设计评审；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`

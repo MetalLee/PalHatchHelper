@@ -1,6 +1,6 @@
 # PalHatchHelper
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。Phase 4 的实现、自动化门禁、Build `24181105` 真实目录验收及本地测试 world 发布/回滚演练均已完成；Phase 5 Web 基础、Phase 6 配种器与异步路线、Phase 7 执行计划，以及 Phase 8 第一轮管理员工作台、受控命令队列和生产部署文件也已完成本地实现与自动化门禁。当前仍是 `MODE=DEVELOP_ADMIN`：生产 Supabase、Vercel 和腾讯云 Agent 部署均为 `not_started`，仓库不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
+PalHatchHelper 第一版是“帕鲁配种协作工作台”。配种器使用固定版本的确定性算法生成去重路线，支持 2000+ 库存，并把“我的计划”实现为只读路线收藏。Supabase、Vercel 和腾讯云私有 Agent 已完成生产部署；当前发布标识与回滚引用记录在 [v1 生产发布记录](docs/releases/v1-production-deployment.md)。开发与测试默认仍只使用 fixture 和本地 Supabase，不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
 
 ## 前置工具
 
@@ -9,7 +9,7 @@ PalHatchHelper 第一版是“帕鲁配种协作工作台”。Phase 4 的实现
 - Python 3.12
 - [uv](https://docs.astral.sh/uv/)
 - Docker（只在本地构建或检查 Agent 镜像时需要）
-- Supabase CLI（只连接本地开发实例）
+- Supabase CLI（开发默认只连接本地实例；生产操作必须按运行手册明确获批）
 
 ## 从零开始
 
@@ -73,9 +73,9 @@ uv run pytest
 
 ## 安全边界
 
-- `/opt/palworld` 与真实存档只允许在部署阶段获批后由人员确认路径，并只读挂载给独立 Save Worker；当前仓库验证不访问它们。
+- `/opt/palworld` 与真实存档只允许在部署阶段获批后由人员确认路径，并只读挂载给独立 Save Worker；开发验证不访问它们。
 - Agent 不提供公网任务 API，健康接口只绑定回环地址。
 - `.env`、Service Role、AI Key 和真实服务器凭证不得进入 Git。
-- 当前阶段不部署到 `/opt/services/palworld-manager`，不操作 Palworld 或 mihomo 容器。
+- 生产发布只按受控运行手册操作 PalHatchHelper 服务，绝不操作 Palworld 或 mihomo 容器。
 
 设计规格与分阶段计划位于 `docs/superpowers/`。

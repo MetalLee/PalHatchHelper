@@ -1,5 +1,39 @@
 # PalHatchHelper v1 生产发布记录
 
+## 2026-07-27 路线去重与计划收藏更新
+
+- Git SHA：`c67b511bbcb49a0f58a712ca4b60f39d8fde1d3e`
+- Supabase migrations：`20260727010000_saved_breeding_plans.sql`、
+  `20260727020000_remove_execution_plan_surfaces.sql`、
+  `20260727030000_drop_execution_plan_rpcs.sql`
+- Agent 镜像：
+  `ghcr.io/metallee/palhatch-agent:c67b511bbcb@sha256:71e213e30b049c13be746acd9cd4a213076e2782e8ff6bb4cc97a144abd6e15f`
+- Vercel deployment：`dpl_68SdQGmi3eH4ZTAsTJoJ2hDPhEP6`
+- Vercel deployment URL：`https://pal-hatch-helper-95w198a6p-devil-s-claw.vercel.app`
+- 生产域名：`https://www.palbeacon.app`；项目 Node.js 已固定为 `22.x`
+- 生产 deployment record：`bea26940-8faa-450f-9320-d65624ad061f`
+
+Supabase dry-run 只列出上述三条迁移，应用后 local/remote migration list 一致。生产烟测确认
+收藏表和新 RPC 可用、四个 v5 评分配置激活、旧执行计划为零且旧列表 RPC 已移除。旧计划数据按
+已批准需求删除，不做转换。
+
+四个 Agent 服务已切换到新不可变镜像，并通过非 root、只读存档挂载、资源/PID 限制、回环端口、
+连续健康与日志秘密检查。Vercel 健康响应返回完整本次 Git SHA；登录页、未登录计划重定向和计划
+API 私有缓存头烟测通过。
+
+本次备份与回滚引用：
+
+- 生产备份：`/data/projects/PalHatchHelper/data/backups/20260726T192631Z/`，权限 `0700`
+- 上一 Agent 镜像：
+  `ghcr.io/metallee/palhatch-agent:37094571cd58@sha256:e101d46d7b9d1fde07171aba49e768bd996154bd64e6ea1e360e681e7bee1c56`
+- 上一 Vercel deployment：`dpl_DpwukS8iC6o3VYrUNYLPxda2oVZd`
+
+部署前后 `/opt/palworld/docker-compose.yml`、目标 appmanifest、Palworld/mihomo 容器身份与重启计数、
+以及 230 个源存档文件的 SHA-256 清单完全一致。没有修改或重启 Palworld、mihomo，也没有开放
+新的公网 Agent 端口。
+
+## 2026-07-20 首次发布
+
 发布日期：2026-07-20（Asia/Shanghai）
 
 ## 发布标识

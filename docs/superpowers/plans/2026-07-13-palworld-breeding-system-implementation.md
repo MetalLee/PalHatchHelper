@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=not_started；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=not_started
+- 状态：2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -382,7 +382,7 @@
 - Phase 4A/4B 仅作为实现检查点，不改变本节的统一验收范围。
 - 已完成受审计来源入口、精确基础目录/provenance 绑定、六类非配种事实发布门禁、确定性两层搜索、实例分配、候选物理去重、四模式全候选池排名和完整评分明细。
 - 数据库已启用与引擎一致的四套 v2 评分配置；真实本地 Claim 必须经精确 published 目录、content hash、world 和固定库存快照校验后才能进入引擎。
-- Build `24181105` 的真实七类目录已完成人工批准、本地测试 world 发布、回滚与恢复演练；Phase 4 的 `real_data_acceptance` 和 `local_test_publish` 已完成。生产 Supabase/Vercel 发布仍为 `not_started`，属于 Phase 8，不能把本地测试发布描述为生产发布。
+- Build `24181105` 的真实七类目录已完成人工批准、本地测试 world 发布、回滚与恢复演练；Phase 4 的 `real_data_acceptance`、`local_test_publish` 和后续 Phase 8 生产发布均已完成。
 - 2026-07-20 追加库存感知修订：目标路线必须支持 `ready/needs_inventory` 分层、缺失父母需求、真实库存覆盖率、禁止目标零步完成、增量保留有界搜索候选，并升级算法与评分版本；历史固定结果保持不变。
 
 ### 阶段目标
@@ -534,7 +534,7 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 ### 当前状态（2026-07-16）
 
-- Phase 4 `real_data_acceptance=completed` 且 `local_test_publish=completed`；Phase 6 `implementation=completed`、`automated_gates=passed`、`local_integration=completed`。生产 Supabase 与 Vercel 部署仍未授权，Phase 6 `production_deploy=not_started`，生产发布属于 Phase 8。
+- Phase 4 `real_data_acceptance=completed` 且 `local_test_publish=completed`；Phase 6 `implementation=completed`、`automated_gates=passed`、`local_integration=completed`、`production_deploy=completed`。生产发布由 Phase 8 受控流程完成。
 
 ### 阶段目标
 
@@ -692,7 +692,8 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 - 算法与评分版本前向新增，历史任务继续固定旧版本；应用回滚不会重写历史结果。
 - 压力测试只使用合成库存和本地目录，不读取生产数据库、真实存档或凭证。
-- 本修订不修改 `/opt/palworld`、不部署生产、不推送远程仓库。
+- 本修订不修改 `/opt/palworld`、不推送远程仓库；生产部署须单独明确批准，已于 2026-07-27
+  获批并完成。
 
 ## 2026-07-24 跨阶段修订：数据库库存快照 24 小时保留
 

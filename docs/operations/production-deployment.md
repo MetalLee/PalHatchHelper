@@ -1,6 +1,7 @@
 # PalHatchHelper 生产部署手册
 
-本文档描述 Phase 8 生产文件和下一轮 `MODE=DEPLOY_PRODUCTION` 的执行顺序。当前 `MODE=DEVELOP_ADMIN` 只生成并验证文件，不部署 Supabase、Vercel 或腾讯云 Agent。
+本文档描述 Phase 8 生产发布与后续更新的受控执行顺序。任何生产变更都必须先获得明确批准，再按
+`MODE=DEPLOY_PRODUCTION` 的边界执行；开发模式只生成并验证文件。
 
 ## 永久安全边界
 
@@ -129,6 +130,9 @@ ENV_FILE=/data/projects/PalHatchHelper/.env.production \
 
 ## Smoke 与回滚
 
-管理员 smoke：登录、概览、绑定、save/parser、目录、任务、非秘密设置、审计。玩家 smoke：库存、自己的共享开关、创建任务、Worker 完成、路线、采用计划和步骤推进。额外确认普通玩家被 `/admin` 拒绝、Service Role 不出现在 HTML/JS/响应/日志、Agent 无公网端口、Palworld Compose/源存档/mihomo 校验值不变、AI 不可用时 Template 降级。
+管理员 smoke：登录、概览、绑定、save/parser、目录、任务、非秘密设置、审计。玩家 smoke：库存、
+自己的共享开关、创建任务、Worker 完成、比较路线、保存到“我的计划”、只读查看和移除收藏。
+额外确认普通玩家被 `/admin` 拒绝、Service Role 不出现在 HTML/JS/响应/日志、Agent 无公网端口、
+Palworld Compose/源存档/mihomo 校验值不变、AI 不可用时 Template 降级。
 
 核心检查失败时按顺序：关闭新任务创建；Vercel 切回上一 production deployment；运行 [`rollback-production.sh`](../../infra/agent/scripts/rollback-production.sh) 切回 previous Agent image；Catalog world pointer 切回上一 published version；数据库使用向前补偿或备份恢复；保留失败版本和审计。整个过程不操作 Palworld 或 mihomo。
