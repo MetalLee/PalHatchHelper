@@ -486,12 +486,11 @@ describe("Phase 6 breeder form", () => {
     expect(routerPush).not.toHaveBeenCalled();
   });
 
-  it("preserves the current data-state warning", () => {
+  it("does not repeat the global data-state warning", () => {
     render(<BreederForm context={{ ...context, data_state: "parse_error" }} />);
 
-    const status = screen.getByRole("status");
-    expect(status.textContent).toContain("parse_error");
-    expect(status.textContent).toContain("published 快照");
+    expect(screen.queryByText(/当前库存状态/)).toBeNull();
+    expect(screen.queryByText(/published 快照/)).toBeNull();
   });
 
   it("keeps full pinned versions collapsed behind a readable summary", () => {

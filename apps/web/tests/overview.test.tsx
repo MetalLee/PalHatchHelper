@@ -77,7 +77,7 @@ describe("overview dashboard", () => {
     expect(screen.queryByText(/候选子代|当前步骤/)).toBeNull();
   });
 
-  it("keeps stale sync state explicit in the hero", () => {
+  it("keeps stale details out of the overview", () => {
     render(
       <OverviewDashboard
         playerNickname="Fixture Player"
@@ -88,8 +88,8 @@ describe("overview dashboard", () => {
       />,
     );
 
-    expect(screen.getAllByText("数据已过期").length).toBeGreaterThan(0);
-    expect(screen.queryByText("服务器运行正常")).toBeNull();
+    expect(screen.queryByText("数据已过期")).toBeNull();
+    expect(screen.getByRole("heading", { name: "当前数据基线" })).toBeTruthy();
   });
 
   it("uses CSS-only scenery and constrains mobile width", () => {

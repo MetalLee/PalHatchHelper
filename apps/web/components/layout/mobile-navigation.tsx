@@ -11,6 +11,7 @@ import {
 } from "@/components/app-navigation";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
+import { StatusChip, type StatusTone } from "@/components/status/status-chip";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -30,11 +31,13 @@ export function MobileNavigation({
   activePath,
   displayName,
   role,
+  dataStatus,
   onSignOut,
 }: Readonly<{
   activePath: string;
   displayName: string;
   role: "admin" | "player";
+  dataStatus: { label: string; tone: StatusTone };
   onSignOut: () => void;
 }>) {
   const hydrated = useSyncExternalStore(
@@ -95,7 +98,15 @@ export function MobileNavigation({
                     className="size-5"
                     strokeWidth={1.8}
                   />
-                  {item.label}
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  {item.href === "/data-status" ? (
+                    <StatusChip
+                      tone={dataStatus.tone}
+                      className="min-h-7 shrink-0 border-0 bg-transparent px-0"
+                    >
+                      {dataStatus.label}
+                    </StatusChip>
+                  ) : null}
                 </Link>
               </SheetClose>
             );

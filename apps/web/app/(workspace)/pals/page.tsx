@@ -5,10 +5,8 @@ import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHero } from "@/components/layout/page-hero";
 import { ErrorState } from "@/components/page-state";
 import { PageError } from "@/components/states/page-error";
-import { StatusChip } from "@/components/status/status-chip";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { requireUserContext } from "@/features/auth/server";
-import { dataStatusPresentation } from "@/features/data-status/presentation";
 import { PalFilters } from "@/features/pals/pal-filters";
 import { PalInventory } from "@/features/pals/pal-inventory";
 import { PalPagination } from "@/features/pals/pal-pagination";
@@ -131,7 +129,6 @@ export default async function PalsPage({
     );
   }
 
-  const status = dataStatusPresentation(summary.data_status.state);
   const synchronizedAt = formatDateTime(summary.data_status.captured_at);
 
   return (
@@ -142,16 +139,6 @@ export default async function PalsPage({
         description="查看当前可用于配种的自有与公会共享库存，并在安全查询边界内筛选真实实例。"
         className="min-h-[17rem] border-white/80 bg-white/74 sm:min-h-[18rem] lg:pr-[30%]"
         background={<ForestScenery variant="hero" />}
-        actions={
-          <Link
-            href="/data-status"
-            className="rounded-full no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-          >
-            <StatusChip tone={status.tone}>
-              {status.title} · {synchronizedAt}
-            </StatusChip>
-          </Link>
-        }
       />
 
       <section
@@ -182,7 +169,7 @@ export default async function PalsPage({
         <MetricCard
           label="最新库存同步"
           value={synchronizedAt}
-          detail={status.title}
+          detail="来自当前稳定库存快照"
           icon={Clock3}
           tone="sky"
         />

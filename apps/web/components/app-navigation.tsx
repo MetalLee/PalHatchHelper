@@ -1,12 +1,15 @@
+"use client";
+
 import {
   ClipboardList,
   Database,
   Dna,
   House,
-  Rabbit,
+  PawPrint,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -18,7 +21,7 @@ export interface NavigationItem {
 
 export const workspaceNavigationItems: readonly NavigationItem[] = [
   { href: "/overview", label: "首页", icon: House },
-  { href: "/pals", label: "帕鲁库存", icon: Rabbit },
+  { href: "/pals", label: "帕鲁库存", icon: PawPrint },
   { href: "/breeder", label: "配种工作台", icon: Dna },
   { href: "/plans", label: "我的计划", icon: ClipboardList },
   { href: "/data-status", label: "数据状态", icon: Database },
@@ -49,32 +52,153 @@ export function currentPageTitle(activePath: string): string {
   );
 }
 
+interface HighlightGeometry {
+  left: number;
+  width: number;
+  visible: boolean;
+}
+
 export function AppNavigation({
   activePath,
   className,
 }: Readonly<{ activePath: string; className?: string }>) {
+  const activeHref = useMemo(
+    () =>
+      workspaceNavigationItems.find((item) =>
+        isNavigationItemActive(activePath, item.href),
+      )?.href ?? null,
+    [activePath],
+  );
+  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
+  const [focusedHref, setFocusedHref] = useState<string | null>(null);
+  const hoverHref = hoveredHref ?? focusedHref;
+  const navRef = useRef<HTMLElement>(null);
+  const linkRefs = useRef(new Map<string, HTMLAnchorElement>());
+  const [activeHighlight, setActiveHighlight] = useState<HighlightGeometry>({
+    left: 0,
+    width: 0,
+    visible: false,
+  });
+  const [hoverHighlight, setHoverHighlight] = useState<HighlightGeometry>({
+    left: 0,
+    width: 0,
+    visible: false,
+  });
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const target =
+      activeHref === null ? null : linkRefs.current.get(activeHref);
+    if (nav === null || target === null || target === undefined) {
+      setActiveHighlight((current) => ({ ...current, visible: false }));
+      return;
+    }
+
+    const measure = (): void => {
+      setActiveHighlight({
+        left: target.offsetLeft,
+        width: target.offsetWidth,
+        visible: true,
+      });
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [activeHref]);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const target = hoverHref === null ? null : linkRefs.current.get(hoverHref);
+    if (nav === null || target === null || target === undefined) {
+      setHoverHighlight((current) => ({ ...current, visible: false }));
+      return;
+    }
+
+    const measure = (): void => {
+      setHoverHighlight({
+        left: target.offsetLeft,
+        width: target.offsetWidth,
+        visible: true,
+      });
+    };
+
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hoverHref]);
+
   return (
     <nav
+      ref={navRef}
       aria-label="主导航"
+      data-active-href={activeHref ?? undefined}
+      data-hovered-href={hoverHref ?? undefined}
       className={cn(
-        "hidden min-w-0 items-center justify-center gap-1 lg:flex",
+        "relative hidden min-w-0 items-center justify-center gap-1 lg:flex",
         className,
       )}
+      onPointerLeave={() => setHoveredHref(null)}
     >
+      <span
+        aria-hidden="true"
+        data-testid="navigation-active-highlight"
+        className="pointer-events-none absolute inset-y-0 left-0 z-0 transition-[width,transform,opacity] duration-200 ease-out motion-reduce:transition-none"
+        style={{
+          width: `${activeHighlight.width}px`,
+          opacity: activeHighlight.visible ? 1 : 0,
+          transform: `translateX(${activeHighlight.left}px)`,
+        }}
+      >
+        <span className="block size-full rounded-xl bg-accent" />
+      </span>
+
+      <span
+        aria-hidden="true"
+        data-testid="navigation-hover-highlight"
+        className="pointer-events-none absolute inset-y-0 left-0 z-0 transition-[width,transform,opacity] duration-200 ease-out motion-reduce:transition-none"
+        style={{
+          width: `${hoverHighlight.width}px`,
+          opacity: hoverHighlight.visible ? 1 : 0,
+          transform: `translateX(${hoverHighlight.left}px)`,
+        }}
+      >
+        <span
+          key={hoverHref}
+          className="nav-highlight-jelly block size-full rounded-xl bg-accent"
+        />
+      </span>
+
       {workspaceNavigationItems.map((item) => {
         const active = isNavigationItemActive(activePath, item.href);
+        const hovered = hoverHref === item.href;
         const Icon = item.icon;
         return (
           <Link
+            ref={(node) => {
+              if (node === null) linkRefs.current.delete(item.href);
+              else linkRefs.current.set(item.href, node);
+            }}
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "nav-jelly inline-flex min-h-11 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-semibold text-muted-foreground no-underline transition-[color,background-color,border-color,box-shadow] duration-200",
-              "hover:border-primary/15 hover:bg-accent hover:text-accent-foreground hover:shadow-sm focus-visible:border-primary/20 focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+              "relative z-10 inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-muted-foreground no-underline transition-colors duration-200",
+              "hover:text-accent-foreground focus-visible:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+              (active || hovered) && "text-accent-foreground",
               active &&
-                "border-primary/20 bg-primary/10 text-primary shadow-sm",
+                !activeHighlight.visible &&
+                "bg-accent text-accent-foreground",
             )}
+            onPointerEnter={() => setHoveredHref(item.href)}
+            onFocus={() => setFocusedHref(item.href)}
+            onBlur={() => setFocusedHref(null)}
           >
             <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />
             <span>{item.label}</span>

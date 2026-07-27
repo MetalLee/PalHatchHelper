@@ -1,5 +1,5 @@
 import type { InventoryDataStatus, PlanSummary } from "@palhatch/contracts";
-import { ArrowRight, Dna, Rabbit } from "lucide-react";
+import { ArrowRight, Dna, PawPrint } from "lucide-react";
 import Link from "next/link";
 
 import { PageHero } from "@/components/layout/page-hero";
@@ -9,7 +9,6 @@ import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { GlassPanel } from "@/components/surfaces/glass-panel";
 import { StatusChip } from "@/components/status/status-chip";
 import { Card, CardContent } from "@/components/ui/card";
-import { dataStatusPresentation } from "@/features/data-status/presentation";
 import { cn } from "@/lib/utils";
 
 export interface OverviewPlanFeed {
@@ -36,7 +35,7 @@ function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
   return (
     <Link
       href={`/plans/${plan.route_id}`}
-      className="group flex min-w-0 items-center gap-3 rounded-2xl bg-white/68 p-4 text-foreground no-underline shadow-sm transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+      className="group flex min-w-0 items-center gap-3 rounded-2xl bg-white/68 p-4 text-foreground no-underline shadow-sm transition-[background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-accent/70 hover:shadow-md focus-visible:-translate-y-0.5 focus-visible:bg-accent/70 focus-visible:shadow-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 motion-reduce:transform-none"
     >
       <PalPortrait
         palId={plan.target_pal_id}
@@ -80,7 +79,6 @@ export function OverviewDashboard({
   dataStatus: InventoryDataStatus;
   planFeed: OverviewPlanFeed;
 }>) {
-  const status = dataStatusPresentation(dataStatus.state);
   return (
     <div
       className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8"
@@ -102,18 +100,8 @@ export function OverviewDashboard({
               href="/pals"
               className={cn(outlineLinkClass, "min-h-12 px-6")}
             >
-              <Rabbit aria-hidden="true" className="size-4" />
+              <PawPrint aria-hidden="true" className="size-4" />
               查看帕鲁
-            </Link>
-            <Link
-              href="/data-status"
-              className="rounded-full no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-            >
-              <StatusChip tone={status.tone}>
-                {dataStatus.state === "healthy"
-                  ? `最新同步 ${formatDateTime(dataStatus.captured_at)}`
-                  : status.title}
-              </StatusChip>
             </Link>
           </>
         }
@@ -183,7 +171,7 @@ export function OverviewDashboard({
           className="min-w-0 bg-white/78"
           aria-labelledby="data-status-heading"
         >
-          <div role="status" aria-live="polite">
+          <div>
             <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
               Beacon status
             </p>
@@ -192,9 +180,8 @@ export function OverviewDashboard({
                 id="data-status-heading"
                 className="text-xl font-bold tracking-tight"
               >
-                服务器数据状态
+                当前数据基线
               </h2>
-              <StatusChip tone={status.tone}>{status.title}</StatusChip>
             </div>
           </div>
           <dl className="mt-5 grid gap-3 text-sm">

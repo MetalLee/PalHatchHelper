@@ -159,6 +159,7 @@ export function SiteHeader({
             activePath={activePath}
             displayName={displayName}
             role={role}
+            dataStatus={dataStatus}
             onSignOut={signOut}
           />
         </div>
