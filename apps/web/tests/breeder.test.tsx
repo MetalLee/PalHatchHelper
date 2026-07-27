@@ -901,7 +901,7 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
     expect(screen.getAllByText("父本").length).toBeGreaterThan(0);
     expect(screen.getAllByText("母本").length).toBeGreaterThan(0);
-    expect(screen.getByText("收藏不会推进配种进度")).toBeTruthy();
+    expect(screen.getByText(/收藏不会推进配种进度/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "保存到我的计划" })).toBeTruthy();
   });
 });

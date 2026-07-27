@@ -286,7 +286,9 @@ test("player responses never contain private, cross-guild, raw-save or path data
 test("stale data status stays explicit on iPhone width", async ({ page }) => {
   await login(page);
   await navigateFromMobileMenu(page, "数据状态");
-  await expect(page.getByRole("heading", { name: "数据状态" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "服务器数据状态" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("status").filter({ hasText: "数据已过期" }),
   ).toBeVisible();

@@ -116,9 +116,6 @@ export function LoginForm({
         ) : null}
         {pending ? "正在登录…" : "登录工作台"}
       </Button>
-      <p className="text-center text-xs leading-5 text-muted-foreground">
-        仅使用当前系统已提供的账号登录。
-      </p>
     </form>
   );
 }

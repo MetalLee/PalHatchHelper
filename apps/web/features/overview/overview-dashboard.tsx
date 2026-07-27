@@ -20,6 +20,7 @@ import { GlassPanel } from "@/components/surfaces/glass-panel";
 import { StatusChip } from "@/components/status/status-chip";
 import { Card, CardContent } from "@/components/ui/card";
 import { dataStatusPresentation } from "@/features/data-status/presentation";
+import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils";
 
 export interface OverviewPlanFeed {
@@ -142,9 +143,9 @@ export function OverviewDashboard({
       data-testid="overview-dashboard"
     >
       <PageHero
-        eyebrow="Breeding workspace"
+        eyebrow="PALWORLD SERVER CONSOLE"
         title={`欢迎回来，${playerNickname}`}
-        description={`${worldName} · ${guildName ?? "未加入公会"}。从真实库存出发，比较确定性路线并收藏需要保留的方案。`}
+        description={`${worldName} · ${guildName ?? "未加入公会"}。集中查看数据同步、帕鲁库存与配种计划，让整个帕鲁世界保持清晰可见。`}
         className="min-h-[21rem] border-white/80 bg-white/72 sm:min-h-[22rem] lg:min-h-[21rem] lg:pr-[32%]"
         background={<ForestScenery variant="hero" />}
         actions={
@@ -165,7 +166,9 @@ export function OverviewDashboard({
               className="rounded-full no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
             >
               <StatusChip tone={status.tone}>
-                最新同步 {formatDateTime(summary.data_status.captured_at)}
+                {summary.data_status.state === "healthy"
+                  ? `最新同步 ${formatDateTime(summary.data_status.captured_at)}`
+                  : status.title}
               </StatusChip>
             </Link>
           </>
@@ -213,21 +216,21 @@ export function OverviewDashboard({
         <QuickEntry
           href="/breeder"
           title="配种工作台"
-          description="选择目标与期望被动，计算并比较真实合法路线。"
+          description="选择目标帕鲁与期望被动，根据真实库存计算并比较合法配种路线。"
           icon={Dna}
           tone="forest"
         />
         <QuickEntry
           href="/pals"
           title="帕鲁库存"
-          description="查看自有与公会共享候选，并管理自己的共享状态。"
+          description="查看个人与公会共享库存，管理帕鲁共享状态和可用候选。"
           icon={Warehouse}
           tone="leaf"
         />
         <QuickEntry
           href="/plans"
           title="我的计划"
-          description="查看已收藏路线的配种树、库存需求与评分。"
+          description="查看已收藏的配种路线、库存需求、评分与固定版本信息。"
           icon={Bookmark}
           tone="sky"
         />
@@ -299,19 +302,19 @@ export function OverviewDashboard({
         >
           <div role="status" aria-live="polite">
             <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-              Data status
+              Beacon status
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <h2
                 id="data-status-heading"
                 className="text-xl font-bold tracking-tight"
               >
-                数据状态
+                服务器数据状态
               </h2>
               <StatusChip tone={status.tone}>{status.title}</StatusChip>
             </div>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              {status.description}
+              {brand.summary} {status.description}
             </p>
           </div>
           <dl className="mt-5 grid gap-3 text-sm">

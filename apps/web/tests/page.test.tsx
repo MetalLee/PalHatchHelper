@@ -13,7 +13,7 @@ describe("login page", () => {
     vi.unstubAllGlobals();
   });
 
-  it("identifies the secure breeding workspace without unsupported actions", () => {
+  it("identifies the secure PalBeacon console without unsupported actions", () => {
     render(<LoginPage />);
 
     const headings = screen.getAllByRole("heading");
@@ -21,10 +21,19 @@ describe("login page", () => {
     expect(headings.filter((heading) => heading.tagName === "H1")).toHaveLength(
       1,
     );
+    expect(screen.getAllByLabelText("PalBeacon").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("帕鲁服务器控制台").length).toBeGreaterThan(0);
     expect(
-      screen.getByRole("heading", { name: /欢迎回到配种工作台/i }),
+      screen.getByRole("heading", { name: "欢迎回到服务器控制台" }),
     ).toBeTruthy();
-    expect(screen.getByText(/RLS\/RPC 授权/)).toBeTruthy();
+    const englishTagline = screen.getByText("Keep your world visible.");
+    const brandPanel = englishTagline.closest("section");
+    expect(brandPanel).not.toBeNull();
+    expect(brandPanel?.textContent).toContain("时刻掌握你的帕鲁世界。");
+    expect(brandPanel?.textContent).toContain("安全连接的你帕鲁世界");
+    expect(screen.queryByText("安全连接你的帕鲁世界")).toBeNull();
+    expect(screen.queryByText(/RLS.*RPC 授权/)).toBeNull();
+    expect(screen.queryByText("仅使用当前系统已提供的账号登录。")).toBeNull();
     expect(
       screen.queryByRole("link", { name: /注册|游客|忘记密码/ }),
     ).toBeNull();

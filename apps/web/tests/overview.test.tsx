@@ -77,6 +77,9 @@ function renderOverview(planFeed: OverviewPlanFeed = feed) {
 describe("overview dashboard", () => {
   it("renders real inventory values and saved routes", () => {
     renderOverview();
+    expect(screen.getByText("PALWORLD SERVER CONSOLE")).toBeTruthy();
+    expect(screen.getByText(/Fixture World · Fixture Guild/)).toBeTruthy();
+    expect(screen.getByText(/整个帕鲁世界保持清晰可见/)).toBeTruthy();
     const metrics = screen.getByRole("region", { name: "库存概览" });
     expect(within(metrics).getByText("7")).toBeTruthy();
     expect(within(metrics).getByText("3")).toBeTruthy();
@@ -84,6 +87,24 @@ describe("overview dashboard", () => {
     expect(screen.getByText("测试目标帕鲁")).toBeTruthy();
     expect(screen.getByText("2 代 · 2 步", { exact: false })).toBeTruthy();
     expect(screen.queryByText(/候选子代|当前步骤/)).toBeNull();
+  });
+
+  it("keeps stale sync state explicit in the hero", () => {
+    render(
+      <OverviewDashboard
+        playerNickname="Fixture Player"
+        worldName="Fixture World"
+        guildName="Fixture Guild"
+        summary={{
+          ...summary,
+          data_status: { ...dataStatus, state: "stale" },
+        }}
+        planFeed={feed}
+      />,
+    );
+
+    expect(screen.getAllByText("数据已过期").length).toBeGreaterThan(0);
+    expect(screen.queryByText("服务器运行正常")).toBeNull();
   });
 
   it("uses CSS-only scenery and constrains mobile width", () => {

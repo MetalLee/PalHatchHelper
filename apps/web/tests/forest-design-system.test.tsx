@@ -27,6 +27,20 @@ describe("Forest Healing design system", () => {
         .getAllByRole("link", { name: "首页" })[0]
         ?.hasAttribute("aria-current"),
     ).toBe(false);
+    expect(screen.getByRole("link", { name: "PalBeacon 首页" })).toBeTruthy();
+    expect(
+      screen.getByRole("img", { name: "PalBeacon 帕鲁服务器控制台" }),
+    ).toBeTruthy();
+    const wordmarks = screen.getAllByLabelText("PalBeacon");
+    expect(wordmarks.length).toBeGreaterThan(0);
+    for (const wordmark of wordmarks) {
+      expect(
+        wordmark.querySelector('[data-brand-part="pal"]')?.className,
+      ).toContain("text-primary");
+      expect(
+        wordmark.querySelector('[data-brand-part="beacon"]')?.className,
+      ).toContain("text-sky-700");
+    }
   });
 
   it("only exposes the admin center to administrators", () => {
@@ -66,9 +80,9 @@ describe("Forest Healing design system", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "打开导航菜单" }));
-    const sheet = screen.getByRole("dialog", { name: "导航菜单" });
+    const sheet = screen.getByRole("dialog", { name: "PalBeacon" });
     expect(within(sheet).getByRole("link", { name: "我的计划" })).toBeTruthy();
-    expect(within(sheet).getByText("当前页面：我的计划")).toBeTruthy();
+    expect(within(sheet).getByText(/当前页面：我的计划/)).toBeTruthy();
   });
 
   it("keeps the mobile navigation trigger disabled until hydration", () => {

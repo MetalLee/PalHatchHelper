@@ -108,9 +108,9 @@ export function DataStatusDashboard({
   return (
     <div className="grid min-w-0 gap-5">
       <PageHero
-        eyebrow="DATA HEALTH"
-        title="数据状态"
-        description="查看脱敏库存同步、Parser 与固定版本事实。这里不读取原始存档、服务器路径、内部堆栈或其他玩家数据。"
+        eyebrow="BEACON STATUS"
+        title="服务器数据状态"
+        description="查看 PalBeacon 与游戏存档之间的数据同步、解析和版本状态。"
         actions={
           <StatusChip tone={inventory.tone}>{inventory.title}</StatusChip>
         }

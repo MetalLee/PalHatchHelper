@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Settings, ShieldCheck, Sprout } from "lucide-react";
+import { LogOut, Menu, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
@@ -9,6 +9,8 @@ import {
   isNavigationItemActive,
   workspaceNavigationItems,
 } from "@/components/app-navigation";
+import { BrandLogo } from "@/components/brand/brand-logo";
+import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -20,6 +22,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { brand } from "@/config/brand";
 
 const subscribeToHydration = (): (() => void) => () => undefined;
 
@@ -60,13 +63,13 @@ export function MobileNavigation({
       >
         <SheetHeader className="px-3 pb-2 pt-[max(1rem,env(safe-area-inset-top))] text-left">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-2xl bg-accent text-primary">
-              <Sprout aria-hidden="true" className="size-6" />
-            </span>
+            <BrandLogo size={40} />
             <div>
-              <SheetTitle>导航菜单</SheetTitle>
+              <SheetTitle>
+                <BrandWordmark />
+              </SheetTitle>
               <SheetDescription>
-                当前页面：{currentPageTitle(activePath)}
+                {brand.productName} · 当前页面：{currentPageTitle(activePath)}
               </SheetDescription>
             </div>
           </div>

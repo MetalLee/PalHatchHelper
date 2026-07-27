@@ -6,11 +6,12 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
-  Sprout,
 } from "lucide-react";
 import Link from "next/link";
 
-import { AppNavigation, currentPageTitle } from "@/components/app-navigation";
+import { AppNavigation } from "@/components/app-navigation";
+import { BrandLogo } from "@/components/brand/brand-logo";
+import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { StatusChip, type StatusTone } from "@/components/status/status-chip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { brand } from "@/config/brand";
 
 function displayInitial(displayName: string): string {
   return Array.from(displayName.trim())[0]?.toUpperCase() ?? "P";
@@ -53,27 +55,22 @@ export function SiteHeader({
       <div className="mx-auto flex min-h-16 w-full max-w-[90rem] items-center gap-3 rounded-[1.4rem] border border-glass-border bg-glass px-3 shadow-soft backdrop-blur-xl sm:px-4">
         <Link
           href="/overview"
-          aria-label="PalHatch Helper 首页"
+          aria-label={`${brand.name} 首页`}
           className="flex min-w-0 items-center gap-2.5 rounded-xl text-foreground no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(145deg,var(--accent),white)] text-primary shadow-[inset_0_0_0_1px_rgb(40_122_84_/_0.12)]">
-            <Sprout aria-hidden="true" className="size-6" strokeWidth={1.9} />
-          </span>
+          <BrandLogo size={40} className="size-[34px] sm:size-10" priority />
           <span className="hidden min-w-0 xl:grid">
             <strong className="truncate text-sm font-bold tracking-[-0.01em]">
-              PalHatch Helper
+              <BrandWordmark />
             </strong>
             <small className="truncate text-[0.68rem] text-muted-foreground">
-              帕鲁配种助手
+              {brand.productName}
             </small>
           </span>
-          <span className="grid min-w-0 lg:hidden">
+          <span className="grid min-w-0 xl:hidden">
             <strong className="truncate text-sm font-bold">
-              PalHatch Helper
+              <BrandWordmark />
             </strong>
-            <small className="truncate text-[0.68rem] text-muted-foreground">
-              {currentPageTitle(activePath)}
-            </small>
           </span>
         </Link>
 
