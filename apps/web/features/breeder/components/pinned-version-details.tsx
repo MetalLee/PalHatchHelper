@@ -21,7 +21,7 @@ export function PinnedVersionDetails({
   algorithmVersion,
   scoringProfileVersion,
   optimizationMode,
-  title = "固定版本",
+  title = "本次计算依据",
 }: Readonly<{
   inventorySnapshotId: string;
   gameDataVersionId: string;
@@ -32,21 +32,21 @@ export function PinnedVersionDetails({
   title?: string;
 }>) {
   const [open, setOpen] = useState(false);
-  const versions: [string, string][] = [
-    ["库存快照", inventorySnapshotId],
-    ["目录版本", gameDataVersionId],
-    ["Content hash", gameDataContentHash],
-    ["算法版本", algorithmVersion],
-    ["评分版本", scoringProfileVersion],
+  const details: [string, string][] = [
+    ["库存数据", inventorySnapshotId],
+    ["游戏数据", gameDataVersionId],
+    ["校验信息", gameDataContentHash],
+    ["计算方式", algorithmVersion],
+    ["推荐方式", scoringProfileVersion],
   ];
   if (optimizationMode !== undefined) {
-    versions.push(["优化模式", optimizationModeLabels[optimizationMode]]);
+    details.push(["方案偏好", optimizationModeLabels[optimizationMode]]);
   }
 
   return (
     <section
       className="min-w-0 rounded-3xl border border-glass-border bg-glass shadow-soft backdrop-blur-md"
-      aria-label="固定版本"
+      aria-label={title}
     >
       <Collapsible open={open} onOpenChange={setOpen}>
         <div className="flex min-w-0 items-center gap-3 p-4 sm:p-5">
@@ -55,9 +55,12 @@ export function PinnedVersionDetails({
           </span>
           <div className="min-w-0 flex-1">
             <h3 className="font-bold text-foreground">{title}</h3>
-            <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-              快照 {compactIdentifier(inventorySnapshotId, 18)} · 目录{" "}
-              {compactIdentifier(gameDataVersionId, 18)}
+            <p className="mt-1 truncate text-xs text-muted-foreground">
+              保存时使用的库存与游戏数据 ·{" "}
+              <span className="font-mono">
+                {compactIdentifier(inventorySnapshotId, 12)} ·{" "}
+                {compactIdentifier(gameDataVersionId, 12)}
+              </span>
             </p>
           </div>
           <CollapsibleTrigger asChild>
@@ -65,7 +68,7 @@ export function PinnedVersionDetails({
               type="button"
               variant="ghost"
               size="sm"
-              aria-label={open ? "收起固定版本" : "展开固定版本"}
+              aria-label={open ? `收起${title}` : `展开${title}`}
               className="text-primary"
             >
               {open ? "收起" : "展开"}
@@ -82,7 +85,7 @@ export function PinnedVersionDetails({
 
         <CollapsibleContent>
           <dl className="grid min-w-0 gap-2 border-t border-border px-4 py-5 sm:grid-cols-2 sm:px-5">
-            {versions.map(([label, value]) => (
+            {details.map(([label, value]) => (
               <div
                 key={label}
                 className="min-w-0 rounded-2xl border border-border bg-white/72 p-3"

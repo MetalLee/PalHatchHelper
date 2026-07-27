@@ -1,7 +1,7 @@
 "use client";
 
 import type { PlanListPage, PlanSummary } from "@palhatch/contracts";
-import { Bookmark, ChevronRight, GitBranch, Sparkles } from "lucide-react";
+import { ChevronRight, GitBranch, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
@@ -14,28 +14,6 @@ import { userFacingCatalogName } from "@/lib/user-facing-name";
 export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
   return (
     <div className="grid min-w-0 max-w-full gap-6 overflow-x-clip">
-      <section
-        className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-3xl border border-glass-border bg-white/74 p-4 shadow-soft sm:p-5"
-        aria-label="收藏计划摘要"
-      >
-        <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary">
-            <Bookmark aria-hidden="true" className="size-5" />
-          </span>
-          <div>
-            <p className="font-bold text-foreground">
-              当前页已收藏 {page.items.length} 条计划
-            </p>
-            <p className="text-sm text-muted-foreground">
-              仅展示保存时的确定性路线，不维护执行进度。
-            </p>
-          </div>
-        </div>
-        <Button asChild>
-          <Link href="/breeder">打开配种器</Link>
-        </Button>
-      </section>
-
       {page.items.length === 0 ? (
         <Card className="border-dashed border-glass-border bg-white/78 shadow-soft">
           <CardContent className="grid justify-items-start gap-3 p-6 sm:p-8">
@@ -51,13 +29,13 @@ export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
               </p>
             </div>
             <Button asChild>
-              <Link href="/breeder">打开配种器</Link>
+              <Link href="/breeder">开始规划</Link>
             </Button>
           </CardContent>
         </Card>
       ) : (
         <section
-          className="grid min-w-0 gap-4 lg:grid-cols-2"
+          className="grid min-w-0 justify-items-center gap-4 lg:grid-cols-2"
           aria-label="计划列表"
         >
           {page.items.map((plan) => (
@@ -87,8 +65,11 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
     "名称暂不可用",
   );
   return (
-    <Card className="min-w-0 gap-0 overflow-hidden border-glass-border bg-card/92 py-0 shadow-soft transition-colors hover:border-primary/25">
-      <CardContent className="grid min-w-0 gap-5 p-5 sm:p-6">
+    <Card
+      data-plan-card
+      className="w-full max-w-[32rem] min-w-0 gap-0 overflow-hidden border-glass-border bg-card/92 py-0 shadow-soft transition-colors hover:border-primary/25"
+    >
+      <CardContent className="grid min-w-0 content-start gap-5 p-5 sm:p-6">
         <div className="flex min-w-0 items-start gap-4">
           <PalPortrait palId={plan.target_pal_id} name={targetName} size={60} />
           <div className="min-w-0 flex-1">
@@ -98,7 +79,7 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
               >
                 {plan.feasibility_status === "ready"
                   ? "库存可执行"
-                  : "需补库存"}
+                  : "还需准备帕鲁"}
               </StatusChip>
               <span className="text-xs text-muted-foreground">
                 保存于 {formatDateTime(plan.saved_at)}
@@ -117,13 +98,13 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
 
         <div>
           <p className="text-xs font-semibold text-muted-foreground">
-            目标被动
+            想要的被动
           </p>
           {plan.desired_passives.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">无指定被动</p>
           ) : (
             <div
-              className="mt-2 grid grid-cols-2 gap-1.5"
+              className="mt-2 grid auto-rows-min grid-cols-2 content-start items-start gap-1.5"
               data-passive-layout="2x2"
             >
               {plan.desired_passives.map((passive) => (
@@ -144,18 +125,18 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
         </div>
 
         <dl className="grid grid-cols-2 gap-3 rounded-2xl bg-muted/55 p-4 text-sm sm:grid-cols-4">
-          <Metric label="总分" value={plan.total_score.toFixed(2)} />
+          <Metric label="推荐分" value={plan.total_score.toFixed(2)} />
           <Metric
             label="尝试"
             value={`${plan.estimated_attempts_min}–${plan.estimated_attempts_max} 次`}
           />
           <Metric label="难度" value={difficultyLabel(plan.difficulty)} />
-          <Metric label="缺口" value={`${plan.missing_pal_count} 只`} />
+          <Metric label="还差" value={`${plan.missing_pal_count} 只`} />
         </dl>
 
         <Button asChild className="w-full">
           <Link href={`/plans/${plan.route_id}`}>
-            查看收藏路线
+            查看计划
             <ChevronRight aria-hidden="true" className="size-4" />
           </Link>
         </Button>

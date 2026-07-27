@@ -291,8 +291,12 @@ test.describe.serial("Phase 7 local My Plans workflow", () => {
     await expect(savedLink).toBeVisible();
     await savedLink.click();
     await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/);
-    await expect(page.getByText("收藏路线", { exact: true })).toBeVisible();
-    await expect(page.getByText(/不维护执行进度/)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "幻色幼崽", level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText("配种路径", { exact: true })).toBeVisible();
+    await expect(page.getByText("本次计算依据")).toBeVisible();
+    await expect(page.getByTestId("overview-scenery")).toHaveCount(0);
     await expect(page.getByText(/当前步骤|候选子代|计划进度/)).toHaveCount(0);
 
     const overflow = await page.evaluate(

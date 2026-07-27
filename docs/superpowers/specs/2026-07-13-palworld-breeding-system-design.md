@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -904,6 +904,9 @@ requester
 - Supabase Auth 与浏览器客户端。
 - 深色优先、现代游戏工具风格。
 
+登录页与业务页面的 CSS 风景背景不显示上方白云装饰。业务 Hero 只保留与当前任务相关的标题、
+说明和主要操作；“我的计划”与配种工作台 Hero 不在右侧放置纯装饰图标组，也不为其预留空白。
+
 ### 17.2 左侧导航
 
 普通玩家桌面端导航固定为：
@@ -1045,6 +1048,8 @@ shadcn 层级阴影，基础阴影贴合底部，Hover 提升一层，避免大�
 等实现术语。必须保留的可复现事实收纳为次要的“本次计算依据”，使用“库存数据”“游戏数据”
 “计算方式”“推荐方式”等玩家可理解标签，不改变实际固定值。
 
+创建页 Hero 右侧不显示目标、被动或路线等纯装饰图标组，正文区域使用完整可读宽度。
+
 目标帕鲁字段标签只显示“目标帕鲁”。选中后，选择框本身同时展示头像、本地化名称和图鉴编号，
 不得再渲染重复的目标摘要卡。弹出候选继续支持按本地化名称和图鉴编号搜索，并保持键盘选择、
 清晰焦点和移动端最小点击尺寸。
@@ -1092,6 +1097,11 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 - 每一步按性别区分的父本与母本，以及来源是自有、借用、中间产物还是缺失。
 - 缺失父母汇总，包括帕鲁、数量、所需性别、所需被动和使用步骤。
 
+桌面配种路线树中，同一步骤的两个亲本连接必须先汇合到子代箭头左侧的同一锚点，再由唯一的
+水平末段和箭头指向子代；曲线末端、水平末段与箭头基线使用同一组几何常量，不得出现断缝或
+重叠箭头。普通与特殊配方只改变颜色和虚线样式，不改变连接几何。亲本节点只展示真实库存被动，
+不重复显示“本步骤需保留”；中间产物和最终目标继续展示路线所需被动。
+
 `needs_inventory` 路线显示“补齐库存后重新计算”。`ready` 和 `needs_inventory` 路线均可“保存到我的计划”；保存不会创建执行步骤或锁定库存。
 
 允许最多三条路线横向比较。移动端使用纵向卡片。
@@ -1100,9 +1110,26 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 
 `/plans` 是已收藏路线列表，不提供进度状态筛选。每项显示目标帕鲁、期望被动、可行性、代数、步骤数、借用数、预计尝试次数、保存时间和路线链摘要。
 
+页面不显示“当前页已收藏多少条计划”的独立摘要卡。计划卡片在移动端使用可用全宽，在桌面端
+最大宽度为 32rem，并在列表网格中居中排列。想要的被动固定使用两列布局；一至两个徽标只占一行
+自身高度，三个至四个徽标自然增加第二行，不以相邻卡片高度拉伸徽标。
+
+页面文案使用玩家能直接理解的“保存的配种路线”“想要的被动”“还需准备”“开始规划”等语言，
+不在标题、说明、卡片指标或按钮中使用“需求”“版本”“确定性”“任务”等实现术语。
+
 ### 17.9 计划详情
 
-页面只读展示收藏路线的完整配种树、真实库存父母、缺失需求、评分和版本。玩家可移除收藏、返回原任务或基于当前库存创建新任务，不提供手工推进操作。
+页面只读展示收藏路线的完整配种树、真实库存亲本、仍需准备的帕鲁、推荐依据和本次计算依据。
+玩家可移除收藏、查看原配种结果或基于当前库存重新规划，不提供手工推进操作。
+
+计划详情不显示 Hero。返回入口后直接使用紧凑目标摘要作为页面开头，目标帕鲁名称是页面唯一
+一级标题，并同时展示保存时间、收藏状态与当前路线是否已具备所需库存。路线树与配种工作台使用
+相同紧凑布局、标题和节点密度，不显示英文眉题或重复说明。
+
+面向玩家的标题和操作使用“配种路线”“想要的被动”“推荐依据”“查看原配种结果”等语言。
+库存、游戏数据、算法、评分和内容哈希仍完整保留在可折叠的“本次计算依据”中，但可见标签使用
+“库存数据”“游戏数据”“计算方式”“推荐方式”“校验信息”，不得以“固定版本”“目录版本”
+“算法版本”“评分版本”等术语作为玩家界面标签。
 
 ### 17.10 数据状态
 

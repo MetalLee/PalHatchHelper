@@ -38,6 +38,10 @@ interface TreeLayout {
   height: number;
 }
 
+const TREE_ARROW_WIDTH = 12;
+const TREE_ARROW_HEIGHT = 10;
+const TREE_ARROW_GAP = 8;
+
 export function BreedingRouteTree({
   route,
   treeModel,
@@ -238,58 +242,110 @@ function DesktopTree({
             <defs>
               <marker
                 id="breeding-tree-arrow-normal"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="4"
+                markerUnits="userSpaceOnUse"
+                markerWidth={TREE_ARROW_WIDTH}
+                markerHeight={TREE_ARROW_HEIGHT}
+                refX={TREE_ARROW_WIDTH}
+                refY={TREE_ARROW_HEIGHT / 2}
                 orient="auto"
+                viewBox={`0 0 ${TREE_ARROW_WIDTH} ${TREE_ARROW_HEIGHT}`}
               >
-                <path d="M0 0L8 4L0 8Z" fill="#6b9d8b" />
+                <path
+                  d={`M0 0L${TREE_ARROW_WIDTH} ${TREE_ARROW_HEIGHT / 2}L0 ${TREE_ARROW_HEIGHT}Z`}
+                  fill="#6b9d8b"
+                />
               </marker>
               <marker
                 id="breeding-tree-arrow-special"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="4"
+                markerUnits="userSpaceOnUse"
+                markerWidth={TREE_ARROW_WIDTH}
+                markerHeight={TREE_ARROW_HEIGHT}
+                refX={TREE_ARROW_WIDTH}
+                refY={TREE_ARROW_HEIGHT / 2}
                 orient="auto"
+                viewBox={`0 0 ${TREE_ARROW_WIDTH} ${TREE_ARROW_HEIGHT}`}
               >
-                <path d="M0 0L8 4L0 8Z" fill="#d97706" />
+                <path
+                  d={`M0 0L${TREE_ARROW_WIDTH} ${TREE_ARROW_HEIGHT / 2}L0 ${TREE_ARROW_HEIGHT}Z`}
+                  fill="#d97706"
+                />
               </marker>
             </defs>
-            {model.edges.map((edge) => {
-              const from = layout.positionByOccurrenceId.get(
-                edge.fromOccurrenceId,
+            {model.steps.map((step) => {
+              const parentA = layout.positionByOccurrenceId.get(
+                step.parentAOccurrenceId,
               );
-              const to = layout.positionByOccurrenceId.get(edge.toOccurrenceId);
-              if (from === undefined || to === undefined) return null;
-              const startX =
-                from.column * (layout.cardWidth + layout.columnGap) +
-                layout.cardWidth;
-              const endX = to.column * (layout.cardWidth + layout.columnGap);
-              const startY =
-                (from.row - 1) * (layout.rowHeight + layout.rowGap) +
-                layout.rowHeight / 2;
+              const parentB = layout.positionByOccurrenceId.get(
+                step.parentBOccurrenceId,
+              );
+              const child = layout.positionByOccurrenceId.get(
+                step.childOccurrenceId,
+              );
+              if (
+                parentA === undefined ||
+                parentB === undefined ||
+                child === undefined
+              ) {
+                return null;
+              }
+
+              const endX = child.column * (layout.cardWidth + layout.columnGap);
               const endY =
-                (to.row - 1) * (layout.rowHeight + layout.rowGap) +
+                (child.row - 1) * (layout.rowHeight + layout.rowGap) +
                 layout.rowHeight / 2;
-              const controlX = startX + Math.max(32, (endX - startX) / 2);
+              const arrowTipX = endX - TREE_ARROW_GAP;
+              const joinX = arrowTipX - TREE_ARROW_WIDTH;
+              const stroke =
+                step.recipeType === "special" ? "#d97706" : "#6b9d8b";
+              const markerEnd =
+                step.recipeType === "special"
+                  ? "url(#breeding-tree-arrow-special)"
+                  : "url(#breeding-tree-arrow-normal)";
+
               return (
-                <path
-                  key={edge.id}
-                  d={`M ${startX} ${startY} C ${controlX} ${startY}, ${controlX} ${endY}, ${endX - 8} ${endY}`}
-                  fill="none"
-                  stroke={edge.recipeType === "special" ? "#d97706" : "#6b9d8b"}
-                  strokeWidth="2"
-                  strokeDasharray={
-                    edge.recipeType === "special" ? "7 6" : undefined
-                  }
-                  markerEnd={
-                    edge.recipeType === "special"
-                      ? "url(#breeding-tree-arrow-special)"
-                      : "url(#breeding-tree-arrow-normal)"
-                  }
-                />
+                <g key={step.stepIndex} data-step-connector={step.stepIndex}>
+                  {[parentA, parentB].map((parent, parentIndex) => {
+                    const startX =
+                      parent.column * (layout.cardWidth + layout.columnGap) +
+                      layout.cardWidth;
+                    const startY =
+                      (parent.row - 1) * (layout.rowHeight + layout.rowGap) +
+                      layout.rowHeight / 2;
+                    const controlX =
+                      startX + Math.max(16, (joinX - startX) / 2);
+                    return (
+                      <path
+                        key={parentIndex}
+                        d={`M ${startX} ${startY} C ${controlX} ${startY}, ${controlX} ${endY}, ${joinX} ${endY}`}
+                        fill="none"
+                        stroke={stroke}
+                        strokeWidth="2"
+                        strokeDasharray={
+                          step.recipeType === "special" ? "7 6" : undefined
+                        }
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        data-connector-role="branch"
+                        data-end-x={joinX}
+                        data-end-y={endY}
+                      />
+                    );
+                  })}
+                  <path
+                    d={`M ${joinX} ${endY} H ${arrowTipX}`}
+                    fill="none"
+                    stroke={stroke}
+                    strokeWidth="2"
+                    strokeDasharray={
+                      step.recipeType === "special" ? "7 6" : undefined
+                    }
+                    strokeLinecap="round"
+                    markerEnd={markerEnd}
+                    data-connector-role="trunk"
+                    data-start-x={joinX}
+                    data-start-y={endY}
+                  />
+                </g>
               );
             })}
           </svg>
@@ -490,15 +546,12 @@ function createTreeLayout(
     ...model.occurrences.map((occurrence) => {
       const entity = entityById.get(occurrence.entityId);
       if (entity === undefined) return 0;
-      if (compactPreview) {
-        if (entity.kind === "inventory" || entity.kind === "existing_target") {
-          return entity.passives.length;
-        }
-        return entity.requiredPassives.length > 0
-          ? entity.requiredPassives.length
-          : entity.passives.length;
+      if (entity.kind === "inventory" || entity.kind === "existing_target") {
+        return entity.passives.length;
       }
-      return entity.passives.length + occurrence.requiredPassiveIds.length;
+      return entity.requiredPassives.length > 0
+        ? entity.requiredPassives.length
+        : entity.passives.length;
     }),
   );
   const rowHeight =

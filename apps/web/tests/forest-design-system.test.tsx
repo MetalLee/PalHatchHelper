@@ -6,8 +6,24 @@ import { SiteHeader } from "../components/layout/site-header";
 import { PalPortrait } from "../components/pals/pal-portrait";
 import { PassiveBadge } from "../components/pals/passive-badge";
 import { PageError } from "../components/states/page-error";
+import { ForestScenery } from "../components/surfaces/forest-scenery";
 
 describe("Forest Healing design system", () => {
+  it("keeps login and hero scenery free of white cloud shapes", () => {
+    const { container } = render(
+      <div>
+        <ForestScenery variant="page" />
+        <ForestScenery variant="hero" />
+      </div>,
+    );
+
+    expect(
+      container.querySelectorAll(
+        '[class*="bg-white/75"], [class*="bg-white/55"]',
+      ),
+    ).toHaveLength(0);
+  });
+
   it("marks the current top navigation destination", () => {
     render(
       <SiteHeader
