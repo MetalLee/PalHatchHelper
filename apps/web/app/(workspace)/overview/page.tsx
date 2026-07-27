@@ -4,7 +4,10 @@ import {
   OverviewDashboard,
   type OverviewPlanFeed,
 } from "@/features/overview/overview-dashboard";
-import { getOverviewSummary, Phase5DataError } from "@/features/pals/server";
+import {
+  getInventoryDataStatus,
+  Phase5DataError,
+} from "@/features/pals/server";
 import { loadPlans } from "@/features/plans/server";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +17,12 @@ export default async function OverviewPage() {
   if (context.binding === null)
     return <ErrorState code="PLAYER_BINDING_REQUIRED" />;
 
-  const [summaryResult, plansResult] = await Promise.allSettled([
-    getOverviewSummary(),
+  const [dataStatusResult, plansResult] = await Promise.allSettled([
+    getInventoryDataStatus(),
     loadPlans({ limit: 4 }),
   ]);
-  if (summaryResult.status === "rejected") {
-    const error = summaryResult.reason;
+  if (dataStatusResult.status === "rejected") {
+    const error = dataStatusResult.reason;
     return (
       <ErrorState
         code={
@@ -37,7 +40,7 @@ export default async function OverviewPage() {
       playerNickname={context.binding.player_nickname}
       worldName={context.binding.world_name}
       guildName={context.binding.guild_name}
-      summary={summaryResult.value}
+      dataStatus={dataStatusResult.value}
       planFeed={planFeed}
     />
   );

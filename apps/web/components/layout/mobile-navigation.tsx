@@ -139,7 +139,7 @@ export function MobileNavigation({
           <SheetClose asChild>
             <button
               type="button"
-              className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left text-sm font-semibold text-destructive hover:bg-destructive/8"
+              className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left text-sm font-semibold text-destructive hover:bg-destructive/8 [&_svg]:text-destructive"
               onClick={onSignOut}
             >
               <LogOut aria-hidden="true" className="size-5" />

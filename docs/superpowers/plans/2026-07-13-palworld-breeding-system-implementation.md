@@ -462,6 +462,7 @@
 - `implementation=completed`、`automated_gates=passed`；并行交付边界已由 `docs/decisions/0005-phase5-parallel-delivery-boundary.md` 批准。
 - 独立使用 Phase 1 RLS/RPC、Phase 3 脱敏库存以及本地或预览 Supabase。
 - 不要求也不得绕过 Phase 4 的真实数据人工验收和生产发布门禁。
+- 2026-07-27 概览页信息层级精简为 Hero、最近收藏与数据状态；库存统计保留在帕鲁列表页，概览不再为已删除卡片发起库存分页 RPC。
 
 ### 阶段目标
 

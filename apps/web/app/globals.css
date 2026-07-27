@@ -138,6 +138,28 @@ textarea {
   touch-action: manipulation;
 }
 
+@keyframes nav-jelly {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.055, 0.94);
+  }
+  62% {
+    transform: scale(0.985, 1.035);
+  }
+  82% {
+    transform: scale(1.012, 0.992);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-jelly:hover {
+    animation: nav-jelly 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

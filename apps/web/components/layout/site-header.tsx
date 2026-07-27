@@ -146,10 +146,7 @@ export function SiteHeader({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onSelect={signOut}
-              >
+              <DropdownMenuItem variant="destructive" onSelect={signOut}>
                 <LogOut aria-hidden="true" />
                 退出登录
               </DropdownMenuItem>

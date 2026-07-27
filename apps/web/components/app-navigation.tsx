@@ -1,9 +1,9 @@
 import {
-  Boxes,
   ClipboardList,
   Database,
   Dna,
   House,
+  Rabbit,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -18,7 +18,7 @@ export interface NavigationItem {
 
 export const workspaceNavigationItems: readonly NavigationItem[] = [
   { href: "/overview", label: "首页", icon: House },
-  { href: "/pals", label: "帕鲁库存", icon: Boxes },
+  { href: "/pals", label: "帕鲁库存", icon: Rabbit },
   { href: "/breeder", label: "配种工作台", icon: Dna },
   { href: "/plans", label: "我的计划", icon: ClipboardList },
   { href: "/data-status", label: "数据状态", icon: Database },
@@ -70,10 +70,10 @@ export function AppNavigation({
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold text-muted-foreground no-underline transition-colors duration-200",
-              "hover:bg-white/65 hover:text-forest focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+              "nav-jelly inline-flex min-h-11 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-semibold text-muted-foreground no-underline transition-[color,background-color,border-color,box-shadow] duration-200",
+              "hover:border-primary/15 hover:bg-accent hover:text-accent-foreground hover:shadow-sm focus-visible:border-primary/20 focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
               active &&
-                "bg-accent text-accent-foreground shadow-[inset_0_0_0_1px_rgb(40_122_84_/_0.08)]",
+                "border-primary/20 bg-primary/10 text-primary shadow-sm",
             )}
           >
             <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />

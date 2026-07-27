@@ -50,7 +50,7 @@ test("overview stays within a 390px viewport and uses CSS-only hero scenery", as
   await expect(
     page.getByRole("link", { name: "开始配种" }).first(),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "查看库存" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看帕鲁" })).toBeVisible();
   const scenery = page.getByTestId("overview-scenery");
   await expect(scenery).toHaveAttribute("data-visual-source", "css");
   await expect(scenery.locator("img")).toHaveCount(0);
