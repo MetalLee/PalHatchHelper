@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -980,11 +980,26 @@ Hover 框在导航项之间水平滑动并保留轻量果冻反馈，离开导�
 - 共享状态。
 - 稀有被动。
 
+面向玩家的名称和被动筛选只接受本地化名称或图鉴编号，不接受帕鲁、被动等目录稳定英文
+内部 ID。内部 ID 继续作为数据库、契约、图片索引和确定性算法的关联键，但不得作为玩家界面
+的标签、辅助文字、搜索关键字或未翻译名称回退。目录事实不可用时使用“名称暂不可用”与
+“未知被动”等中性降级，不把原始内部 ID 暴露给玩家。
+
 自己的帕鲁显示共享开关；其他玩家帕鲁只显示共享状态。每只帕鲁可“作为配种起点”。
 公会所有的基地工作帕鲁显示在“全部”和“公会共享”，所有者显示公会名，不显示个人共享开关。
-头目个体显示“头目”徽标。位置使用一致的诚实降级：基地显示基地名或稳定短 ID及工作位；
+头目个体显示“头目”徽标。位置使用一致的诚实降级：基地显示基地名或“未命名据点”及工作位；
 普通帕鲁终端和次元帕鲁仓库显示第几页、第几格；无法证明精确位置时仅显示位置类型或
 “位置未解析”，不得展示原始容器 GUID。
+
+库存页 Hero 使用玩家能直接理解的配种与共享库存语言，不出现“边界”“安全”“实例”等实现
+术语。四张库存指标卡使用紧凑间距且不显示底部辅助说明；“帕鲁总数”固定表示当前用户完整
+可用库存，不随范围与其他筛选变化，筛选后的数量在列表工具栏单独显示。卡片/表格视图切换
+只显示图标按钮，但必须保留可访问名称、键盘焦点和 Tooltip。
+
+库存列表存在多个页面时，列表进入视口后在视口底部居中显示浮动分页；接近列表末端时由同
+样式的正常流分页接替，列表与分页均离开视口后隐藏。分页只动画 opacity/transform，遵循
+reduced-motion、移动端安全区和 44px 最小点击区域，不得遮挡最后一行内容。卡片使用统一的
+shadcn 层级阴影，基础阴影贴合底部，Hover 提升一层，避免大幅下偏移造成阴影断层。
 
 ### 17.6 配种器
 
@@ -1005,6 +1020,7 @@ Hover 框在导航项之间水平滑动并保留轻量果冻反馈，离开导�
 - 当前库存快照与游戏数据版本。
 
 选择器支持名称、编号、属性、最近选择、已拥有标记和公会拥有数量。
+目标帕鲁与被动选择器不得显示或搜索目录稳定英文内部 ID；未翻译事实使用中性名称降级。
 
 计算过程使用真实阶段，不显示虚假百分比：
 

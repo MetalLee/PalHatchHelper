@@ -1,11 +1,13 @@
 import type { PalInventoryPage } from "@palhatch/contracts";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PalInventory } from "../features/pals/pal-inventory";
 import { PalFilters } from "../features/pals/pal-filters";
 import { PalPagination } from "../features/pals/pal-pagination";
 import { parsePalListQuery } from "../features/pals/query";
+
+afterEach(() => vi.unstubAllGlobals());
 
 const page: PalInventoryPage = {
   snapshot_id: "40000000-0000-4000-8000-000000000002",
@@ -173,6 +175,19 @@ describe("pal inventory", () => {
     );
   });
 
+  it("does not match passive filters by internal IDs", () => {
+    const query = parsePalListQuery(new URLSearchParams());
+    render(<PalFilters query={query} page={page} />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
+    fireEvent.change(screen.getByPlaceholderText(/搜索被动/), {
+      target: { value: "test_passive_c" },
+    });
+
+    expect(screen.queryByRole("option", { name: /稀有被动/ })).toBeNull();
+    expect(screen.getByText("没有匹配的被动")).toBeTruthy();
+  });
+
   it("provides standard numbered pagination with ellipses", () => {
     const query = parsePalListQuery(
       new URLSearchParams({
@@ -213,8 +228,83 @@ describe("pal inventory", () => {
     expect(
       screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
     ).toContain("view=table");
-    expect(screen.getAllByText("更多页面")).toHaveLength(2);
+    expect(
+      within(screen.getByTestId("pal-pagination-inline")).getAllByText(
+        "更多页面",
+      ),
+    ).toHaveLength(2);
     expect(screen.queryByRole("spinbutton", { name: "跳转页码" })).toBeNull();
+  });
+
+  it("floats pagination only while inventory is visible before inline handoff", () => {
+    let callback: IntersectionObserverCallback | undefined;
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class IntersectionObserverMock {
+        constructor(nextCallback: IntersectionObserverCallback) {
+          callback = nextCallback;
+        }
+        observe(element: Element) {
+          observed.push(element);
+        }
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+        readonly root = null;
+        readonly rootMargin = "0px";
+        readonly thresholds = [0];
+      },
+    );
+
+    const query = parsePalListQuery(new URLSearchParams());
+    render(
+      <>
+        <div id="pal-inventory-results" />
+        <PalPagination
+          query={query}
+          page={{ ...page, page_number: 2, total_pages: 4, total_count: 80 }}
+        />
+      </>,
+    );
+
+    const inventory = document.querySelector("#pal-inventory-results");
+    const inline = screen.getByTestId("pal-pagination-inline");
+    const floating = screen.getByTestId("pal-pagination-floating");
+    expect(inventory).not.toBeNull();
+    expect(observed).toContain(inventory);
+    expect(observed).toContain(inline);
+    expect(floating.dataset.visible).toBe("false");
+
+    act(() => {
+      callback?.(
+        [
+          {
+            target: inventory!,
+            isIntersecting: true,
+            intersectionRatio: 0.5,
+          } as unknown as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(floating.dataset.visible).toBe("true");
+
+    act(() => {
+      callback?.(
+        [
+          {
+            target: inline,
+            isIntersecting: true,
+            intersectionRatio: 1,
+          } as unknown as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(floating.dataset.visible).toBe("false");
   });
 
   it("renders compact cards with icon-only gender and elements", () => {
@@ -292,7 +382,7 @@ describe("pal inventory", () => {
     ).toBe("page");
   });
 
-  it("makes missing catalog data and unknown IDs explicit", () => {
+  it("keeps internal catalog IDs out of fallback presentation", () => {
     render(
       <PalInventory
         page={{
@@ -317,12 +407,13 @@ describe("pal inventory", () => {
       />,
     );
 
-    expect(screen.getByRole("status").textContent).toContain(
-      "游戏目录尚未配置",
-    );
-    expect(screen.getByText("未解析目录项")).toBeTruthy();
-    const unknownPassive = screen.getByText("未知被动 · unknown_passive");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByText("名称暂不可用")).toBeTruthy();
+    expect(screen.getByText("目录信息暂不可用")).toBeTruthy();
+    const unknownPassive = screen.getByText("未知被动");
     expect(unknownPassive.dataset.rank).toBe("unknown");
+    expect(document.body.textContent).not.toContain("unknown_pal");
+    expect(document.body.textContent).not.toContain("unknown_passive");
   });
 
   it("opens secondary filters in a mobile sheet", () => {
@@ -335,16 +426,14 @@ describe("pal inventory", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "筛选" }));
     const sheet = screen.getByRole("dialog", { name: "筛选库存" });
-    expect(
-      within(sheet).getByLabelText("名称、图鉴编号或稳定 ID"),
-    ).toBeTruthy();
+    expect(within(sheet).getByLabelText("名称或图鉴编号")).toBeTruthy();
     expect(within(sheet).getByLabelText("所有者")).toBeTruthy();
     expect(
       within(sheet).getByRole("button", { name: "应用筛选" }),
     ).toBeTruthy();
   });
 
-  it("shows a useful empty state without hiding catalog status", () => {
+  it("shows a useful empty state without duplicating global status", () => {
     render(
       <PalInventory
         page={{
@@ -359,9 +448,7 @@ describe("pal inventory", () => {
       />,
     );
 
-    expect(screen.getByRole("status").textContent).toContain(
-      "游戏目录尚未配置",
-    );
+    expect(screen.queryByRole("status")).toBeNull();
     expect(
       screen.getByRole("heading", { name: "没有匹配的帕鲁" }),
     ).toBeTruthy();

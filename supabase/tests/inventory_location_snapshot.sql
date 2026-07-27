@@ -236,10 +236,10 @@ select results_eq(
       item->>'location_access_scope'
     from jsonb_array_elements(
       public.list_available_pals_page_v2(
-        p_scope => 'shared',
-        p_query => 'dps_shared_fixture'
+        p_scope => 'shared'
       )->'data'->'items'
     ) as item
+    where item->>'pal_id' = 'dps_shared_fixture'
   $$,
   $$ values (
     'false'::text,
@@ -252,11 +252,12 @@ select results_eq(
 );
 
 select is(
-  jsonb_array_length(
-    public.list_available_pals_page_v2(
-      p_scope => 'shared',
-      p_query => 'dps_unresolved_fixture'
-    )->'data'->'items'
+  (
+    select count(*)::integer
+    from jsonb_array_elements(
+      public.list_available_pals_page_v2(p_scope => 'shared')->'data'->'items'
+    ) as item
+    where item->>'pal_id' = 'dps_unresolved_fixture'
   ),
   0,
   'unresolved dimensional storage is absent from shared inventory'
@@ -270,10 +271,10 @@ select results_eq(
       item->>'location_access_scope'
     from jsonb_array_elements(
       public.list_available_pals_page_v2(
-        p_scope => 'mine',
-        p_query => 'anubis'
+        p_scope => 'mine'
       )->'data'->'items'
     ) as item
+    where item->>'pal_id' = 'anubis'
   $$,
   $$ values ('true'::text, '64'::text, 'player'::text) $$,
   'personal inventory exposes the boss marker and absolute storage slot'

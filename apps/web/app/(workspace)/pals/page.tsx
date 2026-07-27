@@ -134,9 +134,9 @@ export default async function PalsPage({
   return (
     <div className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8">
       <PageHero
-        eyebrow="Pal inventory"
+        eyebrow="配种库存一览"
         title="帕鲁库存"
-        description="查看当前可用于配种的自有与公会共享库存，并在安全查询边界内筛选真实实例。"
+        description="查看自己的帕鲁和公会伙伴愿意共享的帕鲁，快速找到适合配种的伙伴。"
         className="min-h-[17rem] border-white/80 bg-white/74 sm:min-h-[18rem] lg:pr-[30%]"
         background={<ForestScenery variant="hero" />}
       />
@@ -146,32 +146,32 @@ export default async function PalsPage({
         aria-label="库存指标"
       >
         <MetricCard
-          label="当前可见总数"
-          value={page.total_count.toLocaleString("zh-CN")}
-          detail="应用当前范围与筛选后"
+          label="帕鲁总数"
+          value={summary.all_count.toLocaleString("zh-CN")}
           icon={Boxes}
           tone="forest"
+          compact
         />
         <MetricCard
           label="我的帕鲁"
           value={summary.owned_count.toLocaleString("zh-CN")}
-          detail="当前稳定库存快照"
           icon={PawPrint}
           tone="leaf"
+          compact
         />
         <MetricCard
           label="公会共享"
           value={summary.shared_count.toLocaleString("zh-CN")}
-          detail="仅含可安全协作的实例"
           icon={Users}
           tone="sky"
+          compact
         />
         <MetricCard
           label="最新库存同步"
           value={synchronizedAt}
-          detail="来自当前稳定库存快照"
           icon={Clock3}
           tone="sky"
+          compact
         />
       </section>
 

@@ -95,12 +95,14 @@ select is(
   2,
   'location filtering is supported'
 );
-select is(
+select ok(
   jsonb_array_length(
     public.list_available_pals_page(p_scope => 'all', p_query => 'PARENT_B')->'data'->'items'
-  ),
-  1,
-  'stable ID filtering is case-insensitive'
+  ) = 0
+  and jsonb_array_length(
+    public.list_available_pals_page_v2(p_scope => 'all', p_query => 'PARENT_B')->'data'->'items'
+  ) = 0,
+  'player inventory search does not accept internal Pal IDs'
 );
 select is(
   jsonb_array_length(
@@ -229,20 +231,26 @@ select results_eq(
       item->>'catalog_entry_state',
       item->'unknown_passive_skill_ids'
     from jsonb_array_elements(
-      public.list_available_pals_page(p_scope => 'mine', p_query => 'unknown_pal')
+      public.list_available_pals_page(p_scope => 'mine')
         ->'data'->'items'
     ) as item
+    where item->>'pal_id' = 'unknown_pal'
   $$,
   $$ values (
-    'unknown_pal'::text,
+    '名称暂不可用'::text,
     'unknown'::text,
     '["unknown_passive"]'::jsonb
   ) $$,
-  'unknown Pal and passive IDs remain visible but are explicitly marked unresolved'
+  'unknown Pal and passive IDs remain available to internal projections and are marked unresolved'
 );
 select is(
-  public.list_available_pals_page(p_scope => 'mine', p_query => 'unknown_pal')
-    #>> '{data,items,0,encyclopedia_no}',
+  (
+    select item->>'encyclopedia_no'
+    from jsonb_array_elements(
+      public.list_available_pals_page(p_scope => 'mine')->'data'->'items'
+    ) as item
+    where item->>'pal_id' = 'unknown_pal'
+  ),
   null,
   'unknown catalog IDs never receive a fabricated encyclopedia number'
 );

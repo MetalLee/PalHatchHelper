@@ -10,9 +10,9 @@ async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
   await expect(page).toHaveURL(/\/overview$/);
 }
 
-async function navigateFromMobileMenu(page: Page, label: string) {
+async function navigateFromMobileMenu(page: Page, label: string | RegExp) {
   await page.getByRole("button", { name: "打开导航菜单" }).click();
-  const menu = page.getByRole("dialog", { name: "导航菜单" });
+  const menu = page.getByRole("dialog", { name: "PalBeacon" });
   await menu.getByRole("link", { name: label }).click();
 }
 
@@ -71,14 +71,14 @@ test("inventory scope and pagination links refresh the visible list", async ({
 
   await page.getByRole("link", { name: "公会共享" }).click();
   await expect(page).toHaveURL(/\/pals\?scope=shared&page_size=1$/);
-  await expect(page.getByText("共 1 只可见帕鲁")).toBeVisible();
+  await expect(page.getByText("筛选结果 1 只")).toBeVisible();
   await expect(
     page.getByRole("article").getByText("Fixture Player B"),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "全部", exact: true }).click();
   await expect(page).toHaveURL(/\/pals\?scope=all&page_size=1$/);
-  await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
+  await expect(page.getByText("筛选结果 3 只")).toBeVisible();
 
   await page.goto("/pals?scope=all&page_size=1");
   await page.getByRole("link", { name: "表格视图" }).click();
@@ -171,27 +171,30 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   page,
 }) => {
   await login(page);
-  await navigateFromMobileMenu(page, "帕鲁");
+  await navigateFromMobileMenu(page, /^帕鲁库存$/);
   await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
 
   await page.getByRole("button", { name: "筛选" }).click();
   let filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉");
+  await filterSheet.getByLabel("名称或图鉴编号").fill("棉");
   await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
+  await expect(
+    page.getByText("帕鲁总数").locator("..").getByText("3", { exact: true }),
+  ).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   await page.getByRole("button", { name: "筛选" }).click();
   filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("2");
+  await filterSheet.getByLabel("名称或图鉴编号").fill("2");
   await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "筛选" }).click();
   filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉悠悠");
+  await filterSheet.getByLabel("名称或图鉴编号").fill("棉悠悠");
   await filterSheet.getByRole("button", { name: "应用筛选" }).click();
   await page.waitForLoadState("networkidle");
 
@@ -223,7 +226,7 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   await expect(sharing).toHaveAttribute("aria-checked", "true");
 
   await page.goto("/pals?scope=all&page_size=1");
-  await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
+  await expect(page.getByText("筛选结果 3 只")).toBeVisible();
   const nextHref = await page
     .getByRole("link", { name: "下一页" })
     .getAttribute("href");
@@ -285,12 +288,14 @@ test("player responses never contain private, cross-guild, raw-save or path data
 
 test("stale data status stays explicit on iPhone width", async ({ page }) => {
   await login(page);
-  await navigateFromMobileMenu(page, "数据状态");
+  await navigateFromMobileMenu(page, /^数据状态/);
   await expect(
     page.getByRole("heading", { name: "服务器数据状态" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("status").filter({ hasText: "数据已过期" }),
+    page
+      .getByRole("region", { name: "数据状态摘要" })
+      .getByText("数据已过期", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("确定性算法版本")).toBeVisible();
   await expect(

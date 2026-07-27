@@ -9,6 +9,7 @@ import { PassiveBadge } from "@/components/pals/passive-badge";
 import { StatusChip } from "@/components/status/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { userFacingCatalogName } from "@/lib/user-facing-name";
 
 export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
   return (
@@ -80,15 +81,16 @@ export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
 }
 
 function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
+  const targetName = userFacingCatalogName(
+    plan.target_pal_display_name,
+    plan.target_pal_id,
+    "名称暂不可用",
+  );
   return (
     <Card className="min-w-0 gap-0 overflow-hidden border-glass-border bg-card/92 py-0 shadow-soft transition-colors hover:border-primary/25">
       <CardContent className="grid min-w-0 gap-5 p-5 sm:p-6">
         <div className="flex min-w-0 items-start gap-4">
-          <PalPortrait
-            palId={plan.target_pal_id}
-            name={plan.target_pal_display_name}
-            size={60}
-          />
+          <PalPortrait palId={plan.target_pal_id} name={targetName} size={60} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <StatusChip
@@ -103,7 +105,7 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
               </span>
             </div>
             <h2 className="mt-2 truncate text-lg font-bold text-foreground">
-              {plan.target_pal_display_name}
+              {targetName}
             </h2>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
               <GitBranch aria-hidden="true" className="size-4" />
@@ -127,7 +129,11 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
               {plan.desired_passives.map((passive) => (
                 <PassiveBadge
                   key={passive.passive_skill_id}
-                  name={passive.display_name}
+                  name={userFacingCatalogName(
+                    passive.display_name,
+                    passive.passive_skill_id,
+                    "被动名称暂不可用",
+                  )}
                   rank={passive.rank}
                   isNegative={passive.is_negative}
                   className="w-full min-w-0 justify-start truncate"

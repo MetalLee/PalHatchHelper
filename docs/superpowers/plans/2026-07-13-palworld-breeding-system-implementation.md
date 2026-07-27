@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -465,6 +465,7 @@
 - 2026-07-27 概览页信息层级精简为 Hero、最近收藏与数据状态；库存统计保留在帕鲁列表页，概览不再为已删除卡片发起库存分页 RPC。
 - 2026-07-27 全局数据状态提示收敛到桌面/移动导航入口和 `/data-status` 详情；概览、库存与配种器只保留中性快照/版本事实，不重复展示过期或解析异常告警。
 - 2026-07-27 桌面导航改为固定选中框与独立水平滑动 Hover 框，统一无边框强调色和果冻反馈；库存入口统一使用爪印图标，首页收藏项目补充 Hover/焦点反馈。
+- 2026-07-27 帕鲁库存用户语言、目录内部 ID 隐藏、紧凑指标卡、统一卡片阴影和视口分页修订已批准，按本计划末尾跨阶段修订顺序交付。
 
 ### 阶段目标
 
@@ -679,6 +680,38 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-27 跨阶段修订：帕鲁库存用户体验收口
+
+### 交付顺序
+
+1. 先更新正式规格和本计划，固定玩家语言、目录内部 ID 隐藏、总数语义、卡片层级与视口分页
+   行为；内部契约、确定性算法和版本审计 ID 不变。
+2. 只为功能行为增加失败测试：库存 RPC 不再接受帕鲁内部 ID 查询，名称/图鉴编号保持可用；
+   配种目标和被动不再由内部 ID 命中；浮动分页只在库存区域可见且正常流分页未接管时启用。
+   纯文案、间距、阴影和图标外观不新增失败测试。
+3. 追加前向数据库迁移，从两个库存分页 RPC 中删除 `pal_id` 查询分支；不得修改已应用迁移。
+4. 收口库存与配种器玩家界面中的帕鲁/被动内部 ID，使用本地化名称、图鉴编号和中性未知降级；
+   内部 ID 继续用于数据库关联、契约、React key、图片索引和任务提交。
+5. 压缩库存指标卡，固定“帕鲁总数”为当前用户完整可用库存；视图切换改为带可访问名称和
+   Tooltip 的 44px 图标按钮；Card 类表面统一为贴合底部的 shadcn 阴影层级。
+6. 使用 IntersectionObserver 实现正常流/浮动分页交接，保留服务器分页与快照上下文，处理
+   safe-area、键盘焦点、reduced-motion 和最后一行内容避让。
+7. 开发中每个失败检查和受影响局部检查只运行一次；最终状态运行一次根 `pnpm check`、完整
+   Supabase 测试、受影响 Web E2E 和 `git diff --check`，聚合命令已覆盖的检查不重复执行。
+
+### 回滚与生产约束
+
+- 数据库变更只追加函数定义迁移；应用回滚可保留“不支持内部 ID 搜索”的更严格用户查询语义。
+- 不修改算法、目录事实、库存快照或真实存档，不访问生产密钥，不执行生产部署或远程推送。
+- 浮动分页只增加浏览器端视口观察，不改变页码、快照上下文和 RLS 权限边界。
+
+### 完成状态
+
+- Web 格式、lint、类型检查、相关单元测试与生产构建通过；完整 Supabase 套件的 393 项断言通过，
+  Phase 5 库存流程与 Phase 6 配种流程浏览器验证通过。
+- 根聚合检查的受影响 Web/契约部分通过；Agent 测试段因当前环境缺少 `gcc`，有 3 项临时 Oodle
+  ABI 测试桩无法建立（其余 237 项通过、4 项跳过），不影响本修订的 Web 与数据库验收结论。
 
 ## 2026-07-27 跨阶段修订：路线语义去重与 2000+ 库存容量
 

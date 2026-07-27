@@ -182,7 +182,7 @@ function PassiveCombobox({
           className="w-[min(22rem,var(--radix-popover-content-available-width))] p-0"
         >
           <Command>
-            <CommandInput placeholder="搜索被动名称或 Stable ID" />
+            <CommandInput placeholder="搜索被动名称" />
             <CommandList>
               <CommandEmpty>没有匹配的被动</CommandEmpty>
               <CommandGroup>
@@ -205,7 +205,7 @@ function PassiveCombobox({
                 {options.map((option) => (
                   <CommandItem
                     key={option.value}
-                    value={`${option.label} ${option.value}`}
+                    value={option.label}
                     onSelect={() => {
                       setValue(option.value);
                       setOpen(false);
@@ -218,12 +218,7 @@ function PassiveCombobox({
                         value === option.value ? "opacity-100" : "opacity-0",
                       )}
                     />
-                    <span className="min-w-0">
-                      <span className="block truncate">{option.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {option.value}
-                      </span>
-                    </span>
+                    <span className="min-w-0 truncate">{option.label}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -278,14 +273,14 @@ function FilterFields({
           htmlFor={`${idPrefix}-query`}
           className="text-xs text-muted-foreground"
         >
-          名称、图鉴编号或稳定 ID
+          名称或图鉴编号
         </Label>
         <Input
           id={`${idPrefix}-query`}
           type="search"
           name="query"
           defaultValue={query.query}
-          placeholder="棉悠悠 / 1 / test_parent_a"
+          placeholder="棉悠悠 / 1"
           className="bg-white/82"
         />
       </div>
@@ -421,7 +416,7 @@ export function PalFilters({
             <SheetHeader className="pr-12">
               <SheetTitle>筛选库存</SheetTitle>
               <SheetDescription>
-                筛选由 URL 驱动，应用后会保留当前库存范围与 page_size。
+                应用后会保留当前选择的库存范围。
               </SheetDescription>
             </SheetHeader>
             <FilterFields

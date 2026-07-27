@@ -10,6 +10,7 @@ import { GlassPanel } from "@/components/surfaces/glass-panel";
 import { StatusChip } from "@/components/status/status-chip";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { userFacingCatalogName } from "@/lib/user-facing-name";
 
 export interface OverviewPlanFeed {
   items: PlanSummary[];
@@ -32,20 +33,21 @@ function formatDateTime(value: string | null): string {
 }
 
 function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
+  const targetName = userFacingCatalogName(
+    plan.target_pal_display_name,
+    plan.target_pal_id,
+    "名称暂不可用",
+  );
   return (
     <Link
       href={`/plans/${plan.route_id}`}
       className="group flex min-w-0 items-center gap-3 rounded-2xl bg-white/68 p-4 text-foreground no-underline shadow-sm transition-[background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-accent/70 hover:shadow-md focus-visible:-translate-y-0.5 focus-visible:bg-accent/70 focus-visible:shadow-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 motion-reduce:transform-none"
     >
-      <PalPortrait
-        palId={plan.target_pal_id}
-        name={plan.target_pal_display_name}
-        size={44}
-      />
+      <PalPortrait palId={plan.target_pal_id} name={targetName} size={44} />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
           <strong className="truncate text-sm sm:text-base">
-            {plan.target_pal_display_name}
+            {targetName}
           </strong>
           <StatusChip
             tone={plan.feasibility_status === "ready" ? "good" : "warning"}

@@ -72,6 +72,8 @@ function PalInventoryTableRow({
   const location = palLocationDisplay(pal);
   const dimensionalSharingUnresolved = isDimensionalSharingUnresolved(pal);
   const switchId = `pal-table-share-${pal.pal_instance_uid}`;
+  const accessibleName =
+    pal.catalog_entry_state === "resolved" ? pal.pal_display_name : "此帕鲁";
 
   return (
     <TableRow data-pal-id={pal.pal_id}>
@@ -104,13 +106,13 @@ function PalInventoryTableRow({
                 {palShareLabel(pal, false)}
               </StatusChip>
               <Label htmlFor={switchId} className="sr-only">
-                {pal.pal_display_name} 公会共享
+                {accessibleName} 公会共享
               </Label>
               <Switch
                 id={switchId}
                 checked={pal.share_enabled}
                 disabled={pending}
-                aria-label={`${pal.pal_display_name} 公会共享`}
+                aria-label={`${accessibleName} 公会共享`}
                 aria-busy={pending}
                 onCheckedChange={(enabled) =>
                   onToggleShare(pal.pal_instance_uid, enabled)
