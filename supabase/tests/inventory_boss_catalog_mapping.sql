@@ -49,10 +49,10 @@ select results_eq(
       item->>'catalog_entry_state'
     from jsonb_array_elements(
       public.list_available_pals_page(
-        p_scope => 'mine',
-        p_query => 'boss_test_parent_a'
+        p_scope => 'mine'
       )->'data'->'items'
     ) as item
+    where item->>'pal_id' = 'boss_test_parent_a'
   $$,
   $$ values (
     'boss_test_parent_a'::text,
@@ -72,10 +72,10 @@ select results_eq(
       item->>'catalog_entry_state'
     from jsonb_array_elements(
       public.list_available_pals_page_v2(
-        p_scope => 'mine',
-        p_query => 'boss_test_parent_a'
+        p_scope => 'mine'
       )->'data'->'items'
     ) as item
+    where item->>'pal_id' = 'boss_test_parent_a'
   $$,
   $$ values (
     'boss_test_parent_a'::text,

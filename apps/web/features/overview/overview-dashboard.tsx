@@ -1,26 +1,16 @@
-import type { OverviewSummary, PlanSummary } from "@palhatch/contracts";
-import {
-  ArrowRight,
-  Boxes,
-  Bookmark,
-  Clock3,
-  Dna,
-  PawPrint,
-  Sprout,
-  Users,
-  Warehouse,
-} from "lucide-react";
+import type { InventoryDataStatus, PlanSummary } from "@palhatch/contracts";
+import { ArrowRight, Dna, PawPrint } from "lucide-react";
 import Link from "next/link";
 
-import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHero } from "@/components/layout/page-hero";
+import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PageError } from "@/components/states/page-error";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { GlassPanel } from "@/components/surfaces/glass-panel";
 import { StatusChip } from "@/components/status/status-chip";
 import { Card, CardContent } from "@/components/ui/card";
-import { dataStatusPresentation } from "@/features/data-status/presentation";
 import { cn } from "@/lib/utils";
+import { userFacingCatalogName } from "@/lib/user-facing-name";
 
 export interface OverviewPlanFeed {
   items: PlanSummary[];
@@ -43,18 +33,21 @@ function formatDateTime(value: string | null): string {
 }
 
 function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
+  const targetName = userFacingCatalogName(
+    plan.target_pal_display_name,
+    plan.target_pal_id,
+    "名称暂不可用",
+  );
   return (
     <Link
       href={`/plans/${plan.route_id}`}
-      className="group flex min-w-0 items-center gap-3 rounded-2xl bg-white/68 p-4 text-foreground no-underline shadow-sm transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+      className="group flex min-w-0 items-center gap-3 rounded-2xl bg-white/68 p-4 text-foreground no-underline shadow-sm transition-[background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-accent/70 hover:shadow-md focus-visible:-translate-y-0.5 focus-visible:bg-accent/70 focus-visible:shadow-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 motion-reduce:transform-none"
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-sky/20 text-sky-900">
-        <Bookmark aria-hidden="true" className="size-5" />
-      </span>
+      <PalPortrait palId={plan.target_pal_id} name={targetName} size={44} />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
           <strong className="truncate text-sm sm:text-base">
-            {plan.target_pal_display_name}
+            {targetName}
           </strong>
           <StatusChip
             tone={plan.feasibility_status === "ready" ? "good" : "warning"}
@@ -75,163 +68,46 @@ function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
   );
 }
 
-function QuickEntry({
-  href,
-  title,
-  description,
-  icon: Icon,
-  tone,
-}: Readonly<{
-  href: string;
-  title: string;
-  description: string;
-  icon: typeof Dna;
-  tone: "forest" | "sky" | "leaf";
-}>) {
-  const toneClass = {
-    forest: "bg-primary/10 text-primary",
-    sky: "bg-sky/20 text-sky-900",
-    leaf: "bg-leaf/16 text-forest",
-  }[tone];
-  return (
-    <Link
-      href={href}
-      className="group flex min-h-32 min-w-0 items-center gap-4 rounded-2xl border border-glass-border bg-white/78 p-5 text-foreground no-underline shadow-soft transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-    >
-      <span
-        className={cn(
-          "grid size-12 shrink-0 place-items-center rounded-2xl",
-          toneClass,
-        )}
-      >
-        <Icon aria-hidden="true" className="size-6" strokeWidth={1.8} />
-      </span>
-      <span className="min-w-0">
-        <strong className="flex items-center gap-1.5 text-base">
-          {title}
-          <ArrowRight
-            aria-hidden="true"
-            className="size-4 transition-transform group-hover:translate-x-0.5"
-          />
-        </strong>
-        <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-          {description}
-        </span>
-      </span>
-    </Link>
-  );
-}
-
 export function OverviewDashboard({
   playerNickname,
   worldName,
   guildName,
-  summary,
+  dataStatus,
   planFeed,
 }: Readonly<{
   playerNickname: string;
   worldName: string;
   guildName: string | null;
-  summary: OverviewSummary;
+  dataStatus: InventoryDataStatus;
   planFeed: OverviewPlanFeed;
 }>) {
-  const status = dataStatusPresentation(summary.data_status.state);
   return (
     <div
       className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8"
       data-testid="overview-dashboard"
     >
       <PageHero
-        eyebrow="Breeding workspace"
+        eyebrow="PALWORLD SERVER CONSOLE"
         title={`欢迎回来，${playerNickname}`}
-        description={`${worldName} · ${guildName ?? "未加入公会"}。从真实库存出发，比较确定性路线并收藏需要保留的方案。`}
+        description={`${worldName} · ${guildName ?? "未加入公会"}`}
         className="min-h-[21rem] border-white/80 bg-white/72 sm:min-h-[22rem] lg:min-h-[21rem] lg:pr-[32%]"
         background={<ForestScenery variant="hero" />}
         actions={
           <>
             <Link href="/breeder" className={primaryLinkClass}>
-              <Sprout aria-hidden="true" className="size-4" />
+              <Dna aria-hidden="true" className="size-4" />
               开始配种
             </Link>
             <Link
               href="/pals"
               className={cn(outlineLinkClass, "min-h-12 px-6")}
             >
-              <Warehouse aria-hidden="true" className="size-4" />
-              查看库存
-            </Link>
-            <Link
-              href="/data-status"
-              className="rounded-full no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-            >
-              <StatusChip tone={status.tone}>
-                最新同步 {formatDateTime(summary.data_status.captured_at)}
-              </StatusChip>
+              <PawPrint aria-hidden="true" className="size-4" />
+              查看帕鲁
             </Link>
           </>
         }
       />
-
-      <section
-        className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="库存概览"
-      >
-        <MetricCard
-          label="可用候选池"
-          value={summary.all_count.toLocaleString("zh-CN")}
-          detail="自有 + 当前可共享"
-          icon={Boxes}
-          tone="forest"
-        />
-        <MetricCard
-          label="我的帕鲁"
-          value={summary.owned_count.toLocaleString("zh-CN")}
-          detail="完整库存仅你可见"
-          icon={PawPrint}
-          tone="leaf"
-        />
-        <MetricCard
-          label="公会共享"
-          value={summary.shared_count.toLocaleString("zh-CN")}
-          detail="仅含配种所需字段"
-          icon={Users}
-          tone="sky"
-        />
-        <MetricCard
-          label="最新库存同步"
-          value={formatDateTime(summary.data_status.captured_at)}
-          detail={status.title}
-          icon={Clock3}
-          tone="sky"
-        />
-      </section>
-
-      <section
-        className="grid min-w-0 gap-3 md:grid-cols-3"
-        aria-label="工作台快捷入口"
-      >
-        <QuickEntry
-          href="/breeder"
-          title="配种工作台"
-          description="选择目标与期望被动，计算并比较真实合法路线。"
-          icon={Dna}
-          tone="forest"
-        />
-        <QuickEntry
-          href="/pals"
-          title="帕鲁库存"
-          description="查看自有与公会共享候选，并管理自己的共享状态。"
-          icon={Warehouse}
-          tone="leaf"
-        />
-        <QuickEntry
-          href="/plans"
-          title="我的计划"
-          description="查看已收藏路线的配种树、库存需求与评分。"
-          icon={Bookmark}
-          tone="sky"
-        />
-      </section>
 
       {planFeed.unavailable ? (
         <PageError
@@ -297,42 +173,38 @@ export function OverviewDashboard({
           className="min-w-0 bg-white/78"
           aria-labelledby="data-status-heading"
         >
-          <div role="status" aria-live="polite">
+          <div>
             <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-              Data status
+              Beacon status
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <h2
                 id="data-status-heading"
                 className="text-xl font-bold tracking-tight"
               >
-                数据状态
+                当前数据基线
               </h2>
-              <StatusChip tone={status.tone}>{status.title}</StatusChip>
             </div>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              {status.description}
-            </p>
           </div>
           <dl className="mt-5 grid gap-3 text-sm">
             <div className="rounded-xl bg-white/72 p-3">
               <dt className="text-muted-foreground">最新同步</dt>
               <dd className="mt-1 font-semibold text-foreground">
-                {formatDateTime(summary.data_status.captured_at)}
+                {formatDateTime(dataStatus.captured_at)}
               </dd>
             </div>
             <div className="rounded-xl bg-white/72 p-3">
               <dt className="text-muted-foreground">游戏数据</dt>
               <dd className="mt-1 break-words font-semibold text-foreground">
-                {summary.data_status.game_version ??
-                  summary.data_status.game_data_version_id?.slice(0, 8) ??
+                {dataStatus.game_version ??
+                  dataStatus.game_data_version_id?.slice(0, 8) ??
                   "尚未配置"}
               </dd>
             </div>
             <div className="rounded-xl bg-white/72 p-3">
               <dt className="text-muted-foreground">确定性算法</dt>
               <dd className="mt-1 break-words font-semibold text-foreground">
-                {summary.data_status.algorithm_version ?? "尚未提供"}
+                {dataStatus.algorithm_version ?? "尚未提供"}
               </dd>
             </div>
           </dl>

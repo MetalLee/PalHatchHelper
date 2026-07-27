@@ -67,7 +67,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
 
   await page
     .getByRole("combobox", {
-      name: "目标 Pal（名称、编号或 Stable ID）",
+      name: "目标帕鲁（名称或图鉴编号）",
     })
     .click();
   const targetSearch = page.getByRole("combobox", {

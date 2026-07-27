@@ -1,14 +1,11 @@
 "use client";
 
 import type { PalInventoryPage, Phase5ErrorCode } from "@palhatch/contracts";
-import { LayoutGrid, List, ShieldCheck, Warehouse } from "lucide-react";
-import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { PageEmpty } from "@/components/states/page-empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 import { PalInventoryCard } from "./pal-inventory-card";
 import { PalInventoryTable } from "./pal-inventory-table";
@@ -22,13 +19,11 @@ type ToggleShare = (
 export function PalInventory({
   page,
   view,
-  viewHrefs,
   passiveRanks = {},
   onToggleShare,
 }: Readonly<{
   page: PalInventoryPage;
   view: PalInventoryView;
-  viewHrefs: Readonly<Record<PalInventoryView, string>>;
   passiveRanks?: Readonly<Record<string, number>>;
   onToggleShare?: ToggleShare;
 }>) {
@@ -80,57 +75,17 @@ export function PalInventory({
   }
 
   return (
-    <section className="grid min-w-0 gap-4" aria-label="帕鲁库存结果">
-      {page.catalog_state === "not_configured" ? (
-        <Alert
-          role="status"
-          className="rounded-2xl border-amber-200 bg-amber-50/90 text-amber-950 shadow-soft"
-        >
-          <Warehouse aria-hidden="true" className="size-5" />
-          <AlertTitle>游戏目录尚未配置</AlertTitle>
-          <AlertDescription className="text-amber-900">
-            当前仅显示和搜索 Stable ID，中文名称、图鉴编号与被动品级暂不可用。
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p
-          className="text-sm font-medium text-muted-foreground"
-          aria-live="polite"
-        >
-          共 {page.total_count.toLocaleString("zh-CN")} 只可见帕鲁
-        </p>
-        <div
-          className="flex items-center rounded-xl border border-border/80 bg-background/80 p-1"
-          aria-label="库存展示形式"
-        >
-          <Link
-            href={viewHrefs.cards}
-            aria-current={view === "cards" ? "page" : undefined}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "min-h-9 rounded-lg px-2.5",
-              view === "cards" && "bg-accent text-accent-foreground shadow-xs",
-            )}
-          >
-            <LayoutGrid aria-hidden="true" className="size-4" />
-            卡片视图
-          </Link>
-          <Link
-            href={viewHrefs.table}
-            aria-current={view === "table" ? "page" : undefined}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "min-h-9 rounded-lg px-2.5",
-              view === "table" && "bg-accent text-accent-foreground shadow-xs",
-            )}
-          >
-            <List aria-hidden="true" className="size-4" />
-            表格视图
-          </Link>
-        </div>
-      </div>
+    <section
+      id="pal-inventory-results"
+      className="grid min-w-0 gap-4"
+      aria-label="帕鲁库存结果"
+    >
+      <p
+        className="text-sm font-medium text-muted-foreground"
+        aria-live="polite"
+      >
+        筛选结果 {page.total_count.toLocaleString("zh-CN")} 只
+      </p>
 
       {errorCode !== null ? (
         <Alert

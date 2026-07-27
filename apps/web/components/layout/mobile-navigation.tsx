@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Settings, ShieldCheck, Sprout } from "lucide-react";
+import { LogOut, Menu, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
@@ -9,6 +9,9 @@ import {
   isNavigationItemActive,
   workspaceNavigationItems,
 } from "@/components/app-navigation";
+import { BrandLogo } from "@/components/brand/brand-logo";
+import { BrandWordmark } from "@/components/brand/brand-wordmark";
+import { StatusChip, type StatusTone } from "@/components/status/status-chip";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -20,6 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { brand } from "@/config/brand";
 
 const subscribeToHydration = (): (() => void) => () => undefined;
 
@@ -27,11 +31,13 @@ export function MobileNavigation({
   activePath,
   displayName,
   role,
+  dataStatus,
   onSignOut,
 }: Readonly<{
   activePath: string;
   displayName: string;
   role: "admin" | "player";
+  dataStatus: { label: string; tone: StatusTone };
   onSignOut: () => void;
 }>) {
   const hydrated = useSyncExternalStore(
@@ -60,13 +66,13 @@ export function MobileNavigation({
       >
         <SheetHeader className="px-3 pb-2 pt-[max(1rem,env(safe-area-inset-top))] text-left">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-2xl bg-accent text-primary">
-              <Sprout aria-hidden="true" className="size-6" />
-            </span>
+            <BrandLogo size={40} />
             <div>
-              <SheetTitle>导航菜单</SheetTitle>
+              <SheetTitle>
+                <BrandWordmark />
+              </SheetTitle>
               <SheetDescription>
-                当前页面：{currentPageTitle(activePath)}
+                {brand.productName} · 当前页面：{currentPageTitle(activePath)}
               </SheetDescription>
             </div>
           </div>
@@ -92,7 +98,15 @@ export function MobileNavigation({
                     className="size-5"
                     strokeWidth={1.8}
                   />
-                  {item.label}
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  {item.href === "/data-status" ? (
+                    <StatusChip
+                      tone={dataStatus.tone}
+                      className="min-h-7 shrink-0 border-0 bg-transparent px-0"
+                    >
+                      {dataStatus.label}
+                    </StatusChip>
+                  ) : null}
                 </Link>
               </SheetClose>
             );
@@ -136,7 +150,7 @@ export function MobileNavigation({
           <SheetClose asChild>
             <button
               type="button"
-              className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left text-sm font-semibold text-destructive hover:bg-destructive/8"
+              className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left text-sm font-semibold text-destructive hover:bg-destructive/8 [&_svg]:text-destructive"
               onClick={onSignOut}
             >
               <LogOut aria-hidden="true" className="size-5" />

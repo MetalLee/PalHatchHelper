@@ -9,7 +9,7 @@ export interface PalListQuery {
   query: string;
   owner: string;
   gender: PalGender | "";
-  passive: string;
+  passives: string[];
   location: PalLocationType | "";
   shared: boolean | null;
   page_size: number;
@@ -38,6 +38,19 @@ function shortValue(value: string | null, maximum: number): string {
   return (value ?? "").trim().slice(0, maximum);
 }
 
+function passiveValues(params: URLSearchParams): string[] {
+  return Array.from(
+    new Set(
+      params
+        .getAll("passive")
+        .map((value) => shortValue(value, 120))
+        .filter((value) => value.length > 0),
+    ),
+  )
+    .sort()
+    .slice(0, 4);
+}
+
 export function parsePalListQuery(params: URLSearchParams): PalListQuery {
   const requestedScope = params.get("scope") as InventoryScope | null;
   const requestedGender = params.get("gender") as PalGender | null;
@@ -62,7 +75,7 @@ export function parsePalListQuery(params: URLSearchParams): PalListQuery {
       requestedGender !== null && genders.has(requestedGender)
         ? requestedGender
         : "",
-    passive: shortValue(params.get("passive"), 120),
+    passives: passiveValues(params),
     location:
       requestedLocation !== null && locations.has(requestedLocation)
         ? requestedLocation
@@ -82,7 +95,14 @@ export function parsePalListQuery(params: URLSearchParams): PalListQuery {
 }
 
 export function encodePageContext(context: InventoryPageContext): string {
-  return Buffer.from(JSON.stringify(context), "utf8").toString("base64url");
+  const bytes = new TextEncoder().encode(JSON.stringify(context));
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join(
+    "",
+  );
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/=+$/u, "");
 }
 
 export function decodePageContext(
@@ -91,8 +111,16 @@ export function decodePageContext(
   if (context === null || context.length === 0 || context.length > 320)
     return null;
   try {
+    const base64 = context.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "=",
+    );
+    const binary = atob(padded);
     const value = JSON.parse(
-      Buffer.from(context, "base64url").toString("utf8"),
+      new TextDecoder().decode(
+        Uint8Array.from(binary, (character) => character.charCodeAt(0)),
+      ),
     ) as Partial<InventoryPageContext>;
     if (
       typeof value.snapshot_id !== "string" ||

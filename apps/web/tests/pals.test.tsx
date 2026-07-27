@@ -1,11 +1,13 @@
 import type { PalInventoryPage } from "@palhatch/contracts";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PalInventory } from "../features/pals/pal-inventory";
 import { PalFilters } from "../features/pals/pal-filters";
 import { PalPagination } from "../features/pals/pal-pagination";
 import { parsePalListQuery } from "../features/pals/query";
+
+afterEach(() => vi.unstubAllGlobals());
 
 const page: PalInventoryPage = {
   snapshot_id: "40000000-0000-4000-8000-000000000002",
@@ -94,9 +96,36 @@ const page: PalInventoryPage = {
     ],
     genders: ["male", "female"],
     passives: [
-      { value: "test_passive_a", label: "认真" },
-      { value: "test_passive_b", label: "工匠精神" },
-      { value: "test_passive_c", label: "稀有被动" },
+      {
+        value: "test_passive_a",
+        label: "认真",
+        rank: 3,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_b",
+        label: "工匠精神",
+        rank: 5,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_c",
+        label: "稀有被动",
+        rank: 4,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_d",
+        label: "传说被动",
+        rank: 2,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_e",
+        label: "负面被动",
+        rank: -1,
+        is_negative: true,
+      },
     ],
     locations: [
       "player_storage",
@@ -109,29 +138,35 @@ const page: PalInventoryPage = {
   game_data_version_id: "51000000-0000-4000-8000-000000000001",
 };
 
+const viewHrefs = {
+  cards: "/pals?view=cards",
+  table: "/pals?view=table",
+} as const;
+
 describe("pal inventory", () => {
   it("supports all three inventory scopes and all Phase 5 filters", () => {
-    const query = parsePalListQuery(
-      new URLSearchParams({
-        scope: "shared",
-        query: "棉悠悠",
-        owner: "b".repeat(64),
-        gender: "female",
-        passive: "test_passive_b",
-        location: "base",
-        shared: "true",
-        page_size: "12",
-        page: "3",
-        view: "table",
-      }),
-    );
+    const params = new URLSearchParams({
+      scope: "shared",
+      query: "棉悠悠",
+      owner: "b".repeat(64),
+      gender: "female",
+      location: "base",
+      shared: "true",
+      page_size: "12",
+      page: "3",
+      view: "table",
+    });
+    params.append("passive", "test_passive_b");
+    params.append("passive", "test_passive_c");
+    params.append("passive", "test_passive_b");
+    const query = parsePalListQuery(params);
 
     expect(query).toEqual({
       scope: "shared",
       query: "棉悠悠",
       owner: "b".repeat(64),
       gender: "female",
-      passive: "test_passive_b",
+      passives: ["test_passive_b", "test_passive_c"],
       location: "base",
       shared: true,
       page_size: 12,
@@ -148,17 +183,31 @@ describe("pal inventory", () => {
 
   it("uses full-pool valid filter options instead of only the current page", () => {
     const query = parsePalListQuery(new URLSearchParams());
-    render(<PalFilters query={query} page={page} />);
+    render(<PalFilters query={query} page={page} viewHrefs={viewHrefs} />);
 
+    fireEvent.click(screen.getByRole("button", { name: /更多筛选/ }));
     fireEvent.click(screen.getByRole("combobox", { name: "所有者" }));
     expect(
       screen.getByRole("option", { name: "Fixture Player C" }),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("option", { name: "Fixture Player C" }));
 
-    fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
-    expect(screen.getByRole("option", { name: /稀有被动/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("option", { name: /稀有被动/ }));
+    fireEvent.click(screen.getByRole("combobox", { name: "被动技能" }));
+    const rarePassive = screen.getByRole("option", { name: /稀有被动/ });
+    expect(rarePassive.querySelector("[data-rank='4']")).toBeTruthy();
+    fireEvent.click(rarePassive);
+    expect(
+      screen
+        .getByRole("combobox", { name: "被动技能" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+    fireEvent.click(screen.getByRole("option", { name: /工匠精神/ }));
+    expect(
+      Array.from(
+        document.querySelectorAll<HTMLInputElement>('input[name="passive"]'),
+        (input) => input.value,
+      ),
+    ).toEqual(["test_passive_b", "test_passive_c"]);
 
     fireEvent.click(screen.getByRole("combobox", { name: "位置" }));
     expect(screen.getByRole("option", { name: "观赏笼" })).toBeTruthy();
@@ -173,16 +222,56 @@ describe("pal inventory", () => {
     );
   });
 
+  it("does not match passive filters by internal IDs", () => {
+    const query = parsePalListQuery(new URLSearchParams());
+    render(<PalFilters query={query} page={page} viewHrefs={viewHrefs} />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "被动技能" }));
+    fireEvent.change(screen.getByPlaceholderText(/搜索被动/), {
+      target: { value: "test_passive_c" },
+    });
+
+    expect(screen.queryByRole("option", { name: /稀有被动/ })).toBeNull();
+    expect(screen.getByText("没有匹配的被动")).toBeTruthy();
+  });
+
+  it("limits passive multi-selection to four and supports toggling and clearing", () => {
+    const query = parsePalListQuery(new URLSearchParams());
+    render(<PalFilters query={query} page={page} viewHrefs={viewHrefs} />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "被动技能" }));
+    for (const name of ["认真", "工匠精神", "稀有被动", "传说被动"]) {
+      fireEvent.click(screen.getByRole("option", { name: new RegExp(name) }));
+    }
+
+    expect(screen.getByText("已选择 4 / 4")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("option", { name: /负面被动/ })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
+    expect(document.querySelectorAll('input[name="passive"]')).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole("option", { name: /认真/ }));
+    expect(document.querySelectorAll('input[name="passive"]')).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "清空被动筛选" }));
+    expect(document.querySelectorAll('input[name="passive"]')).toHaveLength(0);
+    expect(
+      screen.getByRole("combobox", { name: "被动技能" }).textContent,
+    ).toContain("全部被动");
+  });
+
   it("provides standard numbered pagination with ellipses", () => {
-    const query = parsePalListQuery(
-      new URLSearchParams({
-        scope: "mine",
-        query: "棉",
-        page: "2",
-        page_size: "12",
-        view: "table",
-      }),
-    );
+    const params = new URLSearchParams({
+      scope: "mine",
+      query: "棉",
+      page: "2",
+      page_size: "12",
+      view: "table",
+    });
+    params.append("passive", "test_passive_a");
+    params.append("passive", "test_passive_b");
+    const query = parsePalListQuery(params);
     render(
       <PalPagination
         query={query}
@@ -213,8 +302,144 @@ describe("pal inventory", () => {
     expect(
       screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
     ).toContain("view=table");
-    expect(screen.getAllByText("更多页面")).toHaveLength(2);
+    const nextParams = new URL(
+      screen.getByRole("link", { name: "下一页" }).getAttribute("href")!,
+      "https://palbeacon.invalid",
+    ).searchParams;
+    expect(nextParams.getAll("passive")).toEqual([
+      "test_passive_a",
+      "test_passive_b",
+    ]);
+    expect(
+      within(screen.getByTestId("pal-pagination-inline")).getAllByText(
+        "更多页面",
+      ),
+    ).toHaveLength(2);
     expect(screen.queryByRole("spinbutton", { name: "跳转页码" })).toBeNull();
+  });
+
+  it("floats pagination only while inventory is visible before inline handoff", () => {
+    let callback: IntersectionObserverCallback | undefined;
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class IntersectionObserverMock {
+        constructor(nextCallback: IntersectionObserverCallback) {
+          callback = nextCallback;
+        }
+        observe(element: Element) {
+          observed.push(element);
+        }
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+        readonly root = null;
+        readonly rootMargin = "0px";
+        readonly thresholds = [0];
+      },
+    );
+
+    const query = parsePalListQuery(new URLSearchParams());
+    render(
+      <>
+        <div id="pal-inventory-results" />
+        <PalPagination
+          query={query}
+          page={{ ...page, page_number: 2, total_pages: 4, total_count: 80 }}
+        />
+      </>,
+    );
+
+    const inventory = document.querySelector("#pal-inventory-results");
+    const inline = screen.getByTestId("pal-pagination-inline");
+    const floating = screen.getByTestId("pal-pagination-floating");
+    expect(inventory).not.toBeNull();
+    expect(observed).toContain(inventory);
+    expect(observed).toContain(inline);
+    expect(floating.dataset.visible).toBe("false");
+
+    act(() => {
+      callback?.(
+        [
+          {
+            target: inventory!,
+            isIntersecting: true,
+            intersectionRatio: 0.5,
+          } as unknown as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(floating.dataset.visible).toBe("true");
+
+    act(() => {
+      callback?.(
+        [
+          {
+            target: inline,
+            isIntersecting: true,
+            intersectionRatio: 1,
+          } as unknown as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(floating.dataset.visible).toBe("false");
+  });
+
+  it("rebinds floating pagination when the inventory view replaces its result node", () => {
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class IntersectionObserverMock {
+        observe(element: Element) {
+          observed.push(element);
+        }
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+        readonly root = null;
+        readonly rootMargin = "0px";
+        readonly thresholds = [0];
+      },
+    );
+
+    const cardsQuery = parsePalListQuery(
+      new URLSearchParams({ view: "cards" }),
+    );
+    const tableQuery = parsePalListQuery(
+      new URLSearchParams({ view: "table" }),
+    );
+    const paged = { ...page, page_number: 2, total_pages: 4, total_count: 80 };
+    const { rerender } = render(
+      <>
+        <div key="cards" id="pal-inventory-results" data-view="cards" />
+        <PalPagination query={cardsQuery} page={paged} />
+      </>,
+    );
+    const cardsInventory = document.querySelector(
+      '#pal-inventory-results[data-view="cards"]',
+    );
+
+    rerender(
+      <>
+        <div key="table" id="pal-inventory-results" data-view="table" />
+        <PalPagination query={tableQuery} page={paged} />
+      </>,
+    );
+    const tableInventory = document.querySelector(
+      '#pal-inventory-results[data-view="table"]',
+    );
+
+    expect(cardsInventory).not.toBeNull();
+    expect(tableInventory).not.toBeNull();
+    expect(tableInventory).not.toBe(cardsInventory);
+    expect(observed).toContain(cardsInventory);
+    expect(observed).toContain(tableInventory);
   });
 
   it("renders compact cards with icon-only gender and elements", () => {
@@ -223,7 +448,6 @@ describe("pal inventory", () => {
       <PalInventory
         page={page}
         view="cards"
-        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
         passiveRanks={{
           test_passive_a: 3,
           test_passive_b: 5,
@@ -274,7 +498,6 @@ describe("pal inventory", () => {
       <PalInventory
         page={page}
         view="table"
-        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
         passiveRanks={{ test_passive_a: 3, test_passive_b: 5 }}
         onToggleShare={vi.fn()}
       />,
@@ -285,14 +508,9 @@ describe("pal inventory", () => {
     expect(within(table).getByRole("img", { name: "棉悠悠头像" })).toBeTruthy();
     expect(within(table).getAllByRole("row")).toHaveLength(4);
     expect(screen.queryByRole("article")).toBeNull();
-    expect(
-      screen
-        .getByRole("link", { name: "表格视图" })
-        .getAttribute("aria-current"),
-    ).toBe("page");
   });
 
-  it("makes missing catalog data and unknown IDs explicit", () => {
+  it("keeps internal catalog IDs out of fallback presentation", () => {
     render(
       <PalInventory
         page={{
@@ -313,38 +531,52 @@ describe("pal inventory", () => {
           ],
         }}
         view="cards"
-        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
       />,
     );
 
-    expect(screen.getByRole("status").textContent).toContain(
-      "游戏目录尚未配置",
-    );
-    expect(screen.getByText("未解析目录项")).toBeTruthy();
-    const unknownPassive = screen.getByText("未知被动 · unknown_passive");
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByText("名称暂不可用")).toBeTruthy();
+    expect(screen.getByText("目录信息暂不可用")).toBeTruthy();
+    const unknownPassive = screen.getByText("未知被动");
     expect(unknownPassive.dataset.rank).toBe("unknown");
+    expect(document.body.textContent).not.toContain("unknown_pal");
+    expect(document.body.textContent).not.toContain("unknown_passive");
   });
 
-  it("opens secondary filters in a mobile sheet", () => {
+  it("keeps secondary filters tidy until more filters is requested", () => {
     const query = parsePalListQuery(new URLSearchParams());
-    render(<PalFilters query={query} page={page} />);
+    render(<PalFilters query={query} page={page} viewHrefs={viewHrefs} />);
 
     expect(screen.getByRole("link", { name: "全部" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "我的帕鲁" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "公会共享" })).toBeTruthy();
+    expect(screen.getByLabelText("名称或图鉴编号")).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "被动技能" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "应用筛选" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "清除" })).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "卡片视图" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+    expect(screen.getByRole("link", { name: "表格视图" })).toBeTruthy();
+    expect(screen.queryByRole("combobox", { name: "所有者" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "性别" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "位置" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "共享状态" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "筛选" }));
-    const sheet = screen.getByRole("dialog", { name: "筛选库存" });
-    expect(
-      within(sheet).getByLabelText("名称、图鉴编号或稳定 ID"),
-    ).toBeTruthy();
-    expect(within(sheet).getByLabelText("所有者")).toBeTruthy();
-    expect(
-      within(sheet).getByRole("button", { name: "应用筛选" }),
-    ).toBeTruthy();
+    const moreFilters = screen.getByRole("button", { name: /更多筛选/ });
+    expect(moreFilters.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(moreFilters);
+
+    expect(moreFilters.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("combobox", { name: "所有者" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "性别" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "位置" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "共享状态" })).toBeTruthy();
   });
 
-  it("shows a useful empty state without hiding catalog status", () => {
+  it("shows a useful empty state without duplicating global status", () => {
     render(
       <PalInventory
         page={{
@@ -355,13 +587,10 @@ describe("pal inventory", () => {
           game_data_version_id: null,
         }}
         view="cards"
-        viewHrefs={{ cards: "/pals?view=cards", table: "/pals?view=table" }}
       />,
     );
 
-    expect(screen.getByRole("status").textContent).toContain(
-      "游戏目录尚未配置",
-    );
+    expect(screen.queryByRole("status")).toBeNull();
     expect(
       screen.getByRole("heading", { name: "没有匹配的帕鲁" }),
     ).toBeTruthy();

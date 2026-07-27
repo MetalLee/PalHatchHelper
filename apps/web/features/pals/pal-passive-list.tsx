@@ -26,7 +26,7 @@ export function PalPassiveList({
           return (
             <PassiveBadge
               key={`${passiveId}-${index}`}
-              name={isUnknown ? `未知被动 · ${passive}` : passive}
+              name={isUnknown ? "未知被动" : passive}
               rank={isUnknown ? null : (passiveRanks[passiveId] ?? null)}
             />
           );

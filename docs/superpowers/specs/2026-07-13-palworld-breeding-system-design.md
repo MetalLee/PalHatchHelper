@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -928,6 +928,11 @@ requester
 └── 系统设置
 ```
 
+桌面导航的当前选中框与 Hover/键盘焦点框必须相互独立：当前选中框固定在当前路由，
+Hover 框在导航项之间水平滑动并保留轻量果冻反馈，离开导航后只隐藏 Hover 框。两者均使用
+与用户菜单 Hover 一致的无边框强调色状态；动效遵循 reduced-motion。帕鲁库存入口统一使用
+爪印图标。
+
 ### 17.3 移动端导航
 
 底部导航：
@@ -936,19 +941,23 @@ requester
 概览 | 帕鲁 | 配种器 | 计划
 ```
 
-数据状态在顶部状态入口或用户菜单中展示。
+数据状态在顶部状态入口或用户菜单中展示，并与桌面导航使用相同的状态语义。
 
 ### 17.4 概览页
 
 展示：
 
 - 最近收藏的计划路线。
-- 我的帕鲁数量。
-- 公会可共享帕鲁数量。
-- 最新库存同步时间。
 - 打开配种器的快捷入口。
+- 打开帕鲁列表的快捷入口。
+- 最新库存同步时间与数据版本摘要。
 
 没有计划时显示明确空状态；有计划时展示目标、被动、路线摘要和保存时间。
+最近收藏项目必须同时提供清晰的 Hover 与键盘焦点反馈；“查看帕鲁”入口使用爪印图标。
+概览页不重复展示库存统计卡片或与顶部导航相同的快捷入口卡片；库存数量在帕鲁列表页展示。
+概览页只查询渲染所需的数据状态与最近收藏，不为已移除的统计卡片发起库存分页查询。
+概览、帕鲁列表和配种器只展示完成当前任务所需的中性快照/版本事实，不重复显式展示
+“数据已过期”“存档解析异常”或“当前使用上一份有效库存”等全局状态提示。
 
 ### 17.5 帕鲁列表
 
@@ -971,11 +980,43 @@ requester
 - 共享状态。
 - 稀有被动。
 
+库存筛选项使用“被动技能”标签；选项按照配种工作台相同的 rank 降序排列，同 rank 按稳定内部 ID
+排序。被动筛选支持同时选择最多四项，并使用 AND 语义：结果必须同时拥有全部所选被动。被动选项、
+筛选器中的已选项和业务页面中的被动词条统一使用相同的品级徽标；筛选参数以可重复的
+`passive` URL 参数传递，范围、视图和分页切换必须完整保留全部选择。
+
+被动徽标只按固定游戏数据版本中的 `rank` 决定品级视觉，不以 `is_negative` 覆盖颜色：
+
+- `rank <= -1` 使用红色文字/边框和暗红背景。
+- `rank = 1` 使用白色文字/边框和中性深色背景。
+- `rank = 2` 或 `3` 使用金黄色文字/边框和暗金背景。
+- `rank = 4` 使用 `#68ffd8` 文字/边框和偏青绿背景。
+- `rank = 5` 同样使用 `#68ffd8`，但背景明显偏紫色。
+- `rank = 0`、缺失或范围外值使用中性降级样式。
+
+所有品级背景均使用本地 CSS 生成的拼接三角纹理，不热链或复制第三方站点纹理资产。文字与背景
+保持可读对比度；徽标不得仅以颜色表达负面语义，已有负面文字和可访问名称继续保留。
+
+面向玩家的名称和被动筛选只接受本地化名称或图鉴编号，不接受帕鲁、被动等目录稳定英文
+内部 ID。内部 ID 继续作为数据库、契约、图片索引和确定性算法的关联键，但不得作为玩家界面
+的标签、辅助文字、搜索关键字或未翻译名称回退。目录事实不可用时使用“名称暂不可用”与
+“未知被动”等中性降级，不把原始内部 ID 暴露给玩家。
+
 自己的帕鲁显示共享开关；其他玩家帕鲁只显示共享状态。每只帕鲁可“作为配种起点”。
 公会所有的基地工作帕鲁显示在“全部”和“公会共享”，所有者显示公会名，不显示个人共享开关。
-头目个体显示“头目”徽标。位置使用一致的诚实降级：基地显示基地名或稳定短 ID及工作位；
+头目个体显示“头目”徽标。位置使用一致的诚实降级：基地显示基地名或“未命名据点”及工作位；
 普通帕鲁终端和次元帕鲁仓库显示第几页、第几格；无法证明精确位置时仅显示位置类型或
 “位置未解析”，不得展示原始容器 GUID。
+
+库存页 Hero 使用玩家能直接理解的配种与共享库存语言，不出现“边界”“安全”“实例”等实现
+术语。四张库存指标卡使用紧凑间距且不显示底部辅助说明；“帕鲁总数”固定表示当前用户完整
+可用库存，不随范围与其他筛选变化，筛选后的数量在列表工具栏单独显示。卡片/表格视图切换
+只显示图标按钮，但必须保留可访问名称、键盘焦点和 Tooltip。
+
+库存列表存在多个页面时，列表进入视口后在视口底部居中显示浮动分页；接近列表末端时由同
+样式的正常流分页接替，列表与分页均离开视口后隐藏。分页只动画 opacity/transform，遵循
+reduced-motion、移动端安全区和 44px 最小点击区域，不得遮挡最后一行内容。卡片使用统一的
+shadcn 层级阴影，基础阴影贴合底部，Hover 提升一层，避免大幅下偏移造成阴影断层。
 
 ### 17.6 配种器
 
@@ -996,6 +1037,7 @@ requester
 - 当前库存快照与游戏数据版本。
 
 选择器支持名称、编号、属性、最近选择、已拥有标记和公会拥有数量。
+目标帕鲁与被动选择器不得显示或搜索目录稳定英文内部 ID；未翻译事实使用中性名称降级。
 
 计算过程使用真实阶段，不显示虚假百分比：
 
@@ -1064,14 +1106,18 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 
 普通玩家可查看同步时间、快照版本、游戏数据和算法版本。管理员额外查看 Agent 心跳、Parser 版本、失败记录、待处理任务和手动同步入口。
 
+全局库存与游戏数据状态提示集中在桌面/移动导航状态入口和 `/data-status` 详情页。
+其他业务页面不得重复渲染同一状态告警；页面自身可操作的局部错误、权限错误、查询失败和
+会改变当前功能能力的降级说明不受此限制。管理员页面中的 Agent/Worker 心跳诊断属于独立
+运维事实，不视为重复的全局数据状态提示。
+
 ### 17.11 关键状态
 
 所有核心页面必须覆盖：
 
 - 加载中。
 - 空状态。
-- 数据过期。
-- 解析异常。
+- 数据过期与解析异常，由导航状态入口和数据状态详情统一覆盖。
 - 方案失效。
 - AI 降级。
 - 没有合法路线。

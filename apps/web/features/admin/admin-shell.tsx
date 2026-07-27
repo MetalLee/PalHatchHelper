@@ -12,7 +12,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="grid min-w-0 gap-5">
       <PageHero
-        eyebrow="PALHATCH ADMIN"
+        eyebrow="PALBEACON ADMIN"
         title="管理中心"
         description="查看真实运行摘要并执行受审计操作。权限由每次服务器请求验证，导航可见性不参与授权判断。"
         className="p-5 sm:p-7"

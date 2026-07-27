@@ -1,6 +1,8 @@
-# PalHatchHelper
+# PalBeacon
 
-PalHatchHelper 第一版是“帕鲁配种协作工作台”。配种器使用固定版本的确定性算法生成去重路线，支持 2000+ 库存，并把“我的计划”实现为只读路线收藏。Supabase、Vercel 和腾讯云私有 Agent 已完成生产部署；当前发布标识与回滚引用记录在 [v1 生产发布记录](docs/releases/v1-production-deployment.md)。开发与测试默认仍只使用 fixture 和本地 Supabase，不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
+PalBeacon 是面向《幻兽帕鲁》私人服务器的数据监控、帕鲁库存与配种协作控制台。服务器状态、帕鲁库存与配种计划，尽在一个看板。Keep your world visible. 时刻掌握你的帕鲁世界。
+
+第一版继续以安全同步库存、确定性配种路线比较和“我的计划”只读收藏为核心闭环。代码仓库与内部工程标识仍为 `PalHatchHelper`；Supabase、Vercel 和腾讯云私有 Agent 已完成生产部署，当前发布标识与回滚引用记录在 [v1 生产发布记录](docs/releases/v1-production-deployment.md)。开发与测试默认仍只使用 fixture 和本地 Supabase，不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
 
 ## 前置工具
 

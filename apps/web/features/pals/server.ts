@@ -57,12 +57,12 @@ export async function listPals(
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
   const context = decodePageContext(query.context);
-  const { data, error } = await supabase.rpc("list_available_pals_page_v2", {
+  const { data, error } = await supabase.rpc("list_available_pals_page_v3", {
     p_scope: query.scope,
     p_query: query.query || null,
     p_owner_filter_key: query.owner || null,
     p_gender: query.gender || null,
-    p_passive_skill_id: query.passive || null,
+    p_passive_skill_ids: query.passives,
     p_location_type: query.location || null,
     p_share_enabled: query.shared,
     p_snapshot_id: context?.snapshot_id ?? null,
@@ -94,46 +94,12 @@ export async function listPals(
   };
 }
 
-export async function loadPassiveRanks(
+export function passiveRanksFromPage(
   page: PalInventoryPage,
-  client?: SupabaseClient<Database>,
-): Promise<Record<string, number>> {
-  noStore();
-  if (
-    page.catalog_state !== "published" ||
-    page.game_data_version_id === null
-  ) {
-    return {};
-  }
-
-  const knownPassiveIds = Array.from(
-    new Set(
-      page.items.flatMap((item) =>
-        item.passive_skill_ids.filter(
-          (passiveId) => !item.unknown_passive_skill_ids.includes(passiveId),
-        ),
-      ),
-    ),
+): Record<string, number> {
+  return Object.fromEntries(
+    page.filter_options.passives.map((option) => [option.value, option.rank]),
   );
-  if (knownPassiveIds.length === 0) return {};
-
-  const supabase = client ?? (await createServerSupabaseClient());
-  const ranks: Record<string, number> = {};
-  for (let index = 0; index < knownPassiveIds.length; index += 100) {
-    const passiveIdBatch = knownPassiveIds.slice(index, index + 100);
-    const { data, error } = await supabase
-      .from("catalog_passive_skills")
-      .select("passive_skill_id,rank")
-      .eq("version_id", page.game_data_version_id)
-      .in("passive_skill_id", passiveIdBatch);
-    if (error !== null) throw new Phase5DataError(databaseFailureCode(error));
-    for (const row of data) ranks[row.passive_skill_id] = row.rank;
-  }
-
-  if (knownPassiveIds.some((passiveId) => ranks[passiveId] === undefined)) {
-    throw new Phase5DataError("GAME_DATA_VERSION_CHANGED");
-  }
-  return ranks;
 }
 
 export async function getInventoryDataStatus(
@@ -153,7 +119,7 @@ const emptyQuery: PalListQuery = {
   query: "",
   owner: "",
   gender: "",
-  passive: "",
+  passives: [],
   location: "",
   shared: null,
   page_size: 1,

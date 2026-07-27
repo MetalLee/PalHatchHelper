@@ -32,6 +32,8 @@ export function PalInventoryCard({
   const location = palLocationDisplay(pal);
   const dimensionalSharingUnresolved = isDimensionalSharingUnresolved(pal);
   const switchId = `pal-share-${pal.pal_instance_uid}`;
+  const accessibleName =
+    pal.catalog_entry_state === "resolved" ? pal.pal_display_name : "此帕鲁";
 
   return (
     <Card
@@ -103,7 +105,7 @@ export function PalInventoryCard({
               id={switchId}
               checked={pal.share_enabled}
               disabled={pending}
-              aria-label={`${pal.pal_display_name} 公会共享`}
+              aria-label={`${accessibleName} 公会共享`}
               aria-busy={pending}
               onCheckedChange={(enabled) =>
                 onToggleShare(pal.pal_instance_uid, enabled)

@@ -228,18 +228,6 @@ export function BreederForm({
             title="目标设置"
             description="从当前固定目录中选择目标 Pal，并确认任务真正要搜索的物种。"
           />
-          {context.data_state === "healthy" ? null : (
-            <Alert
-              role="status"
-              className="rounded-2xl border-amber-200 bg-amber-50/92 text-amber-950"
-            >
-              <AlertTriangle aria-hidden="true" className="size-5" />
-              <AlertTitle>当前库存状态：{context.data_state}</AlertTitle>
-              <AlertDescription className="text-amber-900">
-                任务仍会固定本页所示 published 快照，请留意数据状态后再创建。
-              </AlertDescription>
-            </Alert>
-          )}
           <TargetPalCombobox
             pals={context.pals}
             value={target}

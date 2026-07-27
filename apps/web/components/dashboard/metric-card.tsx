@@ -10,6 +10,7 @@ export function MetricCard({
   detail,
   icon: Icon,
   tone = "forest",
+  compact = false,
   className,
 }: Readonly<{
   label: string;
@@ -17,6 +18,7 @@ export function MetricCard({
   detail?: ReactNode;
   icon: LucideIcon;
   tone?: "forest" | "sky" | "leaf";
+  compact?: boolean;
   className?: string;
 }>) {
   const toneClass = {
@@ -27,20 +29,39 @@ export function MetricCard({
 
   return (
     <Card
-      className={cn("border-glass-border bg-card/90 shadow-soft", className)}
+      className={cn(
+        "border-border/60 bg-card/90 shadow-soft",
+        compact && "gap-0 py-0",
+        className,
+      )}
     >
-      <CardContent className="flex items-center gap-4 p-5">
+      <CardContent
+        className={cn(
+          "flex items-center",
+          compact ? "min-h-20 gap-3.5 px-4 py-3.5" : "gap-4 p-5",
+        )}
+      >
         <span
           className={cn(
-            "grid size-12 shrink-0 place-items-center rounded-2xl",
+            "grid shrink-0 place-items-center",
+            compact ? "size-11 rounded-xl" : "size-12 rounded-2xl",
             toneClass,
           )}
         >
-          <Icon aria-hidden="true" className="size-6" strokeWidth={1.8} />
+          <Icon
+            aria-hidden="true"
+            className={compact ? "size-5" : "size-6"}
+            strokeWidth={1.8}
+          />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-muted-foreground">{label}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-foreground">
+          <p
+            className={cn(
+              "font-bold tabular-nums text-foreground",
+              compact ? "mt-0.5 text-xl" : "mt-1 text-2xl",
+            )}
+          >
             {value}
           </p>
           {detail ? (

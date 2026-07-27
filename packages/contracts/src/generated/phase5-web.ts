@@ -107,12 +107,18 @@ export interface PalInventoryFilterOptions {
   /**
    * @maxItems 1000
    */
-  passives: PalFilterOption[];
+  passives: PalPassiveFilterOption[];
   locations: PalLocationType[];
 }
 export interface PalFilterOption {
   value: string;
   label: string;
+}
+export interface PalPassiveFilterOption {
+  value: string;
+  label: string;
+  rank: number;
+  is_negative: boolean;
 }
 export interface PalInventoryRpcItem {
   pal_instance_uid: string;

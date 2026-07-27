@@ -5,10 +5,8 @@ import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHero } from "@/components/layout/page-hero";
 import { ErrorState } from "@/components/page-state";
 import { PageError } from "@/components/states/page-error";
-import { StatusChip } from "@/components/status/status-chip";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { requireUserContext } from "@/features/auth/server";
-import { dataStatusPresentation } from "@/features/data-status/presentation";
 import { PalFilters } from "@/features/pals/pal-filters";
 import { PalInventory } from "@/features/pals/pal-inventory";
 import { PalPagination } from "@/features/pals/pal-pagination";
@@ -16,7 +14,7 @@ import { encodePageContext, parsePalListQuery } from "@/features/pals/query";
 import {
   getOverviewSummary,
   listPals,
-  loadPassiveRanks,
+  passiveRanksFromPage,
   Phase5DataError,
 } from "@/features/pals/server";
 
@@ -28,6 +26,9 @@ function toUrlSearchParams(values: Awaited<SearchParams>): URLSearchParams {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) {
     if (typeof value === "string") params.set(key, value);
+    else if (Array.isArray(value)) {
+      for (const item of value) params.append(key, item);
+    }
   }
   return params;
 }
@@ -114,12 +115,8 @@ export default async function PalsPage({
         });
 
   let summary;
-  let passiveRanks;
   try {
-    [summary, passiveRanks] = await Promise.all([
-      getOverviewSummary(stableContext),
-      loadPassiveRanks(page),
-    ]);
+    summary = await getOverviewSummary(stableContext);
   } catch (error) {
     const code =
       error instanceof Phase5DataError ? error.code : "DATA_UNAVAILABLE";
@@ -131,27 +128,18 @@ export default async function PalsPage({
     );
   }
 
-  const status = dataStatusPresentation(summary.data_status.state);
+  const passiveRanks = passiveRanksFromPage(page);
+
   const synchronizedAt = formatDateTime(summary.data_status.captured_at);
 
   return (
     <div className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8">
       <PageHero
-        eyebrow="Pal inventory"
+        eyebrow="配种库存一览"
         title="帕鲁库存"
-        description="查看当前可用于配种的自有与公会共享库存，并在安全查询边界内筛选真实实例。"
+        description="查看自己的帕鲁和公会伙伴愿意共享的帕鲁，快速找到适合配种的伙伴。"
         className="min-h-[17rem] border-white/80 bg-white/74 sm:min-h-[18rem] lg:pr-[30%]"
         background={<ForestScenery variant="hero" />}
-        actions={
-          <Link
-            href="/data-status"
-            className="rounded-full no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-          >
-            <StatusChip tone={status.tone}>
-              {status.title} · {synchronizedAt}
-            </StatusChip>
-          </Link>
-        }
       />
 
       <section
@@ -159,46 +147,47 @@ export default async function PalsPage({
         aria-label="库存指标"
       >
         <MetricCard
-          label="当前可见总数"
-          value={page.total_count.toLocaleString("zh-CN")}
-          detail="应用当前范围与筛选后"
+          label="帕鲁总数"
+          value={summary.all_count.toLocaleString("zh-CN")}
           icon={Boxes}
           tone="forest"
+          compact
         />
         <MetricCard
           label="我的帕鲁"
           value={summary.owned_count.toLocaleString("zh-CN")}
-          detail="当前稳定库存快照"
           icon={PawPrint}
           tone="leaf"
+          compact
         />
         <MetricCard
           label="公会共享"
           value={summary.shared_count.toLocaleString("zh-CN")}
-          detail="仅含可安全协作的实例"
           icon={Users}
           tone="sky"
+          compact
         />
         <MetricCard
           label="最新库存同步"
           value={synchronizedAt}
-          detail={status.title}
           icon={Clock3}
           tone="sky"
+          compact
         />
       </section>
 
-      <PalFilters query={query} page={page} />
-      <PalInventory
-        key={rawParams.toString()}
-        page={page}
-        view={query.view}
-        viewHrefs={viewHrefs}
-        passiveRanks={passiveRanks}
-      />
-      {page.items.length > 0 ? (
-        <PalPagination query={query} page={page} />
-      ) : null}
+      <section className="grid min-w-0 gap-3 sm:gap-4" aria-label="库存列表">
+        <PalFilters query={query} page={page} viewHrefs={viewHrefs} />
+        <PalInventory
+          key={rawParams.toString()}
+          page={page}
+          view={query.view}
+          passiveRanks={passiveRanks}
+        />
+        {page.items.length > 0 ? (
+          <PalPagination query={query} page={page} />
+        ) : null}
+      </section>
     </div>
   );
 }

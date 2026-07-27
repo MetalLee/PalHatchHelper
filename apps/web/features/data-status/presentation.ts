@@ -8,8 +8,8 @@ export function dataStatusPresentation(state: InventoryDataStatus["state"]): {
   switch (state) {
     case "healthy":
       return {
-        title: "数据正常",
-        description: "正在使用最近一次成功发布的脱敏库存。",
+        title: "数据同步正常",
+        description: "服务器数据已同步，世界状态清晰可见。",
         tone: "good",
       };
     case "stale":
@@ -56,7 +56,7 @@ export function gameDataStatusPresentation(
     case "review_pending":
       return {
         title: "游戏数据待审核",
-        description: "已有较新的候选版本，当前仍使用已发布版本。",
+        description: "存在待审核的配种数据版本，当前仍使用已发布版本。",
         tone: "warning",
       };
     case "blocked":

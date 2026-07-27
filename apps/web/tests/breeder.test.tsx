@@ -73,7 +73,7 @@ const context: BreederFormContext = {
 function selectTarget(query: string): void {
   fireEvent.click(
     screen.getByRole("combobox", {
-      name: "目标 Pal（名称、编号或 Stable ID）",
+      name: "目标帕鲁（名称或图鉴编号）",
     }),
   );
   const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
@@ -280,18 +280,59 @@ describe("Phase 6 breeder form", () => {
 
     fireEvent.click(
       screen.getByRole("combobox", {
-        name: "目标 Pal（名称、编号或 Stable ID）",
+        name: "目标帕鲁（名称或图鉴编号）",
       }),
     );
     const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
-    fireEvent.change(search, { target: { value: "test_child_pal" } });
+    fireEvent.change(search, { target: { value: "幻色幼崽" } });
     fireEvent.keyDown(search, { key: "ArrowDown" });
     fireEvent.keyDown(search, { key: "Enter" });
 
     const summary = screen.getByRole("region", { name: "目标 Pal 摘要" });
     expect(summary.textContent).toContain("幻色幼崽");
     expect(summary.textContent).toContain("#003");
-    expect(summary.textContent).toContain("test_child_pal");
+    expect(summary.textContent).not.toContain("test_child_pal");
+  });
+
+  it("does not match target Pals by internal IDs", () => {
+    const untranslatedContext = {
+      ...context,
+      pals: context.pals.map((pal) => ({
+        ...pal,
+        display_name: pal.pal_id,
+      })),
+    };
+    render(<BreederForm context={untranslatedContext} />);
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "目标帕鲁（名称或图鉴编号）",
+      }),
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "搜索目标 Pal" }), {
+      target: { value: "test_child_pal" },
+    });
+
+    expect(screen.queryByText("test_child_pal", { exact: true })).toBeNull();
+    expect(screen.getByText("没有匹配的目标 Pal")).toBeTruthy();
+  });
+
+  it("does not match passive skills by internal IDs", () => {
+    const untranslatedContext = {
+      ...context,
+      passive_skills: context.passive_skills.map((skill) => ({
+        ...skill,
+        display_name: skill.passive_skill_id,
+      })),
+    };
+    render(<BreederForm context={untranslatedContext} />);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "搜索被动" }), {
+      target: { value: "test_passive_a" },
+    });
+
+    expect(screen.queryByRole("button", { name: /选择被动 A/ })).toBeNull();
+    expect(screen.getByText("没有匹配的被动")).toBeTruthy();
   });
 
   it("shows passive traits, enforces four selections and creates the fixed request", async () => {
@@ -305,7 +346,7 @@ describe("Phase 6 breeder form", () => {
     });
     render(<BreederForm context={context} createJob={createJob} />);
 
-    selectTarget("test_child_pal");
+    selectTarget("幻色幼崽");
 
     for (const id of ["A", "B", "C", "D", "E"]) {
       fireEvent.click(
@@ -380,8 +421,8 @@ describe("Phase 6 breeder form", () => {
     ).toBe(true);
   });
 
-  it.each(["幻色幼崽", "3", "#3", "test_child_pal"])(
-    "resolves a published target by name, encyclopedia number or Stable ID: %s",
+  it.each(["幻色幼崽", "3", "#3"])(
+    "resolves a published target by name or encyclopedia number: %s",
     async (query) => {
       const createJob = vi.fn(async (request: CreateBreedingJobRequest) => {
         void request;
@@ -401,7 +442,7 @@ describe("Phase 6 breeder form", () => {
     },
   );
 
-  it("rejects an invalid target Stable ID", async () => {
+  it("rejects an invalid internal target ID", async () => {
     const invalidContext: BreederFormContext = {
       ...context,
       pals: [{ ...context.pals[0]!, pal_id: "Invalid Target ID" }],
@@ -415,7 +456,7 @@ describe("Phase 6 breeder form", () => {
 
     fireEvent.click(
       screen.getByRole("combobox", {
-        name: "目标 Pal（名称、编号或 Stable ID）",
+        name: "目标帕鲁（名称或图鉴编号）",
       }),
     );
     fireEvent.click(screen.getByRole("option", { name: /幻色幼崽/ }));
@@ -486,12 +527,11 @@ describe("Phase 6 breeder form", () => {
     expect(routerPush).not.toHaveBeenCalled();
   });
 
-  it("preserves the current data-state warning", () => {
+  it("does not repeat the global data-state warning", () => {
     render(<BreederForm context={{ ...context, data_state: "parse_error" }} />);
 
-    const status = screen.getByRole("status");
-    expect(status.textContent).toContain("parse_error");
-    expect(status.textContent).toContain("published 快照");
+    expect(screen.queryByText(/当前库存状态/)).toBeNull();
+    expect(screen.queryByText(/published 快照/)).toBeNull();
   });
 
   it("keeps full pinned versions collapsed behind a readable summary", () => {
@@ -703,9 +743,7 @@ describe("Phase 6 job comparison", () => {
     expect(
       screen.getAllByText("库存缺少以下目标被动来源：").length,
     ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText("未翻译被动（test_passive_b）").length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("未翻译被动").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "保存到我的计划" })).toBeTruthy();
   });
 
@@ -901,7 +939,7 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getAllByText("被动无要求").length).toBeGreaterThan(0);
     expect(screen.getAllByText("父本").length).toBeGreaterThan(0);
     expect(screen.getAllByText("母本").length).toBeGreaterThan(0);
-    expect(screen.getByText("收藏不会推进配种进度")).toBeTruthy();
+    expect(screen.getByText(/收藏不会推进配种进度/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "保存到我的计划" })).toBeTruthy();
   });
 });

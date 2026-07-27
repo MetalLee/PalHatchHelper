@@ -22,11 +22,16 @@ export function PalIdentity({
   portraitSize?: number;
   compact?: boolean;
 }>) {
+  const displayName =
+    pal.catalog_entry_state === "resolved"
+      ? pal.pal_display_name
+      : "名称暂不可用";
+
   return (
     <div className="flex min-w-0 items-center gap-3">
       <PalPortrait
         palId={pal.pal_id}
-        name={pal.pal_display_name}
+        name={displayName}
         catalogNumber={pal.encyclopedia_no}
         size={portraitSize}
         className={cn(compact ? "size-11 rounded-xl" : "size-14 rounded-xl")}
@@ -35,11 +40,11 @@ export function PalIdentity({
         <div className="flex min-w-0 items-center gap-1.5">
           {compact ? (
             <span className="truncate text-sm font-bold tracking-tight text-foreground">
-              {pal.pal_display_name}
+              {displayName}
             </span>
           ) : (
             <h2 className="truncate text-base font-bold tracking-tight text-foreground">
-              {pal.pal_display_name}
+              {displayName}
             </h2>
           )}
           <PalElementIcons
@@ -68,7 +73,7 @@ export function PalIdentity({
         </div>
         {pal.catalog_entry_state === "resolved" ? null : (
           <p className="mt-1 text-[0.68rem] font-medium text-amber-800">
-            未解析目录项
+            目录信息暂不可用
           </p>
         )}
       </div>

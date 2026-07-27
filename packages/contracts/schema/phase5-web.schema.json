@@ -133,6 +133,17 @@
         "label": { "type": "string", "minLength": 1, "maxLength": 160 }
       }
     },
+    "PalPassiveFilterOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label", "rank", "is_negative"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "rank": { "type": "integer" },
+        "is_negative": { "type": "boolean" }
+      }
+    },
     "PalInventoryFilterOptions": {
       "type": "object",
       "additionalProperties": false,
@@ -151,7 +162,7 @@
         "passives": {
           "type": "array",
           "maxItems": 1000,
-          "items": { "$ref": "#/$defs/PalFilterOption" }
+          "items": { "$ref": "#/$defs/PalPassiveFilterOption" }
         },
         "locations": {
           "type": "array",

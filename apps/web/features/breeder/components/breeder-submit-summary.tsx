@@ -5,6 +5,7 @@ import type {
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { userFacingCatalogName } from "@/lib/user-facing-name";
 
 import { optimizationModeLabel } from "./optimization-mode-picker";
 
@@ -24,7 +25,16 @@ export function BreederSubmitSummary({
   submitting: boolean;
 }>) {
   const facts = [
-    ["当前目标", target?.display_name ?? "尚未选择"],
+    [
+      "当前目标",
+      target === undefined
+        ? "尚未选择"
+        : userFacingCatalogName(
+            target.display_name,
+            target.pal_id,
+            "名称暂不可用",
+          ),
+    ],
     ["已选被动", `${passiveCount} / 4`],
     ["优化模式", optimizationModeLabel(mode)],
     ["公会共享", allowShared ? "允许" : "不允许"],

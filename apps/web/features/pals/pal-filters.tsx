@@ -1,11 +1,23 @@
 "use client";
 
 import type { PalInventoryPage } from "@palhatch/contracts";
-import { Check, ChevronsUpDown, SlidersHorizontal } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronsUpDown,
+  LayoutGrid,
+  List,
+  SlidersHorizontal,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Command,
   CommandEmpty,
@@ -28,22 +40,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Tabs, TabsList } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import {
   GenderDisplay,
   type DisplayGender,
 } from "@/components/pals/gender-display";
-import type { PalListQuery } from "./query";
+import { PassiveBadge } from "@/components/pals/passive-badge";
+import type { PalInventoryView, PalListQuery } from "./query";
 
 const scopes = [
   ["all", "全部"],
@@ -73,12 +84,24 @@ type FilterOption = {
   gender?: DisplayGender;
 };
 
+type PassiveFilterOption =
+  PalInventoryPage["filter_options"]["passives"][number];
+
+function orderPassiveOptions(
+  options: readonly PassiveFilterOption[],
+): PassiveFilterOption[] {
+  return [...options].sort(
+    (left, right) =>
+      right.rank - left.rank || left.value.localeCompare(right.value),
+  );
+}
+
 function scopeHref(scope: string, query: PalListQuery): string {
   const params = new URLSearchParams({ scope });
   if (query.query) params.set("query", query.query);
   if (query.owner) params.set("owner", query.owner);
   if (query.gender) params.set("gender", query.gender);
-  if (query.passive) params.set("passive", query.passive);
+  for (const passive of query.passives) params.append("passive", passive);
   if (query.location) params.set("location", query.location);
   if (query.shared !== null) params.set("shared", String(query.shared));
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));
@@ -91,6 +114,60 @@ function resetHref(query: PalListQuery): string {
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));
   if (query.view !== "cards") params.set("view", query.view);
   return `/pals?${params.toString()}`;
+}
+
+function ViewToggle({
+  view,
+  viewHrefs,
+}: Readonly<{
+  view: PalInventoryView;
+  viewHrefs: Readonly<Record<PalInventoryView, string>>;
+}>) {
+  return (
+    <TooltipProvider>
+      <div
+        className="flex items-center overflow-hidden rounded-lg border border-input bg-background shadow-xs"
+        aria-label="库存展示形式"
+      >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href={viewHrefs.cards}
+              aria-label="卡片视图"
+              aria-current={view === "cards" ? "page" : undefined}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "rounded-none",
+                view === "cards" &&
+                  "bg-accent text-accent-foreground shadow-xs",
+              )}
+            >
+              <LayoutGrid aria-hidden="true" className="size-4" />
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="top">卡片视图</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href={viewHrefs.table}
+              aria-label="表格视图"
+              aria-current={view === "table" ? "page" : undefined}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "rounded-none",
+                view === "table" &&
+                  "bg-accent text-accent-foreground shadow-xs",
+              )}
+            >
+              <List aria-hidden="true" className="size-4" />
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="top">表格视图</TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
 }
 
 function FilterSelect({
@@ -143,23 +220,40 @@ function FilterSelect({
 
 function PassiveCombobox({
   id,
-  initialValue,
+  initialValues,
   options,
 }: Readonly<{
   id: string;
-  initialValue: string;
-  options: FilterOption[];
+  initialValues: string[];
+  options: PalInventoryPage["filter_options"]["passives"];
 }>) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(initialValue);
-  const selected = options.find((option) => option.value === value);
+  const [value, setValue] = useState(() =>
+    Array.from(new Set(initialValues)).sort().slice(0, 4),
+  );
+  const orderedOptions = orderPassiveOptions(options);
+  const selectedOptions = orderedOptions.filter((option) =>
+    value.includes(option.value),
+  );
+
+  function toggleValue(optionValue: string): void {
+    setValue((current) => {
+      if (current.includes(optionValue)) {
+        return current.filter((item) => item !== optionValue);
+      }
+      if (current.length >= 4) return current;
+      return [...current, optionValue].sort();
+    });
+  }
 
   return (
     <div className="grid min-w-0 gap-1.5">
       <Label htmlFor={id} className="text-xs text-muted-foreground">
-        被动
+        被动技能
       </Label>
-      <input type="hidden" name="passive" value={value} />
+      {value.map((passive) => (
+        <input key={passive} type="hidden" name="passive" value={passive} />
+      ))}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -170,7 +264,25 @@ function PassiveCombobox({
             aria-expanded={open}
             className="w-full justify-between bg-white/82 px-3 font-normal"
           >
-            <span className="truncate">{selected?.label ?? "全部被动"}</span>
+            {value.length === 0 ? (
+              <span className="truncate">全部被动</span>
+            ) : selectedOptions.length === 0 ? (
+              <span className="truncate">已选择 {value.length} 个被动</span>
+            ) : (
+              <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                <PassiveBadge
+                  name={selectedOptions[0]!.label}
+                  rank={selectedOptions[0]!.rank}
+                  isNegative={selectedOptions[0]!.is_negative}
+                  className="min-h-6 min-w-0 py-0.5"
+                />
+                {value.length > 1 ? (
+                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                    +{value.length - 1}
+                  </span>
+                ) : null}
+              </span>
+            )}
             <ChevronsUpDown
               aria-hidden="true"
               className="size-4 shrink-0 opacity-50"
@@ -182,50 +294,53 @@ function PassiveCombobox({
           className="w-[min(22rem,var(--radix-popover-content-available-width))] p-0"
         >
           <Command>
-            <CommandInput placeholder="搜索被动名称或 Stable ID" />
-            <CommandList>
+            <CommandInput placeholder="搜索被动名称" />
+            <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border/70 px-3 py-1.5 text-xs text-muted-foreground">
+              <span>已选择 {value.length} / 4</span>
+              {value.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="清空被动筛选"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setValue([])}
+                >
+                  清空
+                </Button>
+              ) : null}
+            </div>
+            <CommandList aria-label="被动技能选项" aria-multiselectable="true">
               <CommandEmpty>没有匹配的被动</CommandEmpty>
               <CommandGroup>
-                <CommandItem
-                  value="全部被动"
-                  onSelect={() => {
-                    setValue("");
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    aria-hidden="true"
-                    className={cn(
-                      "size-4",
-                      value === "" ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  全部被动
-                </CommandItem>
-                {options.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={`${option.label} ${option.value}`}
-                    onSelect={() => {
-                      setValue(option.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      aria-hidden="true"
-                      className={cn(
-                        "size-4",
-                        value === option.value ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate">{option.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {option.value}
-                      </span>
-                    </span>
-                  </CommandItem>
-                ))}
+                {orderedOptions.map((option) => {
+                  const selected = value.includes(option.value);
+                  const disabled = value.length >= 4 && !selected;
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      value={option.label}
+                      disabled={disabled}
+                      aria-label={`${option.label}${selected ? "，已选择" : ""}`}
+                      onSelect={() => toggleValue(option.value)}
+                      className="gap-2"
+                    >
+                      <Check
+                        aria-hidden="true"
+                        className={cn(
+                          "size-4 shrink-0",
+                          selected ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <PassiveBadge
+                        name={option.label}
+                        rank={option.rank}
+                        isNegative={option.is_negative}
+                        className="min-w-0"
+                      />
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             </CommandList>
           </Command>
@@ -236,15 +351,13 @@ function PassiveCombobox({
 }
 
 function FilterFields({
-  idPrefix,
   query,
   page,
-  mobile = false,
+  viewHrefs,
 }: Readonly<{
-  idPrefix: string;
   query: PalListQuery;
   page: PalInventoryPage;
-  mobile?: boolean;
+  viewHrefs: Readonly<Record<PalInventoryView, string>>;
 }>) {
   const genders = page.filter_options.genders.map((value) => ({
     value,
@@ -257,15 +370,7 @@ function FilterFields({
   }));
 
   return (
-    <form
-      action="/pals"
-      method="get"
-      className={cn(
-        mobile
-          ? "grid gap-4 px-4 pb-8"
-          : "grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-[minmax(16rem,1.6fr)_repeat(5,minmax(8.5rem,1fr))_auto]",
-      )}
-    >
+    <form action="/pals" method="get" className="grid gap-4">
       <input type="hidden" name="scope" value={query.scope} />
       {query.page_size !== 24 ? (
         <input type="hidden" name="page_size" value={query.page_size} />
@@ -273,106 +378,8 @@ function FilterFields({
       {query.view !== "cards" ? (
         <input type="hidden" name="view" value={query.view} />
       ) : null}
-      <div className="grid min-w-0 gap-1.5 lg:col-span-2 xl:col-span-1">
-        <Label
-          htmlFor={`${idPrefix}-query`}
-          className="text-xs text-muted-foreground"
-        >
-          名称、图鉴编号或稳定 ID
-        </Label>
-        <Input
-          id={`${idPrefix}-query`}
-          type="search"
-          name="query"
-          defaultValue={query.query}
-          placeholder="棉悠悠 / 1 / test_parent_a"
-          className="bg-white/82"
-        />
-      </div>
-      <FilterSelect
-        id={`${idPrefix}-owner`}
-        name="owner"
-        label="所有者"
-        emptyLabel="全部所有者"
-        initialValue={query.owner}
-        options={page.filter_options.owners}
-      />
-      <FilterSelect
-        id={`${idPrefix}-gender`}
-        name="gender"
-        label="性别"
-        emptyLabel="全部性别"
-        initialValue={query.gender}
-        options={genders}
-      />
-      <PassiveCombobox
-        id={`${idPrefix}-passive`}
-        initialValue={query.passive}
-        options={page.filter_options.passives}
-      />
-      <FilterSelect
-        id={`${idPrefix}-location`}
-        name="location"
-        label="位置"
-        emptyLabel="全部位置"
-        initialValue={query.location}
-        options={locations}
-      />
-      <FilterSelect
-        id={`${idPrefix}-shared`}
-        name="shared"
-        label="共享状态"
-        emptyLabel="全部状态"
-        initialValue={query.shared === null ? "" : String(query.shared)}
-        options={[
-          { value: "true", label: "公会可用" },
-          { value: "false", label: "仅自己" },
-        ]}
-      />
-      <div
-        className={cn(
-          "flex items-end gap-2",
-          mobile
-            ? "mt-2 grid grid-cols-2"
-            : "col-span-2 lg:col-span-4 xl:col-span-1",
-        )}
-      >
-        <Button
-          asChild
-          variant="outline"
-          className={mobile ? "w-full" : "px-3"}
-        >
-          <Link href={resetHref(query)}>清除</Link>
-        </Button>
-        <Button type="submit" className={mobile ? "w-full" : ""}>
-          应用筛选
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-export function PalFilters({
-  query,
-  page,
-}: Readonly<{ query: PalListQuery; page: PalInventoryPage }>) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const activeFilterCount = [
-    query.query,
-    query.owner,
-    query.gender,
-    query.passive,
-    query.location,
-    query.shared,
-  ].filter((value) => value !== "" && value !== null).length;
-
-  return (
-    <section
-      className="rounded-3xl border border-glass-border bg-white/78 p-3 shadow-soft backdrop-blur-xl sm:p-4"
-      aria-label="库存筛选"
-    >
-      <div className="flex min-w-0 items-center justify-between gap-3">
-        <Tabs value={query.scope} className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+        <Tabs value={query.scope} className="min-w-0 shrink-0">
           <TabsList
             role="navigation"
             aria-label="库存范围"
@@ -394,52 +401,141 @@ export function PalFilters({
           </TabsList>
         </Tabs>
 
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className="md:hidden"
-              aria-label="筛选"
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end xl:ml-auto xl:justify-end">
+          <div className="grid min-w-0 gap-1.5 sm:w-64 lg:w-72">
+            <Label
+              htmlFor="pal-filter-query"
+              className="text-xs text-muted-foreground"
             >
-              <SlidersHorizontal aria-hidden="true" className="size-4" />
-              筛选
-              {activeFilterCount > 0 ? (
-                <span
-                  aria-hidden="true"
-                  className="grid size-5 place-items-center rounded-full bg-primary text-[0.65rem] text-primary-foreground"
-                >
-                  {activeFilterCount}
-                </span>
-              ) : null}
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="right"
-            className="w-[min(92vw,28rem)] overflow-y-auto bg-[image:var(--page-surface-gradient)] sm:max-w-md"
-          >
-            <SheetHeader className="pr-12">
-              <SheetTitle>筛选库存</SheetTitle>
-              <SheetDescription>
-                筛选由 URL 驱动，应用后会保留当前库存范围与 page_size。
-              </SheetDescription>
-            </SheetHeader>
-            <FilterFields
-              idPrefix="mobile-pal-filter"
-              query={query}
-              page={page}
-              mobile
+              名称或图鉴编号
+            </Label>
+            <Input
+              id="pal-filter-query"
+              type="search"
+              name="query"
+              defaultValue={query.query}
+              placeholder="棉悠悠 / 1"
+              className="bg-white/82"
             />
-          </SheetContent>
-        </Sheet>
+          </div>
+          <div className="min-w-0 sm:w-52">
+            <PassiveCombobox
+              id="pal-filter-passive"
+              initialValues={query.passives}
+              options={page.filter_options.passives}
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <Button asChild variant="outline" className="px-3">
+              <Link href={resetHref(query)}>清除</Link>
+            </Button>
+            <Button type="submit">应用筛选</Button>
+            <ViewToggle view={query.view} viewHrefs={viewHrefs} />
+          </div>
+        </div>
       </div>
 
-      <div
-        className="mt-4 hidden md:block"
-        aria-hidden={mobileOpen ? "true" : undefined}
+      <CollapsibleContent
+        id="pal-advanced-filters"
+        className="grid gap-3 border-t border-border/60 pt-4 sm:grid-cols-2 xl:grid-cols-4"
       >
-        <FilterFields idPrefix="desktop-pal-filter" query={query} page={page} />
+        <FilterSelect
+          id="pal-filter-owner"
+          name="owner"
+          label="所有者"
+          emptyLabel="全部所有者"
+          initialValue={query.owner}
+          options={page.filter_options.owners}
+        />
+        <FilterSelect
+          id="pal-filter-gender"
+          name="gender"
+          label="性别"
+          emptyLabel="全部性别"
+          initialValue={query.gender}
+          options={genders}
+        />
+        <FilterSelect
+          id="pal-filter-location"
+          name="location"
+          label="位置"
+          emptyLabel="全部位置"
+          initialValue={query.location}
+          options={locations}
+        />
+        <FilterSelect
+          id="pal-filter-shared"
+          name="shared"
+          label="共享状态"
+          emptyLabel="全部状态"
+          initialValue={query.shared === null ? "" : String(query.shared)}
+          options={[
+            { value: "true", label: "公会可用" },
+            { value: "false", label: "仅自己" },
+          ]}
+        />
+      </CollapsibleContent>
+    </form>
+  );
+}
+
+export function PalFilters({
+  query,
+  page,
+  viewHrefs,
+}: Readonly<{
+  query: PalListQuery;
+  page: PalInventoryPage;
+  viewHrefs: Readonly<Record<PalInventoryView, string>>;
+}>) {
+  const activeAdvancedFilterCount = [
+    query.owner,
+    query.gender,
+    query.location,
+    query.shared,
+  ].filter((value) => value !== "" && value !== null).length;
+  const [advancedOpen, setAdvancedOpen] = useState(
+    activeAdvancedFilterCount > 0,
+  );
+
+  return (
+    <Collapsible
+      open={advancedOpen}
+      onOpenChange={setAdvancedOpen}
+      className="grid gap-1.5"
+    >
+      <section
+        className="rounded-3xl border border-glass-border bg-white/78 p-3 shadow-soft backdrop-blur-xl sm:p-4"
+        aria-label="库存筛选"
+      >
+        <FilterFields query={query} page={page} viewHrefs={viewHrefs} />
+      </section>
+
+      <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+        <span className="hidden sm:inline">还想缩小范围？</span>
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-controls="pal-advanced-filters"
+            className="gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+          >
+            <SlidersHorizontal aria-hidden="true" className="size-3.5" />
+            {advancedOpen ? "收起筛选" : "更多筛选"}
+            {activeAdvancedFilterCount > 0 ? (
+              <span className="text-xs">({activeAdvancedFilterCount})</span>
+            ) : null}
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                "size-3.5 transition-transform motion-reduce:transition-none",
+                advancedOpen && "rotate-180",
+              )}
+            />
+          </Button>
+        </CollapsibleTrigger>
       </div>
-    </section>
+    </Collapsible>
   );
 }

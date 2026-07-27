@@ -94,6 +94,11 @@ describe("data status dashboard", () => {
 
   it("uses four real status cards and no invented chart surfaces", () => {
     render(<DataStatusDashboard data={baseStatus} />);
+    expect(
+      screen.getByRole("heading", { name: "服务器数据状态" }),
+    ).toBeTruthy();
+    expect(screen.getByText("BEACON STATUS")).toBeTruthy();
+    expect(screen.getAllByText("数据同步正常").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("data-status-card")).toHaveLength(4);
     expect(screen.queryByText(/属性分布|库存趋势|计划趋势|热度图/)).toBeNull();
   });

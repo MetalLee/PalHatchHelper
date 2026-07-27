@@ -6,6 +6,8 @@ import type {
   RouteScoreComponent,
 } from "@palhatch/contracts";
 
+import { userFacingCatalogName } from "@/lib/user-facing-name";
+
 export const optimizationModeLabels: Record<BreederOptimizationMode, string> = {
   balanced: "综合推荐",
   fastest: "最快路线",
@@ -76,7 +78,7 @@ export function localizedName(
   id: string,
   entityLabel: string,
 ): string {
-  return names.get(id) ?? `未翻译${entityLabel}（${id}）`;
+  return userFacingCatalogName(names.get(id) ?? "", id, `未翻译${entityLabel}`);
 }
 
 export function localizedNames(

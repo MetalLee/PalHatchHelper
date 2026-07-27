@@ -11,14 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { userFacingCatalogName } from "@/lib/user-facing-name";
 
 type PassiveOption = BreederFormContext["passive_skills"][number];
 
 function PassiveMetadata({ skill }: Readonly<{ skill: PassiveOption }>) {
+  const displayName = userFacingCatalogName(
+    skill.display_name,
+    skill.passive_skill_id,
+    "被动名称暂不可用",
+  );
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       <PassiveBadge
-        name={skill.display_name}
+        name={displayName}
         rank={skill.rank}
         isNegative={skill.is_negative}
       />
@@ -52,10 +58,14 @@ export function PassiveSkillPicker({
   const visibleSkills = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("zh-CN");
     if (normalized.length === 0) return skills;
-    return skills.filter(
-      (skill) =>
-        skill.display_name.toLocaleLowerCase("zh-CN").includes(normalized) ||
-        skill.passive_skill_id.toLocaleLowerCase("en-US").includes(normalized),
+    return skills.filter((skill) =>
+      userFacingCatalogName(
+        skill.display_name,
+        skill.passive_skill_id,
+        "被动名称暂不可用",
+      )
+        .toLocaleLowerCase("zh-CN")
+        .includes(normalized),
     );
   }, [query, skills]);
   const selectedSkills = selectedIds.flatMap((id) => {
@@ -95,12 +105,16 @@ export function PassiveSkillPicker({
               <button
                 type="button"
                 key={skill.passive_skill_id}
-                aria-label={`移除${skill.display_name}`}
+                aria-label={`移除${userFacingCatalogName(skill.display_name, skill.passive_skill_id, "被动名称暂不可用")}`}
                 onClick={() => onToggle(skill.passive_skill_id)}
                 className="inline-flex min-h-11 max-w-full cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-white/80 px-2.5 py-1.5 text-left transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
               >
                 <PassiveBadge
-                  name={skill.display_name}
+                  name={userFacingCatalogName(
+                    skill.display_name,
+                    skill.passive_skill_id,
+                    "被动名称暂不可用",
+                  )}
                   rank={skill.rank}
                   isNegative={skill.is_negative}
                   className="max-w-[13rem] truncate"
@@ -113,7 +127,7 @@ export function PassiveSkillPicker({
       </section>
 
       <div className="grid min-w-0 gap-1.5">
-        <Label htmlFor="passive-search">搜索被动名称或 Stable ID</Label>
+        <Label htmlFor="passive-search">搜索被动名称</Label>
         <div className="relative min-w-0">
           <Search
             aria-hidden="true"
@@ -147,23 +161,17 @@ export function PassiveSkillPicker({
                 <button
                   type="button"
                   key={skill.passive_skill_id}
-                  aria-label={`${selected ? "移除" : "选择"}${skill.display_name}，${skill.is_negative ? "负面" : "正面"}`}
+                  aria-label={`${selected ? "移除" : "选择"}${userFacingCatalogName(skill.display_name, skill.passive_skill_id, "被动名称暂不可用")}，${skill.is_negative ? "负面" : "正面"}`}
                   aria-pressed={selected}
                   onClick={() => onToggle(skill.passive_skill_id)}
                   className={cn(
-                    "grid min-h-14 min-w-0 cursor-pointer gap-1 rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
+                    "grid min-h-14 min-w-0 cursor-pointer items-center rounded-xl border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
                     selected
                       ? "border-primary/40 bg-primary/8"
                       : "border-transparent hover:border-border hover:bg-accent/55",
                   )}
                 >
                   <PassiveMetadata skill={skill} />
-                  <span
-                    className="truncate font-mono text-[0.7rem] text-muted-foreground"
-                    title={skill.passive_skill_id}
-                  >
-                    {skill.passive_skill_id}
-                  </span>
                 </button>
               );
             })}

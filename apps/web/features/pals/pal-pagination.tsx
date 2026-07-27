@@ -1,4 +1,7 @@
+"use client";
+
 import type { PalInventoryPage } from "@palhatch/contracts";
+import { useEffect, useRef, useState } from "react";
 import {
   Pagination,
   PaginationContent,
@@ -31,7 +34,7 @@ function queryParams(
   if (query.query) params.set("query", query.query);
   if (query.owner) params.set("owner", query.owner);
   if (query.gender) params.set("gender", query.gender);
-  if (query.passive) params.set("passive", query.passive);
+  for (const passive of query.passives) params.append("passive", passive);
   if (query.location) params.set("location", query.location);
   if (query.shared !== null) params.set("shared", String(query.shared));
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));
@@ -72,10 +75,15 @@ function pageTokens(currentPage: number, totalPages: number): PageToken[] {
   ];
 }
 
-export function PalPagination({
+function PaginationView({
   query,
   page,
-}: Readonly<{ query: PalListQuery; page: PalInventoryPage }>) {
+  className,
+}: Readonly<{
+  query: PalListQuery;
+  page: PalInventoryPage;
+  className?: string;
+}>) {
   const context = pageContext(page);
   const previousHref =
     page.page_number > 1
@@ -88,10 +96,7 @@ export function PalPagination({
   const tokens = pageTokens(page.page_number, page.total_pages);
 
   return (
-    <Pagination
-      className="rounded-2xl border border-glass-border bg-white/78 p-3 shadow-soft"
-      aria-label="帕鲁列表分页"
-    >
+    <Pagination className={className} aria-label="帕鲁列表分页">
       <PaginationContent>
         <PaginationItem>
           {previousHref === null ? (
@@ -116,12 +121,9 @@ export function PalPagination({
           ) : (
             <PaginationItem
               key={token}
-              className={
-                (token === 1 || token === page.total_pages) &&
-                page.total_pages > 7
-                  ? "hidden sm:list-item"
-                  : undefined
-              }
+              className={cn(
+                Math.abs(token - page.page_number) > 1 && "hidden sm:list-item",
+              )}
             >
               <PaginationLink
                 href={`/pals?${queryParams(query, token, context).toString()}`}
@@ -150,5 +152,82 @@ export function PalPagination({
         </PaginationItem>
       </PaginationContent>
     </Pagination>
+  );
+}
+
+export function PalPagination({
+  query,
+  page,
+}: Readonly<{ query: PalListQuery; page: PalInventoryPage }>) {
+  const inlineRef = useRef<HTMLDivElement>(null);
+  const [inventoryVisible, setInventoryVisible] = useState(false);
+  const [inlineVisible, setInlineVisible] = useState(false);
+
+  useEffect(() => {
+    const inventory = document.getElementById("pal-inventory-results");
+    const inline = inlineRef.current;
+    if (
+      inventory === null ||
+      inline === null ||
+      typeof IntersectionObserver === "undefined"
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target === inventory) {
+            setInventoryVisible(entry.isIntersecting);
+          }
+          if (entry.target === inline) {
+            setInlineVisible(entry.isIntersecting);
+          }
+        }
+      },
+      { rootMargin: "0px 0px 72px 0px" },
+    );
+    observer.observe(inventory);
+    observer.observe(inline);
+    return () => observer.disconnect();
+  }, [page.total_pages, query.view]);
+
+  if (page.total_pages <= 1) return null;
+
+  const floatingVisible = inventoryVisible && !inlineVisible;
+
+  return (
+    <>
+      <div
+        ref={inlineRef}
+        data-testid="pal-pagination-inline"
+        aria-hidden={floatingVisible}
+        inert={floatingVisible ? true : undefined}
+      >
+        <PaginationView
+          query={query}
+          page={page}
+          className="rounded-2xl border border-border/60 bg-card/90 p-2 shadow-sm"
+        />
+      </div>
+      <div
+        data-testid="pal-pagination-floating"
+        data-visible={String(floatingVisible)}
+        aria-hidden={!floatingVisible}
+        inert={!floatingVisible ? true : undefined}
+        className={cn(
+          "pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-40 -translate-x-1/2 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none",
+          floatingVisible
+            ? "translate-y-0 opacity-100"
+            : "translate-y-3 opacity-0",
+        )}
+      >
+        <PaginationView
+          query={query}
+          page={page}
+          className="pointer-events-auto w-max max-w-[calc(100vw-1.5rem)] rounded-2xl border border-border/70 bg-background/92 p-1.5 shadow-lg backdrop-blur-xl"
+        />
+      </div>
+    </>
   );
 }

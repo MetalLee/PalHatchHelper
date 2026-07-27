@@ -1,9 +1,5 @@
-import type {
-  InventoryDataStatus,
-  OverviewSummary,
-  PlanSummary,
-} from "@palhatch/contracts";
-import { render, screen, within } from "@testing-library/react";
+import type { InventoryDataStatus, PlanSummary } from "@palhatch/contracts";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -26,12 +22,6 @@ const dataStatus: InventoryDataStatus = {
   game_build_id: "fixture-build",
   game_version: "fixture-game",
   algorithm_version: "fixture-algorithm",
-};
-const summary: OverviewSummary = {
-  all_count: 7,
-  owned_count: 3,
-  shared_count: 4,
-  data_status: dataStatus,
 };
 const savedPlan: PlanSummary = {
   route_id: "33333333-3333-4333-8333-333333333333",
@@ -68,22 +58,38 @@ function renderOverview(planFeed: OverviewPlanFeed = feed) {
       playerNickname="Fixture Player"
       worldName="Fixture World"
       guildName="Fixture Guild"
-      summary={summary}
+      dataStatus={dataStatus}
       planFeed={planFeed}
     />,
   );
 }
 
 describe("overview dashboard", () => {
-  it("renders real inventory values and saved routes", () => {
+  it("renders the focused overview and saved routes", () => {
     renderOverview();
-    const metrics = screen.getByRole("region", { name: "库存概览" });
-    expect(within(metrics).getByText("7")).toBeTruthy();
-    expect(within(metrics).getByText("3")).toBeTruthy();
-    expect(within(metrics).getByText("4")).toBeTruthy();
+    expect(screen.getByText("PALWORLD SERVER CONSOLE")).toBeTruthy();
+    expect(screen.getByText(/Fixture World · Fixture Guild/)).toBeTruthy();
+    expect(screen.queryByText(/整个帕鲁世界保持清晰可见/)).toBeNull();
+    expect(screen.getByRole("link", { name: "查看帕鲁" })).toBeTruthy();
     expect(screen.getByText("测试目标帕鲁")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "测试目标帕鲁头像" })).toBeTruthy();
     expect(screen.getByText("2 代 · 2 步", { exact: false })).toBeTruthy();
     expect(screen.queryByText(/候选子代|当前步骤/)).toBeNull();
+  });
+
+  it("keeps stale details out of the overview", () => {
+    render(
+      <OverviewDashboard
+        playerNickname="Fixture Player"
+        worldName="Fixture World"
+        guildName="Fixture Guild"
+        dataStatus={{ ...dataStatus, state: "stale" }}
+        planFeed={feed}
+      />,
+    );
+
+    expect(screen.queryByText("数据已过期")).toBeNull();
+    expect(screen.getByRole("heading", { name: "当前数据基线" })).toBeTruthy();
   });
 
   it("uses CSS-only scenery and constrains mobile width", () => {
@@ -94,7 +100,9 @@ describe("overview dashboard", () => {
     expect(
       screen.getByTestId("overview-scenery").getAttribute("data-visual-source"),
     ).toBe("css");
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(
+      screen.getByTestId("overview-scenery").querySelector("img"),
+    ).toBeNull();
   });
 
   it("shows a stable partial-data error", () => {

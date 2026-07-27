@@ -51,9 +51,6 @@ export function BreedingJobTargetSummary({
           <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
             {targetName}
           </h2>
-          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-            {targetPalId}
-          </p>
           <p className="mt-1 font-mono text-[0.68rem] text-muted-foreground">
             任务 {compactIdentifier(jobId)}
           </p>

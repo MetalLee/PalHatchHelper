@@ -115,32 +115,34 @@ select results_eq(
       item->>'is_owned_by_requester'
     from jsonb_array_elements(
       public.list_available_pals_page_v2(
-        p_scope => 'shared',
-        p_query => 'guild_owned_fixture'
+        p_scope => 'shared'
       )->'data'->'items'
     ) as item
+    where item->>'pal_id' = 'guild_owned_fixture'
   $$,
   $$ values ('Fixture Guild Alpha'::text, 'guild'::text, 'true'::text, 'false'::text) $$,
   'same-guild base inventory is listed with the guild name as owner'
 );
 
 select is(
-  jsonb_array_length(
-    public.list_available_pals_page_v2(
-      p_scope => 'mine',
-      p_query => 'guild_owned_fixture'
-    )->'data'->'items'
+  (
+    select count(*)::integer
+    from jsonb_array_elements(
+      public.list_available_pals_page_v2(p_scope => 'mine')->'data'->'items'
+    ) as item
+    where item->>'pal_id' = 'guild_owned_fixture'
   ),
   0,
   'guild-owned inventory is not presented as personal inventory'
 );
 
 select is(
-  jsonb_array_length(
-    public.list_available_pals_page_v2(
-      p_scope => 'shared',
-      p_query => 'other_guild_owned_fixture'
-    )->'data'->'items'
+  (
+    select count(*)::integer
+    from jsonb_array_elements(
+      public.list_available_pals_page_v2(p_scope => 'shared')->'data'->'items'
+    ) as item
+    where item->>'pal_id' = 'other_guild_owned_fixture'
   ),
   0,
   'other-guild base inventory remains isolated'

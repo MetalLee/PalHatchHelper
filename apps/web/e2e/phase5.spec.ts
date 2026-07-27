@@ -7,12 +7,12 @@ async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
   await page.getByLabel("邮箱").fill(email);
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();
-  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page).toHaveURL(/\/overview$/, { timeout: 15_000 });
 }
 
-async function navigateFromMobileMenu(page: Page, label: string) {
+async function navigateFromMobileMenu(page: Page, label: string | RegExp) {
   await page.getByRole("button", { name: "打开导航菜单" }).click();
-  const menu = page.getByRole("dialog", { name: "导航菜单" });
+  const menu = page.getByRole("dialog", { name: "PalBeacon" });
   await menu.getByRole("link", { name: label }).click();
 }
 
@@ -33,7 +33,7 @@ test("login reports failed credentials and then succeeds", async ({ page }) => {
 
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();
-  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page).toHaveURL(/\/overview$/, { timeout: 15_000 });
 });
 
 test("unbound test account receives the binding state", async ({ page }) => {
@@ -50,7 +50,7 @@ test("overview stays within a 390px viewport and uses CSS-only hero scenery", as
   await expect(
     page.getByRole("link", { name: "开始配种" }).first(),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "查看库存" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看帕鲁" })).toBeVisible();
   const scenery = page.getByTestId("overview-scenery");
   await expect(scenery).toHaveAttribute("data-visual-source", "css");
   await expect(scenery.locator("img")).toHaveCount(0);
@@ -71,14 +71,14 @@ test("inventory scope and pagination links refresh the visible list", async ({
 
   await page.getByRole("link", { name: "公会共享" }).click();
   await expect(page).toHaveURL(/\/pals\?scope=shared&page_size=1$/);
-  await expect(page.getByText("共 1 只可见帕鲁")).toBeVisible();
+  await expect(page.getByText("筛选结果 1 只")).toBeVisible();
   await expect(
     page.getByRole("article").getByText("Fixture Player B"),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "全部", exact: true }).click();
   await expect(page).toHaveURL(/\/pals\?scope=all&page_size=1$/);
-  await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
+  await expect(page.getByText("筛选结果 3 只")).toBeVisible();
 
   await page.goto("/pals?scope=all&page_size=1");
   await page.getByRole("link", { name: "表格视图" }).click();
@@ -135,6 +135,7 @@ test("inventory filter styles use semantic border colors", async ({ page }) => {
   expect(semanticColors.border).toBe(semanticColors.semanticInput);
   expect(semanticColors.border).not.toBe(semanticColors.foreground);
 
+  await page.getByRole("button", { name: /更多筛选/ }).click();
   await page.getByRole("combobox", { name: "所有者" }).click();
   const selectContent = page.locator('[data-slot="select-content"]');
   await expect(selectContent).toBeVisible();
@@ -151,7 +152,7 @@ test("inventory filter styles keep a single search focus indicator", async ({
   await login(page);
   await page.goto("/pals");
 
-  await page.getByRole("combobox", { name: "被动" }).click();
+  await page.getByRole("combobox", { name: "被动技能" }).click();
   const commandInput = page.locator('[data-slot="command-input"]');
   await expect(commandInput).toBeFocused();
 
@@ -167,32 +168,50 @@ test("inventory filter styles keep a single search focus indicator", async ({
   expect(wrapperShadow).not.toBe("none");
 });
 
+test("inventory passive badges support four-slot AND multi-selection", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/pals");
+
+  const passivePicker = page.getByRole("combobox", { name: "被动技能" });
+  await passivePicker.click();
+  const serious = page.getByRole("option", { name: /认真/ });
+  await expect(serious.locator("[data-rank='1']")).toBeVisible();
+  await serious.click();
+  await expect(passivePicker).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("option", { name: /工匠精神/ }).click();
+  await expect(page.getByText("已选择 2 / 4")).toBeVisible();
+
+  await page.getByRole("button", { name: "应用筛选" }).click();
+  await expect(page).toHaveURL(/passive=test_passive_a/);
+  await expect(page).toHaveURL(/passive=test_passive_b/);
+  await expect(page.getByText("筛选结果 1 只")).toBeVisible();
+});
+
 test("iPhone flow filters inventory, pages deterministically and toggles owned sharing", async ({
   page,
 }) => {
   await login(page);
-  await navigateFromMobileMenu(page, "帕鲁");
+  await navigateFromMobileMenu(page, /^帕鲁库存$/);
   await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
 
-  await page.getByRole("button", { name: "筛选" }).click();
-  let filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉");
-  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByLabel("名称或图鉴编号").fill("棉");
+  await page.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
+  await expect(
+    page.getByText("帕鲁总数").locator("..").getByText("3", { exact: true }),
+  ).toBeVisible();
   await page.waitForLoadState("networkidle");
 
-  await page.getByRole("button", { name: "筛选" }).click();
-  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("2");
-  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByLabel("名称或图鉴编号").fill("2");
+  await page.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "筛选" }).click();
-  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称、图鉴编号或稳定 ID").fill("棉悠悠");
-  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByLabel("名称或图鉴编号").fill("棉悠悠");
+  await page.getByRole("button", { name: "应用筛选" }).click();
   await page.waitForLoadState("networkidle");
 
   const sharing = page.getByRole("switch", { name: "棉悠悠 公会共享" });
@@ -223,7 +242,7 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   await expect(sharing).toHaveAttribute("aria-checked", "true");
 
   await page.goto("/pals?scope=all&page_size=1");
-  await expect(page.getByText("共 3 只可见帕鲁")).toBeVisible();
+  await expect(page.getByText("筛选结果 3 只")).toBeVisible();
   const nextHref = await page
     .getByRole("link", { name: "下一页" })
     .getAttribute("href");
@@ -285,10 +304,14 @@ test("player responses never contain private, cross-guild, raw-save or path data
 
 test("stale data status stays explicit on iPhone width", async ({ page }) => {
   await login(page);
-  await navigateFromMobileMenu(page, "数据状态");
-  await expect(page.getByRole("heading", { name: "数据状态" })).toBeVisible();
+  await navigateFromMobileMenu(page, /^数据状态/);
   await expect(
-    page.getByRole("status").filter({ hasText: "数据已过期" }),
+    page.getByRole("heading", { name: "服务器数据状态" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "数据状态摘要" })
+      .getByText("数据已过期", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("确定性算法版本")).toBeVisible();
   await expect(
