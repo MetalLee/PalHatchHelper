@@ -103,7 +103,9 @@ export function AppNavigation({
     const target =
       activeHref === null ? null : linkRefs.current.get(activeHref);
     if (nav === null || target === null || target === undefined) {
-      const frame = requestAnimationFrame(() => hideHighlight(setActiveHighlight));
+      const frame = requestAnimationFrame(() =>
+        hideHighlight(setActiveHighlight),
+      );
       return () => cancelAnimationFrame(frame);
     }
 
@@ -127,7 +129,9 @@ export function AppNavigation({
     const nav = navRef.current;
     const target = hoverHref === null ? null : linkRefs.current.get(hoverHref);
     if (nav === null || target === null || target === undefined) {
-      const frame = requestAnimationFrame(() => hideHighlight(setHoverHighlight));
+      const frame = requestAnimationFrame(() =>
+        hideHighlight(setHoverHighlight),
+      );
       return () => cancelAnimationFrame(frame);
     }
 
