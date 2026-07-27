@@ -584,7 +584,7 @@ describe("Phase 6 job comparison", () => {
     expect(screen.getAllByText("捣蛋猫").length).toBeGreaterThan(0);
     expect(screen.getAllByText("认真").length).toBeGreaterThan(0);
     expect(screen.queryByText(/Rank/)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
+    fireEvent.click(screen.getByRole("button", { name: "展开推荐依据" }));
     expect(screen.getByText("路线长度")).toBeTruthy();
     expect(screen.getByText(/综合推荐：80\.00/)).toBeTruthy();
     expect(screen.queryByText("test_parent_a")).toBeNull();
@@ -621,9 +621,9 @@ describe("Phase 6 job comparison", () => {
     expect(screen.queryByText("路线 2 模板解释")).toBeNull();
     expect(screen.queryByText("词条来源")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "展开评分明细" }));
-    expect(screen.getByText("完整评分明细")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "展开固定版本" }));
+    fireEvent.click(screen.getByRole("button", { name: "展开推荐依据" }));
+    expect(screen.getByText("各项得分")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "展开本次计算依据" }));
     expect(screen.getByText(context.game_data_version_id)).toBeTruthy();
   });
 
@@ -662,7 +662,19 @@ describe("Phase 6 job comparison", () => {
     );
     expect(mobileText).toContain("Fixture Base · 工作位 8");
     expect(mobileText).toContain("终端 · 第 3 页 · 第 5 格");
-    expect(tree.querySelectorAll("path[marker-end]").length).toBe(2);
+    const branches = tree.querySelectorAll<SVGPathElement>(
+      '[data-connector-role="branch"]',
+    );
+    const trunks = tree.querySelectorAll<SVGPathElement>(
+      '[data-connector-role="trunk"]',
+    );
+    expect(branches).toHaveLength(2);
+    expect(trunks).toHaveLength(1);
+    expect(tree.querySelectorAll("path[marker-end]")).toHaveLength(1);
+    for (const branch of branches) {
+      expect(branch.dataset.endX).toBe(trunks[0]?.dataset.startX);
+      expect(branch.dataset.endY).toBe(trunks[0]?.dataset.startY);
+    }
     expect(
       tree.querySelectorAll('[data-passive-layout="2x2"]').length,
     ).toBeGreaterThan(0);

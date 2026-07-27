@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -680,6 +680,48 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-28 跨阶段修订：我的计划与配种路线视觉收口
+
+### 交付顺序
+
+1. 先更新正式规格和本计划，固定玩家语言、计划卡片密度、Hero/登录背景精简、计划详情层级和
+   路线树连接几何；数据库、共享契约、配方、算法和评分事实保持不变。
+2. 增加一次失败测试，覆盖收藏数量摘要卡消失、计划详情无 Hero、登录与 Hero 背景无白云、
+   “我的计划”与配种工作台 Hero 无右侧装饰图标、计划卡片 32rem 上限、被动两列且不拉伸、
+   亲本无“本步骤需保留”，以及每个子代只有一个箭头且分支终点与箭头左侧锚点重合。
+3. 精简 `/plans`：使用玩家语言重写 Hero、卡片和空状态，删除整张收藏数量摘要卡；计划卡片在
+   移动端全宽、桌面端最大 32rem 并居中，想要的被动使用两列最小内容行高。
+4. 删除 `/plans/[routeId]` 的整个 Hero，把紧凑目标摘要提升为页面开头和唯一一级标题；保存时间、
+   收藏/库存状态并入摘要。计划详情使用“配种路线”“想要的被动”“推荐依据”“查看原配种结果”
+   等玩家语言，技术事实保留在“本次计算依据”折叠区并改用玩家可理解标签。
+5. 移除 `/plans` 与 `/breeder` Hero 右侧纯装饰图标及预留空间；从共享 CSS 风景中删除登录页和
+   所有业务 Hero 上方白云，不改变其他山丘、树叶和焦点/交互状态。
+6. 计划详情与配种工作台复用相同的紧凑 `BreedingRouteTree` 配置；亲本节点只展示库存被动，
+   被动网格不使用固定最小高度。桌面连接按子代分组，两条亲本分支汇合到共享锚点，再由唯一
+   水平末段和 marker 指向子代，普通/特殊配方共用几何。
+7. 开发中只运行一次最小失败测试和一次受影响局部验证；最终状态运行一次 Web 格式、lint、
+   typecheck、完整 test、build、受影响 Phase 6/7 浏览器验证和 `git diff --check`。聚合命令已经
+   覆盖的检查不再单独重复执行。
+
+### 回滚与生产约束
+
+- 本修订只修改规格、计划和 Web 展示；不修改数据库迁移、共享 Schema、算法、评分、库存快照、
+  真实存档或 `/opt/palworld`，不新增依赖或公网端口。
+- 应用回滚恢复上一 Web 构建即可，收藏关系、物化路线和版本审计事实不受影响。
+- 代码提交、PR 与合并按用户明确授权执行；不执行 Vercel、Supabase 或 Agent 生产部署。
+
+### 完成验证
+
+- 失败基线：3 个相关测试文件共 51 个用例中 5 个按预期失败，分别锁定摘要卡、详情 Hero、白云、
+  计算依据文案和路线连接几何。
+- 局部验证：同一组 51 个用例全部通过。
+- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 110 个用例和 Next.js 生产构建
+  全部通过。
+- 浏览器验证：Phase 7 通过；Phase 6 首次在隔离服务冷启动登录阶段超时，服务预热后仅重跑该
+  失败用例并通过。未重跑已通过的 Phase 7。
+- 运行环境使用 Node.js 26.3.0，仓库声明为 Node.js 22.x；所有命令均仅产生 engine warning，
+  未影响验证结果。
 
 ## 2026-07-27 跨阶段修订：配种工作台创建页聚焦与被动效果说明
 

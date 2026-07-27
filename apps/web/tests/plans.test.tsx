@@ -240,12 +240,24 @@ beforeEach(() => {
 
 describe("My Plans route saves", () => {
   it("renders saved route facts without execution progress", () => {
-    render(<PlanList page={listPage()} />);
+    const { container } = render(<PlanList page={listPage()} />);
     expect(screen.getByText("幻色幼崽")).toBeTruthy();
     expect(screen.getByText("库存可执行")).toBeTruthy();
     expect(screen.getByText("神速")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "收藏计划摘要" })).toBeNull();
+    expect(screen.getByText("想要的被动")).toBeTruthy();
+    expect(screen.queryByText("目标被动")).toBeNull();
+    const card = container.querySelector<HTMLElement>("[data-plan-card]");
+    expect(card).not.toBeNull();
+    expect(card?.className).toContain("max-w-[32rem]");
+    const passiveGrid = container.querySelector<HTMLElement>(
+      '[data-passive-layout="2x2"]',
+    );
+    expect(passiveGrid?.className).toContain("auto-rows-min");
+    expect(passiveGrid?.className).toContain("items-start");
+    expect(passiveGrid?.className).not.toContain("min-h-");
     expect(
-      screen.getByRole("link", { name: /查看收藏路线/ }).getAttribute("href"),
+      screen.getByRole("link", { name: /查看计划/ }).getAttribute("href"),
     ).toBe(`/plans/${routeId}`);
     expect(screen.queryByText(/当前步骤|候选子代|计划进度/)).toBeNull();
   });
@@ -254,7 +266,7 @@ describe("My Plans route saves", () => {
     render(<PlanList page={listPage([])} />);
     expect(screen.getByRole("heading", { name: "暂无收藏计划" })).toBeTruthy();
     expect(
-      screen.getAllByRole("link", { name: "打开配种器" }).length,
+      screen.getAllByRole("link", { name: "开始规划" }).length,
     ).toBeGreaterThan(0);
   });
 
@@ -279,12 +291,22 @@ describe("My Plans route saves", () => {
     expect(
       screen.getByRole("heading", { name: "幻色幼崽", level: 1 }),
     ).toBeTruthy();
+    expect(screen.queryByTestId("overview-scenery")).toBeNull();
     expect(
       screen.getByRole("region", { name: "收藏路线的完整配种路径树" }),
     ).toBeTruthy();
+    expect(screen.getByText("配种路径")).toBeTruthy();
+    expect(screen.queryByText("本步骤需保留")).toBeNull();
+    expect(screen.getByText("本次计算依据")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "查看原配种结果" })).toBeTruthy();
     expect(
-      screen.getByText("移除只会删除“我的计划”收藏，不会删除原配种任务。"),
+      screen.getByText(
+        "移除后，这条路线将不再出现在“我的计划”中，原配种结果仍会保留。",
+      ),
     ).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(
+      /需求|固定版本|目录版本|算法版本|评分版本|原任务/,
+    );
     expect(screen.queryByText(/当前步骤|候选子代|计划进度/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "移除收藏" }));

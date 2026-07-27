@@ -247,13 +247,6 @@ export function BreedingTreeNode({
           passiveNames={passiveNames}
         />
       ) : null}
-      {!compactPreview && showActualPassives && requiredPassives.length > 0 ? (
-        <PassiveList
-          label="本步骤需保留"
-          passives={requiredPassives}
-          passiveNames={passiveNames}
-        />
-      ) : null}
     </article>
   );
 }
@@ -350,8 +343,7 @@ function PassiveList({
       ) : (
         <div
           className={cn(
-            "mt-2 grid grid-cols-2 items-start gap-1.5",
-            fixedGrid && "min-h-[3.875rem]",
+            "mt-2 grid auto-rows-min grid-cols-2 content-start items-start gap-1.5 self-start",
           )}
           data-passive-layout={fixedGrid ? "2x2" : undefined}
         >

@@ -21,23 +21,6 @@ export function ForestScenery({
 
       <div
         className={cn(
-          "absolute rounded-full bg-white/75 blur-[1px] shadow-soft",
-          variant === "page"
-            ? "right-[8%] top-[12%] h-14 w-40 sm:h-20 sm:w-60"
-            : "right-[9%] top-[12%] h-12 w-36 sm:h-16 sm:w-52",
-        )}
-      />
-      <div
-        className={cn(
-          "absolute rounded-full bg-white/55 blur-[1px]",
-          variant === "page"
-            ? "left-[7%] top-[24%] h-10 w-28 sm:w-44"
-            : "left-[42%] top-[20%] h-9 w-28",
-        )}
-      />
-
-      <div
-        className={cn(
           "absolute bottom-[20%] bg-sky/18 [clip-path:polygon(50%_0,100%_100%,0_100%)]",
           variant === "page"
             ? "left-[4%] h-[34%] w-[48%]"
