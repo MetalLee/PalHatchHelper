@@ -36,9 +36,16 @@ test("PalBeacon login and workspace branding stay responsive", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/login");
   await expect(page).toHaveTitle("PalBeacon｜帕鲁服务器控制台");
-  await expect(
-    page.getByRole("heading", { name: "欢迎回到服务器控制台" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
+  await expect(page.getByText("登录你的 PalBeacon 账号")).toBeVisible();
+  await expect(page.getByText("忘记密码？")).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await expect(page.getByText("注册账号")).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
   await expect(
     page.getByRole("img", { name: "PalBeacon 帕鲁服务器控制台" }),
   ).toBeVisible();

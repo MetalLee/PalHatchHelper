@@ -14,7 +14,7 @@ export default function LoginPage() {
     <main className="relative min-h-dvh overflow-x-hidden">
       <ForestScenery variant="page" />
       <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-[90rem] items-center gap-8 px-4 py-6 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(26rem,31rem)] lg:gap-14 lg:px-10">
-        <section className="hidden max-w-2xl rounded-[2rem] bg-white/28 p-8 text-foreground backdrop-blur-[2px] lg:block">
+        <section className="hidden max-w-2xl p-8 text-foreground lg:block">
           <div className="flex items-center gap-3">
             <BrandLogo size={56} priority />
             <div>
@@ -59,8 +59,11 @@ export default function LoginPage() {
             {brand.englishProductName.toUpperCase()}
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-[-0.035em] text-foreground sm:text-4xl">
-            欢迎回到服务器控制台
+            欢迎回来
           </h1>
+          <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+            登录你的 PalBeacon 账号
+          </p>
           <LoginForm />
         </section>
       </div>

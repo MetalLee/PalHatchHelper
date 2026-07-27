@@ -76,7 +76,16 @@ export function LoginForm({
         </div>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="login-password">密码</Label>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="login-password">密码</Label>
+          <span
+            aria-disabled="true"
+            className="cursor-not-allowed text-xs font-semibold text-primary/65"
+            title="忘记密码功能暂未开放"
+          >
+            忘记密码？
+          </span>
+        </div>
         <div className="relative">
           <LockKeyhole
             aria-hidden="true"
@@ -116,6 +125,16 @@ export function LoginForm({
         ) : null}
         {pending ? "正在登录…" : "登录工作台"}
       </Button>
+      <p className="text-center text-xs leading-5 text-muted-foreground">
+        还没有账号？{" "}
+        <span
+          aria-disabled="true"
+          className="cursor-not-allowed font-semibold text-primary/65"
+          title="注册功能暂未开放"
+        >
+          注册账号
+        </span>
+      </p>
     </form>
   );
 }
