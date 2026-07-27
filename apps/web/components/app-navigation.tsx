@@ -197,7 +197,11 @@ export function AppNavigation({
                 "bg-accent text-accent-foreground",
             )}
             onPointerEnter={() => setHoveredHref(item.href)}
-            onFocus={() => setFocusedHref(item.href)}
+            onFocus={(event) => {
+              if (event.currentTarget.matches(":focus-visible")) {
+                setFocusedHref(item.href);
+              }
+            }}
             onBlur={() => setFocusedHref(null)}
           >
             <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />
