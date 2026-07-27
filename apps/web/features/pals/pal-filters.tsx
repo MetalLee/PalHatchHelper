@@ -84,6 +84,18 @@ type FilterOption = {
   gender?: DisplayGender;
 };
 
+type PassiveFilterOption =
+  PalInventoryPage["filter_options"]["passives"][number];
+
+function orderPassiveOptions(
+  options: readonly PassiveFilterOption[],
+): PassiveFilterOption[] {
+  return [...options].sort(
+    (left, right) =>
+      right.rank - left.rank || left.value.localeCompare(right.value),
+  );
+}
+
 function scopeHref(scope: string, query: PalListQuery): string {
   const params = new URLSearchParams({ scope });
   if (query.query) params.set("query", query.query);
@@ -219,7 +231,8 @@ function PassiveCombobox({
   const [value, setValue] = useState(() =>
     Array.from(new Set(initialValues)).sort().slice(0, 4),
   );
-  const selectedOptions = options.filter((option) =>
+  const orderedOptions = orderPassiveOptions(options);
+  const selectedOptions = orderedOptions.filter((option) =>
     value.includes(option.value),
   );
 
@@ -236,7 +249,7 @@ function PassiveCombobox({
   return (
     <div className="grid min-w-0 gap-1.5">
       <Label htmlFor={id} className="text-xs text-muted-foreground">
-        被动
+        被动技能
       </Label>
       {value.map((passive) => (
         <input key={passive} type="hidden" name="passive" value={passive} />
@@ -300,7 +313,7 @@ function PassiveCombobox({
             <CommandList aria-label="被动技能选项" aria-multiselectable="true">
               <CommandEmpty>没有匹配的被动</CommandEmpty>
               <CommandGroup>
-                {options.map((option) => {
+                {orderedOptions.map((option) => {
                   const selected = value.includes(option.value);
                   const disabled = value.length >= 4 && !selected;
                   return (

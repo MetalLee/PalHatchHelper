@@ -152,7 +152,7 @@ test("inventory filter styles keep a single search focus indicator", async ({
   await login(page);
   await page.goto("/pals");
 
-  await page.getByRole("combobox", { name: "被动" }).click();
+  await page.getByRole("combobox", { name: "被动技能" }).click();
   const commandInput = page.locator('[data-slot="command-input"]');
   await expect(commandInput).toBeFocused();
 
@@ -174,7 +174,7 @@ test("inventory passive badges support four-slot AND multi-selection", async ({
   await login(page);
   await page.goto("/pals");
 
-  const passivePicker = page.getByRole("combobox", { name: "被动" });
+  const passivePicker = page.getByRole("combobox", { name: "被动技能" });
   await passivePicker.click();
   const serious = page.getByRole("option", { name: /认真/ });
   await expect(serious.locator("[data-rank='1']")).toBeVisible();

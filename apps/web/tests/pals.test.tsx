@@ -192,13 +192,13 @@ describe("pal inventory", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("option", { name: "Fixture Player C" }));
 
-    fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "被动技能" }));
     const rarePassive = screen.getByRole("option", { name: /稀有被动/ });
     expect(rarePassive.querySelector("[data-rank='4']")).toBeTruthy();
     fireEvent.click(rarePassive);
     expect(
       screen
-        .getByRole("combobox", { name: "被动" })
+        .getByRole("combobox", { name: "被动技能" })
         .getAttribute("aria-expanded"),
     ).toBe("true");
     fireEvent.click(screen.getByRole("option", { name: /工匠精神/ }));
@@ -226,7 +226,7 @@ describe("pal inventory", () => {
     const query = parsePalListQuery(new URLSearchParams());
     render(<PalFilters query={query} page={page} viewHrefs={viewHrefs} />);
 
-    fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "被动技能" }));
     fireEvent.change(screen.getByPlaceholderText(/搜索被动/), {
       target: { value: "test_passive_c" },
     });
@@ -239,7 +239,7 @@ describe("pal inventory", () => {
     const query = parsePalListQuery(new URLSearchParams());
     render(<PalFilters query={query} page={page} viewHrefs={viewHrefs} />);
 
-    fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "被动技能" }));
     for (const name of ["认真", "工匠精神", "稀有被动", "传说被动"]) {
       fireEvent.click(screen.getByRole("option", { name: new RegExp(name) }));
     }
@@ -257,7 +257,7 @@ describe("pal inventory", () => {
     fireEvent.click(screen.getByRole("button", { name: "清空被动筛选" }));
     expect(document.querySelectorAll('input[name="passive"]')).toHaveLength(0);
     expect(
-      screen.getByRole("combobox", { name: "被动" }).textContent,
+      screen.getByRole("combobox", { name: "被动技能" }).textContent,
     ).toContain("全部被动");
   });
 
@@ -551,7 +551,7 @@ describe("pal inventory", () => {
     expect(screen.getByRole("link", { name: "我的帕鲁" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "公会共享" })).toBeTruthy();
     expect(screen.getByLabelText("名称或图鉴编号")).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "被动" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "被动技能" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "应用筛选" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "清除" })).toBeTruthy();
     expect(

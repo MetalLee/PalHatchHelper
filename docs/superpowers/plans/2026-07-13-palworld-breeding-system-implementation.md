@@ -693,7 +693,8 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 4. 更新共享 Phase 5 Schema 与生成类型；库存页从同一固定版本 facet 构造全页被动事实，避免
    额外 rank 查询。
 5. 全局 `PassiveBadge` 使用本地 CSS 三角拼接纹理和 rank 颜色；库存筛选 Popover 使用同一
-   badge，保留 Radix Command 键盘导航、清晰焦点、可访问选择状态和移动端可用尺寸。
+   badge，标题使用“被动技能”，选项按配种工作台的 rank 降序和稳定 ID 顺序排列；保留 Radix
+   Command 键盘导航、清晰焦点、可访问选择状态和移动端可用尺寸。
 6. 开发中只运行一次最小失败验证和一次受影响局部验证；最终状态运行一次根 `pnpm check`、
    完整 Supabase 测试、Phase 5 Web E2E 与 `git diff --check`，不重复聚合命令已覆盖的检查。
 
