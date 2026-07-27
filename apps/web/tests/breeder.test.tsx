@@ -65,6 +65,8 @@ const context: BreederFormContext = {
   passive_skills: ["a", "b", "c", "d", "e"].map((id, index) => ({
     passive_skill_id: `test_passive_${id}`,
     display_name: `被动 ${id.toUpperCase()}`,
+    effect_text:
+      index === 4 ? "工作速度降低 10%" : `工作速度提升 ${20 - index * 2}%`,
     rank: 5 - index,
     is_negative: index === 4,
   })),
@@ -73,10 +75,10 @@ const context: BreederFormContext = {
 function selectTarget(query: string): void {
   fireEvent.click(
     screen.getByRole("combobox", {
-      name: "目标帕鲁（名称或图鉴编号）",
+      name: "目标帕鲁",
     }),
   );
-  const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
+  const search = screen.getByRole("combobox", { name: "搜索目标帕鲁" });
   fireEvent.change(search, { target: { value: query } });
   fireEvent.click(screen.getByRole("option", { name: /幻色幼崽/ }));
 }
@@ -280,18 +282,22 @@ describe("Phase 6 breeder form", () => {
 
     fireEvent.click(
       screen.getByRole("combobox", {
-        name: "目标帕鲁（名称或图鉴编号）",
+        name: "目标帕鲁",
       }),
     );
-    const search = screen.getByRole("combobox", { name: "搜索目标 Pal" });
+    const search = screen.getByRole("combobox", { name: "搜索目标帕鲁" });
     fireEvent.change(search, { target: { value: "幻色幼崽" } });
     fireEvent.keyDown(search, { key: "ArrowDown" });
     fireEvent.keyDown(search, { key: "Enter" });
 
-    const summary = screen.getByRole("region", { name: "目标 Pal 摘要" });
-    expect(summary.textContent).toContain("幻色幼崽");
-    expect(summary.textContent).toContain("#003");
-    expect(summary.textContent).not.toContain("test_child_pal");
+    const trigger = screen.getByRole("combobox", { name: "目标帕鲁" });
+    expect(
+      within(trigger).getByRole("img", { name: "幻色幼崽头像" }),
+    ).toBeTruthy();
+    expect(trigger.textContent).toContain("幻色幼崽");
+    expect(trigger.textContent).toContain("#003");
+    expect(trigger.textContent).not.toContain("test_child_pal");
+    expect(screen.queryByRole("region", { name: "目标帕鲁摘要" })).toBeNull();
   });
 
   it("does not match target Pals by internal IDs", () => {
@@ -306,15 +312,15 @@ describe("Phase 6 breeder form", () => {
 
     fireEvent.click(
       screen.getByRole("combobox", {
-        name: "目标帕鲁（名称或图鉴编号）",
+        name: "目标帕鲁",
       }),
     );
-    fireEvent.change(screen.getByRole("combobox", { name: "搜索目标 Pal" }), {
+    fireEvent.change(screen.getByRole("combobox", { name: "搜索目标帕鲁" }), {
       target: { value: "test_child_pal" },
     });
 
     expect(screen.queryByText("test_child_pal", { exact: true })).toBeNull();
-    expect(screen.getByText("没有匹配的目标 Pal")).toBeTruthy();
+    expect(screen.getByText("没有匹配的目标帕鲁")).toBeTruthy();
   });
 
   it("does not match passive skills by internal IDs", () => {
@@ -355,7 +361,10 @@ describe("Phase 6 breeder form", () => {
     }
     expect(screen.getByRole("alert").textContent).toContain("最多选择四个被动");
     expect(screen.queryByText(/Rank|R5/)).toBeNull();
-    expect(screen.getByText("负面")).toBeTruthy();
+    expect(screen.getByText("工作速度提升 20%")).toBeTruthy();
+    expect(screen.getByText("工作速度降低 10%")).toBeTruthy();
+    expect(screen.queryByText("正面", { exact: true })).toBeNull();
+    expect(screen.queryByText("负面", { exact: true })).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "最少借用" }));
     fireEvent.change(screen.getByLabelText("最大代数"), {
       target: { value: "6" },
@@ -456,7 +465,7 @@ describe("Phase 6 breeder form", () => {
 
     fireEvent.click(
       screen.getByRole("combobox", {
-        name: "目标帕鲁（名称或图鉴编号）",
+        name: "目标帕鲁",
       }),
     );
     fireEvent.click(screen.getByRole("option", { name: /幻色幼崽/ }));
@@ -534,13 +543,16 @@ describe("Phase 6 breeder form", () => {
     expect(screen.queryByText(/published 快照/)).toBeNull();
   });
 
-  it("keeps full pinned versions collapsed behind a readable summary", () => {
+  it("keeps the calculation details collapsed behind a readable summary", () => {
     render(<BreederForm context={context} />);
 
-    expect(screen.getByText("Build 24181105")).toBeTruthy();
+    const summary = screen.getByRole("complementary", {
+      name: "本次计算依据",
+    });
+    expect(summary.textContent).not.toMatch(/目录|版本|边界/);
     expect(screen.queryByText(context.inventory_snapshot_id)).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "查看固定版本" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看详细信息" }));
     expect(screen.getByText(context.inventory_snapshot_id)).toBeTruthy();
     expect(screen.getByText(context.game_data_content_hash)).toBeTruthy();
     expect(screen.getByText("phase4b-deterministic-v1")).toBeTruthy();

@@ -44,6 +44,8 @@ const jobStatuses = new Set<CreateBreedingJobResponse["status"]>([
   "failed",
   "cancelled",
 ]);
+const formSectionClassName =
+  "grid min-w-0 gap-5 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-6";
 
 function buildCreateRequest(value: CreateJobInput): CreateBreedingJobRequest {
   const passives = value.desired_passive_ids;
@@ -219,14 +221,11 @@ export function BreederForm({
       onSubmit={submit}
     >
       <div className="grid min-w-0 gap-6">
-        <section
-          className="grid min-w-0 gap-5 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-6"
-          aria-label="配种目标"
-        >
+        <section className={formSectionClassName} aria-label="配种目标">
           <SectionHeading
             icon={Target}
             title="目标设置"
-            description="从当前固定目录中选择目标 Pal，并确认任务真正要搜索的物种。"
+            description="选择你想培育的帕鲁。"
           />
           <TargetPalCombobox
             pals={context.pals}
@@ -238,11 +237,11 @@ export function BreederForm({
           />
         </section>
 
-        <section className="grid min-w-0 gap-5 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-6">
+        <section className={formSectionClassName}>
           <SectionHeading
             icon={Sparkles}
             title="期望被动"
-            description="搜索并选择最多四个词条；点击已选词条即可移除。"
+            description="最多选择 4 个想要继承的被动技能，点击已选技能即可移除。"
           />
           <PassiveSkillPicker
             skills={context.passive_skills}
@@ -255,11 +254,11 @@ export function BreederForm({
           />
         </section>
 
-        <section className="grid min-w-0 gap-6 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-6">
+        <section className={formSectionClassName}>
           <SectionHeading
             icon={SlidersHorizontal}
             title="路线偏好"
-            description="选择评分倾向，并设置公会共享与确定性搜索边界。"
+            description="告诉我们你更看重速度、成功率，还是少借用公会帕鲁。"
           />
           <OptimizationModePicker value={mode} onValueChange={setMode} />
           <BreederSettings

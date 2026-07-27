@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(39);
+select plan(40);
 
 -- The acceptance database may keep the real local-test binding active. This
 -- transaction-local fixture binding makes pgTAP deterministic and rolls back.
@@ -82,6 +82,12 @@ select ok(
   and public.get_breeder_form_context()::text !~
     '(owner_player_id|guild_id|source_save_hash|raw_metadata|/opt/palworld)',
   'the form context is complete and excludes inventory identities and raw-save fields'
+);
+
+select is(
+  public.get_breeder_form_context() #>> '{data,passive_skills,0,effect_text}',
+  '工作速度提升 20%',
+  'the form context exposes the localized passive effect text'
 );
 
 select lives_ok(

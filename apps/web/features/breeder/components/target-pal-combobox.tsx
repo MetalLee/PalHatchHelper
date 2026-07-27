@@ -48,9 +48,12 @@ export function TargetPalCombobox({
         );
 
   return (
-    <div className="grid min-w-0 gap-3">
-      <Label htmlFor="target-pal-combobox" className="font-semibold">
-        目标帕鲁（名称或图鉴编号）
+    <div className="grid min-w-0 gap-2">
+      <Label
+        htmlFor="target-pal-combobox"
+        className="text-sm font-semibold text-foreground"
+      >
+        目标帕鲁
       </Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -59,21 +62,30 @@ export function TargetPalCombobox({
             type="button"
             variant="outline"
             role="combobox"
-            aria-label="目标帕鲁（名称或图鉴编号）"
+            aria-label="目标帕鲁"
             aria-expanded={open}
-            className="h-auto min-h-12 w-full min-w-0 justify-between bg-white/82 px-3 py-2.5 text-left font-normal"
+            className="h-auto min-h-14 w-full min-w-0 justify-between rounded-xl border-border bg-white/72 px-3 py-2 text-left font-normal hover:border-primary/25 hover:bg-accent/45"
           >
             {selected === undefined ? (
               <span className="truncate text-muted-foreground">
                 搜索名称或图鉴编号
               </span>
             ) : (
-              <span className="min-w-0">
-                <span className="block truncate font-semibold text-foreground">
-                  {selectedName}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {catalogNumber(selected.encyclopedia_no)}
+              <span className="flex min-w-0 flex-1 items-center gap-3">
+                <PalPortrait
+                  palId={selected.pal_id}
+                  name={selectedName ?? "名称暂不可用"}
+                  catalogNumber={selected.encyclopedia_no}
+                  size={44}
+                  className="size-11 rounded-xl"
+                />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-foreground">
+                    {selectedName}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs font-semibold text-primary">
+                    {catalogNumber(selected.encyclopedia_no)}
+                  </span>
                 </span>
               </span>
             )}
@@ -85,16 +97,16 @@ export function TargetPalCombobox({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0"
+          className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] rounded-xl p-0"
         >
-          <Command label="搜索目标 Pal">
+          <Command label="搜索目标帕鲁" className="rounded-xl">
             <CommandInput
-              aria-label="搜索目标 Pal"
+              aria-label="搜索目标帕鲁"
               placeholder="输入名称或图鉴编号"
             />
             <CommandList className="max-h-80">
-              <CommandEmpty>没有匹配的目标 Pal</CommandEmpty>
-              <CommandGroup aria-label="目标 Pal 候选">
+              <CommandEmpty>没有匹配的目标帕鲁</CommandEmpty>
+              <CommandGroup aria-label="目标帕鲁候选">
                 {pals.map((pal) => {
                   const displayName = userFacingCatalogName(
                     pal.display_name,
@@ -109,7 +121,7 @@ export function TargetPalCombobox({
                         onValueChange(pal.pal_id);
                         setOpen(false);
                       }}
-                      className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-3 py-2.5"
+                      className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] gap-3 rounded-xl py-2.5"
                     >
                       <PalPortrait
                         palId={pal.pal_id}
@@ -141,27 +153,6 @@ export function TargetPalCombobox({
           </Command>
         </PopoverContent>
       </Popover>
-
-      {selected === undefined ? null : (
-        <section
-          className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3 sm:p-4"
-          aria-label="目标 Pal 摘要"
-        >
-          <PalPortrait
-            palId={selected.pal_id}
-            name={selectedName ?? "名称暂不可用"}
-            catalogNumber={selected.encyclopedia_no}
-            size={64}
-            className="size-16 rounded-2xl"
-          />
-          <div className="min-w-0 self-center">
-            <p className="font-bold text-foreground">{selectedName}</p>
-            <p className="mt-1 text-sm font-semibold text-primary">
-              {catalogNumber(selected.encyclopedia_no)}
-            </p>
-          </div>
-        </section>
-      )}
     </div>
   );
 }

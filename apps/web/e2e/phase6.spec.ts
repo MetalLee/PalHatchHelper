@@ -50,7 +50,11 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   test.setTimeout(120_000);
   await login(page);
   await page.getByRole("link", { name: "开始配种" }).first().click();
-  await expect(page.getByRole("heading", { name: "配种器" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "配种工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "创建配种任务" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByText(/Step 1|当前页只收集/)).toHaveCount(0);
   await page.waitForFunction(
     () => {
       const button = [...document.querySelectorAll("button")].find(
@@ -67,15 +71,24 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
 
   await page
     .getByRole("combobox", {
-      name: "目标帕鲁（名称或图鉴编号）",
+      name: "目标帕鲁",
     })
     .click();
   const targetSearch = page.getByRole("combobox", {
-    name: "搜索目标 Pal",
+    name: "搜索目标帕鲁",
   });
   await targetSearch.fill("幻色幼崽");
   await targetSearch.press("ArrowDown");
   await targetSearch.press("Enter");
+  const selectedTarget = page.getByRole("combobox", {
+    name: "目标帕鲁",
+    exact: true,
+  });
+  await expect(
+    selectedTarget.getByRole("img", { name: "幻色幼崽头像" }),
+  ).toBeVisible();
+  await expect(selectedTarget).toContainText("#003");
+  await expect(page.getByText("工作速度提升 20%")).toBeVisible();
   await page.getByRole("button", { name: /选择认真/ }).click();
   await page.getByRole("radio", { name: "综合推荐" }).check();
   await page.getByLabel("最大代数").fill("5");

@@ -1,6 +1,46 @@
 import { describe, expect, it } from "vitest";
 
-import { parseBreedingJobDetailRpcResult } from "../src/phase6-validation";
+import {
+  parseBreederFormContextRpcResult,
+  parseBreedingJobDetailRpcResult,
+} from "../src/phase6-validation";
+
+describe("Phase 6 breeder form context", () => {
+  it("accepts localized passive effect text from the pinned game data", () => {
+    const result = parseBreederFormContextRpcResult({
+      ok: true,
+      data: {
+        data_state: "healthy",
+        inventory_snapshot_id: "40000000-0000-4000-8000-000000000002",
+        game_data_version_id: "51000000-0000-4000-8000-000000000001",
+        game_data_content_hash: "c".repeat(64),
+        game_build_id: "24181105",
+        game_version: "v1.0.1.100619",
+        algorithm_version: "phase4b-deterministic-v1",
+        scoring_profile_versions: {
+          balanced: "balanced-v2",
+          fastest: "fastest-v2",
+          highest_success: "highest-success-v2",
+          least_borrowing: "least-borrowing-v2",
+        },
+        pals: [],
+        passive_skills: [
+          {
+            passive_skill_id: "test_passive_a",
+            display_name: "认真",
+            effect_text: "工作速度提升 20%",
+            rank: 1,
+            is_negative: false,
+          },
+        ],
+      },
+    });
+
+    expect(result.ok && result.data.passive_skills[0]?.effect_text).toBe(
+      "工作速度提升 20%",
+    );
+  });
+});
 
 const legacyComponents = [
   "route_length",

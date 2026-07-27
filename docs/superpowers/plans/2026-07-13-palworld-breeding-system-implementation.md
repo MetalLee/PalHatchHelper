@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -680,6 +680,36 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-27 跨阶段修订：配种工作台创建页聚焦与被动效果说明
+
+### 交付顺序
+
+1. 先更新正式规格和本计划，固定页面层级、玩家语言、目标选择器收口和被动效果文本投影。
+2. 增加失败测试：Hero 使用“配种工作台”且重复标题消失；目标选择框选中后直接包含头像、名称和
+   图鉴编号且不再出现摘要卡；被动候选显示效果文本而不显示“正面”“负面”；表单上下文从同一
+   游戏数据和 locale 返回效果文本。
+3. 追加前向迁移替换 `get_breeder_form_context`，通过 `description_key` 关联本地化效果文本；旧迁移
+   不修改，缺失效果保持 null。
+4. 扩展 Phase 6 共享 Schema 的 `BreederPassiveOption.effect_text` 并重新生成 TypeScript/Pydantic
+   模型，不复制 DTO，不改变 `rank`、`is_negative`、任务输入或算法。
+5. 精简创建页重复标题，统一三个核心区块的字体、圆角和交互状态；目标选择框内联头像、名称和编号；
+   被动列表使用效果说明并提供诚实降级；技术事实以“本次计算依据”收纳并使用玩家语言。
+6. 开发中运行一次最小失败验证和一次受影响局部验证；最终状态运行一次根 `pnpm check`、完整
+   Supabase 测试、Phase 6 Web E2E 与 `git diff --check`，不重复聚合命令已覆盖的检查。
+
+### 回滚与生产约束
+
+- 数据库只追加函数定义迁移；应用回滚可忽略新增 JSON 字段，旧任务和路线不变。
+- 不修改配种关系、算法、评分、库存快照、真实存档或 `/opt/palworld`，不新增生产依赖或端口。
+- 本修订只发布代码与 PR，不执行生产部署；生产发布仍需单独批准。
+
+### 完成状态
+
+- Web 格式、lint、类型检查、109 项单元测试与生产构建通过；共享契约 28 项测试通过。
+- 完整 Supabase 套件 18 个文件、400 项断言通过；Phase 6 iPhone 浏览器全流程通过。
+- 根聚合检查在 Agent 段因当前环境缺少 `gcc`，3 项临时 Oodle ABI 测试桩无法建立；其余 237 项
+  Agent 测试通过、4 项跳过。该既有环境限制不影响本修订的 Web、契约、数据库与浏览器验收。
 
 ## 2026-07-27 跨阶段修订：全局被动品级视觉与库存被动多选
 

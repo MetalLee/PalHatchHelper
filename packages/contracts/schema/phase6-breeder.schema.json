@@ -92,10 +92,17 @@
     "BreederPassiveOption": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["passive_skill_id", "display_name", "rank", "is_negative"],
+      "required": [
+        "passive_skill_id",
+        "display_name",
+        "effect_text",
+        "rank",
+        "is_negative"
+      ],
       "properties": {
         "passive_skill_id": { "$ref": "#/$defs/BreederStableId" },
         "display_name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "effect_text": { "type": ["string", "null"], "maxLength": 10000 },
         "rank": { "type": "integer" },
         "is_negative": { "type": "boolean" }
       }

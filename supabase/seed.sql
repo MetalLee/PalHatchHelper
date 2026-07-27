@@ -520,7 +520,7 @@ insert into public.catalog_passive_skills (
 values
   (
     '51000000-0000-4000-8000-000000000001', 'test_passive_a',
-    'fixture.passive.a', null, 1, false, '{"fixture":true}'
+    'fixture.passive.a', 'fixture.passive.a.description', 1, false, '{"fixture":true}'
   ),
   (
     '51000000-0000-4000-8000-000000000001', 'test_passive_b',
@@ -562,6 +562,12 @@ values
     'zh-CN',
     'fixture.passive.a',
     '认真'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'zh-CN',
+    'fixture.passive.a.description',
+    '工作速度提升 20%'
   ),
   (
     '51000000-0000-4000-8000-000000000001',

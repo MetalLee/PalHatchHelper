@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const testPort = process.env.PALHATCH_E2E_PORT ?? "3000";
+if (!/^\d{4,5}$/.test(testPort)) {
+  throw new Error("PALHATCH_E2E_PORT must be a four or five digit port");
+}
+const testBaseUrl = `http://127.0.0.1:${testPort}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -9,7 +15,7 @@ export default defineConfig({
   retries: 0,
   reporter: "line",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: testBaseUrl,
     trace: "retain-on-failure",
     actionTimeout: 10_000,
   },
@@ -20,8 +26,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm dev",
-    url: "http://127.0.0.1:3000/login",
+    command:
+      testPort === "3000"
+        ? "pnpm dev"
+        : `pnpm exec next dev --port ${testPort}`,
+    url: `${testBaseUrl}/login`,
     reuseExistingServer: process.env.PALHATCH_E2E_REUSE_SERVER === "1",
     timeout: 120_000,
   },

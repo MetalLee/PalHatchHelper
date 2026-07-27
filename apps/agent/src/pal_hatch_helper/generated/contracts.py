@@ -969,6 +969,7 @@ class BreederPassiveOption(BaseModel):
 
     passive_skill_id: BreederStableId
     display_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    effect_text: Annotated[str, Field(max_length=10000)] | None
     rank: int
     is_negative: bool
 
