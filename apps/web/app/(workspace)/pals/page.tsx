@@ -175,17 +175,18 @@ export default async function PalsPage({
         />
       </section>
 
-      <PalFilters query={query} page={page} />
-      <PalInventory
-        key={rawParams.toString()}
-        page={page}
-        view={query.view}
-        viewHrefs={viewHrefs}
-        passiveRanks={passiveRanks}
-      />
-      {page.items.length > 0 ? (
-        <PalPagination query={query} page={page} />
-      ) : null}
+      <section className="grid min-w-0 gap-3 sm:gap-4" aria-label="库存列表">
+        <PalFilters query={query} page={page} viewHrefs={viewHrefs} />
+        <PalInventory
+          key={rawParams.toString()}
+          page={page}
+          view={query.view}
+          passiveRanks={passiveRanks}
+        />
+        {page.items.length > 0 ? (
+          <PalPagination query={query} page={page} />
+        ) : null}
+      </section>
     </div>
   );
 }

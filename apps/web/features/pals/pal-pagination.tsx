@@ -190,7 +190,7 @@ export function PalPagination({
     observer.observe(inventory);
     observer.observe(inline);
     return () => observer.disconnect();
-  }, [page.total_pages]);
+  }, [page.total_pages, query.view]);
 
   if (page.total_pages <= 1) return null;
 

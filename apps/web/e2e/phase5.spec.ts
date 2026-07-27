@@ -135,6 +135,7 @@ test("inventory filter styles use semantic border colors", async ({ page }) => {
   expect(semanticColors.border).toBe(semanticColors.semanticInput);
   expect(semanticColors.border).not.toBe(semanticColors.foreground);
 
+  await page.getByRole("button", { name: /更多筛选/ }).click();
   await page.getByRole("combobox", { name: "所有者" }).click();
   const selectContent = page.locator('[data-slot="select-content"]');
   await expect(selectContent).toBeVisible();
@@ -174,10 +175,8 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   await navigateFromMobileMenu(page, /^帕鲁库存$/);
   await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
 
-  await page.getByRole("button", { name: "筛选" }).click();
-  let filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称或图鉴编号").fill("棉");
-  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByLabel("名称或图鉴编号").fill("棉");
+  await page.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await expect(
@@ -185,17 +184,13 @@ test("iPhone flow filters inventory, pages deterministically and toggles owned s
   ).toBeVisible();
   await page.waitForLoadState("networkidle");
 
-  await page.getByRole("button", { name: "筛选" }).click();
-  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称或图鉴编号").fill("2");
-  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByLabel("名称或图鉴编号").fill("2");
+  await page.getByRole("button", { name: "应用筛选" }).click();
   await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "棉悠悠" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "筛选" }).click();
-  filterSheet = page.getByRole("dialog", { name: "筛选库存" });
-  await filterSheet.getByLabel("名称或图鉴编号").fill("棉悠悠");
-  await filterSheet.getByRole("button", { name: "应用筛选" }).click();
+  await page.getByLabel("名称或图鉴编号").fill("棉悠悠");
+  await page.getByRole("button", { name: "应用筛选" }).click();
   await page.waitForLoadState("networkidle");
 
   const sharing = page.getByRole("switch", { name: "棉悠悠 公会共享" });

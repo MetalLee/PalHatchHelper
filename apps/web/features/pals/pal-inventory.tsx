@@ -1,20 +1,11 @@
 "use client";
 
 import type { PalInventoryPage, Phase5ErrorCode } from "@palhatch/contracts";
-import { LayoutGrid, List, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { PageEmpty } from "@/components/states/page-empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 import { PalInventoryCard } from "./pal-inventory-card";
 import { PalInventoryTable } from "./pal-inventory-table";
@@ -28,13 +19,11 @@ type ToggleShare = (
 export function PalInventory({
   page,
   view,
-  viewHrefs,
   passiveRanks = {},
   onToggleShare,
 }: Readonly<{
   page: PalInventoryPage;
   view: PalInventoryView;
-  viewHrefs: Readonly<Record<PalInventoryView, string>>;
   passiveRanks?: Readonly<Record<string, number>>;
   onToggleShare?: ToggleShare;
 }>) {
@@ -91,57 +80,12 @@ export function PalInventory({
       className="grid min-w-0 gap-4"
       aria-label="帕鲁库存结果"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p
-          className="text-sm font-medium text-muted-foreground"
-          aria-live="polite"
-        >
-          筛选结果 {page.total_count.toLocaleString("zh-CN")} 只
-        </p>
-        <TooltipProvider>
-          <div
-            className="flex items-center rounded-xl border border-border/80 bg-background/80 p-1"
-            aria-label="库存展示形式"
-          >
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href={viewHrefs.cards}
-                  aria-label="卡片视图"
-                  aria-current={view === "cards" ? "page" : undefined}
-                  className={cn(
-                    buttonVariants({ variant: "ghost", size: "icon" }),
-                    "size-11 rounded-lg",
-                    view === "cards" &&
-                      "bg-accent text-accent-foreground shadow-xs",
-                  )}
-                >
-                  <LayoutGrid aria-hidden="true" className="size-4" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="top">卡片视图</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href={viewHrefs.table}
-                  aria-label="表格视图"
-                  aria-current={view === "table" ? "page" : undefined}
-                  className={cn(
-                    buttonVariants({ variant: "ghost", size: "icon" }),
-                    "size-11 rounded-lg",
-                    view === "table" &&
-                      "bg-accent text-accent-foreground shadow-xs",
-                  )}
-                >
-                  <List aria-hidden="true" className="size-4" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="top">表格视图</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
-      </div>
+      <p
+        className="text-sm font-medium text-muted-foreground"
+        aria-live="polite"
+      >
+        筛选结果 {page.total_count.toLocaleString("zh-CN")} 只
+      </p>
 
       {errorCode !== null ? (
         <Alert
