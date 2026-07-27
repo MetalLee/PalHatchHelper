@@ -129,6 +129,7 @@ const functions = await sql`
       'list_available_pals',
       'list_available_pals_page',
       'list_available_pals_page_v2',
+      'list_available_pals_page_v3',
       'list_admin_audit_events',
       'list_admin_binding_candidates',
       'list_admin_catalog_versions',

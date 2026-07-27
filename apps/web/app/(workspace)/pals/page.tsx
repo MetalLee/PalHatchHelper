@@ -14,7 +14,7 @@ import { encodePageContext, parsePalListQuery } from "@/features/pals/query";
 import {
   getOverviewSummary,
   listPals,
-  loadPassiveRanks,
+  passiveRanksFromPage,
   Phase5DataError,
 } from "@/features/pals/server";
 
@@ -26,6 +26,9 @@ function toUrlSearchParams(values: Awaited<SearchParams>): URLSearchParams {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) {
     if (typeof value === "string") params.set(key, value);
+    else if (Array.isArray(value)) {
+      for (const item of value) params.append(key, item);
+    }
   }
   return params;
 }
@@ -112,12 +115,8 @@ export default async function PalsPage({
         });
 
   let summary;
-  let passiveRanks;
   try {
-    [summary, passiveRanks] = await Promise.all([
-      getOverviewSummary(stableContext),
-      loadPassiveRanks(page),
-    ]);
+    summary = await getOverviewSummary(stableContext);
   } catch (error) {
     const code =
       error instanceof Phase5DataError ? error.code : "DATA_UNAVAILABLE";
@@ -128,6 +127,8 @@ export default async function PalsPage({
       <ErrorState code={code} />
     );
   }
+
+  const passiveRanks = passiveRanksFromPage(page);
 
   const synchronizedAt = formatDateTime(summary.data_status.captured_at);
 

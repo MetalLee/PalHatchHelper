@@ -53,6 +53,7 @@ import {
   GenderDisplay,
   type DisplayGender,
 } from "@/components/pals/gender-display";
+import { PassiveBadge } from "@/components/pals/passive-badge";
 import type { PalInventoryView, PalListQuery } from "./query";
 
 const scopes = [
@@ -88,7 +89,7 @@ function scopeHref(scope: string, query: PalListQuery): string {
   if (query.query) params.set("query", query.query);
   if (query.owner) params.set("owner", query.owner);
   if (query.gender) params.set("gender", query.gender);
-  if (query.passive) params.set("passive", query.passive);
+  for (const passive of query.passives) params.append("passive", passive);
   if (query.location) params.set("location", query.location);
   if (query.shared !== null) params.set("shared", String(query.shared));
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));
@@ -207,23 +208,39 @@ function FilterSelect({
 
 function PassiveCombobox({
   id,
-  initialValue,
+  initialValues,
   options,
 }: Readonly<{
   id: string;
-  initialValue: string;
-  options: FilterOption[];
+  initialValues: string[];
+  options: PalInventoryPage["filter_options"]["passives"];
 }>) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(initialValue);
-  const selected = options.find((option) => option.value === value);
+  const [value, setValue] = useState(() =>
+    Array.from(new Set(initialValues)).sort().slice(0, 4),
+  );
+  const selectedOptions = options.filter((option) =>
+    value.includes(option.value),
+  );
+
+  function toggleValue(optionValue: string): void {
+    setValue((current) => {
+      if (current.includes(optionValue)) {
+        return current.filter((item) => item !== optionValue);
+      }
+      if (current.length >= 4) return current;
+      return [...current, optionValue].sort();
+    });
+  }
 
   return (
     <div className="grid min-w-0 gap-1.5">
       <Label htmlFor={id} className="text-xs text-muted-foreground">
         被动
       </Label>
-      <input type="hidden" name="passive" value={value} />
+      {value.map((passive) => (
+        <input key={passive} type="hidden" name="passive" value={passive} />
+      ))}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -234,7 +251,25 @@ function PassiveCombobox({
             aria-expanded={open}
             className="w-full justify-between bg-white/82 px-3 font-normal"
           >
-            <span className="truncate">{selected?.label ?? "全部被动"}</span>
+            {value.length === 0 ? (
+              <span className="truncate">全部被动</span>
+            ) : selectedOptions.length === 0 ? (
+              <span className="truncate">已选择 {value.length} 个被动</span>
+            ) : (
+              <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                <PassiveBadge
+                  name={selectedOptions[0]!.label}
+                  rank={selectedOptions[0]!.rank}
+                  isNegative={selectedOptions[0]!.is_negative}
+                  className="min-h-6 min-w-0 py-0.5"
+                />
+                {value.length > 1 ? (
+                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                    +{value.length - 1}
+                  </span>
+                ) : null}
+              </span>
+            )}
             <ChevronsUpDown
               aria-hidden="true"
               className="size-4 shrink-0 opacity-50"
@@ -247,44 +282,52 @@ function PassiveCombobox({
         >
           <Command>
             <CommandInput placeholder="搜索被动名称" />
-            <CommandList>
+            <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border/70 px-3 py-1.5 text-xs text-muted-foreground">
+              <span>已选择 {value.length} / 4</span>
+              {value.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="清空被动筛选"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setValue([])}
+                >
+                  清空
+                </Button>
+              ) : null}
+            </div>
+            <CommandList aria-label="被动技能选项" aria-multiselectable="true">
               <CommandEmpty>没有匹配的被动</CommandEmpty>
               <CommandGroup>
-                <CommandItem
-                  value="全部被动"
-                  onSelect={() => {
-                    setValue("");
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    aria-hidden="true"
-                    className={cn(
-                      "size-4",
-                      value === "" ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  全部被动
-                </CommandItem>
-                {options.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.label}
-                    onSelect={() => {
-                      setValue(option.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      aria-hidden="true"
-                      className={cn(
-                        "size-4",
-                        value === option.value ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <span className="min-w-0 truncate">{option.label}</span>
-                  </CommandItem>
-                ))}
+                {options.map((option) => {
+                  const selected = value.includes(option.value);
+                  const disabled = value.length >= 4 && !selected;
+                  return (
+                    <CommandItem
+                      key={option.value}
+                      value={option.label}
+                      disabled={disabled}
+                      aria-label={`${option.label}${selected ? "，已选择" : ""}`}
+                      onSelect={() => toggleValue(option.value)}
+                      className="gap-2"
+                    >
+                      <Check
+                        aria-hidden="true"
+                        className={cn(
+                          "size-4 shrink-0",
+                          selected ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <PassiveBadge
+                        name={option.label}
+                        rank={option.rank}
+                        isNegative={option.is_negative}
+                        className="min-w-0"
+                      />
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             </CommandList>
           </Command>
@@ -365,7 +408,7 @@ function FilterFields({
           <div className="min-w-0 sm:w-52">
             <PassiveCombobox
               id="pal-filter-passive"
-              initialValue={query.passive}
+              initialValues={query.passives}
               options={page.filter_options.passives}
             />
           </div>

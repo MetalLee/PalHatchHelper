@@ -9,7 +9,7 @@ export interface PalListQuery {
   query: string;
   owner: string;
   gender: PalGender | "";
-  passive: string;
+  passives: string[];
   location: PalLocationType | "";
   shared: boolean | null;
   page_size: number;
@@ -38,6 +38,19 @@ function shortValue(value: string | null, maximum: number): string {
   return (value ?? "").trim().slice(0, maximum);
 }
 
+function passiveValues(params: URLSearchParams): string[] {
+  return Array.from(
+    new Set(
+      params
+        .getAll("passive")
+        .map((value) => shortValue(value, 120))
+        .filter((value) => value.length > 0),
+    ),
+  )
+    .sort()
+    .slice(0, 4);
+}
+
 export function parsePalListQuery(params: URLSearchParams): PalListQuery {
   const requestedScope = params.get("scope") as InventoryScope | null;
   const requestedGender = params.get("gender") as PalGender | null;
@@ -62,7 +75,7 @@ export function parsePalListQuery(params: URLSearchParams): PalListQuery {
       requestedGender !== null && genders.has(requestedGender)
         ? requestedGender
         : "",
-    passive: shortValue(params.get("passive"), 120),
+    passives: passiveValues(params),
     location:
       requestedLocation !== null && locations.has(requestedLocation)
         ? requestedLocation

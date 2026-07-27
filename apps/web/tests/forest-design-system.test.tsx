@@ -102,6 +102,7 @@ describe("Forest Healing design system", () => {
   it("keeps passive rank styling without rendering rank text", () => {
     const { rerender } = render(<PassiveBadge name="任意名称" rank={1} />);
     expect(screen.getByText("任意名称").dataset.rank).toBe("1");
+    expect(screen.getByText("任意名称").className).toContain("passive-badge");
     expect(screen.queryByText(/Rank|R1/)).toBeNull();
 
     for (const rank of [2, 3, 4, 5] as const) {
@@ -122,7 +123,7 @@ describe("Forest Healing design system", () => {
         .getByText("目录负面被动")
         .closest("[data-rank]")
         ?.getAttribute("data-rank"),
-    ).toBe("negative");
+    ).toBe("1");
     expect(screen.queryByText(/Rank 1/)).toBeNull();
     expect(
       screen.getByText("目录负面被动").getAttribute("aria-label"),
@@ -130,6 +131,9 @@ describe("Forest Healing design system", () => {
 
     rerender(<PassiveBadge name="未知品级" rank={null} />);
     expect(screen.getByText("未知品级").dataset.rank).toBe("unknown");
+
+    rerender(<PassiveBadge name="零品级" rank={0} />);
+    expect(screen.getByText("零品级").dataset.rank).toBe("unknown");
   });
 
   it("replaces a missing local pal icon with a stable portrait fallback", () => {

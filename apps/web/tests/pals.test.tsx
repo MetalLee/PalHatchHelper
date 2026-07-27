@@ -96,9 +96,36 @@ const page: PalInventoryPage = {
     ],
     genders: ["male", "female"],
     passives: [
-      { value: "test_passive_a", label: "认真" },
-      { value: "test_passive_b", label: "工匠精神" },
-      { value: "test_passive_c", label: "稀有被动" },
+      {
+        value: "test_passive_a",
+        label: "认真",
+        rank: 3,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_b",
+        label: "工匠精神",
+        rank: 5,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_c",
+        label: "稀有被动",
+        rank: 4,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_d",
+        label: "传说被动",
+        rank: 2,
+        is_negative: false,
+      },
+      {
+        value: "test_passive_e",
+        label: "负面被动",
+        rank: -1,
+        is_negative: true,
+      },
     ],
     locations: [
       "player_storage",
@@ -118,27 +145,28 @@ const viewHrefs = {
 
 describe("pal inventory", () => {
   it("supports all three inventory scopes and all Phase 5 filters", () => {
-    const query = parsePalListQuery(
-      new URLSearchParams({
-        scope: "shared",
-        query: "棉悠悠",
-        owner: "b".repeat(64),
-        gender: "female",
-        passive: "test_passive_b",
-        location: "base",
-        shared: "true",
-        page_size: "12",
-        page: "3",
-        view: "table",
-      }),
-    );
+    const params = new URLSearchParams({
+      scope: "shared",
+      query: "棉悠悠",
+      owner: "b".repeat(64),
+      gender: "female",
+      location: "base",
+      shared: "true",
+      page_size: "12",
+      page: "3",
+      view: "table",
+    });
+    params.append("passive", "test_passive_b");
+    params.append("passive", "test_passive_c");
+    params.append("passive", "test_passive_b");
+    const query = parsePalListQuery(params);
 
     expect(query).toEqual({
       scope: "shared",
       query: "棉悠悠",
       owner: "b".repeat(64),
       gender: "female",
-      passive: "test_passive_b",
+      passives: ["test_passive_b", "test_passive_c"],
       location: "base",
       shared: true,
       page_size: 12,
@@ -165,8 +193,21 @@ describe("pal inventory", () => {
     fireEvent.click(screen.getByRole("option", { name: "Fixture Player C" }));
 
     fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
-    expect(screen.getByRole("option", { name: /稀有被动/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("option", { name: /稀有被动/ }));
+    const rarePassive = screen.getByRole("option", { name: /稀有被动/ });
+    expect(rarePassive.querySelector("[data-rank='4']")).toBeTruthy();
+    fireEvent.click(rarePassive);
+    expect(
+      screen
+        .getByRole("combobox", { name: "被动" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+    fireEvent.click(screen.getByRole("option", { name: /工匠精神/ }));
+    expect(
+      Array.from(
+        document.querySelectorAll<HTMLInputElement>('input[name="passive"]'),
+        (input) => input.value,
+      ),
+    ).toEqual(["test_passive_b", "test_passive_c"]);
 
     fireEvent.click(screen.getByRole("combobox", { name: "位置" }));
     expect(screen.getByRole("option", { name: "观赏笼" })).toBeTruthy();
@@ -194,16 +235,43 @@ describe("pal inventory", () => {
     expect(screen.getByText("没有匹配的被动")).toBeTruthy();
   });
 
+  it("limits passive multi-selection to four and supports toggling and clearing", () => {
+    const query = parsePalListQuery(new URLSearchParams());
+    render(<PalFilters query={query} page={page} viewHrefs={viewHrefs} />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "被动" }));
+    for (const name of ["认真", "工匠精神", "稀有被动", "传说被动"]) {
+      fireEvent.click(screen.getByRole("option", { name: new RegExp(name) }));
+    }
+
+    expect(screen.getByText("已选择 4 / 4")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("option", { name: /负面被动/ })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
+    expect(document.querySelectorAll('input[name="passive"]')).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole("option", { name: /认真/ }));
+    expect(document.querySelectorAll('input[name="passive"]')).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "清空被动筛选" }));
+    expect(document.querySelectorAll('input[name="passive"]')).toHaveLength(0);
+    expect(
+      screen.getByRole("combobox", { name: "被动" }).textContent,
+    ).toContain("全部被动");
+  });
+
   it("provides standard numbered pagination with ellipses", () => {
-    const query = parsePalListQuery(
-      new URLSearchParams({
-        scope: "mine",
-        query: "棉",
-        page: "2",
-        page_size: "12",
-        view: "table",
-      }),
-    );
+    const params = new URLSearchParams({
+      scope: "mine",
+      query: "棉",
+      page: "2",
+      page_size: "12",
+      view: "table",
+    });
+    params.append("passive", "test_passive_a");
+    params.append("passive", "test_passive_b");
+    const query = parsePalListQuery(params);
     render(
       <PalPagination
         query={query}
@@ -234,6 +302,14 @@ describe("pal inventory", () => {
     expect(
       screen.getByRole("link", { name: "下一页" }).getAttribute("href"),
     ).toContain("view=table");
+    const nextParams = new URL(
+      screen.getByRole("link", { name: "下一页" }).getAttribute("href")!,
+      "https://palbeacon.invalid",
+    ).searchParams;
+    expect(nextParams.getAll("passive")).toEqual([
+      "test_passive_a",
+      "test_passive_b",
+    ]);
     expect(
       within(screen.getByTestId("pal-pagination-inline")).getAllByText(
         "更多页面",

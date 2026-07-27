@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(44);
+select plan(50);
 
 select has_function(
   'public',
@@ -20,6 +20,15 @@ select has_function(
     'boolean', 'uuid', 'uuid', 'integer', 'integer'
   ],
   'Phase 5 exposes random-access pages with full-pool filter facets'
+);
+select has_function(
+  'public',
+  'list_available_pals_page_v3',
+  array[
+    'text', 'text', 'text', 'pal_gender', 'text[]', 'pal_location_type',
+    'boolean', 'uuid', 'uuid', 'integer', 'integer'
+  ],
+  'Phase 5 exposes rank-aware random-access pages with passive multi-select'
 );
 select has_function(
   'public',
@@ -192,6 +201,48 @@ select ok(
   ) #> '{data,filter_options,locations}'
     @> '["player_storage","base"]'::jsonb,
   'location options contain every effective known type in the visible pool'
+);
+select is(
+  jsonb_array_length(
+    public.list_available_pals_page_v3(
+      p_scope => 'all',
+      p_passive_skill_ids => array['test_passive_b', 'test_passive_a']
+    ) #> '{data,items}'
+  ),
+  1,
+  'passive multi-select uses AND semantics independent of selection order'
+);
+select is(
+  jsonb_array_length(
+    public.list_available_pals_page_v3(
+      p_scope => 'all', p_passive_skill_ids => array['test_passive_a']
+    ) #> '{data,items}'
+  ),
+  2,
+  'a single V3 passive selection preserves existing filter behavior'
+);
+select is(
+  jsonb_array_length(
+    public.list_available_pals_page_v3(
+      p_scope => 'all', p_passive_skill_ids => array[]::text[]
+    ) #> '{data,items}'
+  ),
+  3,
+  'an empty passive selection leaves the visible inventory unfiltered'
+);
+select is(
+  public.list_available_pals_page_v3(
+    p_scope => 'all',
+    p_passive_skill_ids => array['a', 'b', 'c', 'd', 'e']
+  ) ->> 'error_code',
+  'INVALID_PAL_FILTER',
+  'passive multi-select rejects more than four values'
+);
+select ok(
+  public.list_available_pals_page_v3(p_scope => 'all')
+    #> '{data,filter_options,passives}'
+    @> '[{"value":"test_passive_a","label":"认真","rank":1,"is_negative":false}]'::jsonb,
+  'passive filter facets include fixed-version rank and negative facts'
 );
 
 reset role;

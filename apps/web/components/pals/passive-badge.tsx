@@ -2,19 +2,18 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const rankStyles: Record<string, string> = {
-  "1": "border-slate-200 bg-slate-50 text-slate-700",
-  "2": "border-sky-200 bg-sky-50 text-sky-800",
-  "3": "border-emerald-200 bg-emerald-50 text-emerald-800",
-  "4": "border-violet-200 bg-violet-50 text-violet-800",
-  "5": "border-amber-300 bg-amber-50 text-amber-900",
-  negative: "border-rose-200 bg-rose-50 text-rose-800",
-  unknown: "border-slate-200 bg-slate-100 text-slate-600",
+  "1": "border-[#f7fbff] text-white",
+  "2": "border-[#ffdd00] text-[#ffdd00]",
+  "3": "border-[#ffdd00] text-[#ffdd00]",
+  "4": "border-[#68ffd8] text-[#68ffd8]",
+  "5": "border-[#68ffd8] text-[#68ffd8]",
+  negative: "border-[#ff6b78] text-[#ff7884]",
+  unknown: "border-[#8d9a9e] text-[#d9e1e3]",
 };
 
-function rankKey(rank: number | null, isNegative: boolean | null): string {
-  if (isNegative === true) return "negative";
+function rankKey(rank: number | null): string {
   if (rank === null) return "unknown";
-  if (rank < 0) return "negative";
+  if (rank <= -1) return "negative";
   if (rank >= 1 && rank <= 5) return String(rank);
   return "unknown";
 }
@@ -30,15 +29,16 @@ export function PassiveBadge({
   isNegative?: boolean | null;
   className?: string;
 }>) {
-  const key = rankKey(rank, isNegative);
+  const key = rankKey(rank);
+  const negative = (rank !== null && rank <= -1) || isNegative === true;
   return (
     <Badge
       variant="outline"
       data-rank={key}
       title={name}
-      aria-label={key === "negative" ? `${name}，负面被动` : undefined}
+      aria-label={negative ? `${name}，负面被动` : undefined}
       className={cn(
-        "min-h-7 rounded-lg px-2.5 py-1 font-semibold",
+        "passive-badge relative isolate z-0 min-h-7 max-w-full overflow-hidden rounded-md border border-l-4 bg-[#202729] px-2.5 py-1 font-semibold tracking-[0.01em] text-ellipsis whitespace-nowrap shadow-sm",
         rankStyles[key],
         className,
       )}

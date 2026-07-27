@@ -168,6 +168,27 @@ test("inventory filter styles keep a single search focus indicator", async ({
   expect(wrapperShadow).not.toBe("none");
 });
 
+test("inventory passive badges support four-slot AND multi-selection", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/pals");
+
+  const passivePicker = page.getByRole("combobox", { name: "被动" });
+  await passivePicker.click();
+  const serious = page.getByRole("option", { name: /认真/ });
+  await expect(serious.locator("[data-rank='1']")).toBeVisible();
+  await serious.click();
+  await expect(passivePicker).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("option", { name: /工匠精神/ }).click();
+  await expect(page.getByText("已选择 2 / 4")).toBeVisible();
+
+  await page.getByRole("button", { name: "应用筛选" }).click();
+  await expect(page).toHaveURL(/passive=test_passive_a/);
+  await expect(page).toHaveURL(/passive=test_passive_b/);
+  await expect(page.getByText("筛选结果 1 只")).toBeVisible();
+});
+
 test("iPhone flow filters inventory, pages deterministically and toggles owned sharing", async ({
   page,
 }) => {

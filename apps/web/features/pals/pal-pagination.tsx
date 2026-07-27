@@ -34,7 +34,7 @@ function queryParams(
   if (query.query) params.set("query", query.query);
   if (query.owner) params.set("owner", query.owner);
   if (query.gender) params.set("gender", query.gender);
-  if (query.passive) params.set("passive", query.passive);
+  for (const passive of query.passives) params.append("passive", passive);
   if (query.location) params.set("location", query.location);
   if (query.shared !== null) params.set("shared", String(query.shared));
   if (query.page_size !== 24) params.set("page_size", String(query.page_size));

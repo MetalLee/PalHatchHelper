@@ -52,7 +52,14 @@ describe("Phase 5 web contracts", () => {
       filter_options: {
         owners: [{ value: "a".repeat(64), label: "Fixture Player A" }],
         genders: ["male"],
-        passives: [{ value: "test_passive_a", label: "认真" }],
+        passives: [
+          {
+            value: "test_passive_a",
+            label: "认真",
+            rank: 1,
+            is_negative: false,
+          },
+        ],
         locations: ["player_storage"],
       },
       catalog_state: "published",
@@ -60,6 +67,15 @@ describe("Phase 5 web contracts", () => {
     };
 
     expect(validate(page)).toBe(true);
+    expect(
+      validate({
+        ...page,
+        filter_options: {
+          ...page.filter_options,
+          passives: [{ value: "test_passive_a", label: "认真" }],
+        },
+      }),
+    ).toBe(false);
     expect(
       validate({
         ...page,

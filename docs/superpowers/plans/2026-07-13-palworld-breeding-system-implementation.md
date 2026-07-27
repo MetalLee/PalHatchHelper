@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=completed；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -680,6 +680,28 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-27 跨阶段修订：全局被动品级视觉与库存被动多选
+
+### 交付顺序
+
+1. 先更新正式规格和本计划，固定 rank 视觉映射、三角纹理、AND 语义和四项上限。
+2. 增加失败测试：重复 `passive` URL 参数去重并限制四项；库存 RPC 只返回同时拥有全部所选
+   被动的帕鲁；筛选选项投影 rank/负面事实；多选、取消、清空及分页保留全部选择。
+3. 追加前向 `list_available_pals_page_v3` 迁移，保留 v2 兼容和已有头目、公会所有权、位置、
+   图鉴排序与目录 ID 隐藏语义；v3 接受被动数组并为被动 facet 返回 rank/负面事实。
+4. 更新共享 Phase 5 Schema 与生成类型；库存页从同一固定版本 facet 构造全页被动事实，避免
+   额外 rank 查询。
+5. 全局 `PassiveBadge` 使用本地 CSS 三角拼接纹理和 rank 颜色；库存筛选 Popover 使用同一
+   badge，保留 Radix Command 键盘导航、清晰焦点、可访问选择状态和移动端可用尺寸。
+6. 开发中只运行一次最小失败验证和一次受影响局部验证；最终状态运行一次根 `pnpm check`、
+   完整 Supabase 测试、Phase 5 Web E2E 与 `git diff --check`，不重复聚合命令已覆盖的检查。
+
+### 回滚与生产约束
+
+- 数据库只新增 v3 RPC，不修改或删除 v2；应用回滚继续使用 v2 单选接口。
+- 不改变目录 rank、`is_negative`、库存快照、配种算法或评分，不读取生产数据库或真实存档。
+- 不热链或复制 PalDB 纹理资产，不新增生产依赖、生产部署或远程推送。
 
 ## 2026-07-27 跨阶段修订：帕鲁库存用户体验收口
 
