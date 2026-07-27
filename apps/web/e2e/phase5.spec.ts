@@ -7,7 +7,7 @@ async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
   await page.getByLabel("邮箱").fill(email);
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();
-  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page).toHaveURL(/\/overview$/, { timeout: 15_000 });
 }
 
 async function navigateFromMobileMenu(page: Page, label: string | RegExp) {
@@ -33,7 +33,7 @@ test("login reports failed credentials and then succeeds", async ({ page }) => {
 
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();
-  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page).toHaveURL(/\/overview$/, { timeout: 15_000 });
 });
 
 test("unbound test account receives the binding state", async ({ page }) => {

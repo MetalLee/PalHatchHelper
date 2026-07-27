@@ -9,7 +9,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -58,6 +65,12 @@ interface HighlightGeometry {
   visible: boolean;
 }
 
+function hideHighlight(
+  setter: Dispatch<SetStateAction<HighlightGeometry>>,
+): void {
+  setter((current) => ({ ...current, visible: false }));
+}
+
 export function AppNavigation({
   activePath,
   className,
@@ -90,8 +103,8 @@ export function AppNavigation({
     const target =
       activeHref === null ? null : linkRefs.current.get(activeHref);
     if (nav === null || target === null || target === undefined) {
-      setActiveHighlight((current) => ({ ...current, visible: false }));
-      return;
+      const frame = requestAnimationFrame(() => hideHighlight(setActiveHighlight));
+      return () => cancelAnimationFrame(frame);
     }
 
     const measure = (): void => {
@@ -114,8 +127,8 @@ export function AppNavigation({
     const nav = navRef.current;
     const target = hoverHref === null ? null : linkRefs.current.get(hoverHref);
     if (nav === null || target === null || target === undefined) {
-      setHoverHighlight((current) => ({ ...current, visible: false }));
-      return;
+      const frame = requestAnimationFrame(() => hideHighlight(setHoverHighlight));
+      return () => cancelAnimationFrame(frame);
     }
 
     const measure = (): void => {

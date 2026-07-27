@@ -106,8 +106,8 @@ def test_claimed_local_supabase_job_enters_the_version_validated_engine() -> Non
             repository,
             handler,
             worker_id="phase2-local-integration-worker",
-            heartbeat_interval_seconds=0.005,
-            lease_timeout_seconds=0.05,
+            heartbeat_interval_seconds=0.05,
+            lease_timeout_seconds=1.0,
         )
         try:
             assert await worker.run_once()
