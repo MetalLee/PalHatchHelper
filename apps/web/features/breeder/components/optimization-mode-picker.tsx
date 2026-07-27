@@ -22,25 +22,25 @@ export const optimizationModes: ReadonlyArray<{
   {
     value: "balanced",
     label: "综合推荐",
-    description: "平衡路线长度、库存覆盖、被动集中度与借用成本。",
+    description: "兼顾配种代数、现有帕鲁、被动继承和借用数量。",
     icon: Sparkles,
   },
   {
     value: "fastest",
     label: "最快路线",
-    description: "更偏向代数更少、执行链更短的合法路线。",
+    description: "优先推荐配种代数更少、步骤更短的路线。",
     icon: Gauge,
   },
   {
     value: "highest_success",
     label: "最高成功率",
-    description: "更偏向被动集中、策略估计难度更低的路线。",
+    description: "优先推荐被动更集中、预计更容易完成的路线。",
     icon: ShieldCheck,
   },
   {
     value: "least_borrowing",
     label: "最少借用",
-    description: "更偏向使用自有库存，降低公会协作依赖。",
+    description: "优先使用你自己的帕鲁，尽量少向公会伙伴借用。",
     icon: Route,
   },
 ];
@@ -62,7 +62,9 @@ export function OptimizationModePicker({
       aria-label="优化模式"
       className="grid min-w-0 gap-3"
     >
-      <legend className="mb-1 font-semibold text-foreground">优化模式</legend>
+      <legend className="mb-1 text-sm font-semibold text-foreground">
+        优化模式
+      </legend>
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         {optimizationModes.map((mode) => {
           const Icon = mode.icon;
@@ -72,8 +74,8 @@ export function OptimizationModePicker({
               className={cn(
                 "relative grid min-h-32 min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl border p-4 transition-[border-color,background-color,box-shadow] focus-within:ring-3 focus-within:ring-ring/40",
                 value === mode.value
-                  ? "border-primary/50 bg-primary/8 shadow-sm"
-                  : "border-border bg-white/62 hover:border-primary/30 hover:bg-white/84",
+                  ? "border-primary/40 bg-primary/10 shadow-sm"
+                  : "border-border bg-white/55 hover:border-primary/25 hover:bg-accent/50",
               )}
             >
               <input
@@ -108,7 +110,7 @@ export function OptimizationModePicker({
         })}
       </div>
       <p className="text-xs leading-5 text-muted-foreground">
-        模式只调整确定性评分的倾向，不承诺精确遗传概率。
+        偏好只影响推荐顺序，不会改变游戏中的配种关系。
       </p>
     </fieldset>
   );

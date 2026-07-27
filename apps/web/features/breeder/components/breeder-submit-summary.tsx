@@ -44,7 +44,7 @@ export function BreederSubmitSummary({
     <section className="min-w-0 rounded-3xl border border-primary/20 bg-[linear-gradient(145deg,rgba(255,255,255,0.92),rgba(223,245,231,0.78))] p-4 shadow-soft sm:p-5">
       <div className="flex items-center gap-2">
         <CheckCircle2 aria-hidden="true" className="size-5 text-primary" />
-        <h2 className="font-bold text-foreground">创建前确认</h2>
+        <h2 className="font-bold text-foreground">确认设置</h2>
       </div>
       <dl className="mt-4 grid min-w-0 grid-cols-2 gap-2 text-sm">
         {facts.map(([label, value]) => (
@@ -73,7 +73,7 @@ export function BreederSubmitSummary({
         )}
       </Button>
       <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
-        创建后会跳转到任务页，按真实计算阶段展示进度。
+        创建后会自动开始计算，并在下一页显示进度和推荐路线。
       </p>
     </section>
   );

@@ -32,9 +32,9 @@ export default async function BreederPage() {
   return (
     <div className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8">
       <PageHero
-        eyebrow="Deterministic breeder"
-        title="配种器"
-        description="设置目标 Pal 与期望被动，创建固定库存、目录、算法和评分版本的确定性配种任务。"
+        eyebrow="规划你的下一条路线"
+        title="配种工作台"
+        description="选择目标帕鲁和想要的被动技能，我们会根据你当前可用的帕鲁推荐合适路线。"
         className="min-h-[16rem] border-white/80 bg-white/74 sm:min-h-[17rem] lg:pr-[30%]"
         background={<ForestScenery variant="hero" />}
         visual={
@@ -55,17 +55,6 @@ export default async function BreederPage() {
       />
       <BreederFlowProgress />
       <div className="min-w-0">
-        <div className="mb-4">
-          <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
-            Step 1 · Target setup
-          </p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-            创建配种任务
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-            当前页只收集确定性搜索输入；方案推荐与配种路径会在任务页基于固定版本生成。
-          </p>
-        </div>
         <BreederForm context={context} />
       </div>
     </div>

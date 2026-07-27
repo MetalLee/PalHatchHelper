@@ -84,6 +84,7 @@ export interface BreederCatalogPalOption {
 export interface BreederPassiveOption {
   passive_skill_id: BreederStableId;
   display_name: string;
+  effect_text: string | null;
   rank: number;
   is_negative: boolean;
 }

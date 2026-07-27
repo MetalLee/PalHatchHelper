@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -1038,6 +1038,21 @@ shadcn 层级阴影，基础阴影贴合底部，Hover 提升一层，避免大�
 
 选择器支持名称、编号、属性、最近选择、已拥有标记和公会拥有数量。
 目标帕鲁与被动选择器不得显示或搜索目录稳定英文内部 ID；未翻译事实使用中性名称降级。
+
+创建页 Hero 标题使用“配种工作台”，Hero 后不重复显示步骤眉题、创建标题或实现说明，流程条后
+直接进入核心表单。目标设置、期望被动和路线偏好使用一致的卡片层级、字体层级、圆角、Hover、
+选中和键盘焦点状态；面向玩家的说明只描述可完成的操作和结果，不使用“目录”“版本”“边界”
+等实现术语。必须保留的可复现事实收纳为次要的“本次计算依据”，使用“库存数据”“游戏数据”
+“计算方式”“推荐方式”等玩家可理解标签，不改变实际固定值。
+
+目标帕鲁字段标签只显示“目标帕鲁”。选中后，选择框本身同时展示头像、本地化名称和图鉴编号，
+不得再渲染重复的目标摘要卡。弹出候选继续支持按本地化名称和图鉴编号搜索，并保持键盘选择、
+清晰焦点和移动端最小点击尺寸。
+
+期望被动候选使用固定游戏数据中的本地化效果文本替代可见的“正面”“负面”分类标签；名称继续
+使用全局品级徽标，`rank` 与 `is_negative` 事实保持不变。效果文本缺失时显示“效果说明暂不可用”，
+不得回退到内部 ID。表单上下文通过共享 Schema 投影可空的 `effect_text`，数据库从同一固定版本、
+同一 locale 的 `description_key` 本地化读取，不改变游戏事实或配种算法。
 
 计算过程使用真实阶段，不显示虚假百分比：
 
