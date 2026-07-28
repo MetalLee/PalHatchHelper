@@ -34,8 +34,8 @@ test("PalBeacon login and workspace branding stay responsive", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/login");
-  await expect(page).toHaveTitle("PalBeacon｜帕鲁服务器控制台");
+  await page.goto("/zh/login");
+  await expect(page).toHaveTitle("PalBeacon · 帕鲁配种协作工作台");
   await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
   await expect(page.getByText("登录你的 PalBeacon 账号")).toBeVisible();
   await expect(page.getByText("忘记密码？")).toHaveAttribute(
@@ -47,7 +47,7 @@ test("PalBeacon login and workspace branding stay responsive", async ({
     "true",
   );
   await expect(
-    page.getByRole("img", { name: "PalBeacon 帕鲁服务器控制台" }),
+    page.getByRole("img", { name: "PalBeacon 帕鲁配种协作工作台" }),
   ).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.screenshot({
@@ -58,12 +58,11 @@ test("PalBeacon login and workspace branding stay responsive", async ({
   await login(page);
   const header = page.getByRole("banner");
   const headerLogo = header.getByRole("img", {
-    name: "PalBeacon 帕鲁服务器控制台",
+    name: "PalBeacon 帕鲁配种协作工作台",
   });
   await expect(
-    header.getByText("帕鲁服务器控制台", { exact: true }),
+    header.getByText("帕鲁配种协作工作台", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("PALWORLD SERVER CONSOLE")).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(Math.round((await headerLogo.boundingBox())?.width ?? 0)).toBe(40);
   await page.screenshot({
@@ -90,7 +89,7 @@ test("PalBeacon login and workspace branding stay responsive", async ({
   await expectNoHorizontalOverflow(page);
   expect(Math.round((await headerLogo.boundingBox())?.width ?? 0)).toBe(34);
   await expect(
-    header.getByText("帕鲁服务器控制台", { exact: true }),
+    header.getByText("帕鲁配种协作工作台", { exact: true }),
   ).toBeHidden();
   await page.screenshot({
     path: resolve(screenshotDirectory, "overview-mobile-390.png"),
@@ -124,9 +123,9 @@ test("healthy local sync state stays explicit", async ({ page }) => {
   );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/login");
+  await page.goto("/zh/login");
   await login(page);
-  await page.goto("/data-status");
+  await page.goto("/zh/data-status");
   await expect(
     page.getByRole("main").getByText("数据同步正常").first(),
   ).toBeVisible();

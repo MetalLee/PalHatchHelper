@@ -9,7 +9,7 @@ const fixturePassword = "palhatch-local-fixture";
 const agentDirectory = resolve(process.cwd(), "../agent");
 
 async function login(page: Page) {
-  await page.goto("/login");
+  await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill("player-a@palhatch.fixture.invalid");
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();

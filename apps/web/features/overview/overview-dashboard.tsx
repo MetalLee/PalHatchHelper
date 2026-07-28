@@ -1,3 +1,5 @@
+"use client";
+
 import type { InventoryDataStatus, PlanSummary } from "@palhatch/contracts";
 import { ArrowRight, Dna, PawPrint } from "lucide-react";
 

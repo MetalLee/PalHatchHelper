@@ -2,12 +2,12 @@ import { expect, test, type Page } from "@playwright/test";
 
 const fixturePassword = "palhatch-local-fixture";
 const adminRoutes = [
-  "/admin",
-  "/admin/bindings",
-  "/admin/save-parser",
-  "/admin/breeding-data",
-  "/admin/jobs",
-  "/admin/settings",
+  "/zh/admin",
+  "/zh/admin/bindings",
+  "/zh/admin/save-parser",
+  "/zh/admin/breeding-data",
+  "/zh/admin/jobs",
+  "/zh/admin/settings",
 ] as const;
 
 test.beforeAll(async ({ request }) => {
@@ -15,7 +15,7 @@ test.beforeAll(async ({ request }) => {
 });
 
 async function login(page: Page, email: string) {
-  await page.goto("/login");
+  await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill(email);
   await page.getByLabel("密码").fill(fixturePassword);
   await page.waitForFunction(
@@ -37,7 +37,7 @@ test("ordinary player receives stable server-side admin denial", async ({
   page,
 }) => {
   await login(page, "player-a@palhatch.fixture.invalid");
-  const response = await page.goto("/admin");
+  const response = await page.goto("/zh/admin");
   expect(response?.headers()["cache-control"]).toContain("no-store");
   await expect(
     page.getByRole("alert", { name: "没有管理员权限" }),
@@ -63,7 +63,7 @@ test("iPhone admin completes binding, status, catalog, jobs, settings and audit 
   });
 
   await login(page, "admin@palhatch.fixture.invalid");
-  await page.goto("/admin");
+  await page.goto("/zh/admin");
   await expect(page.getByRole("heading", { name: "管理员概览" })).toBeVisible({
     timeout: 30_000,
   });
@@ -71,7 +71,7 @@ test("iPhone admin completes binding, status, catalog, jobs, settings and audit 
     page.getByRole("heading", { name: "Save Worker" }),
   ).toBeVisible();
 
-  await page.goto("/admin/bindings");
+  await page.goto("/zh/admin/bindings");
   await page.getByRole("button", { name: "解除绑定" }).last().click();
   const deleteDialog = page.getByRole("alertdialog", {
     name: "确认执行受审计操作",
@@ -92,19 +92,19 @@ test("iPhone admin completes binding, status, catalog, jobs, settings and audit 
   await createBindingForm.getByRole("button", { name: "创建绑定" }).click();
   await expect(page.getByText("binding_created").first()).toBeVisible();
 
-  await page.goto("/admin/save-parser");
+  await page.goto("/zh/admin/save-parser");
   await expect(
     page.getByRole("heading", { name: "存档与 Parser" }),
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("只读挂载")).toBeVisible();
 
-  await page.goto("/admin/breeding-data");
+  await page.goto("/zh/admin/breeding-data");
   await expect(page.getByRole("heading", { name: "配种数据" })).toBeVisible({
     timeout: 30_000,
   });
   await expect(page.getByText("七类计数")).toBeVisible();
 
-  await page.goto("/admin/jobs");
+  await page.goto("/zh/admin/jobs");
   await expect(page.getByRole("heading", { name: "任务与 AI" })).toBeVisible({
     timeout: 30_000,
   });
@@ -112,7 +112,7 @@ test("iPhone admin completes binding, status, catalog, jobs, settings and audit 
     page.getByRole("button", { name: "Template Provider 自检" }),
   ).toBeVisible();
 
-  await page.goto("/admin/settings");
+  await page.goto("/zh/admin/settings");
   await expect(page.getByRole("heading", { name: "系统设置" })).toBeVisible({
     timeout: 30_000,
   });
@@ -126,7 +126,7 @@ test("iPhone admin completes binding, status, catalog, jobs, settings and audit 
     timeout: 30_000,
   });
 
-  await page.goto("/admin");
+  await page.goto("/zh/admin");
   await expect(page.getByRole("heading", { name: "管理员概览" })).toBeVisible({
     timeout: 30_000,
   });

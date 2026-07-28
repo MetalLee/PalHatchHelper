@@ -16,6 +16,7 @@ export default defineConfig({
   reporter: "line",
   use: {
     baseURL: testBaseUrl,
+    locale: "zh-CN",
     trace: "retain-on-failure",
     actionTimeout: 10_000,
   },

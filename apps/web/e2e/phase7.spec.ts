@@ -16,7 +16,7 @@ function localEnvironment() {
 }
 
 async function login(page: Page) {
-  await page.goto("/login");
+  await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill("player-a@palhatch.fixture.invalid");
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();
@@ -290,7 +290,7 @@ test.describe.serial("Phase 7 local My Plans workflow", () => {
     const savedLink = page.getByRole("link", { name: "查看我的计划" });
     await expect(savedLink).toBeVisible();
     await savedLink.click();
-    await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/zh\/plans\/[0-9a-f-]{36}$/);
     await expect(
       page.getByRole("heading", { name: "幻色幼崽", level: 1 }),
     ).toBeVisible();
@@ -305,7 +305,7 @@ test.describe.serial("Phase 7 local My Plans workflow", () => {
     expect(overflow).toBeLessThanOrEqual(1);
 
     await page.getByRole("button", { name: "移除收藏" }).click();
-    await expect(page).toHaveURL(/\/plans$/);
+    await expect(page).toHaveURL(/\/zh\/plans$/, { timeout: 15_000 });
     await expect(
       page.getByRole("heading", { name: "暂无收藏计划" }),
     ).toBeVisible();

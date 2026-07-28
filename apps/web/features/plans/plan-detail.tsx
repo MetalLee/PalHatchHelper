@@ -21,13 +21,14 @@ import { RouteScoreBreakdown } from "@/features/breeder/components/route-score-b
 import { RouteMissingRequirements } from "@/features/breeder/components/route-supporting-details";
 import { localizedName } from "@/features/breeder/presentation";
 import { useAppLocale, useCopy } from "@/i18n/client";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { catalogLocaleFor } from "@/i18n/routing";
 
 import type { SavedPlanDetail } from "./server";
 
 export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
   const locale = useAppLocale();
+  const router = useRouter();
   const t = useCopy("Plans");
   const [removing, setRemoving] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -84,7 +85,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
             : "DATA_UNAVAILABLE";
         throw new Error(code);
       }
-      globalThis.location.assign(`/${locale}/plans`);
+      router.replace("/plans");
     } catch (error) {
       setErrorCode(error instanceof Error ? error.message : "DATA_UNAVAILABLE");
     } finally {

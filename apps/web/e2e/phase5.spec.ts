@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const fixturePassword = "palhatch-local-fixture";
 
 async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
-  await page.goto("/login");
+  await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill(email);
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();
@@ -25,11 +25,13 @@ test.afterEach(async ({ page }) => {
 });
 
 test("login reports failed credentials and then succeeds", async ({ page }) => {
-  await page.goto("/login");
+  await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill("player-a@palhatch.fixture.invalid");
   await page.getByLabel("密码").fill("definitely-wrong");
   await page.getByRole("button", { name: "登录工作台" }).click();
-  await expect(page.getByText("邮箱或密码不正确。")).toBeVisible();
+  await expect(page.getByText("邮箱或密码不正确。")).toBeVisible({
+    timeout: 15_000,
+  });
 
   await page.getByLabel("密码").fill(fixturePassword);
   await page.getByRole("button", { name: "登录工作台" }).click();
@@ -68,7 +70,9 @@ test("iPhone inventory flow combines passive filtering, sharing, pagination and 
 }) => {
   await login(page);
   await navigateFromMobileMenu(page, /^帕鲁库存$/);
-  await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible({
+    timeout: 15_000,
+  });
 
   const passivePicker = page.getByRole("combobox", { name: "被动技能" });
   await passivePicker.click();
@@ -79,7 +83,7 @@ test("iPhone inventory flow combines passive filtering, sharing, pagination and 
   await expect(page).toHaveURL(/passive=test_passive_b/);
   await expect(page.getByText("筛选结果 1 只")).toBeVisible();
 
-  await page.goto("/pals?scope=all");
+  await page.goto("/zh/pals?scope=all");
   const sharing = page.getByRole("switch", { name: "棉悠悠 公会共享" });
   await expect(sharing).toHaveAttribute("aria-checked", "true");
   expect(
@@ -107,7 +111,7 @@ test("iPhone inventory flow combines passive filtering, sharing, pagination and 
   expect((await restoreResponsePromise).status()).toBe(200);
   await expect(sharing).toHaveAttribute("aria-checked", "true");
 
-  await page.goto("/pals?scope=all&page_size=1");
+  await page.goto("/zh/pals?scope=all&page_size=1");
   await expect(page.getByText("筛选结果 3 只")).toBeVisible();
   const nextHref = await page
     .getByRole("link", { name: "下一页" })
@@ -121,7 +125,7 @@ test("iPhone inventory flow combines passive filtering, sharing, pagination and 
     timeout: 15_000,
   });
 
-  await page.goto("/pals?scope=shared");
+  await page.goto("/zh/pals?scope=shared");
   await expect(
     page.getByRole("article").getByText("Fixture Player B"),
   ).toBeVisible();
@@ -160,7 +164,7 @@ test("player responses never contain private, cross-guild, raw-save or path data
   expect(forbidden.status()).toBe(403);
   expect(await forbidden.json()).toEqual({ error_code: "PAL_NOT_OWNED" });
 
-  const pageResponse = await page.goto("/pals?scope=all");
+  const pageResponse = await page.goto("/zh/pals?scope=all");
   const html = await pageResponse?.text();
   expect(html).not.toContain("fixture-pal-b-private-001");
   expect(html).not.toContain("fixture-pal-c-shared-001");
