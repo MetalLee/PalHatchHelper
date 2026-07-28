@@ -2,8 +2,11 @@ import { access, readFile } from "node:fs/promises";
 
 const requiredPaths = [
   "AGENTS.md",
-  "apps/web/app/page.tsx",
+  "apps/web/app/[locale]/page.tsx",
   "apps/web/app/api/health/route.ts",
+  "apps/web/i18n/routing.ts",
+  "apps/web/messages/en.json",
+  "apps/web/messages/zh.json",
   "apps/agent/src/pal_hatch_helper/main.py",
   "packages/contracts/schema/system-status.schema.json",
   "packages/contracts/schema/breeding-job.schema.json",
@@ -17,6 +20,7 @@ const requiredPaths = [
   "supabase/tests/rpc.sql",
   "docs/architecture/database-and-rls.md",
   "docs/decisions/0005-phase5-parallel-delivery-boundary.md",
+  "docs/decisions/0006-localized-app-router-and-game-content.md",
   "docs/operations/supabase-local-development.md",
   "docs/operations/database-migrations.md",
   "infra/agent/docker-compose.yml",

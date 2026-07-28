@@ -15,6 +15,7 @@ from pal_hatch_helper.generated.contracts import (
 
 def valid_job_data() -> dict[str, object]:
     return {
+        "locale": "zh-CN",
         "job_id": UUID("11111111-1111-4111-8111-111111111111"),
         "requester_user_id": UUID("22222222-2222-4222-8222-222222222222"),
         "world_id": UUID("77777777-7777-4777-8777-777777777777"),

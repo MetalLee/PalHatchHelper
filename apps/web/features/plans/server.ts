@@ -55,15 +55,17 @@ export function decodePlanCursor(value: string | undefined): Cursor | null {
 export async function loadPlans(
   options: { cursor?: string; boundary?: string; limit?: number } = {},
   client?: SupabaseClient<Database>,
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): Promise<PlanListPage> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
   const cursor = decodePlanCursor(options.cursor);
-  const { data, error } = await supabase.rpc("list_saved_breeding_plans", {
+  const { data, error } = await supabase.rpc("list_saved_breeding_plans_v2", {
     p_limit: options.limit ?? 20,
     p_cursor_saved_at: cursor?.savedAt ?? undefined,
     p_cursor_route_id: cursor?.routeId ?? undefined,
     p_query_boundary: options.boundary ?? undefined,
+    p_locale: locale,
   });
   if (error !== null) throw new PlanDataError("DATA_UNAVAILABLE");
   const result = parsePlanListRpcResult(data);
@@ -84,6 +86,7 @@ export async function loadPlans(
 export async function loadPlanDetail(
   routeId: string,
   client?: SupabaseClient<Database>,
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): Promise<SavedPlanDetail> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
@@ -93,7 +96,11 @@ export async function loadPlanDetail(
   if (error !== null) throw new PlanDataError("DATA_UNAVAILABLE");
   const result = parsePlanDetailRpcResult(data);
   if (!result.ok) throw new PlanDataError(result.error_code);
-  const job = await loadBreedingJob(result.data.source_job_id, supabase);
+  const job = await loadBreedingJob(
+    result.data.source_job_id,
+    supabase,
+    locale,
+  );
   const route = job.data.plan?.routes.find(
     (candidate) => candidate.route_id === routeId,
   );

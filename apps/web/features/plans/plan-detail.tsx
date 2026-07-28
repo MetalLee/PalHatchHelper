@@ -8,7 +8,6 @@ import {
   Target,
   Trash2,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
@@ -20,14 +19,17 @@ import { BreedingRouteTree } from "@/features/breeder/components/breeding-route-
 import { PinnedVersionDetails } from "@/features/breeder/components/pinned-version-details";
 import { RouteScoreBreakdown } from "@/features/breeder/components/route-score-breakdown";
 import { RouteMissingRequirements } from "@/features/breeder/components/route-supporting-details";
-import {
-  localizedName,
-  optimizationModeLabels,
-} from "@/features/breeder/presentation";
+import { localizedName } from "@/features/breeder/presentation";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { Link, useRouter } from "@/i18n/navigation";
+import { catalogLocaleFor } from "@/i18n/routing";
 
 import type { SavedPlanDetail } from "./server";
 
 export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
+  const locale = useAppLocale();
+  const router = useRouter();
+  const t = useCopy("Plans");
   const [removing, setRemoving] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const { job, reference, route } = detail;
@@ -58,7 +60,11 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
       ),
     [job.localization.passive_skills],
   );
-  const targetName = localizedName(palNames, job.target_pal_id, "帕鲁");
+  const targetName = localizedName(
+    palNames,
+    job.target_pal_id,
+    t("palFallback"),
+  );
 
   async function removePlan(): Promise<void> {
     setRemoving(true);
@@ -79,7 +85,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
             : "DATA_UNAVAILABLE";
         throw new Error(code);
       }
-      globalThis.location.assign("/plans");
+      router.replace("/plans");
     } catch (error) {
       setErrorCode(error instanceof Error ? error.message : "DATA_UNAVAILABLE");
     } finally {
@@ -99,26 +105,31 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
       >
         <Link href="/plans">
           <ArrowLeft aria-hidden="true" className="size-4" />
-          返回我的计划
+          {t("back")}
         </Link>
       </Button>
 
       <section
         className="min-w-0 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-5"
-        aria-label="收藏计划摘要"
+        aria-label={t("summaryLabel")}
       >
         <div className="flex min-w-0 flex-wrap items-start gap-4">
           <PalPortrait palId={job.target_pal_id} name={targetName} size={64} />
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-primary uppercase">
               <Target aria-hidden="true" className="size-4" />
-              保存的配种路线
+              {t("savedRoute")}
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {targetName}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              保存于 {formatDateTime(reference.saved_at)}
+              {t("savedAt", {
+                date: formatDateTime(
+                  reference.saved_at,
+                  catalogLocaleFor(locale),
+                ),
+              })}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -126,12 +137,12 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
               tone={route.feasibility_status === "ready" ? "good" : "warning"}
             >
               {route.feasibility_status === "ready"
-                ? "库存可执行"
-                : "还需准备帕鲁"}
+                ? t("ready")
+                : t("needsPals")}
             </StatusChip>
             <StatusChip tone="neutral">
               <BookmarkCheck aria-hidden="true" className="size-3.5" />
-              已收藏
+              {t("saved")}
             </StatusChip>
           </div>
         </div>
@@ -139,10 +150,12 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
         <div className="mt-4 border-t border-border pt-4">
           <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
             <Sparkles aria-hidden="true" className="size-4 text-primary" />
-            想要的被动
+            {t("desiredPassives")}
           </h2>
           {job.desired_passive_ids.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">未指定被动</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("noneSpecified")}
+            </p>
           ) : (
             <div
               className="mt-2 grid auto-rows-min grid-cols-2 content-start items-start gap-2 sm:max-w-lg"
@@ -151,7 +164,11 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
               {job.desired_passive_ids.map((passiveId) => (
                 <PassiveBadge
                   key={passiveId}
-                  name={localizedName(passiveNames, passiveId, "被动")}
+                  name={localizedName(
+                    passiveNames,
+                    passiveId,
+                    t("passiveFallback"),
+                  )}
                   rank={passiveFacts.get(passiveId)?.rank ?? null}
                   isNegative={passiveFacts.get(passiveId)?.isNegative ?? null}
                   className="w-full min-w-0 justify-start truncate"
@@ -162,12 +179,12 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
-          <StatusChip tone="good">
-            {optimizationModeLabels[job.optimization_mode]}
+          <StatusChip tone="good">{t(job.optimization_mode)}</StatusChip>
+          <StatusChip tone="neutral">
+            {t("maxGenerations", { count: job.max_generations })}
           </StatusChip>
-          <StatusChip tone="neutral">最多 {job.max_generations} 代</StatusChip>
           <StatusChip tone={job.allow_guild_shared ? "good" : "neutral"}>
-            {job.allow_guild_shared ? "可使用公会库存" : "仅使用自己的库存"}
+            {job.allow_guild_shared ? t("guildAllowed") : t("ownOnly")}
           </StatusChip>
         </div>
       </section>
@@ -175,7 +192,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
       {errorCode === null ? null : (
         <Alert variant="destructive" role="alert">
           <AlertTriangle aria-hidden="true" />
-          <AlertTitle>移除收藏失败</AlertTitle>
+          <AlertTitle>{t("removeFailed")}</AlertTitle>
           <AlertDescription className="font-mono break-all">
             {errorCode}
           </AlertDescription>
@@ -193,10 +210,10 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
         palNames={palNames}
         passiveNames={passiveNames}
         passiveFacts={passiveFacts}
-        ariaLabel="收藏路线的完整配种路径树"
+        ariaLabel={t("treeLabel")}
         compactPreview
         eyebrow={null}
-        title="配种路径"
+        title={t("path")}
         description={null}
       />
       <RouteScoreBreakdown route={route} />
@@ -211,15 +228,15 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-glass-border bg-white/76 p-4 shadow-soft sm:p-5">
         <div>
-          <h2 className="font-bold text-foreground">管理收藏</h2>
+          <h2 className="font-bold text-foreground">{t("manage")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            移除后，这条路线将不再出现在“我的计划”中，原配种结果仍会保留。
+            {t("manageDescription")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
             <Link href={`/breeder/jobs/${reference.source_job_id}`}>
-              查看原配种结果
+              {t("viewOriginal")}
             </Link>
           </Button>
           <Button
@@ -228,7 +245,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
             onClick={() => void removePlan()}
           >
             <Trash2 aria-hidden="true" className="size-4" />
-            {removing ? "正在移除…" : "移除收藏"}
+            {removing ? t("removing") : t("remove")}
           </Button>
         </div>
       </section>
@@ -236,8 +253,8 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
   );
 }
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("zh-CN", {
+function formatDateTime(value: string, locale: "zh-CN" | "en-US"): string {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));

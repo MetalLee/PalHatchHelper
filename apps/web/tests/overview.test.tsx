@@ -67,7 +67,7 @@ function renderOverview(planFeed: OverviewPlanFeed = feed) {
 describe("overview dashboard", () => {
   it("renders the focused overview and saved routes", () => {
     renderOverview();
-    expect(screen.getByText("PALWORLD SERVER CONSOLE")).toBeTruthy();
+    expect(screen.getByText("帕鲁服务器工作台")).toBeTruthy();
     expect(screen.getByText(/Fixture World · Fixture Guild/)).toBeTruthy();
     expect(screen.queryByText(/整个帕鲁世界保持清晰可见/)).toBeNull();
     expect(screen.getByRole("link", { name: "查看帕鲁" })).toBeTruthy();

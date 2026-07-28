@@ -1,3 +1,5 @@
+"use client";
+
 import type { BreedingRoute } from "@palhatch/contracts";
 import {
   Check,
@@ -10,9 +12,8 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
-
-import { difficultyLabels, optimizationModeLabels } from "../presentation";
 
 export function RouteComparisonCard({
   route,
@@ -23,10 +24,11 @@ export function RouteComparisonCard({
   selected: boolean;
   onSelect: () => void;
 }>) {
+  const t = useCopy("Breeder");
   const ready = route.feasibility_status === "ready";
   const accessibleName = ready
-    ? `可执行路线 ${route.rank}`
-    : `备选路线 ${route.rank}`;
+    ? t("readyRouteLabel", { rank: route.rank })
+    : t("fallbackRouteLabel", { rank: route.rank });
 
   return (
     <button
@@ -45,7 +47,10 @@ export function RouteComparisonCard({
     >
       <span className="flex min-w-0 items-center justify-between gap-2">
         <span className="min-w-0 truncate text-base font-bold text-foreground">
-          方案 {route.rank} · {optimizationModeLabels[route.optimization_mode]}
+          {t("routeTitle", {
+            rank: route.rank,
+            mode: t(route.optimization_mode),
+          })}
         </span>
         <span
           aria-hidden="true"
@@ -74,14 +79,14 @@ export function RouteComparisonCard({
           ) : (
             <TriangleAlert aria-hidden="true" />
           )}
-          {ready ? "库存可执行" : "需补库存"}
+          {ready ? t("ready") : t("needsInventory")}
         </Badge>
       </span>
 
       <span className="mt-3 grid grid-cols-[auto_1fr] items-end gap-3 border-b border-border pb-3">
         <span>
           <span className="block text-xs font-semibold text-muted-foreground">
-            总分
+            {t("totalScore")}
           </span>
           <span className="block text-3xl font-bold tracking-[-0.04em] text-primary tabular-nums">
             {route.total_score.toFixed(2)}
@@ -89,11 +94,14 @@ export function RouteComparisonCard({
         </span>
         <span className="grid justify-items-end gap-1 text-right text-xs">
           <span className="font-semibold text-foreground">
-            难度 {difficultyLabels[route.difficulty]}
+            {t("difficulty", { value: t(route.difficulty) })}
           </span>
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <Clock3 aria-hidden="true" className="size-3.5 text-primary" />
-            {route.estimated_attempts_min}–{route.estimated_attempts_max} 次
+            {t("attemptCount", {
+              min: route.estimated_attempts_min,
+              max: route.estimated_attempts_max,
+            })}
           </span>
         </span>
       </span>
@@ -101,22 +109,22 @@ export function RouteComparisonCard({
       <span className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
         <Metric
           icon={GitBranch}
-          label="代数"
-          value={`${route.generation_count} 代`}
+          label={t("generations")}
+          value={t("generationCount", { count: route.generation_count })}
         />
         <Metric
           icon={Users}
-          label="公会借用"
-          value={`${route.borrowed_pal_count} 只`}
+          label={t("guildBorrowing")}
+          value={t("palCount", { count: route.borrowed_pal_count })}
         />
         <Metric
           icon={ShieldCheck}
-          label="库存覆盖"
+          label={t("inventoryCoverage")}
           value={`${Math.round(route.inventory_coverage * 100)}%`}
         />
         <Metric
           icon={Sparkles}
-          label="词条覆盖"
+          label={t("passiveCoverage")}
           value={`${Math.round(route.inventory_passive_coverage * 100)}%`}
         />
       </span>
@@ -124,10 +132,16 @@ export function RouteComparisonCard({
       {route.missing_pal_count > 0 || route.missing_passive_ids.length > 0 ? (
         <span className="mt-3 flex flex-wrap gap-x-3 gap-y-1 rounded-xl border border-orange-200 bg-orange-50/88 px-3 py-2 text-xs font-semibold text-orange-950">
           {route.missing_pal_count > 0 ? (
-            <span>缺 {route.missing_pal_count} 只亲本</span>
+            <span>
+              {t("missingParents", { count: route.missing_pal_count })}
+            </span>
           ) : null}
           {route.missing_passive_ids.length > 0 ? (
-            <span>缺 {route.missing_passive_ids.length} 个目标被动来源</span>
+            <span>
+              {t("missingPassiveCount", {
+                count: route.missing_passive_ids.length,
+              })}
+            </span>
           ) : null}
         </span>
       ) : null}

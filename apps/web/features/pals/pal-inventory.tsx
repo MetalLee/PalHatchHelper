@@ -6,6 +6,8 @@ import { useState } from "react";
 
 import { PageEmpty } from "@/components/states/page-empty";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { catalogLocaleFor } from "@/i18n/routing";
 
 import { PalInventoryCard } from "./pal-inventory-card";
 import { PalInventoryTable } from "./pal-inventory-table";
@@ -27,6 +29,8 @@ export function PalInventory({
   passiveRanks?: Readonly<Record<string, number>>;
   onToggleShare?: ToggleShare;
 }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Pals");
   const [items, setItems] = useState(page.items);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<Phase5ErrorCode | null>(null);
@@ -78,13 +82,15 @@ export function PalInventory({
     <section
       id="pal-inventory-results"
       className="grid min-w-0 gap-4"
-      aria-label="帕鲁库存结果"
+      aria-label={t("resultsLabel")}
     >
       <p
         className="text-sm font-medium text-muted-foreground"
         aria-live="polite"
       >
-        筛选结果 {page.total_count.toLocaleString("zh-CN")} 只
+        {t("filterResults", {
+          count: page.total_count.toLocaleString(catalogLocaleFor(locale)),
+        })}
       </p>
 
       {errorCode !== null ? (
@@ -94,19 +100,17 @@ export function PalInventory({
           className="rounded-2xl border-rose-200 bg-rose-50 text-rose-900"
         >
           <ShieldCheck aria-hidden="true" className="size-5" />
-          <AlertTitle>共享状态未更新</AlertTitle>
+          <AlertTitle>{t("shareUpdateTitle")}</AlertTitle>
           <AlertDescription className="text-rose-800">
-            {errorCode === "PAL_NOT_OWNED"
-              ? "只有当前拥有者可以修改共享状态。"
-              : "更新失败，原共享状态保持不变，请稍后重试。"}
+            {errorCode === "PAL_NOT_OWNED" ? t("onlyOwner") : t("updateKeep")}
           </AlertDescription>
         </Alert>
       ) : null}
 
       {items.length === 0 ? (
         <PageEmpty
-          title="没有匹配的帕鲁"
-          description="尝试清空部分筛选，或切换“全部 / 我的帕鲁 / 公会共享”范围。"
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : view === "table" ? (
         <PalInventoryTable

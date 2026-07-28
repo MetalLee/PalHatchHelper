@@ -1,8 +1,11 @@
+"use client";
+
 import type { BreedingRoute } from "@palhatch/contracts";
 
 import { GenderDisplay } from "@/components/pals/gender-display";
+import { useCopy } from "@/i18n/client";
 
-import { genderLabel, localizedName, localizedNames } from "../presentation";
+import { localizedName, localizedNames } from "../presentation";
 
 export function RouteMissingRequirements({
   route,
@@ -13,6 +16,19 @@ export function RouteMissingRequirements({
   palNames: ReadonlyMap<string, string>;
   passiveNames: ReadonlyMap<string, string>;
 }>) {
+  const t = useCopy("Breeder");
+  const genderText = (
+    gender: BreedingRoute["missing_requirements"][number]["gender"],
+  ): string =>
+    t(
+      gender === "male"
+        ? "male"
+        : gender === "female"
+          ? "female"
+          : gender === "genderless"
+            ? "genderless"
+            : "unknownGender",
+    );
   if (
     route.missing_requirements.length === 0 &&
     route.missing_passive_ids.length === 0
@@ -22,10 +38,10 @@ export function RouteMissingRequirements({
   return (
     <section
       className="rounded-3xl border border-orange-200 bg-orange-50/88 p-5"
-      aria-label="仍缺少的帕鲁"
+      aria-label={t("missingRequirementsLabel")}
     >
       <h2 className="font-bold text-orange-950">
-        仍需准备 {route.missing_pal_count} 只帕鲁
+        {t("stillNeedPals", { count: route.missing_pal_count })}
       </h2>
       {route.missing_requirements.length > 0 ? (
         <ul className="mt-3 grid gap-2 text-sm text-orange-950">
@@ -36,16 +52,27 @@ export function RouteMissingRequirements({
             >
               <span>
                 {requirement.quantity}×{" "}
-                {localizedName(palNames, requirement.pal_id, "帕鲁")} ·
+                {localizedName(
+                  palNames,
+                  requirement.pal_id,
+                  t("targetFallback"),
+                )}{" "}
+                ·
               </span>
               <GenderDisplay
                 gender={requirement.gender}
-                label={genderLabel(requirement.gender)}
+                label={genderText(requirement.gender)}
               />
               <span>
                 {requirement.required_passive_ids.length
-                  ? ` · 被动 ${localizedNames(passiveNames, requirement.required_passive_ids, "被动").join("、")}`
-                  : " · 被动无要求"}
+                  ? t("requirementPassives", {
+                      names: localizedNames(
+                        passiveNames,
+                        requirement.required_passive_ids,
+                        t("passiveFallback"),
+                      ).join(", "),
+                    })
+                  : t("noPassiveRequirement")}
               </span>
             </li>
           ))}
@@ -53,10 +80,13 @@ export function RouteMissingRequirements({
       ) : null}
       {route.missing_passive_ids.length > 0 ? (
         <p className="mt-3 text-sm text-amber-950">
-          缺少被动来源：
-          {localizedNames(passiveNames, route.missing_passive_ids, "被动").join(
-            "、",
-          )}
+          {t("missingPassiveSourcesShort", {
+            names: localizedNames(
+              passiveNames,
+              route.missing_passive_ids,
+              t("passiveFallback"),
+            ).join(", "),
+          })}
         </p>
       ) : null}
     </section>

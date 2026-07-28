@@ -20,6 +20,7 @@ def make_job_claim(
 ) -> JobClaim:
     now = datetime.now(UTC)
     job = BreedingJob(
+        locale="zh-CN",
         job_id=job_id,
         requester_user_id=UUID("22222222-2222-4222-8222-222222222222"),
         world_id=UUID("77777777-7777-4777-8777-777777777777"),
@@ -73,6 +74,7 @@ def make_claim_row(
     )
     return {
         "id": str(claim.job.job_id),
+        "locale": claim.job.locale,
         "requester_user_id": str(claim.job.requester_user_id),
         "world_id": str(claim.job.world_id),
         "player_id": str(claim.job.player_id),

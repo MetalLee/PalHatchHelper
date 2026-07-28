@@ -7,12 +7,12 @@ import {
   Settings,
   ShieldCheck,
 } from "lucide-react";
-import Link from "next/link";
 
 import { AppNavigation } from "@/components/app-navigation";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { StatusChip, type StatusTone } from "@/components/status/status-chip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { brand } from "@/config/brand";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
 
 function displayInitial(displayName: string): string {
   return Array.from(displayName.trim())[0]?.toUpperCase() ?? "P";
@@ -34,19 +36,27 @@ export function SiteHeader({
   activePath,
   displayName,
   role,
-  dataStatus = { label: "查看数据状态", tone: "neutral" },
+  dataStatus,
 }: Readonly<{
   activePath: string;
   displayName: string;
   role: "admin" | "player";
   dataStatus?: { label: string; tone: StatusTone };
 }>) {
+  const locale = useAppLocale();
+  const brandCopy = useCopy("Brand");
+  const navigation = useCopy("Navigation");
+  const t = useCopy("Shell");
+  const resolvedDataStatus = dataStatus ?? {
+    label: t("viewDataStatus"),
+    tone: "neutral" as const,
+  };
   const signOut = (): void => {
     void fetch("/api/auth/logout", {
       method: "POST",
       cache: "no-store",
     }).finally(() => {
-      window.location.assign("/login");
+      window.location.assign(`/${locale}/login`);
     });
   };
 
@@ -55,7 +65,7 @@ export function SiteHeader({
       <div className="mx-auto flex min-h-16 w-full max-w-[90rem] items-center gap-3 rounded-[1.4rem] border border-glass-border bg-glass px-3 shadow-soft backdrop-blur-xl sm:px-4">
         <Link
           href="/overview"
-          aria-label={`${brand.name} 首页`}
+          aria-label={t("homeLabel", { brand: brand.name })}
           className="flex min-w-0 items-center gap-2.5 rounded-xl text-foreground no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
           <BrandLogo size={40} className="size-[34px] sm:size-10" priority />
@@ -64,7 +74,7 @@ export function SiteHeader({
               <BrandWordmark />
             </strong>
             <small className="truncate text-[0.68rem] text-muted-foreground">
-              {brand.productName}
+              {brandCopy("productName")}
             </small>
           </span>
           <span className="grid min-w-0 xl:hidden">
@@ -81,8 +91,12 @@ export function SiteHeader({
             href="/data-status"
             className="rounded-full no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
           >
-            <StatusChip tone={dataStatus.tone}>{dataStatus.label}</StatusChip>
+            <StatusChip tone={resolvedDataStatus.tone}>
+              {resolvedDataStatus.label}
+            </StatusChip>
           </Link>
+
+          <LocaleSwitcher />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -90,7 +104,7 @@ export function SiteHeader({
                 type="button"
                 variant="ghost"
                 className="min-h-11 rounded-xl px-2.5"
-                aria-label={`打开用户菜单，${displayName}`}
+                aria-label={t("openUserMenu", { name: displayName })}
               >
                 <Avatar className="size-8 border border-white shadow-sm">
                   <AvatarFallback className="bg-accent text-xs font-bold text-accent-foreground">
@@ -108,7 +122,7 @@ export function SiteHeader({
               <DropdownMenuLabel>
                 <span className="block truncate">{displayName}</span>
                 <span className="text-xs font-normal text-muted-foreground">
-                  {role === "admin" ? "管理员" : "玩家"}
+                  {role === "admin" ? t("adminRole") : t("playerRole")}
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -121,7 +135,7 @@ export function SiteHeader({
                     }
                   >
                     <ShieldCheck aria-hidden="true" />
-                    管理中心
+                    {navigation("admin")}
                   </Link>
                 </DropdownMenuItem>
               ) : null}
@@ -131,7 +145,7 @@ export function SiteHeader({
                   aria-current={activePath === "/account" ? "page" : undefined}
                 >
                   <Settings aria-hidden="true" />
-                  账号
+                  {navigation("account")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -142,24 +156,25 @@ export function SiteHeader({
                   }
                 >
                   <Database aria-hidden="true" />
-                  数据状态
+                  {navigation("dataStatus")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={signOut}>
                 <LogOut aria-hidden="true" />
-                退出登录
+                {t("signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        <div className="ml-auto lg:hidden">
+        <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <LocaleSwitcher compact />
           <MobileNavigation
             activePath={activePath}
             displayName={displayName}
             role={role}
-            dataStatus={dataStatus}
+            dataStatus={resolvedDataStatus}
             onSignOut={signOut}
           />
         </div>

@@ -1,14 +1,18 @@
+"use client";
+
 import { Check } from "lucide-react";
 
-const steps = ["目标设置", "方案推荐", "配种路径"] as const;
+import { useCopy } from "@/i18n/client";
 
 export function BreederFlowProgress({
   activeStep = 1,
 }: Readonly<{ activeStep?: 1 | 2 | 3 }>) {
+  const t = useCopy("Breeder");
+  const steps = [t("flowTarget"), t("flowRecommendations"), t("flowPath")];
   return (
     <nav
       className="rounded-3xl border border-glass-border bg-glass p-3 shadow-soft backdrop-blur-md sm:p-4"
-      aria-label="配种流程"
+      aria-label={t("flowLabel")}
     >
       <ol className="grid min-w-0 grid-cols-3">
         {steps.map((step, index) => {
@@ -39,13 +43,15 @@ export function BreederFlowProgress({
                 {completed ? (
                   <>
                     <Check aria-hidden="true" className="size-4" />
-                    <span className="sr-only">已完成步骤 {stepNumber}</span>
+                    <span className="sr-only">
+                      {t("completedStep", { step: stepNumber })}
+                    </span>
                   </>
                 ) : (
                   <>
                     {stepNumber}
                     {current ? (
-                      <span className="sr-only">，当前步骤</span>
+                      <span className="sr-only">{t("currentStep")}</span>
                     ) : null}
                   </>
                 )}

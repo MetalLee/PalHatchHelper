@@ -391,7 +391,7 @@ describe("Phase 6 breeder form", () => {
       max_generations: 5,
     });
     expect(routerPush).toHaveBeenCalledWith(
-      "/breeder/jobs/60000000-0000-4000-8000-000000000066",
+      "/zh/breeder/jobs/60000000-0000-4000-8000-000000000066",
     );
   });
 
@@ -628,7 +628,7 @@ describe("Phase 6 job comparison", () => {
     expect(screen.queryByText(/Rank/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "展开推荐依据" }));
     expect(screen.getByText("路线长度")).toBeTruthy();
-    expect(screen.getByText(/综合推荐：80\.00/)).toBeTruthy();
+    expect(screen.getByText(/综合推荐 · 总分 89\.00/)).toBeTruthy();
     expect(screen.queryByText("test_parent_a")).toBeNull();
     expect(screen.queryByText(/被动 test_passive_a/)).toBeNull();
     expect(screen.queryByText("route_length")).toBeNull();
@@ -785,7 +785,7 @@ describe("Phase 6 job comparison", () => {
       <BreedingJobView initialResult={value} poll={false} />,
     );
 
-    expect(screen.getByText("库存可执行方案")).toBeTruthy();
+    expect(screen.getByText("库存可执行方案 1")).toBeTruthy();
     expect(screen.getByText(/需补充库存的备选方案/)).toBeTruthy();
     expect(screen.queryByText(/fixture-parent-a-2/)).toBeNull();
     expect(container.querySelector("details")).toBeNull();
@@ -809,7 +809,7 @@ describe("Phase 6 job comparison", () => {
     expect(
       screen.getAllByText("库存缺少以下目标被动来源：").length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByText("未翻译被动").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("被动名称暂不可用").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "保存到我的计划" })).toBeTruthy();
   });
 

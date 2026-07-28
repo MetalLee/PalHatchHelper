@@ -1,5 +1,5 @@
 import type { BreedingError } from "@palhatch/contracts";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { authUserErrorCode } from "@/features/phase5-errors";
 import {
@@ -8,6 +8,7 @@ import {
   loadBreedingJob,
 } from "@/features/breeder/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isCatalogLocale } from "@/i18n/routing";
 
 const privateHeaders = {
   "cache-control": "private, no-store, max-age=0",
@@ -15,7 +16,7 @@ const privateHeaders = {
 };
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> },
 ) {
   const supabase = await createServerSupabaseClient();
@@ -27,8 +28,10 @@ export async function GET(
       { status: breederHttpStatus(authCode), headers: privateHeaders },
     );
   const { jobId } = await params;
+  const requestedLocale = request.nextUrl.searchParams.get("locale");
+  const locale = isCatalogLocale(requestedLocale) ? requestedLocale : "zh-CN";
   try {
-    const result = await loadBreedingJob(jobId, supabase);
+    const result = await loadBreedingJob(jobId, supabase, locale);
     return NextResponse.json(result, { headers: privateHeaders });
   } catch (error) {
     const code =

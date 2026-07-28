@@ -12,6 +12,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
+import { useAppLocale, useCopy } from "@/i18n/client";
 
 import type { PalListQuery } from "./query";
 import { encodePageContext } from "./query";
@@ -84,19 +85,21 @@ function PaginationView({
   page: PalInventoryPage;
   className?: string;
 }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Pals");
   const context = pageContext(page);
   const previousHref =
     page.page_number > 1
-      ? `/pals?${queryParams(query, page.page_number - 1, context).toString()}`
+      ? `/${locale}/pals?${queryParams(query, page.page_number - 1, context).toString()}`
       : null;
   const nextHref =
     page.page_number < page.total_pages
-      ? `/pals?${queryParams(query, page.page_number + 1, context).toString()}`
+      ? `/${locale}/pals?${queryParams(query, page.page_number + 1, context).toString()}`
       : null;
   const tokens = pageTokens(page.page_number, page.total_pages);
 
   return (
-    <Pagination className={className} aria-label="帕鲁列表分页">
+    <Pagination className={className} aria-label={t("pagination")}>
       <PaginationContent>
         <PaginationItem>
           {previousHref === null ? (
@@ -107,7 +110,7 @@ function PaginationView({
                 "pointer-events-none",
               )}
             >
-              <span className="sr-only">上一页不可用</span>‹
+              <span className="sr-only">{t("previous")}</span>‹
             </span>
           ) : (
             <PaginationPrevious href={previousHref} />
@@ -126,9 +129,12 @@ function PaginationView({
               )}
             >
               <PaginationLink
-                href={`/pals?${queryParams(query, token, context).toString()}`}
+                href={`/${locale}/pals?${queryParams(query, token, context).toString()}`}
                 isActive={token === page.page_number}
-                aria-label={`第 ${token} 页`}
+                aria-label={t("pageStatus", {
+                  page: token,
+                  total: page.total_pages,
+                })}
               >
                 {token}
               </PaginationLink>
@@ -144,7 +150,7 @@ function PaginationView({
                 "pointer-events-none",
               )}
             >
-              <span className="sr-only">下一页不可用</span>›
+              <span className="sr-only">{t("next")}</span>›
             </span>
           ) : (
             <PaginationNext href={nextHref} />

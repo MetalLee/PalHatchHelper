@@ -71,6 +71,7 @@ def _explanation_request(
             )
         )
     return AIExplanationRequest(
+        locale=claim.job.locale,
         target_pal_id=result.target_pal_id,
         desired_passive_ids=result.desired_passive_ids,
         optimization_mode=result.optimization_mode.value,

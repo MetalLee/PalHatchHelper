@@ -1,3 +1,5 @@
+"use client";
+
 import type { BreederJobStatus } from "@palhatch/contracts";
 import {
   CheckCircle2,
@@ -11,9 +13,8 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusChip, type StatusTone } from "@/components/status/status-chip";
+import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
-
-import { jobStagePresentation } from "../presentation";
 
 const stageIcons = {
   pending: Clock3,
@@ -48,14 +49,15 @@ export function JobStagePanel({
   errorCode: string | null;
   pollPaused: boolean;
 }>) {
-  const presentation = jobStagePresentation[status];
+  const t = useCopy("Breeder");
+  const label = t(`${status}Label`);
   const StageIcon = stageIcons[status];
   const active = status === "processing" || status === "ai_enriching";
 
   return (
     <section
       className="min-w-0 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-5"
-      aria-label="当前任务阶段"
+      aria-label={t("jobStageLabel")}
       aria-live="polite"
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
@@ -78,20 +80,18 @@ export function JobStagePanel({
           </span>
           <div className="min-w-0">
             <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-              任务状态
+              {t("jobStatus")}
             </p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">
-              {presentation.label}
-            </h2>
+            <h2 className="mt-1 text-lg font-bold text-foreground">{label}</h2>
             <p
               className="mt-1 font-mono text-xs text-muted-foreground"
               data-testid="job-stage"
             >
-              {status} · 尝试 {attemptCount}
+              {t("jobAttempt", { status, count: attemptCount })}
             </p>
           </div>
         </div>
-        <StatusChip tone={stageTones[status]}>{presentation.label}</StatusChip>
+        <StatusChip tone={stageTones[status]}>{label}</StatusChip>
       </div>
 
       {pollPaused ? (
@@ -100,9 +100,9 @@ export function JobStagePanel({
           className="mt-4 rounded-2xl border-amber-200 bg-amber-50/92 text-amber-950"
         >
           <PauseCircle aria-hidden="true" className="size-4" />
-          <AlertTitle>自动刷新已暂停</AlertTitle>
+          <AlertTitle>{t("refreshPausedTitle")}</AlertTitle>
           <AlertDescription className="text-amber-900">
-            轮询已达到安全上限，请手动刷新页面继续查看。
+            {t("refreshPausedDescription")}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -113,7 +113,7 @@ export function JobStagePanel({
           className="mt-4 rounded-2xl border-rose-200 bg-rose-50/94"
         >
           <TriangleAlert aria-hidden="true" className="size-4" />
-          <AlertTitle>任务返回稳定错误码</AlertTitle>
+          <AlertTitle>{t("stableErrorTitle")}</AlertTitle>
           <AlertDescription className="font-mono break-all">
             {errorCode}
           </AlertDescription>

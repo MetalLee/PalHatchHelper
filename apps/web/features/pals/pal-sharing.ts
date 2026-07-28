@@ -1,4 +1,6 @@
 import type { PalInventoryPage } from "@palhatch/contracts";
+import { getCopy } from "@/i18n/client";
+import type { AppLocale } from "@/i18n/routing";
 
 type PalInventoryItem = PalInventoryPage["items"][number];
 
@@ -12,8 +14,10 @@ export function isDimensionalSharingUnresolved(pal: PalInventoryItem): boolean {
 export function palShareLabel(
   pal: PalInventoryItem,
   dimensionalSharingUnresolved: boolean,
+  locale: AppLocale = "zh",
 ): string {
-  if (dimensionalSharingUnresolved) return "共享权限未确认";
-  if (pal.ownership_scope === "guild") return "公会所有";
-  return pal.share_enabled ? "公会可用" : "仅自己";
+  const t = getCopy(locale, "Pals");
+  if (dimensionalSharingUnresolved) return t("sharingUnconfirmed");
+  if (pal.ownership_scope === "guild") return t("guildOwned");
+  return pal.share_enabled ? t("shareEnabled") : t("shareDisabled");
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import type {
   BreederCatalogPalOption,
   CreateBreedingJobRequest,
@@ -5,9 +7,8 @@ import type {
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useCopy } from "@/i18n/client";
 import { userFacingCatalogName } from "@/lib/user-facing-name";
-
-import { optimizationModeLabel } from "./optimization-mode-picker";
 
 export function BreederSubmitSummary({
   target,
@@ -24,27 +25,28 @@ export function BreederSubmitSummary({
   disabled: boolean;
   submitting: boolean;
 }>) {
+  const t = useCopy("Breeder");
   const facts = [
     [
-      "当前目标",
+      t("currentTarget"),
       target === undefined
-        ? "尚未选择"
+        ? t("notSelected")
         : userFacingCatalogName(
             target.display_name,
             target.pal_id,
-            "名称暂不可用",
+            t("nameUnavailable"),
           ),
     ],
-    ["已选被动", `${passiveCount} / 4`],
-    ["优化模式", optimizationModeLabel(mode)],
-    ["公会共享", allowShared ? "允许" : "不允许"],
+    [t("selectedPassives"), `${passiveCount} / 4`],
+    [t("optimizationMode"), t(mode)],
+    [t("guildSharing"), allowShared ? t("allowed") : t("notAllowed")],
   ] as const;
 
   return (
     <section className="min-w-0 rounded-3xl border border-primary/20 bg-[linear-gradient(145deg,rgba(255,255,255,0.92),rgba(223,245,231,0.78))] p-4 shadow-soft sm:p-5">
       <div className="flex items-center gap-2">
         <CheckCircle2 aria-hidden="true" className="size-5 text-primary" />
-        <h2 className="font-bold text-foreground">确认设置</h2>
+        <h2 className="font-bold text-foreground">{t("confirmSettings")}</h2>
       </div>
       <dl className="mt-4 grid min-w-0 grid-cols-2 gap-2 text-sm">
         {facts.map(([label, value]) => (
@@ -67,13 +69,13 @@ export function BreederSubmitSummary({
         disabled={disabled}
         className="mt-4 w-full rounded-xl shadow-sm"
       >
-        {submitting ? "正在创建…" : "创建配种任务"}
+        {submitting ? t("creating") : t("createJob")}
         {submitting ? null : (
           <ArrowRight aria-hidden="true" className="size-4" />
         )}
       </Button>
       <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
-        创建后会自动开始计算，并在下一页显示进度和推荐路线。
+        {t("createDescription")}
       </p>
     </section>
   );

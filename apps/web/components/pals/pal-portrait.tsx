@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { palPortraitPath } from "@/lib/pal-assets";
 import { cn } from "@/lib/utils";
+import { useCopy } from "@/i18n/client";
 
 const fallbackGradients = [
   "from-sky-100 via-white to-emerald-100",
@@ -34,6 +35,7 @@ export function PalPortrait({
   size?: number;
   className?: string;
 }>) {
+  const t = useCopy("Pals");
   const [failed, setFailed] = useState(false);
   const gradient = useMemo(() => stableGradient(palId), [palId]);
   const fallbackLabel =
@@ -45,7 +47,7 @@ export function PalPortrait({
     return (
       <span
         role="img"
-        aria-label={`${name}头像（暂无本地图标）`}
+        aria-label={t("portraitFallback", { name })}
         className={cn(
           "grid shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/80 bg-gradient-to-br font-bold text-forest shadow-sm",
           gradient,
@@ -61,7 +63,7 @@ export function PalPortrait({
   return (
     <Image
       src={palPortraitPath(palId)}
-      alt={`${name}头像`}
+      alt={t("portrait", { name })}
       width={size}
       height={size}
       onError={() => setFailed(true)}

@@ -16,6 +16,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { catalogLocaleFor } from "@/i18n/routing";
 
 import { BreederSettings } from "./components/breeder-settings";
 import { BreederSubmitSummary } from "./components/breeder-submit-summary";
@@ -100,8 +102,9 @@ function resolveTargetPal(
 
 async function createThroughApi(
   request: CreateBreedingJobRequest,
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): Promise<CreateBreedingJobResponse> {
-  const response = await fetch("/api/breeder/jobs", {
+  const response = await fetch(`/api/breeder/jobs?locale=${locale}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(request),
@@ -149,8 +152,10 @@ function SectionHeading({
 
 export function BreederForm({
   context,
-  createJob = createThroughApi,
+  createJob,
 }: Readonly<{ context: BreederFormContext; createJob?: CreateJob }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Breeder");
   const router = useRouter();
   const [target, setTarget] = useState("");
   const [passives, setPassives] = useState<string[]>([]);
@@ -175,7 +180,7 @@ export function BreederForm({
         return current.filter((value) => value !== id);
       }
       if (current.length >= 4) {
-        setErrorCode("最多选择四个被动");
+        setErrorCode(t("maxFour"));
         return current;
       }
       setErrorCode(null);
@@ -205,8 +210,11 @@ export function BreederForm({
     }
     setSubmitting(true);
     try {
-      const result = await createJob(request);
-      router.push(`/breeder/jobs/${result.job_id}`);
+      const result = await (
+        createJob ??
+        ((value) => createThroughApi(value, catalogLocaleFor(locale)))
+      )(request);
+      router.push(`/${locale}/breeder/jobs/${result.job_id}`);
     } catch (error) {
       setErrorCode(error instanceof Error ? error.message : "DATA_UNAVAILABLE");
     } finally {
@@ -221,11 +229,14 @@ export function BreederForm({
       onSubmit={submit}
     >
       <div className="grid min-w-0 gap-6">
-        <section className={formSectionClassName} aria-label="配种目标">
+        <section
+          className={formSectionClassName}
+          aria-label={t("targetSectionLabel")}
+        >
           <SectionHeading
             icon={Target}
-            title="目标设置"
-            description="选择你想培育的帕鲁。"
+            title={t("targetSettings")}
+            description={t("targetSettingsDescription")}
           />
           <TargetPalCombobox
             pals={context.pals}
@@ -240,8 +251,8 @@ export function BreederForm({
         <section className={formSectionClassName}>
           <SectionHeading
             icon={Sparkles}
-            title="期望被动"
-            description="最多选择 4 个想要继承的被动技能，点击已选技能即可移除。"
+            title={t("desiredPassives")}
+            description={t("desiredPassivesDescription")}
           />
           <PassiveSkillPicker
             skills={context.passive_skills}
@@ -253,8 +264,8 @@ export function BreederForm({
         <section className={formSectionClassName}>
           <SectionHeading
             icon={SlidersHorizontal}
-            title="路线偏好"
-            description="告诉我们你更看重速度、成功率，还是少借用公会帕鲁。"
+            title={t("routePreferences")}
+            description={t("routePreferencesDescription")}
           />
           <OptimizationModePicker value={mode} onValueChange={setMode} />
           <BreederSettings
@@ -275,7 +286,7 @@ export function BreederForm({
             className="rounded-2xl border-rose-200 bg-rose-50 text-rose-900"
           >
             <AlertTriangle aria-hidden="true" className="size-5" />
-            <AlertTitle>无法创建任务</AlertTitle>
+            <AlertTitle>{t("createFailed")}</AlertTitle>
             <AlertDescription className="break-words text-rose-800">
               {errorCode}
             </AlertDescription>

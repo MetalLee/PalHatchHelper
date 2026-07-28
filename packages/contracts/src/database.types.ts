@@ -420,6 +420,7 @@ export type Database = {
           max_generations: number;
           source_plan_id: string | null;
           recalculation_reason: string | null;
+          locale: string;
         };
         Insert: {
           id?: string;
@@ -454,6 +455,7 @@ export type Database = {
           max_generations?: number;
           source_plan_id?: string | null;
           recalculation_reason?: string | null;
+          locale?: string;
         };
         Update: {
           id?: string;
@@ -488,6 +490,7 @@ export type Database = {
           max_generations?: number;
           source_plan_id?: string | null;
           recalculation_reason?: string | null;
+          locale?: string;
         };
         Relationships: [
           {
@@ -2461,6 +2464,17 @@ export type Database = {
         };
         Returns: { job_id: string; reused: boolean }[];
       };
+      create_breeding_job_v3: {
+        Args: {
+          p_target_pal_id: string;
+          p_desired_passive_ids?: string[];
+          p_optimization_mode?: Database["public"]["Enums"]["optimization_mode"];
+          p_allow_guild_shared?: boolean;
+          p_max_generations?: number;
+          p_locale?: string;
+        };
+        Returns: { job_id: string; reused: boolean }[];
+      };
       create_player_binding: {
         Args: {
           p_user_id: string;
@@ -2523,6 +2537,12 @@ export type Database = {
         };
         Returns: Json;
       };
+      get_breeder_form_context_v2: {
+        Args: {
+          p_locale?: string;
+        };
+        Returns: Json;
+      };
       get_breeding_data_diff: {
         Args: {
           p_from_version_id: string;
@@ -2539,6 +2559,13 @@ export type Database = {
       get_breeding_job_detail: {
         Args: {
           p_job_id: string;
+        };
+        Returns: Json;
+      };
+      get_breeding_job_detail_v2: {
+        Args: {
+          p_job_id: string;
+          p_locale?: string;
         };
         Returns: Json;
       };
@@ -2714,6 +2741,25 @@ export type Database = {
         };
         Returns: Json;
       };
+      list_available_pals_page_v4: {
+        Args: {
+          p_scope?: string;
+          p_query?: string | null;
+          p_owner_filter_key?: string | null;
+          p_gender?: Database["public"]["Enums"]["pal_gender"] | null;
+          p_passive_skill_ids?: string[];
+          p_location_type?:
+            | Database["public"]["Enums"]["pal_location_type"]
+            | null;
+          p_share_enabled?: boolean | null;
+          p_snapshot_id?: string | null;
+          p_game_data_version_id?: string | null;
+          p_page_number?: number;
+          p_page_size?: number;
+          p_locale?: string;
+        };
+        Returns: Json;
+      };
       list_player_binding_events: {
         Args: {
           p_user_id?: string | null;
@@ -2727,6 +2773,16 @@ export type Database = {
           p_cursor_saved_at?: string | null;
           p_cursor_route_id?: string | null;
           p_query_boundary?: string | null;
+        };
+        Returns: Json;
+      };
+      list_saved_breeding_plans_v2: {
+        Args: {
+          p_limit?: number;
+          p_cursor_saved_at?: string | null;
+          p_cursor_route_id?: string | null;
+          p_query_boundary?: string | null;
+          p_locale?: string;
         };
         Returns: Json;
       };

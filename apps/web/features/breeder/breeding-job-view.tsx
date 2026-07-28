@@ -10,6 +10,8 @@ import { AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { catalogLocaleFor } from "@/i18n/routing";
 
 import { BreederFlowProgress } from "./components/breeder-flow-progress";
 import { BreedingRouteTree } from "./components/breeding-route-tree";
@@ -77,6 +79,9 @@ export function BreedingJobView({
   initialResult,
   poll = true,
 }: Readonly<{ initialResult: BreedingJobDetailRpcSuccess; poll?: boolean }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Breeder");
+  const catalogLocale = catalogLocaleFor(locale);
   const [result, setResult] = useState(initialResult);
   const [selectedKey, setSelectedKey] = useState(
     initialResult.data.plan?.routes.find(
@@ -107,9 +112,10 @@ export function BreedingJobView({
         setPollPaused(true);
         return;
       }
-      void fetch(`/api/breeder/jobs/${result.data.job_id}`, {
-        cache: "no-store",
-      })
+      void fetch(
+        `/api/breeder/jobs/${result.data.job_id}?locale=${catalogLocale}`,
+        { cache: "no-store" },
+      )
         .then((response) => response.json())
         .then((payload: unknown) => {
           const next = parsePolledJob(payload);
@@ -132,7 +138,7 @@ export function BreedingJobView({
         .catch(() => undefined);
     }, 2_000);
     return () => window.clearInterval(timer);
-  }, [poll, result.data.job_id, result.data.status]);
+  }, [catalogLocale, poll, result.data.job_id, result.data.status]);
 
   const plan = result.data.plan;
   const selected = useMemo(
@@ -182,7 +188,11 @@ export function BreedingJobView({
     !hardSearchLimit &&
     plan?.explanation_codes.includes("SEARCH_PRUNED") === true;
   const activeStep = plan !== null && plan.routes.length > 0 ? 3 : 2;
-  const targetName = localizedName(palNames, result.data.target_pal_id, "Pal");
+  const targetName = localizedName(
+    palNames,
+    result.data.target_pal_id,
+    t("targetFallback"),
+  );
 
   async function saveSelectedRoute(route: BreedingRoute): Promise<void> {
     setBusyRouteId(route.route_id);
@@ -274,13 +284,13 @@ export function BreedingJobView({
       {plan?.missing_passive_ids.length ? (
         <Alert className="rounded-3xl border-amber-200 bg-amber-50/94 text-amber-950">
           <AlertTriangle aria-hidden="true" />
-          <AlertTitle>库存缺少以下目标被动来源：</AlertTitle>
+          <AlertTitle>{t("missingPassiveSources")}</AlertTitle>
           <AlertDescription className="text-amber-900">
             {localizedNames(
               passiveNames,
               plan.missing_passive_ids,
-              "被动",
-            ).join("、")}
+              t("passiveFallback"),
+            ).join(t("listSeparator"))}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -306,7 +316,10 @@ export function BreedingJobView({
           />
 
           {selected === undefined ? null : (
-            <section className="grid min-w-0 gap-4" aria-label="路线详情">
+            <section
+              className="grid min-w-0 gap-4"
+              aria-label={t("routeDetailsLabel")}
+            >
               <BreedingRouteTree
                 route={selected}
                 targetPalId={result.data.target_pal_id}
@@ -315,7 +328,7 @@ export function BreedingJobView({
                 passiveFacts={passiveFacts}
                 compactPreview
                 eyebrow={null}
-                title="配种路径"
+                title={t("path")}
                 description={null}
               />
               <RouteMissingRequirements

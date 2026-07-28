@@ -1,7 +1,9 @@
 import type { Database } from "@palhatch/contracts";
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import createIntlMiddleware from "next-intl/middleware";
 
+import { isAppLocale, routing, stripLocalePrefix } from "@/i18n/routing";
 import { getPublicSupabaseConfig } from "@/lib/supabase/config";
 
 const protectedPrefixes = [
@@ -20,8 +22,38 @@ export function withPrivateCacheHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+function copyResponseCookies(
+  target: NextResponse,
+  source: NextResponse,
+): NextResponse {
+  for (const cookie of source.cookies.getAll()) target.cookies.set(cookie);
+  return target;
+}
+
+const handleI18nRouting = createIntlMiddleware(routing);
+
+function localeFromPathname(pathname: string) {
+  const value = pathname.split("/")[1];
+  return isAppLocale(value) ? value : null;
+}
+
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
+  const normalizedPathname = stripLocalePrefix(pathname);
+  const locale = localeFromPathname(pathname);
+
+  if (locale === null) {
+    const response = handleI18nRouting(request);
+    return protectedPrefixes.some((prefix) =>
+      normalizedPathname.startsWith(prefix),
+    )
+      ? withPrivateCacheHeaders(response)
+      : response;
+  }
+
+  let authResponse = NextResponse.next({
+    request: { headers: new Headers(request.headers) },
+  });
   const { url, anonKey } = getPublicSupabaseConfig();
   const supabase = createServerClient<Database>(url, anonKey, {
     cookies: {
@@ -29,9 +61,11 @@ export async function middleware(request: NextRequest) {
       setAll: (cookiesToSet) => {
         for (const { name, value } of cookiesToSet)
           request.cookies.set(name, value);
-        response = NextResponse.next({ request });
+        authResponse = NextResponse.next({
+          request: { headers: new Headers(request.headers) },
+        });
         for (const { name, value, options } of cookiesToSet) {
-          response.cookies.set(name, value, options);
+          authResponse.cookies.set(name, value, options);
         }
       },
     },
@@ -39,36 +73,38 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
+  const response = copyResponseCookies(
+    handleI18nRouting(request),
+    authResponse,
+  );
   if (
     user === null &&
-    protectedPrefixes.some((prefix) => pathname.startsWith(prefix))
+    protectedPrefixes.some((prefix) => normalizedPathname.startsWith(prefix))
   ) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", pathname);
-    return withPrivateCacheHeaders(NextResponse.redirect(loginUrl));
-  }
-  if (user !== null && pathname === "/login") {
+    loginUrl.pathname = `/${locale}/login`;
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return withPrivateCacheHeaders(
-      NextResponse.redirect(new URL("/overview", request.url)),
+      copyResponseCookies(NextResponse.redirect(loginUrl), response),
     );
   }
-  if (protectedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+  if (user !== null && normalizedPathname === "/login") {
+    return withPrivateCacheHeaders(
+      copyResponseCookies(
+        NextResponse.redirect(new URL(`/${locale}/overview`, request.url)),
+        response,
+      ),
+    );
+  }
+  if (
+    protectedPrefixes.some((prefix) => normalizedPathname.startsWith(prefix))
+  ) {
     return withPrivateCacheHeaders(response);
   }
   return response;
 }
 
 export const config = {
-  matcher: [
-    "/login",
-    "/overview/:path*",
-    "/pals/:path*",
-    "/data-status/:path*",
-    "/account/:path*",
-    "/breeder/:path*",
-    "/plans/:path*",
-    "/admin/:path*",
-  ],
+  matcher: "/((?!api|_next|_vercel|.*\\..*).*)",
 };

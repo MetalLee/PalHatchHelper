@@ -1,10 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import type { StatusTone } from "@/components/status/status-chip";
+import { useCopy } from "@/i18n/client";
+import { usePathname } from "@/i18n/navigation";
 
 export function AppShell({
   children,
@@ -17,6 +18,7 @@ export function AppShell({
   role: "admin" | "player";
   dataStatus?: { label: string; tone: StatusTone };
 }>) {
+  const t = useCopy("Common");
   const pathname = usePathname();
   return (
     <div className="min-h-dvh min-w-0 overflow-x-clip">
@@ -24,7 +26,7 @@ export function AppShell({
         className="fixed top-[-5rem] left-4 z-[100] rounded-xl bg-emerald-100 px-4 py-3 font-bold text-emerald-950 focus:top-4"
         href="#main-content"
       >
-        跳到主要内容
+        {t("skipToContent")}
       </a>
       <SiteHeader
         activePath={pathname}

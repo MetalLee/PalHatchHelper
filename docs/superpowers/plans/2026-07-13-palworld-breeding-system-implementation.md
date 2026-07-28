@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -680,6 +680,39 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-28 跨阶段修订：中英文 i18n 与语言路由
+
+### 交付顺序
+
+1. 更新正式规格、本计划与 ADR，固定 `/zh`、`/en` 顶层动态语言段、UI/游戏内容分层、历史结果
+   回退和语言选择器交互。
+2. 增加失败测试，覆盖无前缀地址重定向、locale 鉴权、查询参数保留、API/静态资源排除、消息键
+   完整性、语言切换器位置与键盘语义；确认失败来自当前无语言段和硬编码中文行为。
+3. 引入 `next-intl`，建立 locale 配置、请求消息与导航封装；将所有页面迁入 `app/[locale]`，组合
+   现有 Supabase middleware，保留 API 无前缀和私有缓存边界。
+4. 按 Auth、Shell、Overview、Pals、Breeder、Plans、Data Status、Account、Admin 命名空间迁移
+   全部 UI、Metadata、ARIA、日期、数字和状态文案；页面链接、表单 action、客户端导航和动态 URL
+   统一保留 locale。
+5. 追加前向数据库迁移，为库存分页、任务详情和收藏列表增加显式 locale 的新版本 RPC；已有
+   `get_breeder_form_context` 传入映射后的目录 locale。共享 Schema 更新后重新生成 TS/Python 与
+   Database 类型，不在两端复制 DTO。
+6. 新目录发布门禁校验中英文玩家可见键覆盖；历史版本不修改，当前语言缺失时使用中性降级且
+   不泄露稳定内部 ID。搜索只匹配当前语言名称和图鉴编号。
+7. AI 请求、模板和展示记录语言；标签使用稳定代码。历史自由文本语言不匹配时用相同路线事实
+   生成当前语言模板，不重复运行算法、不改变配方或评分。
+8. 开发中每层只运行一次失败基线与一次局部验证；最终状态运行一次根 `pnpm check`、完整
+   Supabase 测试、受影响中英文桌面/移动浏览器流程和 `git diff --check`，聚合命令覆盖的检查
+   不再单独重复。
+
+### 回滚与生产约束
+
+- 数据库只追加新 RPC/列/约束，旧 RPC 与历史物化任务保持可读；Web 回滚继续使用旧无 locale
+  接口。目录、算法、评分、库存快照、真实存档和 `/opt/palworld` 不修改。
+- 新增的唯一生产依赖是经本修订批准的 `next-intl`；不新增公网端口，不访问生产凭证，不执行
+  生产部署或远程推送。生产发布仍需单独明确批准。
+- 部署时顺序为向前数据库迁移、兼容 Agent、Web；任一门禁失败停止，不让新 Web 调用尚未存在的
+  locale-aware RPC。
 
 ## 2026-07-28 跨阶段修订：全局被动单排交替三角纹理
 

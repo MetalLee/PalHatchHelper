@@ -45,7 +45,7 @@ describe("Forest Healing design system", () => {
     ).toBe(false);
     expect(screen.getByRole("link", { name: "PalBeacon 首页" })).toBeTruthy();
     expect(
-      screen.getByRole("img", { name: "PalBeacon 帕鲁服务器控制台" }),
+      screen.getByRole("img", { name: "PalBeacon 帕鲁配种协作工作台" }),
     ).toBeTruthy();
     const wordmarks = screen.getAllByLabelText("PalBeacon");
     expect(wordmarks.length).toBeGreaterThan(0);

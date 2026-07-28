@@ -1,7 +1,6 @@
 "use client";
 
 import { LogOut, Menu, Settings, ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
 import {
@@ -23,7 +22,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { brand } from "@/config/brand";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
 
 const subscribeToHydration = (): (() => void) => () => undefined;
 
@@ -40,6 +40,10 @@ export function MobileNavigation({
   dataStatus: { label: string; tone: StatusTone };
   onSignOut: () => void;
 }>) {
+  const locale = useAppLocale();
+  const brandCopy = useCopy("Brand");
+  const navigation = useCopy("Navigation");
+  const shell = useCopy("Shell");
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
     () => true,
@@ -54,7 +58,7 @@ export function MobileNavigation({
           variant="ghost"
           size="icon"
           className="size-11 rounded-xl lg:hidden"
-          aria-label="打开导航菜单"
+          aria-label={navigation("openMobile")}
           disabled={!hydrated}
         >
           <Menu aria-hidden="true" className="size-5" />
@@ -72,13 +76,16 @@ export function MobileNavigation({
                 <BrandWordmark />
               </SheetTitle>
               <SheetDescription>
-                {brand.productName} · 当前页面：{currentPageTitle(activePath)}
+                {brandCopy("productName")} ·{" "}
+                {navigation("currentPage", {
+                  page: currentPageTitle(activePath, locale),
+                })}
               </SheetDescription>
             </div>
           </div>
         </SheetHeader>
 
-        <nav aria-label="移动端导航" className="grid gap-1 px-2">
+        <nav aria-label={navigation("mobileLabel")} className="grid gap-1 px-2">
           {workspaceNavigationItems.map((item) => {
             const active = isNavigationItemActive(activePath, item.href);
             const Icon = item.icon;
@@ -98,7 +105,9 @@ export function MobileNavigation({
                     className="size-5"
                     strokeWidth={1.8}
                   />
-                  <span className="min-w-0 flex-1">{item.label}</span>
+                  <span className="min-w-0 flex-1">
+                    {navigation(item.labelKey)}
+                  </span>
                   {item.href === "/data-status" ? (
                     <StatusChip
                       tone={dataStatus.tone}
@@ -129,7 +138,7 @@ export function MobileNavigation({
                 className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-sm font-semibold text-muted-foreground no-underline hover:bg-accent hover:text-accent-foreground"
               >
                 <ShieldCheck aria-hidden="true" className="size-5" />
-                管理中心
+                {navigation("admin")}
               </Link>
             </SheetClose>
           ) : null}
@@ -144,7 +153,7 @@ export function MobileNavigation({
               className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-sm font-semibold text-muted-foreground no-underline hover:bg-accent hover:text-accent-foreground"
             >
               <Settings aria-hidden="true" className="size-5" />
-              账号
+              {navigation("account")}
             </Link>
           </SheetClose>
           <SheetClose asChild>
@@ -154,7 +163,7 @@ export function MobileNavigation({
               onClick={onSignOut}
             >
               <LogOut aria-hidden="true" className="size-5" />
-              退出登录
+              {shell("signOut")}
             </button>
           </SheetClose>
         </div>

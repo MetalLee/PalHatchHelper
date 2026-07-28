@@ -77,8 +77,9 @@ def _score() -> RouteScoreBreakdown:
     )
 
 
-def _request() -> AIExplanationRequest:
+def _request(locale: str = "zh-CN") -> AIExplanationRequest:
     return AIExplanationRequest(
+        locale=locale,
         target_pal_id="test_target_pal",
         desired_passive_ids=["test_passive_a"],
         optimization_mode="balanced",
@@ -117,6 +118,17 @@ def test_template_provider_does_not_overstate_an_empty_bounded_search() -> None:
 
     assert "有界搜索未返回路线" in result.explanation
     assert "没有合法路线" not in result.explanation
+
+
+def test_template_provider_uses_the_requested_english_locale() -> None:
+    result = asyncio.run(TemplateProvider().explain(_request("en-US")))
+
+    assert "deterministic" in result.explanation.lower()
+    assert result.route_explanations[0].labels == [
+        "Deterministic route",
+        "No borrowing",
+        "Easy to advance",
+    ]
 
 
 def test_fallback_order_is_external_then_codex_then_template() -> None:

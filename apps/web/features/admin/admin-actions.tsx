@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useCopy } from "@/i18n/client";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 import {
@@ -69,6 +70,7 @@ export function AdminActionButton({
   children: ReactNode;
   confirmText?: string;
 }>) {
+  const t = useCopy("Admin");
   const router = useRouter();
   const [state, setState] = useState<"idle" | "pending" | "done" | "error">(
     "idle",
@@ -86,11 +88,11 @@ export function AdminActionButton({
   }
   const label =
     state === "pending"
-      ? "处理中…"
+      ? t("processing")
       : state === "done"
-        ? "已提交"
+        ? t("submitted")
         : state === "error"
-          ? "提交失败"
+          ? t("submitFailed")
           : children;
 
   if (confirmText === undefined) {
@@ -120,31 +122,31 @@ export function AdminActionButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认执行受审计操作</AlertDialogTitle>
+          <AlertDialogTitle>{t("confirmTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            此操作会写入管理员审计记录。请输入下方完整确认文字后继续：
+            {t("confirmDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 font-mono text-sm text-rose-900">
           {confirmText}
         </div>
         <label className="grid gap-2 text-sm font-semibold text-foreground">
-          确认文字
+          {t("confirmation")}
           <Input
-            aria-label="确认文字"
+            aria-label={t("confirmation")}
             autoComplete="off"
             value={confirmation}
             onChange={(event) => setConfirmation(event.target.value)}
           />
         </label>
         <AlertDialogFooter>
-          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={confirmation !== confirmText || state === "pending"}
             onClick={submit}
           >
-            确认执行
+            {t("confirmAction")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -159,6 +161,7 @@ export function BindingCreateForm({
   users: AdminBindingCandidate[];
   players: AdminGamePlayer[];
 }>) {
+  const t = useCopy("Admin");
   const router = useRouter();
   const [status, setStatus] = useState("idle");
   const availableUsers = users.filter((user) => user.player_id === null);
@@ -184,10 +187,10 @@ export function BindingCreateForm({
   return (
     <form className={adminFormClasses} onSubmit={submit}>
       <label>
-        Supabase 用户
+        {t("supabaseUser")}
         <select name="user_id" required defaultValue="">
           <option disabled value="">
-            选择未绑定用户
+            {t("chooseUnlinkedUser")}
           </option>
           {availableUsers.map((user) => (
             <option key={user.user_id} value={user.user_id}>
@@ -197,10 +200,10 @@ export function BindingCreateForm({
         </select>
       </label>
       <label>
-        游戏玩家
+        {t("gamePlayer")}
         <select name="player_id" required defaultValue="">
           <option disabled value="">
-            选择未绑定玩家
+            {t("chooseUnlinkedPlayer")}
           </option>
           {availablePlayers.map((player) => (
             <option key={player.player_id} value={player.player_id}>
@@ -211,10 +214,10 @@ export function BindingCreateForm({
       </label>
       <Button disabled={status === "pending"} type="submit">
         {status === "pending"
-          ? "创建中…"
+          ? t("creating")
           : status === "error"
-            ? "创建失败，重试"
-            : "创建绑定"}
+            ? t("createFailed")
+            : t("createBinding")}
       </Button>
     </form>
   );
@@ -227,6 +230,7 @@ export function BindingUpdateForm({
   user: AdminBindingCandidate;
   players: AdminGamePlayer[];
 }>) {
+  const t = useCopy("Admin");
   const router = useRouter();
   const [status, setStatus] = useState("idle");
   if (user.binding_version === null) return null;
@@ -255,7 +259,7 @@ export function BindingUpdateForm({
     <form className={adminActionStackClasses} onSubmit={submit}>
       <select
         className={adminControlClasses}
-        aria-label={`修改 ${user.user_display} 的绑定`}
+        aria-label={t("updateBindingLabel", { user: user.user_display })}
         name="player_id"
         required
         defaultValue={user.player_id ?? ""}
@@ -268,10 +272,10 @@ export function BindingUpdateForm({
       </select>
       <Button variant="outline" disabled={status === "pending"} type="submit">
         {status === "error"
-          ? "修改失败"
+          ? t("updateFailed")
           : status === "pending"
-            ? "修改中…"
-            : "修改"}
+            ? t("updating")
+            : t("update")}
       </Button>
     </form>
   );
@@ -280,6 +284,7 @@ export function BindingUpdateForm({
 export function SettingsForm({
   version,
 }: Readonly<{ version: RuntimeSettingsVersion }>) {
+  const t = useCopy("Admin");
   const router = useRouter();
   const settings = version.settings;
   const [status, setStatus] = useState("idle");
@@ -321,7 +326,7 @@ export function SettingsForm({
   return (
     <form className={adminFormClasses} onSubmit={submit}>
       <label className="!flex min-h-11 items-center justify-between rounded-lg border border-border bg-white/62 px-3 py-2">
-        <span>允许创建任务</span>
+        <span>{t("jobCreationAllowed")}</span>
         <input
           name="job_creation_enabled"
           type="checkbox"
@@ -330,7 +335,7 @@ export function SettingsForm({
         />
       </label>
       <label>
-        最大代数上限
+        {t("maxGenerationLimit")}
         <input
           name="max_generations"
           type="number"
@@ -340,7 +345,7 @@ export function SettingsForm({
         />
       </label>
       <label>
-        Job Worker 并发
+        {t("jobWorkerConcurrency")}
         <input
           name="job_worker_concurrency"
           type="number"
@@ -350,7 +355,7 @@ export function SettingsForm({
         />
       </label>
       <label>
-        AI 并发
+        {t("aiConcurrency")}
         <input
           name="ai_concurrency"
           type="number"
@@ -360,7 +365,7 @@ export function SettingsForm({
         />
       </label>
       <label>
-        Parser 超时（秒）
+        {t("parserTimeout")}
         <input
           name="parser_timeout_seconds"
           type="number"
@@ -370,7 +375,7 @@ export function SettingsForm({
         />
       </label>
       <label>
-        快照保留数量
+        {t("snapshotRetention")}
         <input
           name="snapshot_retention_count"
           type="number"
@@ -380,7 +385,7 @@ export function SettingsForm({
         />
       </label>
       <label>
-        数据过期阈值（分钟）
+        {t("staleThreshold")}
         <input
           name="data_stale_threshold_minutes"
           type="number"
@@ -390,14 +395,14 @@ export function SettingsForm({
         />
       </label>
       <label>
-        AI Provider 顺序（逗号分隔）
+        {t("providerOrder")}
         <input
           name="ai_provider_order"
           defaultValue={settings.ai_provider_order.join(",")}
         />
       </label>
       <label>
-        维护公告
+        {t("maintenanceAnnouncement")}
         <textarea
           name="maintenance_announcement"
           maxLength={500}
@@ -406,10 +411,10 @@ export function SettingsForm({
       </label>
       <Button type="submit" disabled={status === "pending"}>
         {status === "pending"
-          ? "保存中…"
+          ? t("saving")
           : status === "error"
-            ? "保存失败，重试"
-            : "保存新版本"}
+            ? t("saveFailed")
+            : t("saveNewVersion")}
       </Button>
     </form>
   );
@@ -418,10 +423,9 @@ export function SettingsForm({
 export function CatalogUploadGuard({
   sources,
 }: Readonly<{ sources: AdminCatalogSource[] }>) {
+  const t = useCopy("Admin");
   const router = useRouter();
-  const [message, setMessage] = useState(
-    "仅接受标准化 .tar.zst，最大 64 MiB。",
-  );
+  const [message, setMessage] = useState(t("uploadInitial"));
   const [pending, setPending] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -436,11 +440,11 @@ export function CatalogUploadGuard({
       forbidden.test(file.name) ||
       file.size > 64 * 1024 * 1024
     ) {
-      setMessage("CATALOG_UPLOAD_INVALID：文件类型或大小不符合白名单。");
+      setMessage(t("uploadInvalid"));
       return;
     }
     setPending(true);
-    setMessage("正在计算 SHA-256 并申请私有上传路径…");
+    setMessage(t("uploadHashing"));
     try {
       const digest = await crypto.subtle.digest(
         "SHA-256",
@@ -466,7 +470,7 @@ export function CatalogUploadGuard({
         !ticket.object_path
       )
         throw new Error("CATALOG_UPLOAD_INVALID");
-      setMessage("正在上传到受限私有对象路径…");
+      setMessage(t("uploadingPrivate"));
       const { error } = await createBrowserSupabaseClient()
         .storage.from(ticket.bucket)
         .upload(ticket.object_path, file, {
@@ -480,9 +484,7 @@ export function CatalogUploadGuard({
         upload_id: ticket.upload_id,
       });
       form.reset();
-      setMessage(
-        "上传完成；请发起 validate，Agent 将再次验证大小、SHA-256、成员白名单与目录契约。",
-      );
+      setMessage(t("uploadComplete"));
       router.refresh();
     } catch (error) {
       setMessage(
@@ -495,10 +497,10 @@ export function CatalogUploadGuard({
   return (
     <form className={adminFormClasses} onSubmit={submit}>
       <label>
-        目录来源
+        {t("catalogSource")}
         <select name="source_id" required defaultValue="">
           <option value="" disabled>
-            选择已启用来源
+            {t("chooseSource")}
           </option>
           {sources.map((source) => (
             <option key={source.source_id} value={source.source_id}>
@@ -508,9 +510,9 @@ export function CatalogUploadGuard({
         </select>
       </label>
       <label>
-        标准化目录包
+        {t("catalogPackage")}
         <input
-          aria-label="标准化目录包"
+          aria-label={t("catalogPackage")}
           name="catalog_file"
           required
           type="file"
@@ -518,7 +520,7 @@ export function CatalogUploadGuard({
         />
       </label>
       <Button disabled={pending || sources.length === 0} type="submit">
-        {pending ? "上传中…" : "上传私有目录包"}
+        {pending ? t("uploading") : t("uploadPrivate")}
       </Button>
       <p className="text-sm text-muted-foreground" role="status">
         {message}
@@ -568,13 +570,14 @@ export function CatalogVersionActions({
   version,
   worlds,
 }: Readonly<{ version: AdminCatalogVersion; worlds: AdminCatalogWorld[] }>) {
+  const t = useCopy("Admin");
   const [worldId, setWorldId] = useState(worlds[0]?.world_id ?? "");
   return (
     <div className={adminActionStackClasses}>
       {worlds.length > 0 && (
         <select
           className={adminControlClasses}
-          aria-label={`选择 ${version.version_id} 的世界`}
+          aria-label={t("chooseWorld", { version: version.version_id })}
           value={worldId}
           onChange={(event) => setWorldId(event.target.value)}
         >
@@ -646,6 +649,7 @@ export function CatalogVersionActions({
 export function JobCreationToggle({
   version,
 }: Readonly<{ version: RuntimeSettingsVersion }>) {
+  const t = useCopy("Admin");
   return (
     <AdminActionButton
       action="settings_update"
@@ -657,12 +661,14 @@ export function JobCreationToggle({
         },
       }}
       confirmText={
-        version.settings.job_creation_enabled ? "关闭任务创建" : "开启任务创建"
+        version.settings.job_creation_enabled
+          ? t("disableCreationConfirm")
+          : t("enableCreationConfirm")
       }
     >
       {version.settings.job_creation_enabled
-        ? "临时关闭创建入口"
-        : "打开创建入口"}
+        ? t("disableCreation")
+        : t("enableCreation")}
     </AdminActionButton>
   );
 }

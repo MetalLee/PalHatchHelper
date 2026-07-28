@@ -4,8 +4,8 @@ import { resolve } from "node:path";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import AdminError from "../app/admin/error";
-import AdminLoading from "../app/admin/loading";
+import AdminError from "../app/[locale]/admin/error";
+import AdminLoading from "../app/[locale]/admin/loading";
 import { AdminAccessDenied, hasAdminRole } from "../features/admin/access";
 import { AdminActionButton } from "../features/admin/admin-actions";
 import { AdminNavigation } from "../features/admin/admin-navigation";
@@ -20,10 +20,20 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh }),
 }));
 
+vi.mock("@/i18n/navigation", () => ({
+  Link: "a",
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock("next-intl/server", () => ({
+  getTranslations: async () => (key: string) =>
+    key === "adminLoading" ? "正在读取管理员安全摘要" : key,
+}));
+
 describe("Phase 8 admin access", () => {
   it("rejects an authenticated player with a stable server-side role decision", () => {
     const layout = readFileSync(
-      resolve(process.cwd(), "app/admin/layout.tsx"),
+      resolve(process.cwd(), "app/[locale]/admin/layout.tsx"),
       "utf8",
     );
     expect(hasAdminRole({ role: "player" })).toBe(false);
@@ -102,9 +112,9 @@ describe("Phase 8 admin access", () => {
     fetchMock.mockRestore();
   });
 
-  it("renders stable loading, empty and error states with a retry action", () => {
+  it("renders stable loading, empty and error states with a retry action", async () => {
     const reset = vi.fn();
-    const { rerender } = render(<AdminLoading />);
+    const { rerender } = render(await AdminLoading());
     expect(screen.getByText("正在读取管理员安全摘要")).toBeTruthy();
     rerender(<AdminEmpty>暂无管理员记录。</AdminEmpty>);
     expect(screen.getByText("暂无管理员记录。")).toBeTruthy();

@@ -131,6 +131,7 @@ def _parse_claim(row: Mapping[str, JSONValue]) -> JobClaim:
         job = BreedingJob.model_validate(
             {
                 "job_id": row.get("id"),
+                "locale": row.get("locale"),
                 "requester_user_id": row.get("requester_user_id"),
                 "world_id": row.get("world_id"),
                 "player_id": row.get("player_id"),

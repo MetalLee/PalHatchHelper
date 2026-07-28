@@ -1,3 +1,5 @@
+"use client";
+
 import { Box, MapPin, Sparkles, UserRound } from "lucide-react";
 
 import { GenderDisplay } from "@/components/pals/gender-display";
@@ -5,6 +7,7 @@ import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { palLocationText } from "@/components/pals/pal-location";
 import { Badge } from "@/components/ui/badge";
+import { useAppLocale, useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 import type {
@@ -12,7 +15,7 @@ import type {
   BreedingTreeOccurrence,
   BreedingTreePassive,
 } from "../lib/build-breeding-tree";
-import { compactIdentifier, genderLabel, localizedName } from "../presentation";
+import { compactIdentifier, localizedName } from "../presentation";
 
 export type BreedingTreeNodeTone =
   | "completed"
@@ -46,8 +49,19 @@ export function BreedingTreeNode({
   compactPreview?: boolean;
   className?: string;
 }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Breeder");
+  const genderText =
+    entity.gender === "male"
+      ? t("male")
+      : entity.gender === "female"
+        ? t("female")
+        : entity.gender === "genderless"
+          ? t("genderless")
+          : t("unknownGender");
   const palName =
-    entity.displayNameOverride ?? localizedName(palNames, entity.palId, "Pal");
+    entity.displayNameOverride ??
+    localizedName(palNames, entity.palId, t("targetFallback"));
   const requiredPassives = occurrence.requiredPassiveIds.map((passiveId) => {
     const actual = entity.passives.find(
       (passive) => passive.passiveId === passiveId,
@@ -128,17 +142,14 @@ export function BreedingTreeNode({
           variant="outline"
           className="border-border bg-white/78 text-foreground"
         >
-          <GenderDisplay
-            gender={entity.gender}
-            label={genderLabel(entity.gender)}
-          />
+          <GenderDisplay gender={entity.gender} label={genderText} />
         </Badge>
         {entity.recipeType === "special" ? (
           <Badge
             variant="outline"
             className="border-amber-200 bg-amber-50 text-amber-900"
           >
-            特殊配方
+            {t("specialRecipe")}
           </Badge>
         ) : null}
         {entity.existingTargetInstanceUid !== null ? (
@@ -146,7 +157,7 @@ export function BreedingTreeNode({
             variant="outline"
             className="border-violet-200 bg-violet-50 text-violet-800"
           >
-            当前库存已有目标
+            {t("existingTargetBadge")}
           </Badge>
         ) : null}
       </div>
@@ -154,27 +165,28 @@ export function BreedingTreeNode({
       {entity.kind === "missing" ? (
         <div className="mt-3 grid gap-1 rounded-2xl bg-white/72 p-3 text-xs leading-5 text-orange-950">
           <p>
-            <strong>缺少种类：</strong>
+            <strong>{t("missingSpecies")}</strong>
             {palName}
           </p>
           <p>
-            <strong>所需性别：</strong>
-            <GenderDisplay
-              gender={entity.gender}
-              label={genderLabel(entity.gender)}
-            />
+            <strong>{t("requiredGender")}</strong>
+            <GenderDisplay gender={entity.gender} label={genderText} />
           </p>
           <p>
-            <strong>所需被动：</strong>
+            <strong>{t("requiredPassives")}</strong>
             {requiredPassives.length === 0
-              ? "被动无要求"
+              ? t("noPassiveRequired")
               : requiredPassives
                   .map((passive) =>
-                    localizedName(passiveNames, passive.passiveId, "被动"),
+                    localizedName(
+                      passiveNames,
+                      passive.passiveId,
+                      t("passiveFallback"),
+                    ),
                   )
-                  .join("、")}
+                  .join(t("listSeparator"))}
           </p>
-          <p>未绑定任何库存实例。</p>
+          <p>{t("noInventoryInstance")}</p>
         </div>
       ) : (
         <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
@@ -184,7 +196,7 @@ export function BreedingTreeNode({
               className="mt-0.5 size-3.5 shrink-0 text-primary"
             />
             <span className="min-w-0 break-words">
-              {entity.ownerDisplayName || "所有者未提供"}
+              {localizedOwner(entity.ownerDisplayName, t)}
             </span>
           </p>
           <p className="flex min-w-0 items-start gap-2">
@@ -192,7 +204,9 @@ export function BreedingTreeNode({
               aria-hidden="true"
               className="mt-0.5 size-3.5 shrink-0 text-primary"
             />
-            <span className="min-w-0 break-words">{locationText(entity)}</span>
+            <span className="min-w-0 break-words">
+              {locationText(entity, locale, t)}
+            </span>
           </p>
           {entity.instanceUid !== null && !compactPreview ? (
             <p className="flex min-w-0 items-start gap-2">
@@ -201,7 +215,7 @@ export function BreedingTreeNode({
                 className="mt-0.5 size-3.5 shrink-0 text-primary"
               />
               <span className="min-w-0 break-all font-mono">
-                实例 {compactIdentifier(entity.instanceUid)}
+                {t("instance", { id: compactIdentifier(entity.instanceUid) })}
               </span>
             </p>
           ) : null}
@@ -214,8 +228,9 @@ export function BreedingTreeNode({
                 className="mt-0.5 size-3.5 shrink-0 text-primary"
               />
               <span className="min-w-0 break-all font-mono">
-                现有目标实例{" "}
-                {compactIdentifier(entity.existingTargetInstanceUid)}
+                {t("existingTargetInstance", {
+                  id: compactIdentifier(entity.existingTargetInstanceUid),
+                })}
               </span>
             </p>
           ) : null}
@@ -224,21 +239,21 @@ export function BreedingTreeNode({
 
       {entity.kind === "missing" ? (
         <PassiveList
-          label="所需被动"
+          label={t("requiredPassives")}
           passives={entity.requiredPassives}
           passiveNames={passiveNames}
         />
       ) : null}
       {showActualPassives ? (
         <PassiveList
-          label="库存被动"
+          label={t("inventoryPassives")}
           passives={entity.passives}
           passiveNames={passiveNames}
         />
       ) : null}
       {!showActualPassives && entity.kind !== "missing" ? (
         <PassiveList
-          label={entity.isTarget ? "目标被动" : "需保留被动"}
+          label={entity.isTarget ? t("targetPassives") : t("retainedPassives")}
           passives={
             entity.requiredPassives.length > 0
               ? entity.requiredPassives
@@ -270,20 +285,21 @@ function StepStateBadge({
 }
 
 function SourceBadge({ entity }: Readonly<{ entity: BreedingTreeEntity }>) {
+  const t = useCopy("Breeder");
   if (entity.kind === "missing") {
     return (
       <Badge
         variant="outline"
         className="border-orange-300 bg-orange-100 text-orange-900"
       >
-        缺失
+        {t("missing")}
       </Badge>
     );
   }
   if (entity.kind === "target") {
     return (
       <Badge className="bg-violet-600 text-white hover:bg-violet-600">
-        目标
+        {t("target")}
       </Badge>
     );
   }
@@ -293,7 +309,7 @@ function SourceBadge({ entity }: Readonly<{ entity: BreedingTreeEntity }>) {
         variant="outline"
         className="border-violet-200 bg-violet-50 text-violet-800"
       >
-        现有目标
+        {t("existingTarget")}
       </Badge>
     );
   }
@@ -303,7 +319,7 @@ function SourceBadge({ entity }: Readonly<{ entity: BreedingTreeEntity }>) {
         variant="outline"
         className="border-sky-200 bg-sky-50 text-sky-800"
       >
-        中间产物
+        {t("intermediate")}
       </Badge>
     );
   }
@@ -316,7 +332,7 @@ function SourceBadge({ entity }: Readonly<{ entity: BreedingTreeEntity }>) {
           : "border-emerald-200 bg-emerald-50 text-emerald-800"
       }
     >
-      {entity.borrowed ? "公会借用" : "库存可用"}
+      {entity.borrowed ? t("guildBorrowed") : t("inventoryAvailable")}
     </Badge>
   );
 }
@@ -330,7 +346,12 @@ function PassiveList({
   passives: readonly BreedingTreePassive[];
   passiveNames: ReadonlyMap<string, string>;
 }>) {
-  const fixedGrid = new Set(["库存被动", "需保留被动", "目标被动"]).has(label);
+  const t = useCopy("Breeder");
+  const fixedGrid = new Set([
+    t("inventoryPassives"),
+    t("retainedPassives"),
+    t("targetPassives"),
+  ]).has(label);
 
   return (
     <div className="mt-3 border-t border-border/80 pt-3">
@@ -339,7 +360,9 @@ function PassiveList({
         {label}
       </p>
       {passives.length === 0 ? (
-        <p className="mt-2 text-xs text-muted-foreground">无已提供被动</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {t("noProvidedPassives")}
+        </p>
       ) : (
         <div
           className={cn(
@@ -350,7 +373,11 @@ function PassiveList({
           {passives.map((passive) => (
             <PassiveBadge
               key={passive.passiveId}
-              name={localizedName(passiveNames, passive.passiveId, "被动")}
+              name={localizedName(
+                passiveNames,
+                passive.passiveId,
+                t("passiveFallback"),
+              )}
               rank={passive.rank}
               isNegative={passive.isNegative}
               className="w-full min-w-0 justify-start truncate whitespace-nowrap"
@@ -362,19 +389,42 @@ function PassiveList({
   );
 }
 
-function locationText(entity: BreedingTreeEntity): string {
+function locationText(
+  entity: BreedingTreeEntity,
+  locale: "zh" | "en",
+  t: ReturnType<typeof useCopy<"Breeder">>,
+): string {
   if (
     (entity.kind === "intermediate" || entity.kind === "target") &&
     entity.instanceUid === null
   ) {
-    return entity.isTarget ? "由本路线最终步骤产出" : "由前序步骤产出";
+    return entity.isTarget ? t("producedByFinal") : t("producedByPrevious");
   }
   if (entity.locationType !== null) {
-    return palLocationText({
-      location_type: entity.locationType,
-      location_name: entity.locationName,
-      location_slot_index: entity.locationSlotIndex,
+    return palLocationText(
+      {
+        location_type: entity.locationType,
+        location_name: entity.locationName,
+        location_slot_index: entity.locationSlotIndex,
+      },
+      locale,
+    );
+  }
+  return t("locationUnavailable");
+}
+
+function localizedOwner(
+  value: string,
+  t: ReturnType<typeof useCopy<"Breeder">>,
+): string {
+  if (value === "__ROUTE_FINAL_TARGET__") return t("routeFinalTargetOwner");
+  if (value === "__EXISTING_TARGET_INSTANCE__") {
+    return t("existingTargetOwner");
+  }
+  if (value.startsWith("__ROUTE_INTERMEDIATE__:")) {
+    return t("routeIntermediateOwner", {
+      step: value.slice("__ROUTE_INTERMEDIATE__:".length),
     });
   }
-  return "位置未提供";
+  return value || t("ownerUnavailable");
 }

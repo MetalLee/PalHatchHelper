@@ -603,6 +603,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "locale",
         "target_pal_id",
         "desired_passive_ids",
         "optimization_mode",
@@ -610,6 +611,7 @@
         "routes"
       ],
       "properties": {
+        "locale": { "type": "string", "enum": ["zh-CN", "en-US"] },
         "target_pal_id": { "$ref": "#/$defs/BreederStableId" },
         "desired_passive_ids": {
           "type": "array",

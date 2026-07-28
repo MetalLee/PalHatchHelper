@@ -9,45 +9,32 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 type OptimizationMode = CreateBreedingJobRequest["optimization_mode"];
 
-export const optimizationModes: ReadonlyArray<{
+const optimizationModeDefinitions: ReadonlyArray<{
   value: OptimizationMode;
-  label: string;
-  description: string;
   icon: LucideIcon;
 }> = [
   {
     value: "balanced",
-    label: "综合推荐",
-    description: "兼顾配种代数、现有帕鲁、被动继承和借用数量。",
     icon: Sparkles,
   },
   {
     value: "fastest",
-    label: "最快路线",
-    description: "优先推荐配种代数更少、步骤更短的路线。",
     icon: Gauge,
   },
   {
     value: "highest_success",
-    label: "最高成功率",
-    description: "优先推荐被动更集中、预计更容易完成的路线。",
     icon: ShieldCheck,
   },
   {
     value: "least_borrowing",
-    label: "最少借用",
-    description: "优先使用你自己的帕鲁，尽量少向公会伙伴借用。",
     icon: Route,
   },
 ];
-
-export function optimizationModeLabel(value: OptimizationMode): string {
-  return optimizationModes.find((mode) => mode.value === value)?.label ?? value;
-}
 
 export function OptimizationModePicker({
   value,
@@ -56,18 +43,20 @@ export function OptimizationModePicker({
   value: OptimizationMode;
   onValueChange: (value: OptimizationMode) => void;
 }>) {
+  const t = useCopy("Breeder");
   return (
     <fieldset
       role="radiogroup"
-      aria-label="优化模式"
+      aria-label={t("optimizationMode")}
       className="grid min-w-0 gap-3"
     >
       <legend className="mb-1 text-sm font-semibold text-foreground">
-        优化模式
+        {t("optimizationMode")}
       </legend>
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        {optimizationModes.map((mode) => {
+        {optimizationModeDefinitions.map((mode) => {
           const Icon = mode.icon;
+          const label = t(mode.value);
           return (
             <label
               key={mode.value}
@@ -82,7 +71,7 @@ export function OptimizationModePicker({
                 type="radio"
                 name="optimization-mode"
                 value={mode.value}
-                aria-label={mode.label}
+                aria-label={label}
                 checked={value === mode.value}
                 onChange={() => onValueChange(mode.value)}
                 className="peer sr-only"
@@ -98,11 +87,9 @@ export function OptimizationModePicker({
                 <Icon aria-hidden="true" className="size-5" />
               </span>
               <span className="min-w-0">
-                <span className="block font-bold text-foreground">
-                  {mode.label}
-                </span>
+                <span className="block font-bold text-foreground">{label}</span>
                 <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-                  {mode.description}
+                  {t(`${mode.value}Description`)}
                 </span>
               </span>
             </label>
@@ -110,7 +97,7 @@ export function OptimizationModePicker({
         })}
       </div>
       <p className="text-xs leading-5 text-muted-foreground">
-        偏好只影响推荐顺序，不会改变游戏中的配种关系。
+        {t("preferenceDisclaimer")}
       </p>
     </fieldset>
   );
