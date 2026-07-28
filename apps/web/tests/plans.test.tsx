@@ -11,16 +11,7 @@ import { PlanDetail } from "../features/plans/plan-detail";
 import { PlanList } from "../features/plans/plan-list";
 import type { SavedPlanDetail } from "../features/plans/server";
 
-const routerPush = vi.fn();
-const routerReplace = vi.fn();
-const routerRefresh = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: routerPush,
-    replace: routerReplace,
-    refresh: routerRefresh,
-  }),
-}));
+const locationAssign = vi.fn();
 
 const routeId = "62000000-0000-4000-8000-000000000001";
 const jobId = "60000000-0000-4000-8000-000000000001";
@@ -239,10 +230,8 @@ function summary(): PlanListPage["items"][number] {
 }
 
 beforeEach(() => {
-  routerPush.mockReset();
-  routerReplace.mockReset();
-  routerRefresh.mockReset();
   vi.unstubAllGlobals();
+  locationAssign.mockReset();
 });
 
 describe("My Plans route saves", () => {
@@ -378,6 +367,18 @@ describe("My Plans route saves", () => {
     );
     expect(screen.queryByText(/当前步骤|候选子代|计划进度/)).toBeNull();
 
+    vi.stubGlobal("location", {
+      assign: locationAssign,
+      href: globalThis.location.href,
+      origin: globalThis.location.origin,
+      protocol: globalThis.location.protocol,
+      host: globalThis.location.host,
+      hostname: globalThis.location.hostname,
+      port: globalThis.location.port,
+      pathname: globalThis.location.pathname,
+      search: globalThis.location.search,
+      hash: globalThis.location.hash,
+    });
     fireEvent.click(screen.getByRole("button", { name: "移除收藏" }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(`/api/plans/${routeId}`, {
@@ -385,7 +386,6 @@ describe("My Plans route saves", () => {
         cache: "no-store",
       }),
     );
-    expect(routerReplace).toHaveBeenCalledWith("/plans");
-    expect(routerRefresh).not.toHaveBeenCalled();
+    expect(locationAssign).toHaveBeenCalledWith("/plans");
   });
 });

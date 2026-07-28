@@ -9,7 +9,6 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
@@ -29,7 +28,6 @@ import {
 import type { SavedPlanDetail } from "./server";
 
 export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
-  const router = useRouter();
   const [removing, setRemoving] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const { job, reference, route } = detail;
@@ -81,7 +79,7 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
             : "DATA_UNAVAILABLE";
         throw new Error(code);
       }
-      router.replace("/plans");
+      globalThis.location.assign("/plans");
     } catch (error) {
       setErrorCode(error instanceof Error ? error.message : "DATA_UNAVAILABLE");
     } finally {
