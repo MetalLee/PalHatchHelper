@@ -82,7 +82,6 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
         throw new Error(code);
       }
       router.push("/plans");
-      router.refresh();
     } catch (error) {
       setErrorCode(error instanceof Error ? error.message : "DATA_UNAVAILABLE");
     } finally {

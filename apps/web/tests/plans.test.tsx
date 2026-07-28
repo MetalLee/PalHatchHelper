@@ -380,6 +380,6 @@ describe("My Plans route saves", () => {
       }),
     );
     expect(routerPush).toHaveBeenCalledWith("/plans");
-    expect(routerRefresh).toHaveBeenCalled();
+    expect(routerRefresh).not.toHaveBeenCalled();
   });
 });
