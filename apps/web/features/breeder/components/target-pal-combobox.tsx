@@ -64,7 +64,10 @@ export function TargetPalCombobox({
             role="combobox"
             aria-label="目标帕鲁"
             aria-expanded={open}
-            className="h-auto min-h-14 w-full min-w-0 justify-between rounded-xl border-border bg-white/72 px-3 py-2 text-left font-normal hover:border-primary/25 hover:bg-accent/45"
+            className={cn(
+              "h-auto w-full min-w-0 justify-between rounded-xl border-border bg-white/72 px-3 text-left font-normal hover:border-primary/25 hover:bg-accent/45",
+              selected === undefined ? "min-h-14 py-2" : "min-h-24 py-3",
+            )}
           >
             {selected === undefined ? (
               <span className="truncate text-muted-foreground">
@@ -76,14 +79,14 @@ export function TargetPalCombobox({
                   palId={selected.pal_id}
                   name={selectedName ?? "名称暂不可用"}
                   catalogNumber={selected.encyclopedia_no}
-                  size={44}
-                  className="size-11 rounded-xl"
+                  size={72}
+                  className="size-18 rounded-2xl ring-2 ring-primary/15"
                 />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-bold text-foreground">
+                  <span className="block truncate text-lg font-bold tracking-tight text-foreground">
                     {selectedName}
                   </span>
-                  <span className="mt-0.5 block truncate text-xs font-semibold text-primary">
+                  <span className="mt-1 block truncate text-sm font-semibold text-primary">
                     {catalogNumber(selected.encyclopedia_no)}
                   </span>
                 </span>

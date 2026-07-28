@@ -23,7 +23,7 @@
     },
     "optimization_mode": { "$ref": "#/$defs/BreederOptimizationMode" },
     "allow_guild_shared": { "type": "boolean" },
-    "max_generations": { "type": "integer", "minimum": 1, "maximum": 8 }
+    "max_generations": { "type": "integer", "minimum": 1, "maximum": 5 }
   },
   "$defs": {
     "BreederStableId": {

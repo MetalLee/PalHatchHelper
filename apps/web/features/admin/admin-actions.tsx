@@ -335,7 +335,7 @@ export function SettingsForm({
           name="max_generations"
           type="number"
           min="1"
-          max="8"
+          max="5"
           defaultValue={settings.max_generations}
         />
       </label>

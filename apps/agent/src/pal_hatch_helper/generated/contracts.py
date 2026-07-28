@@ -501,7 +501,7 @@ class BreedingScoreComponentName(StrEnum):
 class BreedingSearchLimits(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    max_generations: Annotated[int, Field(ge=1), Field(le=8)]
+    max_generations: Annotated[int, Field(ge=1), Field(le=5)]
     max_expanded_nodes: Annotated[int, Field(ge=1), Field(le=10000000)]
     timeout_ms: Annotated[int, Field(ge=1), Field(le=300000)]
     max_species_routes_per_pal: Annotated[int, Field(ge=3), Field(le=100000)]
@@ -1696,7 +1696,7 @@ class RuntimeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     job_creation_enabled: bool
-    max_generations: Annotated[int, Field(ge=1), Field(le=8)]
+    max_generations: Annotated[int, Field(ge=1), Field(le=5)]
     job_worker_concurrency: Annotated[int, Field(ge=1), Field(le=4)]
     ai_concurrency: Annotated[int, Field(ge=1), Field(le=2)]
     parser_timeout_seconds: Annotated[int, Field(ge=30), Field(le=1800)]
@@ -1967,7 +1967,7 @@ class CreateBreedingJobRequest(BaseModel):
     ]
     optimization_mode: BreederOptimizationMode
     allow_guild_shared: bool
-    max_generations: Annotated[int, Field(ge=1), Field(le=8)]
+    max_generations: Annotated[int, Field(ge=1), Field(le=5)]
 
 
 class AdminOverview(BaseModel):

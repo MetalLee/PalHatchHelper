@@ -294,6 +294,11 @@ describe("Phase 6 breeder form", () => {
     expect(
       within(trigger).getByRole("img", { name: "幻色幼崽头像" }),
     ).toBeTruthy();
+    expect(
+      within(trigger)
+        .getByRole("img", { name: "幻色幼崽头像" })
+        .getAttribute("width"),
+    ).toBe("72");
     expect(trigger.textContent).toContain("幻色幼崽");
     expect(trigger.textContent).toContain("#003");
     expect(trigger.textContent).not.toContain("test_child_pal");
@@ -367,7 +372,7 @@ describe("Phase 6 breeder form", () => {
     expect(screen.queryByText("负面", { exact: true })).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "最少借用" }));
     fireEvent.change(screen.getByLabelText("最大代数"), {
-      target: { value: "6" },
+      target: { value: "5" },
     });
     fireEvent.click(screen.getByRole("switch", { name: "允许使用公会共享" }));
     fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
@@ -383,15 +388,22 @@ describe("Phase 6 breeder form", () => {
       ],
       optimization_mode: "least_borrowing",
       allow_guild_shared: false,
-      max_generations: 6,
+      max_generations: 5,
     });
     expect(routerPush).toHaveBeenCalledWith(
       "/breeder/jobs/60000000-0000-4000-8000-000000000066",
     );
   });
 
-  it("keeps selected passives above the scrollable candidates, removes and clears them", () => {
+  it("keeps selected passives in a fluid 2x2 grid and removes them individually", () => {
     render(<BreederForm context={context} />);
+
+    const candidates = screen.getByLabelText("被动技能选择");
+    expect(
+      Array.from(candidates.querySelectorAll(".passive-badge")).every((badge) =>
+        badge.classList.contains("breeder-option-passive-badge"),
+      ),
+    ).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: /选择被动 A/ }));
     fireEvent.click(screen.getByRole("button", { name: /选择被动 B/ }));
@@ -400,12 +412,42 @@ describe("Phase 6 breeder form", () => {
     });
 
     const selected = screen.getByRole("region", { name: "已选择的被动" });
+    expect(screen.queryByText("期望被动（最多 4 个）")).toBeNull();
+    expect(within(selected).queryByRole("button", { name: "清空" })).toBeNull();
+    expect(selected.getAttribute("data-passive-layout")).toBe("2x2");
+    expect(
+      Array.from(selected.querySelectorAll(".passive-badge")).every((badge) =>
+        badge.classList.contains("breeder-selected-passive-badge"),
+      ),
+    ).toBe(true);
+    const selectedGrid = selected.querySelector(
+      ".breeder-selected-passive-badge",
+    )?.parentElement?.parentElement;
+    expect(selectedGrid?.className).toContain(
+      "grid-cols-[repeat(2,minmax(0,20rem))]",
+    );
+    expect(selectedGrid?.className).toContain("justify-start");
+    expect(selectedGrid?.className).not.toContain("grid-cols-2");
+    expect(
+      within(selected)
+        .getAllByRole("button")
+        .every(
+          (button) =>
+            button.classList.contains("w-full") &&
+            button.classList.contains("h-11"),
+        ),
+    ).toBe(true);
+    expect(
+      Array.from(selected.querySelectorAll(".lucide-x")).every(
+        (icon) =>
+          icon.classList.contains("text-white") &&
+          icon.classList.contains("bg-black/45"),
+      ),
+    ).toBe(true);
     expect(selected.textContent).toContain("被动 A");
     fireEvent.click(screen.getByRole("button", { name: "移除被动 A" }));
     expect(selected.textContent).not.toContain("被动 A");
-    fireEvent.click(within(selected).getByRole("button", { name: "清空" }));
-    expect(selected.textContent).toContain("尚未选择被动");
-    expect(screen.getByText("已选择 0 / 4")).toBeTruthy();
+    expect(selected.textContent).toContain("被动 B");
   });
 
   it("renders all four optimization modes as selectable cards", () => {
@@ -507,7 +549,7 @@ describe("Phase 6 breeder form", () => {
 
     selectTarget("幻色幼崽");
     fireEvent.change(screen.getByLabelText("最大代数"), {
-      target: { value: "9" },
+      target: { value: "6" },
     });
     fireEvent.submit(screen.getByTestId("breeder-create-form"));
 

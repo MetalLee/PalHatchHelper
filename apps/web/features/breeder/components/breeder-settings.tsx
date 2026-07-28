@@ -61,7 +61,7 @@ export function BreederSettings({
               最大代数
             </Label>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              路线最多经过 1 至 8 代
+              路线最多经过 1 至 5 代
             </p>
           </div>
           <Input
@@ -69,7 +69,7 @@ export function BreederSettings({
             type="number"
             inputMode="numeric"
             min={1}
-            max={8}
+            max={5}
             value={maxGenerations}
             onChange={(event) =>
               onMaxGenerationsChange(Number(event.target.value))

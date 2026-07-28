@@ -2,6 +2,7 @@ import type {
   BreedingJobDetailRpcSuccess,
   BreedingRoute,
   PlanListPage,
+  PlanSummary,
 } from "@palhatch/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,11 +11,7 @@ import { PlanDetail } from "../features/plans/plan-detail";
 import { PlanList } from "../features/plans/plan-list";
 import type { SavedPlanDetail } from "../features/plans/server";
 
-const routerPush = vi.fn();
-const routerRefresh = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
-}));
+const locationAssign = vi.fn();
 
 const routeId = "62000000-0000-4000-8000-000000000001";
 const jobId = "60000000-0000-4000-8000-000000000001";
@@ -233,9 +230,8 @@ function summary(): PlanListPage["items"][number] {
 }
 
 beforeEach(() => {
-  routerPush.mockReset();
-  routerRefresh.mockReset();
   vi.unstubAllGlobals();
+  locationAssign.mockReset();
 });
 
 describe("My Plans route saves", () => {
@@ -250,12 +246,26 @@ describe("My Plans route saves", () => {
     const card = container.querySelector<HTMLElement>("[data-plan-card]");
     expect(card).not.toBeNull();
     expect(card?.className).toContain("max-w-[32rem]");
+    const planGrid = screen.getByRole("region", { name: "计划列表" });
+    expect(planGrid.className).toContain(
+      "grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),32rem))]",
+    );
+    expect(planGrid.className).toContain("justify-start");
+    expect(planGrid.className).toContain("gap-3");
+    expect(planGrid.className).not.toContain("justify-center");
+    expect(planGrid.className).not.toContain("lg:grid-cols-2");
     const passiveGrid = container.querySelector<HTMLElement>(
       '[data-passive-layout="2x2"]',
     );
     expect(passiveGrid?.className).toContain("auto-rows-min");
     expect(passiveGrid?.className).toContain("items-start");
-    expect(passiveGrid?.className).not.toContain("min-h-");
+    expect(passiveGrid?.className).toContain("min-h-[3.875rem]");
+    expect(card?.className).toContain("h-full");
+    const cardContent = card?.firstElementChild as HTMLElement | null;
+    expect(cardContent?.className).toContain("h-full");
+    expect(screen.getByRole("link", { name: /查看计划/ }).className).toContain(
+      "mt-auto",
+    );
     expect(
       screen.getByRole("link", { name: /查看计划/ }).getAttribute("href"),
     ).toBe(`/plans/${routeId}`);
@@ -268,6 +278,54 @@ describe("My Plans route saves", () => {
     expect(
       screen.getAllByRole("link", { name: "开始规划" }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it("reserves two passive rows for plans with zero to two desired passives", () => {
+    const base = summary();
+    const noPassives: PlanSummary = {
+      ...base,
+      route_id: "62000000-0000-4000-8000-000000000002",
+      desired_passive_ids: [],
+      desired_passive_display_names: [],
+      desired_passives: [],
+    };
+    const twoPassives: PlanSummary = {
+      ...base,
+      route_id: "62000000-0000-4000-8000-000000000003",
+      desired_passive_ids: ["swift", "artisan"],
+      desired_passive_display_names: ["神速", "工匠精神"],
+      desired_passives: [
+        base.desired_passives[0]!,
+        {
+          passive_skill_id: "artisan",
+          display_name: "工匠精神",
+          rank: 2,
+          is_negative: false,
+        },
+      ],
+    };
+
+    const { container } = render(
+      <PlanList page={listPage([noPassives, base, twoPassives])} />,
+    );
+
+    expect(screen.getByText("无指定被动").className).toContain(
+      "min-h-[3.875rem]",
+    );
+    const passiveGrids = container.querySelectorAll<HTMLElement>(
+      '[data-passive-layout="2x2"]',
+    );
+    expect(passiveGrids).toHaveLength(2);
+    expect(
+      Array.from(passiveGrids).every((grid) =>
+        grid.classList.contains("min-h-[3.875rem]"),
+      ),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByRole("link", { name: /查看计划/ })
+        .every((link) => link.classList.contains("mt-auto")),
+    ).toBe(true);
   });
 
   it("shows the immutable route and removes only the save", async () => {
@@ -309,6 +367,18 @@ describe("My Plans route saves", () => {
     );
     expect(screen.queryByText(/当前步骤|候选子代|计划进度/)).toBeNull();
 
+    vi.stubGlobal("location", {
+      assign: locationAssign,
+      href: globalThis.location.href,
+      origin: globalThis.location.origin,
+      protocol: globalThis.location.protocol,
+      host: globalThis.location.host,
+      hostname: globalThis.location.hostname,
+      port: globalThis.location.port,
+      pathname: globalThis.location.pathname,
+      search: globalThis.location.search,
+      hash: globalThis.location.hash,
+    });
     fireEvent.click(screen.getByRole("button", { name: "移除收藏" }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(`/api/plans/${routeId}`, {
@@ -316,7 +386,6 @@ describe("My Plans route saves", () => {
         cache: "no-store",
       }),
     );
-    expect(routerPush).toHaveBeenCalledWith("/plans");
-    expect(routerRefresh).toHaveBeenCalled();
+    expect(locationAssign).toHaveBeenCalledWith("/plans");
   });
 });

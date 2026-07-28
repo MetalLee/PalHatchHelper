@@ -326,7 +326,7 @@ select throws_ok(
     2,
     '{
       "job_creation_enabled": true,
-      "max_generations": 99,
+      "max_generations": 6,
       "job_worker_concurrency": 1,
       "ai_concurrency": 1,
       "parser_timeout_seconds": 180,

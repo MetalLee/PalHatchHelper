@@ -149,7 +149,7 @@
         "max_results"
       ],
       "properties": {
-        "max_generations": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "max_generations": { "type": "integer", "minimum": 1, "maximum": 5 },
         "max_expanded_nodes": {
           "type": "integer",
           "minimum": 1,

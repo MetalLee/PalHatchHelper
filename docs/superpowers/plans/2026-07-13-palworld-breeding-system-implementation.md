@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -680,6 +680,129 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-28 跨阶段修订：全局被动单排交替三角纹理
+
+### 交付顺序
+
+1. 更新正式规格与本计划，明确所有全局被动徽标只使用一排跨越完整徽标高度、朝向交替的三角
+   纹理；rank 色板、文字对比、负面语义和业务事实保持不变。
+2. 增加失败测试，锁定纹理由顶边与底边交替锚定、水平重复且不再使用徽标垂直中心作为共同原点。
+3. 最小修改全局 `.passive-badge::before` CSS；不修改 `PassiveBadge` 组件、调用方、外部资产或
+   数据契约。
+4. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次 Web 格式、lint、typecheck、
+   完整 test、build、Phase 6 浏览器纹理验证和 `git diff --check`。
+
+### 回滚与生产约束
+
+- 本修订只修改规格、计划、全局 Web CSS 和测试，不修改数据库、共享 Schema、算法、评分、库存、
+  真实存档或 `/opt/palworld`，不新增依赖、公网端口、远程推送或生产部署。
+- 应用回滚恢复上一 Web 构建即可；所有被动事实和已有物化路线不受影响。
+
+### 完成验证
+
+- 失败基线：纹理相关 2 项测试中 1 项按预期失败，锁定旧 `50% 50%` 中心原点产生的上下两排；
+  另一项既有 Tailwind source 检查通过。
+- 局部验证：同一组 2 项全部通过。
+- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 112 项测试和 Next.js 生产构建
+  全部通过；Phase 6 浏览器纹理流程 1 项通过。
+- 当前环境使用 Node.js 26.3.0，仓库声明为 Node.js 22.x；命令只产生 engine warning。浏览器
+  fixture 缺少测试帕鲁图片并使用既有降级展示，不影响纹理断言。
+
+## 2026-07-28 跨阶段修订：已选被动定宽与计划卡片左对齐
+
+### 交付顺序
+
+1. 更新正式规格与本计划，固定已选被动每列 20rem 上限和窄屏收缩、计划卡片紧凑左对齐网格、
+   零至两个目标被动预留第二行以及底部入口对齐；数据库、共享契约、配种事实和算法保持不变。
+2. 增加失败测试，覆盖已选被动列宽规则、计划网格左对齐与紧凑间距、被动区两行预留和卡片底部
+   入口布局；失败必须来自现有等分拉伸、居中网格和内容高度随被动数量变化的真实行为。
+3. 最小修改 `PassiveSkillPicker` 与 `PlanList`；复用帕鲁列表的紧凑网格间距，保留 32rem 卡片
+   上限、被动品级视觉、44 像素移除点击区和移动端无横向滚动行为。
+4. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次 Web 格式、lint、typecheck、
+   完整 test、build、受影响 Phase 6/7 浏览器验证和 `git diff --check`，不重复聚合命令已覆盖的检查。
+
+### 回滚与生产约束
+
+- 本修订只修改规格、计划和 Web 展示，不修改数据库迁移、共享 Schema、算法、评分、库存快照、
+  真实存档或 `/opt/palworld`，不新增依赖、公网端口、远程推送或生产部署。
+- 应用回滚恢复上一 Web 构建即可；收藏关系、任务、物化路线和版本审计不受影响。
+
+### 完成验证
+
+- 失败基线：计划与配种器相关 43 项测试中 2 项按预期失败，分别锁定旧的等分拉伸已选被动列和
+  居中计划网格；其余 41 项通过。
+- 局部验证：同一组 43 项全部通过；随后补充零、一、两个被动统一预留两行的边界覆盖。
+- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 111 项测试和 Next.js 生产构建
+  全部通过；受影响 Phase 6/7 浏览器流程 2 项通过。
+- 当前环境使用 Node.js 26.3.0，仓库声明为 Node.js 22.x；命令只产生 engine warning。浏览器
+  fixture 缺少测试帕鲁图片并使用既有降级展示，不影响流程与布局断言。
+
+## 2026-07-28 跨阶段修订：计划网格与配种被动布局
+
+### 交付顺序
+
+1. 更新正式规格与本计划，固定计划卡片紧凑居中网格、已选被动等分自适应宽度、候选徽标固定
+   20rem 宽度和删除一键清空操作；数据库、共享契约、配种事实和算法保持不变。
+2. 增加失败测试，覆盖计划卡片使用自动适配的 32rem 网格、配种页不存在清空按钮、已选徽标
+   两列等宽且高度固定、候选徽标不随名称长度变化，以及逐项移除图标保持清晰对比。
+3. 最小修改 `PlanList`、`PassiveSkillPicker` 和局部徽标样式；已选徽标在窄屏随网格列收缩，候选
+   徽标在可用宽度不足 20rem 时降为 100%，不改变全局 rank 品级视觉。
+4. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次 Web 格式、lint、typecheck、
+   完整 test、build、受影响浏览器验证和 `git diff --check`，不重复聚合命令已覆盖的检查。
+
+### 回滚与生产约束
+
+- 本修订只修改规格、计划和 Web 展示，不修改数据库迁移、共享 Schema、算法、评分、库存快照、
+  真实存档或 `/opt/palworld`，不新增依赖、公网端口或生产部署。
+- 应用回滚恢复上一 Web 构建即可；收藏关系、任务和物化路线不受影响。
+
+### 完成验证
+
+- 失败基线：计划与配种器相关 43 项测试中 2 项按预期失败，分别锁定旧两列分散网格和旧被动
+  定宽/清空行为；修正一次无效 ARIA 定位后，被动测试由缺少候选固定宽度类真实失败。
+- 局部验证：同一组 43 项测试全部通过。
+- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 110 项测试和 Next.js 生产构建
+  全部通过；首次并行 typecheck 与 build 因 `.next/types` 重建竞态失败，构建完成后只重跑该失败
+  检查并通过。
+- 浏览器验证：首次全套运行因已有进程占用 3000、开发服务器切换到 3001 而访问了错误端口；改用
+  独立端口后，受影响 Phase 6/7 共 2 项通过，覆盖候选徽标等宽/320px 上限、已选徽标填满网格列、
+  28px 固定高度、无清空按钮及收藏路线流程。
+
+## 2026-07-28 跨阶段修订：配种工作台目标与被动布局、五代上限和 Phase 5 验收提速
+
+### 交付顺序
+
+1. 更新正式规格与本计划，固定已选目标层级、被动两列布局、十字宽度、一行三角纹理、新请求
+   五代上限、历史结果兼容和 Phase 5 浏览器验收的最小关键闭环。
+2. 增加一次失败测试，覆盖 72 像素已选目标头像、重复被动标题消失、已选被动两列且不拉伸、
+   配种页徽标固定宽度、六代新请求/新设置被 Web、共享契约和数据库拒绝。
+3. 最小修改配种器组件与全局被动纹理；不改变 rank、负面事实、配方、算法评分或历史路线载荷。
+4. 请求 Schema 与 Agent 搜索输入上限改为五，结果投影继续接受历史八代数据；追加前向数据库
+   迁移保护新任务和新运行设置，不编辑已应用迁移。
+5. Phase 5 浏览器验收删除纯样式与已有单元/pgTAP 覆盖的重复场景，把库存范围、被动 AND、
+   分页和共享合并为一个玩家主流程；保留登录错误、未绑定、移动端无横向滚动、隐私边界、
+   Phase 6–8 核心流程。运行前保留一次数据库重置，删除验收结束后的重复全库重置。
+6. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次根 `pnpm check`、完整
+   Supabase 测试、精简后的 Phase 5 browser acceptance 与 `git diff --check`，不重复聚合命令
+   已覆盖的检查。
+
+### 回滚与生产约束
+
+- Web 与验收脚本可随应用回滚；数据库只追加写入保护，历史任务、路线和设置版本不原地修改。
+- 不修改真实存档、配种关系、评分、`/opt/palworld`、Palworld/mihomo 容器或公网端口。
+- 提交、PR、合并与远程推送按本次用户明确授权执行；不执行 Vercel、Supabase 或 Agent 生产部署。
+
+### 完成验证
+
+- 失败基线以单个 Web 用例确认重复标题仍存在；实现后 Web 受影响 43 项与契约受影响 9 项通过。
+- 本地 Supabase 从空库重放全部迁移，schema lint 无错误，18 个 pgTAP 文件共 400 项通过。
+- 根聚合检查的格式、lint、类型、110 项 Web 测试、30 项契约测试和生产构建通过；Agent 相关
+  运行设置测试修正后 2 项通过。当前机器缺少 `gcc`，3 个既有 Oodle ABI 临时 shim 测试无法
+  建立；其余 236 项 Agent 测试通过、4 项跳过，该环境限制交由 GitHub CI 覆盖。
+- 精简后的 browser acceptance 从 16 个场景减少为 12 个；首次运行 10 项通过、1 项因合并流程
+  缺少清除筛选而失败、1 项跳过，只修正并重跑该失败场景后通过。Phase 6 的 72 像素头像、
+  两列徽标、单行纹理和五代输入浏览器断言已在首次运行通过。
 
 ## 2026-07-28 跨阶段修订：我的计划与配种路线视觉收口
 

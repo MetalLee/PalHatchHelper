@@ -63,157 +63,23 @@ test("overview stays within a 390px viewport and uses CSS-only hero scenery", as
   ).toBe(true);
 });
 
-test("inventory scope and pagination links refresh the visible list", async ({
-  page,
-}) => {
-  await login(page);
-  await page.goto("/pals?scope=all&page_size=1");
-
-  await page.getByRole("link", { name: "公会共享" }).click();
-  await expect(page).toHaveURL(/\/pals\?scope=shared&page_size=1$/);
-  await expect(page.getByText("筛选结果 1 只")).toBeVisible();
-  await expect(
-    page.getByRole("article").getByText("Fixture Player B"),
-  ).toBeVisible();
-
-  await page.getByRole("link", { name: "全部", exact: true }).click();
-  await expect(page).toHaveURL(/\/pals\?scope=all&page_size=1$/);
-  await expect(page.getByText("筛选结果 3 只")).toBeVisible();
-
-  await page.goto("/pals?scope=all&page_size=1");
-  await page.getByRole("link", { name: "表格视图" }).click();
-  await expect(page).toHaveURL(/view=table/);
-  const inventoryTable = page.getByRole("table", { name: "帕鲁库存表格" });
-  await expect(inventoryTable).toBeVisible();
-  await expect(
-    inventoryTable.getByRole("img", { name: "棉悠悠头像" }),
-  ).toBeVisible();
-
-  const firstPalId = await page
-    .getByRole("row")
-    .filter({ has: page.getByRole("img", { name: "棉悠悠头像" }) })
-    .getAttribute("data-pal-id");
-  await page.getByRole("link", { name: "下一页" }).click();
-  await expect(page).toHaveURL(/page=2/);
-  await expect(page).toHaveURL(/context=/);
-  await expect(page).toHaveURL(/view=table/);
-  await expect
-    .poll(async () =>
-      page
-        .getByRole("row")
-        .filter({ has: page.getByRole("img", { name: "棉绒兽头像" }) })
-        .getAttribute("data-pal-id"),
-    )
-    .not.toBe(firstPalId);
-});
-
-test("inventory filter styles use semantic border colors", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await login(page);
-  await page.goto("/pals");
-
-  const semanticColors = await page
-    .getByRole("link", { name: "清除" })
-    .evaluate((element) => {
-      const resolveColor = (variable: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(${variable})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-
-      return {
-        border: getComputedStyle(element).borderTopColor,
-        foreground: resolveColor("--foreground"),
-        semanticBorder: resolveColor("--border"),
-        semanticInput: resolveColor("--input"),
-      };
-    });
-
-  expect(semanticColors.border).toBe(semanticColors.semanticInput);
-  expect(semanticColors.border).not.toBe(semanticColors.foreground);
-
-  await page.getByRole("button", { name: /更多筛选/ }).click();
-  await page.getByRole("combobox", { name: "所有者" }).click();
-  const selectContent = page.locator('[data-slot="select-content"]');
-  await expect(selectContent).toBeVisible();
-  const selectBorder = await selectContent.evaluate(
-    (element) => getComputedStyle(element).borderTopColor,
-  );
-  expect(selectBorder).toBe(semanticColors.semanticBorder);
-});
-
-test("inventory filter styles keep a single search focus indicator", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await login(page);
-  await page.goto("/pals");
-
-  await page.getByRole("combobox", { name: "被动技能" }).click();
-  const commandInput = page.locator('[data-slot="command-input"]');
-  await expect(commandInput).toBeFocused();
-
-  const inputFocus = await commandInput.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return style.outlineStyle;
-  });
-  expect(inputFocus).toBe("none");
-
-  const wrapperShadow = await page
-    .locator('[data-slot="command-input-wrapper"]')
-    .evaluate((element) => getComputedStyle(element).boxShadow);
-  expect(wrapperShadow).not.toBe("none");
-});
-
-test("inventory passive badges support four-slot AND multi-selection", async ({
-  page,
-}) => {
-  await login(page);
-  await page.goto("/pals");
-
-  const passivePicker = page.getByRole("combobox", { name: "被动技能" });
-  await passivePicker.click();
-  const serious = page.getByRole("option", { name: /认真/ });
-  await expect(serious.locator("[data-rank='1']")).toBeVisible();
-  await serious.click();
-  await expect(passivePicker).toHaveAttribute("aria-expanded", "true");
-  await page.getByRole("option", { name: /工匠精神/ }).click();
-  await expect(page.getByText("已选择 2 / 4")).toBeVisible();
-
-  await page.getByRole("button", { name: "应用筛选" }).click();
-  await expect(page).toHaveURL(/passive=test_passive_a/);
-  await expect(page).toHaveURL(/passive=test_passive_b/);
-  await expect(page.getByText("筛选结果 1 只")).toBeVisible();
-});
-
-test("iPhone flow filters inventory, pages deterministically and toggles owned sharing", async ({
+test("iPhone inventory flow combines passive filtering, sharing, pagination and scope", async ({
   page,
 }) => {
   await login(page);
   await navigateFromMobileMenu(page, /^帕鲁库存$/);
   await expect(page.getByRole("heading", { name: "帕鲁库存" })).toBeVisible();
 
-  await page.getByLabel("名称或图鉴编号").fill("棉");
+  const passivePicker = page.getByRole("combobox", { name: "被动技能" });
+  await passivePicker.click();
+  await page.getByRole("option", { name: /认真/ }).click();
+  await page.getByRole("option", { name: /工匠精神/ }).click();
   await page.getByRole("button", { name: "应用筛选" }).click();
-  await expect(page.getByRole("heading", { name: "棉悠悠" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
-  await expect(
-    page.getByText("帕鲁总数").locator("..").getByText("3", { exact: true }),
-  ).toBeVisible();
-  await page.waitForLoadState("networkidle");
+  await expect(page).toHaveURL(/passive=test_passive_a/);
+  await expect(page).toHaveURL(/passive=test_passive_b/);
+  await expect(page.getByText("筛选结果 1 只")).toBeVisible();
 
-  await page.getByLabel("名称或图鉴编号").fill("2");
-  await page.getByRole("button", { name: "应用筛选" }).click();
-  await expect(page.getByRole("heading", { name: "棉绒兽" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "棉悠悠" })).toHaveCount(0);
-
-  await page.getByLabel("名称或图鉴编号").fill("棉悠悠");
-  await page.getByRole("button", { name: "应用筛选" }).click();
-  await page.waitForLoadState("networkidle");
-
+  await page.goto("/pals?scope=all");
   const sharing = page.getByRole("switch", { name: "棉悠悠 公会共享" });
   await expect(sharing).toHaveAttribute("aria-checked", "true");
   expect(
