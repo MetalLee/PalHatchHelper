@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { Analytics } from "@vercel/analytics/next";
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { brand, brandTitle } from "@/config/brand";
 
@@ -56,6 +58,7 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body>
         <TooltipProvider>{children}</TooltipProvider>
+        <Analytics />
       </body>
     </html>
   );
