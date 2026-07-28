@@ -420,6 +420,14 @@ describe("Phase 6 breeder form", () => {
         badge.classList.contains("breeder-selected-passive-badge"),
       ),
     ).toBe(true);
+    const selectedGrid = selected.querySelector(
+      ".breeder-selected-passive-badge",
+    )?.parentElement?.parentElement;
+    expect(selectedGrid?.className).toContain(
+      "grid-cols-[repeat(2,minmax(0,20rem))]",
+    );
+    expect(selectedGrid?.className).toContain("justify-start");
+    expect(selectedGrid?.className).not.toContain("grid-cols-2");
     expect(
       within(selected)
         .getAllByRole("button")

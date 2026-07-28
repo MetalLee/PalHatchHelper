@@ -121,20 +121,12 @@
     z-index: -1;
     inset: 0;
     background-image:
-      conic-gradient(
-        from 30deg at 50% 50%,
-        rgb(255 255 255 / 0.1) 0deg 60deg,
-        transparent 60deg 120deg,
-        rgb(0 0 0 / 0.1) 120deg 180deg,
-        transparent 180deg 240deg,
-        rgb(255 255 255 / 0.06) 240deg 300deg,
-        transparent 300deg 360deg
-      ),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 28'%3E%3Cpath d='M0%2028L36%2028L18%200Z' fill='%23fff' fill-opacity='.1'/%3E%3Cpath d='M36%200L72%200L54%2028Z' fill='%23000' fill-opacity='.1'/%3E%3C/svg%3E"),
       var(--passive-badge-surface);
     background-position: 0 0;
     background-repeat: repeat-x, no-repeat;
     background-size:
-      18px 100%,
+      72px 100%,
       100% 100%;
     content: "";
     pointer-events: none;

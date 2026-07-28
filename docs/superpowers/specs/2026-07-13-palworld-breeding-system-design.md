@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -998,8 +998,9 @@ Hover 框在导航项之间水平滑动并保留轻量果冻反馈，离开导�
 - `rank = 0`、缺失或范围外值使用中性降级样式。
 
 所有品级背景均使用本地 CSS 生成的拼接三角纹理，不热链或复制第三方站点纹理资产。纹理只在
-水平方向重复为一行三角形，不在徽标高度内形成上下交错的第二行。文字与背景保持可读对比度；
-徽标不得仅以颜色表达负面语义，已有负面文字和可访问名称继续保留。
+水平方向重复为一行三角形，同一行内相邻三角形朝向交替且各自跨越徽标高度，不得以徽标垂直
+中心为原点形成上下交错的第二行。文字与背景保持可读对比度；徽标不得仅以颜色表达负面语义，
+已有负面文字和可访问名称继续保留。
 
 面向玩家的名称和被动筛选只接受本地化名称或图鉴编号，不接受帕鲁、被动等目录稳定英文
 内部 ID。内部 ID 继续作为数据库、契约、图片索引和确定性算法的关联键，但不得作为玩家界面
@@ -1057,9 +1058,10 @@ shadcn 层级阴影，基础阴影贴合底部，Hover 提升一层，避免大�
 提升名称层级和高度以突出当前培育目标；候选列表继续保持紧凑密度。
 
 期望被动卡片不在主标题下重复显示“期望被动（最多 4 个）”字段标题，也不提供一键清空操作。
-已选择区域使用紧凑的两列两行布局，按阅读顺序放置最多四个被动；两列等分可用区域，徽标宽度
-随区域变化并填满所在列，但始终保持单行固定高度，三个至四个被动才自然增加第二行。被动名称
-超长时省略但保留完整名称提示；逐项移除保持至少 44 像素点击区域、键盘焦点和可访问名称。
+已选择区域使用紧凑的两列两行布局，按阅读顺序放置最多四个被动；每列与下方候选徽标一致，
+最大宽度固定为 20rem，整体左对齐，可用宽度不足时两列与徽标同步收缩，不得产生横向滚动。
+徽标始终保持单行固定高度，被动名称超长时省略但保留完整名称提示；逐项移除保持至少 44 像素
+点击区域、键盘焦点和可访问名称。
 
 下方被动候选列表中的品级徽标使用约一个手机内容区宽度的固定 20rem 宽度，不随名称长度变化；
 可用宽度小于 20rem 时收缩到 100%，不得造成横向滚动。效果说明继续在徽标下方独立换行。
@@ -1125,9 +1127,10 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 `/plans` 是已收藏路线列表，不提供进度状态筛选。每项显示目标帕鲁、期望被动、可行性、代数、步骤数、借用数、预计尝试次数、保存时间和路线链摘要。
 
 页面不显示“当前页已收藏多少条计划”的独立摘要卡。计划卡片在移动端使用可用全宽，在桌面端
-最大宽度为 32rem；列表使用紧凑的自动适配网格，卡片组整体居中，同一行的相邻卡片只保留统一
-网格间距，不把列内剩余宽度堆积到卡片之间。想要的被动固定使用两列布局；一至两个徽标只占一行
-自身高度，三个至四个徽标自然增加第二行，不以相邻卡片高度拉伸徽标。
+最大宽度为 32rem；列表参考帕鲁列表使用紧凑的自动适配网格并整体左对齐，同一行的相邻卡片只
+保留统一紧凑间距，不把列内剩余宽度堆积到卡片之间。想要的被动固定使用两列两行布局；零至
+两个被动同样预留第二行空间，三个至四个徽标自然填入第二行，不绘制虚假徽标。卡片内容撑满
+所在网格行，底部“查看计划”入口保持对齐。
 
 页面文案使用玩家能直接理解的“保存的配种路线”“想要的被动”“还需准备”“开始规划”等语言，
 不在标题、说明、卡片指标或按钮中使用“需求”“版本”“确定性”“任务”等实现术语。

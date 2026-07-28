@@ -80,7 +80,7 @@ export function PassiveSkillPicker({
             尚未选择被动
           </p>
         ) : (
-          <div className="grid min-w-0 auto-rows-min grid-cols-2 content-start items-start gap-2">
+          <div className="grid min-w-0 auto-rows-min grid-cols-[repeat(2,minmax(0,20rem))] content-start items-start justify-start gap-2">
             {selectedSkills.map((skill) => (
               <button
                 type="button"

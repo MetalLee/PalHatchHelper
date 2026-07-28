@@ -35,7 +35,7 @@ export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
         </Card>
       ) : (
         <section
-          className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),32rem))] justify-center gap-4"
+          className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),32rem))] justify-start gap-3"
           aria-label="计划列表"
         >
           {page.items.map((plan) => (
@@ -67,9 +67,9 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
   return (
     <Card
       data-plan-card
-      className="w-full max-w-[32rem] min-w-0 gap-0 overflow-hidden border-glass-border bg-card/92 py-0 shadow-soft transition-colors hover:border-primary/25"
+      className="h-full w-full max-w-[32rem] min-w-0 gap-0 overflow-hidden border-glass-border bg-card/92 py-0 shadow-soft transition-colors hover:border-primary/25"
     >
-      <CardContent className="grid min-w-0 content-start gap-5 p-5 sm:p-6">
+      <CardContent className="grid h-full min-w-0 content-start gap-5 p-5 sm:p-6">
         <div className="flex min-w-0 items-start gap-4">
           <PalPortrait palId={plan.target_pal_id} name={targetName} size={60} />
           <div className="min-w-0 flex-1">
@@ -101,10 +101,12 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
             想要的被动
           </p>
           {plan.desired_passives.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">无指定被动</p>
+            <p className="mt-2 min-h-[3.875rem] text-sm text-muted-foreground">
+              无指定被动
+            </p>
           ) : (
             <div
-              className="mt-2 grid auto-rows-min grid-cols-2 content-start items-start gap-1.5"
+              className="mt-2 grid min-h-[3.875rem] auto-rows-min grid-cols-2 content-start items-start gap-1.5"
               data-passive-layout="2x2"
             >
               {plan.desired_passives.map((passive) => (
@@ -134,7 +136,7 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
           <Metric label="还差" value={`${plan.missing_pal_count} 只`} />
         </dl>
 
-        <Button asChild className="w-full">
+        <Button asChild className="mt-auto w-full">
           <Link href={`/plans/${plan.route_id}`}>
             查看计划
             <ChevronRight aria-hidden="true" className="size-4" />

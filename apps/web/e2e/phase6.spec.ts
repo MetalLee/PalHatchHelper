@@ -132,6 +132,7 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   expect(Math.abs(selectedWidths[0] - selectedWidths[1])).toBeLessThanOrEqual(
     1,
   );
+  expect(selectedWidths[0]).toBeLessThanOrEqual(320);
   expect(
     await selectedPassiveBadge.evaluate(
       (badge) => badge.getBoundingClientRect().height,
@@ -146,8 +147,8 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
         size: pattern.backgroundSize,
       };
     });
-  expect(passivePattern.repeat).toBe("repeat-x, no-repeat");
-  expect(passivePattern.size).toContain("18px 100%");
+  expect(passivePattern.repeat).toBe("repeat-x, repeat-x, no-repeat");
+  expect(passivePattern.size).toContain("36px 100%, 36px 100%");
   await page.getByRole("radio", { name: "综合推荐" }).check();
   await expect(page.getByLabel("最大代数")).toHaveAttribute("max", "5");
   await page.getByLabel("最大代数").fill("5");
