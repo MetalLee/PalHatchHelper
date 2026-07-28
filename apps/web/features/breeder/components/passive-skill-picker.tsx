@@ -28,6 +28,7 @@ function PassiveMetadata({ skill }: Readonly<{ skill: PassiveOption }>) {
           name={displayName}
           rank={skill.rank}
           isNegative={skill.is_negative}
+          className="breeder-passive-badge"
         />
       </span>
       <span className="line-clamp-2 text-sm leading-5 text-muted-foreground">
@@ -68,14 +69,11 @@ export function PassiveSkillPicker({
   });
 
   return (
-    <fieldset className="grid min-w-0 gap-4">
-      <legend className="text-sm font-semibold text-foreground">
-        期望被动（最多 4 个）
-      </legend>
-
+    <div className="grid min-w-0 gap-4">
       <section
-        className="grid min-w-0 gap-3 rounded-2xl border border-border bg-accent/35 p-3 sm:p-4"
+        className="grid min-w-0 gap-3 rounded-2xl border border-border bg-white/48 p-3 sm:p-4"
         aria-label="已选择的被动"
+        data-passive-layout="2x2"
       >
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
           <strong className="text-sm">已选择 {selectedIds.length} / 4</strong>
@@ -92,16 +90,18 @@ export function PassiveSkillPicker({
           )}
         </div>
         {selectedSkills.length === 0 ? (
-          <p className="text-sm text-muted-foreground">尚未选择被动</p>
+          <p className="rounded-xl border border-dashed border-border/80 px-3 py-2.5 text-sm text-muted-foreground">
+            尚未选择被动
+          </p>
         ) : (
-          <div className="flex min-w-0 flex-wrap gap-2">
+          <div className="grid min-w-0 auto-rows-min grid-cols-2 content-start items-start gap-2">
             {selectedSkills.map((skill) => (
               <button
                 type="button"
                 key={skill.passive_skill_id}
                 aria-label={`移除${userFacingCatalogName(skill.display_name, skill.passive_skill_id, "被动名称暂不可用")}`}
                 onClick={() => onToggle(skill.passive_skill_id)}
-                className="inline-flex min-h-11 max-w-full cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-white/72 px-2.5 py-1.5 text-left transition-colors hover:border-primary/25 hover:bg-accent/45 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+                className="group relative inline-flex h-11 min-w-0 w-fit max-w-full cursor-pointer items-center rounded-lg text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
               >
                 <PassiveBadge
                   name={userFacingCatalogName(
@@ -111,9 +111,12 @@ export function PassiveSkillPicker({
                   )}
                   rank={skill.rank}
                   isNegative={skill.is_negative}
-                  className="max-w-[13rem] truncate"
+                  className="breeder-passive-badge max-w-full justify-start pr-8 transition-[filter] group-hover:brightness-110"
                 />
-                <X aria-hidden="true" className="size-3.5 shrink-0" />
+                <X
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-2 size-3.5 shrink-0"
+                />
               </button>
             ))}
           </div>
@@ -174,6 +177,6 @@ export function PassiveSkillPicker({
           </div>
         )}
       </ScrollArea>
-    </fieldset>
+    </div>
   );
 }

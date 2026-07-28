@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -997,8 +997,9 @@ Hover 框在导航项之间水平滑动并保留轻量果冻反馈，离开导�
 - `rank = 5` 同样使用 `#68ffd8`，但背景明显偏紫色。
 - `rank = 0`、缺失或范围外值使用中性降级样式。
 
-所有品级背景均使用本地 CSS 生成的拼接三角纹理，不热链或复制第三方站点纹理资产。文字与背景
-保持可读对比度；徽标不得仅以颜色表达负面语义，已有负面文字和可访问名称继续保留。
+所有品级背景均使用本地 CSS 生成的拼接三角纹理，不热链或复制第三方站点纹理资产。纹理只在
+水平方向重复为一行三角形，不在徽标高度内形成上下交错的第二行。文字与背景保持可读对比度；
+徽标不得仅以颜色表达负面语义，已有负面文字和可访问名称继续保留。
 
 面向玩家的名称和被动筛选只接受本地化名称或图鉴编号，不接受帕鲁、被动等目录稳定英文
 内部 ID。内部 ID 继续作为数据库、契约、图片索引和确定性算法的关联键，但不得作为玩家界面
@@ -1052,7 +1053,13 @@ shadcn 层级阴影，基础阴影贴合底部，Hover 提升一层，避免大�
 
 目标帕鲁字段标签只显示“目标帕鲁”。选中后，选择框本身同时展示头像、本地化名称和图鉴编号，
 不得再渲染重复的目标摘要卡。弹出候选继续支持按本地化名称和图鉴编号搜索，并保持键盘选择、
-清晰焦点和移动端最小点击尺寸。
+清晰焦点和移动端最小点击尺寸。已选目标的头像使用明显大于候选列表的 72 像素尺寸，选择框同步
+提升名称层级和高度以突出当前培育目标；候选列表继续保持紧凑密度。
+
+期望被动卡片不在主标题下重复显示“期望被动（最多 4 个）”字段标题。已选择区域使用紧凑的
+两列两行布局，按阅读顺序放置最多四个被动；一至两个被动只占第一行且徽标保持自身固定高度，
+不得拉伸填满剩余空间。配种创建页中的被动徽标统一使用可容纳十个中文字符的固定文字宽度，
+超长名称省略但保留完整名称提示；移除操作保持至少 44 像素点击区域、键盘焦点和可访问名称。
 
 期望被动候选使用固定游戏数据中的本地化效果文本替代可见的“正面”“负面”分类标签；名称继续
 使用全局品级徽标，`rank` 与 `is_negative` 事实保持不变。效果文本缺失时显示“效果说明暂不可用”，
@@ -1070,6 +1077,10 @@ shadcn 层级阴影，基础阴影贴合底部，Hover 提升一层，避免大�
 ```
 
 AI 失败但算法成功时，任务仍成功并显示模板说明。
+
+最大代数只允许 1 至 5。浏览器输入、共享请求契约、Agent 搜索输入和管理员运行设置必须使用相同
+上限；数据库对新任务和新设置执行同一写入保护。历史上已物化的六至八代任务和路线继续只读
+兼容，不因收紧新请求边界而失去可读性。
 
 ### 17.7 结果页
 

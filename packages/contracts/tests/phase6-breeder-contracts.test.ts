@@ -3,7 +3,25 @@ import { describe, expect, it } from "vitest";
 import {
   parseBreederFormContextRpcResult,
   parseBreedingJobDetailRpcResult,
+  parseCreateBreedingJobRequest,
 } from "../src/phase6-validation";
+
+describe("Phase 6 breeding request limits", () => {
+  const request = {
+    target_pal_id: "test_child_pal",
+    desired_passive_ids: [],
+    optimization_mode: "balanced",
+    allow_guild_shared: true,
+    max_generations: 5,
+  } as const;
+
+  it("accepts five generations and rejects six", () => {
+    expect(parseCreateBreedingJobRequest(request)).toEqual(request);
+    expect(() =>
+      parseCreateBreedingJobRequest({ ...request, max_generations: 6 }),
+    ).toThrow("PHASE6_CONTRACT_INVALID");
+  });
+});
 
 describe("Phase 6 breeder form context", () => {
   it("accepts localized passive effect text from the pinned game data", () => {

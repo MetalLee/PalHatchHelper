@@ -132,11 +132,17 @@
       ),
       var(--passive-badge-surface);
     background-position: 0 0;
+    background-repeat: repeat-x, no-repeat;
     background-size:
-      18px 16px,
+      18px 100%,
       100% 100%;
     content: "";
     pointer-events: none;
+  }
+
+  .breeder-passive-badge {
+    width: calc(10em + 1.25rem + 4px);
+    max-width: 100%;
   }
 
   .passive-badge[data-rank="negative"] {

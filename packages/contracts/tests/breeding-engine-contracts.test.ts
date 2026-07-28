@@ -157,6 +157,15 @@ describe("breeding engine contract", () => {
     expect(validator()(validRequest())).toBe(true);
   });
 
+  it("rejects searches beyond the five-generation product limit", () => {
+    expect(
+      validator()({
+        ...validRequest(),
+        limits: { ...validRequest().limits, max_generations: 6 },
+      }),
+    ).toBe(false);
+  });
+
   it("rejects more than four or duplicate desired passives", () => {
     expect(
       validator()({

@@ -87,10 +87,35 @@ test("iPhone breeder creates, resumes, processes and compares fixed deterministi
   await expect(
     selectedTarget.getByRole("img", { name: "幻色幼崽头像" }),
   ).toBeVisible();
+  expect(
+    await selectedTarget
+      .getByRole("img", { name: "幻色幼崽头像" })
+      .evaluate((image) => image.getBoundingClientRect().width),
+  ).toBe(72);
   await expect(selectedTarget).toContainText("#003");
+  await expect(page.getByText("期望被动（最多 4 个）")).toHaveCount(0);
   await expect(page.getByText("工作速度提升 20%")).toBeVisible();
   await page.getByRole("button", { name: /选择认真/ }).click();
+  const selectedPassives = page.getByRole("region", {
+    name: "已选择的被动",
+  });
+  await expect(selectedPassives).toHaveAttribute("data-passive-layout", "2x2");
+  await expect(selectedPassives.locator(".breeder-passive-badge")).toHaveCount(
+    1,
+  );
+  const passivePattern = await selectedPassives
+    .locator(".breeder-passive-badge")
+    .evaluate((badge) => {
+      const pattern = getComputedStyle(badge, "::before");
+      return {
+        repeat: pattern.backgroundRepeat,
+        size: pattern.backgroundSize,
+      };
+    });
+  expect(passivePattern.repeat).toBe("repeat-x, no-repeat");
+  expect(passivePattern.size).toContain("18px 100%");
   await page.getByRole("radio", { name: "综合推荐" }).check();
+  await expect(page.getByLabel("最大代数")).toHaveAttribute("max", "5");
   await page.getByLabel("最大代数").fill("5");
   const createButton = page.getByRole("button", { name: "创建配种任务" });
   await expect(createButton).toBeEnabled();

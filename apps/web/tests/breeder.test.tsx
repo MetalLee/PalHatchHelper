@@ -294,6 +294,11 @@ describe("Phase 6 breeder form", () => {
     expect(
       within(trigger).getByRole("img", { name: "幻色幼崽头像" }),
     ).toBeTruthy();
+    expect(
+      within(trigger)
+        .getByRole("img", { name: "幻色幼崽头像" })
+        .getAttribute("width"),
+    ).toBe("72");
     expect(trigger.textContent).toContain("幻色幼崽");
     expect(trigger.textContent).toContain("#003");
     expect(trigger.textContent).not.toContain("test_child_pal");
@@ -367,7 +372,7 @@ describe("Phase 6 breeder form", () => {
     expect(screen.queryByText("负面", { exact: true })).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "最少借用" }));
     fireEvent.change(screen.getByLabelText("最大代数"), {
-      target: { value: "6" },
+      target: { value: "5" },
     });
     fireEvent.click(screen.getByRole("switch", { name: "允许使用公会共享" }));
     fireEvent.click(screen.getByRole("button", { name: "创建配种任务" }));
@@ -383,7 +388,7 @@ describe("Phase 6 breeder form", () => {
       ],
       optimization_mode: "least_borrowing",
       allow_guild_shared: false,
-      max_generations: 6,
+      max_generations: 5,
     });
     expect(routerPush).toHaveBeenCalledWith(
       "/breeder/jobs/60000000-0000-4000-8000-000000000066",
@@ -400,6 +405,15 @@ describe("Phase 6 breeder form", () => {
     });
 
     const selected = screen.getByRole("region", { name: "已选择的被动" });
+    expect(screen.queryByText("期望被动（最多 4 个）")).toBeNull();
+    expect(selected.getAttribute("data-passive-layout")).toBe("2x2");
+    expect(
+      Array.from(
+        screen
+          .getByTestId("breeder-create-form")
+          .querySelectorAll(".passive-badge"),
+      ).every((badge) => badge.classList.contains("breeder-passive-badge")),
+    ).toBe(true);
     expect(selected.textContent).toContain("被动 A");
     fireEvent.click(screen.getByRole("button", { name: "移除被动 A" }));
     expect(selected.textContent).not.toContain("被动 A");
@@ -507,7 +521,7 @@ describe("Phase 6 breeder form", () => {
 
     selectTarget("幻色幼崽");
     fireEvent.change(screen.getByLabelText("最大代数"), {
-      target: { value: "9" },
+      target: { value: "6" },
     });
     fireEvent.submit(screen.getByTestId("breeder-create-form"));
 

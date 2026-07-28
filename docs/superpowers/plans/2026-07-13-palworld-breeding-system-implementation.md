@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -680,6 +680,41 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-28 跨阶段修订：配种工作台目标与被动布局、五代上限和 Phase 5 验收提速
+
+### 交付顺序
+
+1. 更新正式规格与本计划，固定已选目标层级、被动两列布局、十字宽度、一行三角纹理、新请求
+   五代上限、历史结果兼容和 Phase 5 浏览器验收的最小关键闭环。
+2. 增加一次失败测试，覆盖 72 像素已选目标头像、重复被动标题消失、已选被动两列且不拉伸、
+   配种页徽标固定宽度、六代新请求/新设置被 Web、共享契约和数据库拒绝。
+3. 最小修改配种器组件与全局被动纹理；不改变 rank、负面事实、配方、算法评分或历史路线载荷。
+4. 请求 Schema 与 Agent 搜索输入上限改为五，结果投影继续接受历史八代数据；追加前向数据库
+   迁移保护新任务和新运行设置，不编辑已应用迁移。
+5. Phase 5 浏览器验收删除纯样式与已有单元/pgTAP 覆盖的重复场景，把库存范围、被动 AND、
+   分页和共享合并为一个玩家主流程；保留登录错误、未绑定、移动端无横向滚动、隐私边界、
+   Phase 6–8 核心流程。运行前保留一次数据库重置，删除验收结束后的重复全库重置。
+6. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次根 `pnpm check`、完整
+   Supabase 测试、精简后的 Phase 5 browser acceptance 与 `git diff --check`，不重复聚合命令
+   已覆盖的检查。
+
+### 回滚与生产约束
+
+- Web 与验收脚本可随应用回滚；数据库只追加写入保护，历史任务、路线和设置版本不原地修改。
+- 不修改真实存档、配种关系、评分、`/opt/palworld`、Palworld/mihomo 容器或公网端口。
+- 提交、PR、合并与远程推送按本次用户明确授权执行；不执行 Vercel、Supabase 或 Agent 生产部署。
+
+### 完成验证
+
+- 失败基线以单个 Web 用例确认重复标题仍存在；实现后 Web 受影响 43 项与契约受影响 9 项通过。
+- 本地 Supabase 从空库重放全部迁移，schema lint 无错误，18 个 pgTAP 文件共 400 项通过。
+- 根聚合检查的格式、lint、类型、110 项 Web 测试、30 项契约测试和生产构建通过；Agent 相关
+  运行设置测试修正后 2 项通过。当前机器缺少 `gcc`，3 个既有 Oodle ABI 临时 shim 测试无法
+  建立；其余 236 项 Agent 测试通过、4 项跳过，该环境限制交由 GitHub CI 覆盖。
+- 精简后的 browser acceptance 从 16 个场景减少为 12 个；首次运行 10 项通过、1 项因合并流程
+  缺少清除筛选而失败、1 项跳过，只修正并重跑该失败场景后通过。Phase 6 的 72 像素头像、
+  两列徽标、单行纹理和五代输入浏览器断言已在首次运行通过。
 
 ## 2026-07-28 跨阶段修订：我的计划与配种路线视觉收口
 

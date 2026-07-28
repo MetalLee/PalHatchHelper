@@ -73,17 +73,7 @@ const localEnvironment = localSupabaseEnvironment(
   run("supabase", ["status", "-o", "env"]),
 );
 
-let testFailure;
-try {
-  run("pnpm", ["--filter", "@palhatch/web", "exec", "playwright", "test"], {
-    env: { ...process.env, ...localEnvironment },
-    stdio: "inherit",
-  });
-} catch (error) {
-  testFailure = error;
-} finally {
-  run("supabase", ["db", "reset"], { stdio: "inherit" });
-  refreshLocalGateway();
-}
-
-if (testFailure !== undefined) throw testFailure;
+run("pnpm", ["--filter", "@palhatch/web", "exec", "playwright", "test"], {
+  env: { ...process.env, ...localEnvironment },
+  stdio: "inherit",
+});

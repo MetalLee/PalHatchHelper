@@ -413,7 +413,7 @@
       ],
       "properties": {
         "job_creation_enabled": { "type": "boolean" },
-        "max_generations": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "max_generations": { "type": "integer", "minimum": 1, "maximum": 5 },
         "job_worker_concurrency": {
           "type": "integer",
           "minimum": 1,

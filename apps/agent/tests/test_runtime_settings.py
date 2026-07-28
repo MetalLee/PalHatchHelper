@@ -33,7 +33,7 @@ def test_agent_loads_versioned_runtime_settings_with_hard_limits() -> None:
                     "version": 7,
                     "settings": {
                         "job_creation_enabled": True,
-                        "max_generations": 6,
+                        "max_generations": 5,
                         "job_worker_concurrency": 2,
                         "ai_concurrency": 1,
                         "parser_timeout_seconds": 240,
@@ -56,7 +56,22 @@ def test_agent_rejects_runtime_settings_beyond_shared_contract() -> None:
     with pytest.raises(StructuredError) as caught:
         asyncio.run(
             load_agent_runtime_settings(
-                StubDatabase({"version": 8, "settings": {"job_worker_concurrency": 99}})
+                StubDatabase(
+                    {
+                        "version": 8,
+                        "settings": {
+                            "job_creation_enabled": True,
+                            "max_generations": 6,
+                            "job_worker_concurrency": 2,
+                            "ai_concurrency": 1,
+                            "parser_timeout_seconds": 240,
+                            "snapshot_retention_count": 5,
+                            "data_stale_threshold_minutes": 20,
+                            "ai_provider_order": ["template"],
+                            "maintenance_announcement": None,
+                        },
+                    }
+                )
             )
         )
 

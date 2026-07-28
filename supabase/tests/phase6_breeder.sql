@@ -217,12 +217,12 @@ select isnt(
 select throws_ok(
   $$
     select * from public.create_breeding_job_v2(
-      'test_child_pal', array[]::text[], 'balanced', true, 9
+      'test_child_pal', array[]::text[], 'balanced', true, 6
     )
   $$,
   'P0001',
   'INVALID_MAX_GENERATIONS',
-  'the database rejects an out-of-range generation limit'
+  'the database rejects a generation limit above five'
 );
 
 select throws_ok(

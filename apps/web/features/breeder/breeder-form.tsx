@@ -56,7 +56,7 @@ function buildCreateRequest(value: CreateJobInput): CreateBreedingJobRequest {
     passives.some((id) => !stableIdPattern.test(id)) ||
     !Number.isInteger(value.max_generations) ||
     value.max_generations < 1 ||
-    value.max_generations > 8
+    value.max_generations > 5
   ) {
     throw new Error("INVALID_BREEDING_REQUEST");
   }
