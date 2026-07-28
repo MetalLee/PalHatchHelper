@@ -35,7 +35,7 @@ export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
         </Card>
       ) : (
         <section
-          className="grid min-w-0 justify-items-start gap-4 lg:grid-cols-2"
+          className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),32rem))] justify-center gap-4"
           aria-label="计划列表"
         >
           {page.items.map((plan) => (

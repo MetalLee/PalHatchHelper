@@ -140,11 +140,6 @@
     pointer-events: none;
   }
 
-  .breeder-passive-badge {
-    width: calc(10em + 1.25rem + 4px);
-    max-width: 100%;
-  }
-
   .passive-badge[data-rank="negative"] {
     --passive-badge-surface: linear-gradient(135deg, #702a35, #381d26);
     border-color: #ff6b78;

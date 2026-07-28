@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -680,6 +680,37 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    - 验证：`pnpm --filter @palhatch/web test -- plans breeder`
 4. 运行收藏端到端回归。
    - 验证：`pnpm --filter @palhatch/web test:e2e --grep "我的计划"`
+
+## 2026-07-28 跨阶段修订：计划网格与配种被动布局
+
+### 交付顺序
+
+1. 更新正式规格与本计划，固定计划卡片紧凑居中网格、已选被动等分自适应宽度、候选徽标固定
+   20rem 宽度和删除一键清空操作；数据库、共享契约、配种事实和算法保持不变。
+2. 增加失败测试，覆盖计划卡片使用自动适配的 32rem 网格、配种页不存在清空按钮、已选徽标
+   两列等宽且高度固定、候选徽标不随名称长度变化，以及逐项移除图标保持清晰对比。
+3. 最小修改 `PlanList`、`PassiveSkillPicker` 和局部徽标样式；已选徽标在窄屏随网格列收缩，候选
+   徽标在可用宽度不足 20rem 时降为 100%，不改变全局 rank 品级视觉。
+4. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次 Web 格式、lint、typecheck、
+   完整 test、build、受影响浏览器验证和 `git diff --check`，不重复聚合命令已覆盖的检查。
+
+### 回滚与生产约束
+
+- 本修订只修改规格、计划和 Web 展示，不修改数据库迁移、共享 Schema、算法、评分、库存快照、
+  真实存档或 `/opt/palworld`，不新增依赖、公网端口或生产部署。
+- 应用回滚恢复上一 Web 构建即可；收藏关系、任务和物化路线不受影响。
+
+### 完成验证
+
+- 失败基线：计划与配种器相关 43 项测试中 2 项按预期失败，分别锁定旧两列分散网格和旧被动
+  定宽/清空行为；修正一次无效 ARIA 定位后，被动测试由缺少候选固定宽度类真实失败。
+- 局部验证：同一组 43 项测试全部通过。
+- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 110 项测试和 Next.js 生产构建
+  全部通过；首次并行 typecheck 与 build 因 `.next/types` 重建竞态失败，构建完成后只重跑该失败
+  检查并通过。
+- 浏览器验证：首次全套运行因已有进程占用 3000、开发服务器切换到 3001 而访问了错误端口；改用
+  独立端口后，受影响 Phase 6/7 共 2 项通过，覆盖候选徽标等宽/320px 上限、已选徽标填满网格列、
+  28px 固定高度、无清空按钮及收藏路线流程。
 
 ## 2026-07-28 跨阶段修订：配种工作台目标与被动布局、五代上限和 Phase 5 验收提速
 

@@ -250,6 +250,12 @@ describe("My Plans route saves", () => {
     const card = container.querySelector<HTMLElement>("[data-plan-card]");
     expect(card).not.toBeNull();
     expect(card?.className).toContain("max-w-[32rem]");
+    const planGrid = screen.getByRole("region", { name: "计划列表" });
+    expect(planGrid.className).toContain(
+      "grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),32rem))]",
+    );
+    expect(planGrid.className).toContain("justify-center");
+    expect(planGrid.className).not.toContain("lg:grid-cols-2");
     const passiveGrid = container.querySelector<HTMLElement>(
       '[data-passive-layout="2x2"]',
     );

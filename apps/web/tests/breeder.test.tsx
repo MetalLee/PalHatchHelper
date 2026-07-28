@@ -395,8 +395,15 @@ describe("Phase 6 breeder form", () => {
     );
   });
 
-  it("keeps selected passives above the scrollable candidates, removes and clears them", () => {
+  it("keeps selected passives in a fluid 2x2 grid and removes them individually", () => {
     render(<BreederForm context={context} />);
+
+    const candidates = screen.getByLabelText("被动技能选择");
+    expect(
+      Array.from(candidates.querySelectorAll(".passive-badge")).every((badge) =>
+        badge.classList.contains("breeder-option-passive-badge"),
+      ),
+    ).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: /选择被动 A/ }));
     fireEvent.click(screen.getByRole("button", { name: /选择被动 B/ }));
@@ -406,20 +413,33 @@ describe("Phase 6 breeder form", () => {
 
     const selected = screen.getByRole("region", { name: "已选择的被动" });
     expect(screen.queryByText("期望被动（最多 4 个）")).toBeNull();
+    expect(within(selected).queryByRole("button", { name: "清空" })).toBeNull();
     expect(selected.getAttribute("data-passive-layout")).toBe("2x2");
     expect(
-      Array.from(
-        screen
-          .getByTestId("breeder-create-form")
-          .querySelectorAll(".passive-badge"),
-      ).every((badge) => badge.classList.contains("breeder-passive-badge")),
+      Array.from(selected.querySelectorAll(".passive-badge")).every((badge) =>
+        badge.classList.contains("breeder-selected-passive-badge"),
+      ),
+    ).toBe(true);
+    expect(
+      within(selected)
+        .getAllByRole("button")
+        .every(
+          (button) =>
+            button.classList.contains("w-full") &&
+            button.classList.contains("h-11"),
+        ),
+    ).toBe(true);
+    expect(
+      Array.from(selected.querySelectorAll(".lucide-x")).every(
+        (icon) =>
+          icon.classList.contains("text-white") &&
+          icon.classList.contains("bg-black/45"),
+      ),
     ).toBe(true);
     expect(selected.textContent).toContain("被动 A");
     fireEvent.click(screen.getByRole("button", { name: "移除被动 A" }));
     expect(selected.textContent).not.toContain("被动 A");
-    fireEvent.click(within(selected).getByRole("button", { name: "清空" }));
-    expect(selected.textContent).toContain("尚未选择被动");
-    expect(screen.getByText("已选择 0 / 4")).toBeTruthy();
+    expect(selected.textContent).toContain("被动 B");
   });
 
   it("renders all four optimization modes as selectable cards", () => {

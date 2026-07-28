@@ -247,10 +247,6 @@ export function BreederForm({
             skills={context.passive_skills}
             selectedIds={passives}
             onToggle={togglePassive}
-            onClear={() => {
-              setPassives([]);
-              setErrorCode(null);
-            }}
           />
         </section>
 
