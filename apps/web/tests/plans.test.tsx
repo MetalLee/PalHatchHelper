@@ -12,9 +12,14 @@ import { PlanList } from "../features/plans/plan-list";
 import type { SavedPlanDetail } from "../features/plans/server";
 
 const routerPush = vi.fn();
+const routerReplace = vi.fn();
 const routerRefresh = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
+  useRouter: () => ({
+    push: routerPush,
+    replace: routerReplace,
+    refresh: routerRefresh,
+  }),
 }));
 
 const routeId = "62000000-0000-4000-8000-000000000001";
@@ -235,6 +240,7 @@ function summary(): PlanListPage["items"][number] {
 
 beforeEach(() => {
   routerPush.mockReset();
+  routerReplace.mockReset();
   routerRefresh.mockReset();
   vi.unstubAllGlobals();
 });
@@ -379,7 +385,7 @@ describe("My Plans route saves", () => {
         cache: "no-store",
       }),
     );
-    expect(routerPush).toHaveBeenCalledWith("/plans");
+    expect(routerReplace).toHaveBeenCalledWith("/plans");
     expect(routerRefresh).not.toHaveBeenCalled();
   });
 });
