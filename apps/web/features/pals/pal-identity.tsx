@@ -6,12 +6,9 @@ import { PalElementIcons } from "@/components/pals/pal-element-icons";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useCopy } from "@/i18n/client";
 
 type PalInventoryItem = PalInventoryPage["items"][number];
-
-function catalogNumber(value: number | null): string {
-  return value === null ? "图鉴编号未知" : `#${String(value).padStart(3, "0")}`;
-}
 
 export function PalIdentity({
   pal,
@@ -22,10 +19,11 @@ export function PalIdentity({
   portraitSize?: number;
   compact?: boolean;
 }>) {
+  const t = useCopy("Pals");
   const displayName =
     pal.catalog_entry_state === "resolved"
       ? pal.pal_display_name
-      : "名称暂不可用";
+      : t("nameUnavailable");
 
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -58,7 +56,9 @@ export function PalIdentity({
         </div>
         <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-xs">
           <span className="font-semibold text-primary">
-            {catalogNumber(pal.encyclopedia_no)}
+            {pal.encyclopedia_no === null
+              ? t("catalogUnknown")
+              : `#${String(pal.encyclopedia_no).padStart(3, "0")}`}
           </span>
           <span className="text-muted-foreground">Lv. {pal.level ?? "—"}</span>
           {pal.is_boss === true ? (
@@ -67,13 +67,13 @@ export function PalIdentity({
               className="h-5 gap-1 rounded-full border-amber-300 bg-amber-50 px-1.5 text-[0.65rem] text-amber-900"
             >
               <Crown aria-hidden="true" className="size-3" />
-              头目
+              {t("boss")}
             </Badge>
           ) : null}
         </div>
         {pal.catalog_entry_state === "resolved" ? null : (
           <p className="mt-1 text-[0.68rem] font-medium text-amber-800">
-            目录信息暂不可用
+            {t("catalogUnavailable")}
           </p>
         )}
       </div>

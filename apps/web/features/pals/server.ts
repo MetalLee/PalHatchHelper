@@ -53,11 +53,12 @@ export function toSafeInventoryItem(
 export async function listPals(
   query: PalListQuery,
   client?: SupabaseClient<Database>,
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): Promise<PalInventoryPage> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
   const context = decodePageContext(query.context);
-  const { data, error } = await supabase.rpc("list_available_pals_page_v3", {
+  const { data, error } = await supabase.rpc("list_available_pals_page_v4", {
     p_scope: query.scope,
     p_query: query.query || null,
     p_owner_filter_key: query.owner || null,
@@ -69,6 +70,7 @@ export async function listPals(
     p_game_data_version_id: context?.game_data_version_id ?? null,
     p_page_number: query.page,
     p_page_size: query.page_size,
+    p_locale: locale,
   });
   if (error !== null) throw new Phase5DataError(databaseFailureCode(error));
   const result = parsePalInventoryRpcResult(data);
@@ -130,14 +132,15 @@ const emptyQuery: PalListQuery = {
 
 export async function getOverviewSummary(
   context: string | null = null,
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): Promise<OverviewSummary> {
   noStore();
   const supabase = await createServerSupabaseClient();
   const query = { ...emptyQuery, context };
   const [all, mine, shared, dataStatus] = await Promise.all([
-    listPals(query, supabase),
-    listPals({ ...query, scope: "mine" }, supabase),
-    listPals({ ...query, scope: "shared" }, supabase),
+    listPals(query, supabase, locale),
+    listPals({ ...query, scope: "mine" }, supabase, locale),
+    listPals({ ...query, scope: "shared" }, supabase, locale),
     getInventoryDataStatus(supabase),
   ]);
   return {

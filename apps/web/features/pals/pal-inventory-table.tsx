@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAppLocale, useCopy } from "@/i18n/client";
 
 import { PalIdentity } from "./pal-identity";
 import { PalPassiveList } from "./pal-passive-list";
@@ -30,16 +31,19 @@ export function PalInventoryTable({
   pendingId: string | null;
   onToggleShare: (palInstanceUid: string, enabled: boolean) => void;
 }>) {
+  const t = useCopy("Pals");
   return (
     <div className="overflow-hidden rounded-2xl border border-glass-border bg-card/92 shadow-soft">
-      <Table aria-label="帕鲁库存表格" className="min-w-[58rem] table-fixed">
+      <Table aria-label={t("tableLabel")} className="min-w-[58rem] table-fixed">
         <TableHeader className="bg-accent/45">
           <TableRow>
-            <TableHead className="w-[17rem] px-4">帕鲁</TableHead>
-            <TableHead className="w-[10rem]">所有者</TableHead>
-            <TableHead className="w-[16rem]">被动词条</TableHead>
-            <TableHead className="w-[10rem]">位置</TableHead>
-            <TableHead className="w-[9rem] pr-4 text-right">共享</TableHead>
+            <TableHead className="w-[17rem] px-4">{t("pal")}</TableHead>
+            <TableHead className="w-[10rem]">{t("owner")}</TableHead>
+            <TableHead className="w-[16rem]">{t("passives")}</TableHead>
+            <TableHead className="w-[10rem]">{t("location")}</TableHead>
+            <TableHead className="w-[9rem] pr-4 text-right">
+              {t("share")}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -69,11 +73,15 @@ function PalInventoryTableRow({
   pending: boolean;
   onToggleShare: (palInstanceUid: string, enabled: boolean) => void;
 }>) {
-  const location = palLocationDisplay(pal);
+  const locale = useAppLocale();
+  const t = useCopy("Pals");
+  const location = palLocationDisplay(pal, locale);
   const dimensionalSharingUnresolved = isDimensionalSharingUnresolved(pal);
   const switchId = `pal-table-share-${pal.pal_instance_uid}`;
   const accessibleName =
-    pal.catalog_entry_state === "resolved" ? pal.pal_display_name : "此帕鲁";
+    pal.catalog_entry_state === "resolved"
+      ? pal.pal_display_name
+      : t("thisPal");
 
   return (
     <TableRow data-pal-id={pal.pal_id}>
@@ -103,16 +111,16 @@ function PalInventoryTableRow({
           {pal.is_owned_by_requester && !dimensionalSharingUnresolved ? (
             <div className="flex items-center gap-2">
               <StatusChip tone={pal.share_enabled ? "good" : "warning"}>
-                {palShareLabel(pal, false)}
+                {palShareLabel(pal, false, locale)}
               </StatusChip>
               <Label htmlFor={switchId} className="sr-only">
-                {accessibleName} 公会共享
+                {t("guildShareLabel", { name: accessibleName })}
               </Label>
               <Switch
                 id={switchId}
                 checked={pal.share_enabled}
                 disabled={pending}
-                aria-label={`${accessibleName} 公会共享`}
+                aria-label={t("guildShareLabel", { name: accessibleName })}
                 aria-busy={pending}
                 onCheckedChange={(enabled) =>
                   onToggleShare(pal.pal_instance_uid, enabled)
@@ -127,7 +135,7 @@ function PalInventoryTableRow({
                   : "good"
               }
             >
-              {palShareLabel(pal, dimensionalSharingUnresolved)}
+              {palShareLabel(pal, dimensionalSharingUnresolved, locale)}
             </StatusChip>
           )}
         </div>

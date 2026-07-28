@@ -5,6 +5,7 @@ import { GitBranch, UsersRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useCopy } from "@/i18n/client";
 
 export function BreederSettings({
   allowShared,
@@ -17,10 +18,11 @@ export function BreederSettings({
   maxGenerations: number;
   onMaxGenerationsChange: (value: number) => void;
 }>) {
+  const t = useCopy("Breeder");
   return (
     <fieldset className="grid min-w-0 gap-4">
       <legend className="text-sm font-semibold text-foreground">
-        其他设置
+        {t("otherSettings")}
       </legend>
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <div className="flex min-h-24 min-w-0 items-center justify-between gap-3 rounded-2xl border border-border bg-white/55 p-4 transition-colors hover:border-primary/25 hover:bg-accent/50">
@@ -33,10 +35,10 @@ export function BreederSettings({
                 htmlFor="allow-guild-shared"
                 className="font-bold text-foreground"
               >
-                允许使用公会共享
+                {t("allowGuild")}
               </Label>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                开启后，会把公会伙伴愿意共享的帕鲁一起加入推荐。
+                {t("allowGuildDescription")}
               </p>
             </div>
           </div>
@@ -44,7 +46,7 @@ export function BreederSettings({
             id="allow-guild-shared"
             checked={allowShared}
             onCheckedChange={onAllowSharedChange}
-            aria-label="允许使用公会共享"
+            aria-label={t("allowGuild")}
             className="after:-inset-4"
           />
         </div>
@@ -58,10 +60,10 @@ export function BreederSettings({
               htmlFor="max-generations"
               className="font-bold text-foreground"
             >
-              最大代数
+              {t("maxGenerationLabel")}
             </Label>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              路线最多经过 1 至 5 代
+              {t("maxGenerationDescription")}
             </p>
           </div>
           <Input
@@ -74,7 +76,7 @@ export function BreederSettings({
             onChange={(event) =>
               onMaxGenerationsChange(Number(event.target.value))
             }
-            aria-label="最大代数"
+            aria-label={t("maxGenerationLabel")}
             className="rounded-xl text-center font-semibold"
           />
         </div>

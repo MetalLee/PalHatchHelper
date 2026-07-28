@@ -1,20 +1,22 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { PageHero } from "@/components/layout/page-hero";
+import { useCopy } from "@/i18n/client";
+import { usePathname } from "@/i18n/navigation";
 
 import { AdminNavigation } from "./admin-navigation";
 
 export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
+  const t = useCopy("Admin");
   return (
     <div className="grid min-w-0 gap-5">
       <PageHero
-        eyebrow="PALBEACON ADMIN"
-        title="管理中心"
-        description="查看真实运行摘要并执行受审计操作。权限由每次服务器请求验证，导航可见性不参与授权判断。"
+        eyebrow={t("shellEyebrow")}
+        title={t("shellTitle")}
+        description={t("shellDescription")}
         className="p-5 sm:p-7"
       />
       <section className="-mt-12 min-w-0 px-3 sm:px-5">

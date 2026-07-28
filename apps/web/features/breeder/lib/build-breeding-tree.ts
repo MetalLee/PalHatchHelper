@@ -262,7 +262,9 @@ export function buildBreedingTreeFromSource(
       instanceUid: step.selectedChildInstanceUid ?? null,
       ownerDisplayName:
         step.childOwnerDisplayName ??
-        (isTarget ? "本路线最终目标" : `步骤 ${step.stepIndex + 1} 中间产物`),
+        (isTarget
+          ? "__ROUTE_FINAL_TARGET__"
+          : `__ROUTE_INTERMEDIATE__:${step.stepIndex + 1}`),
       gender: step.childGender ?? step.childRequiredGender,
       passiveSkillIds: [...childPassiveSkillIds],
       passives: toPassives(childPassiveSkillIds, options.passiveFacts),
@@ -360,7 +362,7 @@ function buildRouteWithoutSteps(
         palId: targetPalId,
         displayNameOverride: null,
         instanceUid,
-        ownerDisplayName: "当前库存中的目标实例",
+        ownerDisplayName: "__EXISTING_TARGET_INSTANCE__",
         gender: null,
         passiveSkillIds: [],
         passives: [],

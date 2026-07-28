@@ -1,10 +1,12 @@
 import type { Database, UserContext } from "@palhatch/contracts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { unstable_noStore as noStore } from "next/cache";
-import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { cache } from "react";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { redirect } from "@/i18n/navigation";
+import { isAppLocale } from "@/i18n/routing";
 import {
   authUserErrorCode,
   databaseFailureCode,
@@ -103,6 +105,13 @@ export const getUserContext = cache(async (): Promise<UserContext | null> => {
 
 export async function requireUserContext(): Promise<UserContext> {
   const context = await getUserContext();
-  if (context === null) redirect("/login");
+  if (context === null) {
+    const requestedLocale = await getLocale();
+    redirect({
+      href: "/login",
+      locale: isAppLocale(requestedLocale) ? requestedLocale : "zh",
+    });
+    throw new Error("AUTH_REDIRECT_REQUIRED");
+  }
   return context;
 }

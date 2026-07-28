@@ -18,11 +18,12 @@ export class BreederDataError extends Error {
 
 export async function loadBreederFormContext(
   client?: SupabaseClient<Database>,
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): Promise<BreederFormContext> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
-  const { data, error } = await supabase.rpc("get_breeder_form_context", {
-    p_locale: "zh-CN",
+  const { data, error } = await supabase.rpc("get_breeder_form_context_v2", {
+    p_locale: locale,
   });
   if (error !== null) throw new BreederDataError("DATA_UNAVAILABLE");
   const result = parseBreederFormContextRpcResult(data);
@@ -33,11 +34,13 @@ export async function loadBreederFormContext(
 export async function loadBreedingJob(
   jobId: string,
   client?: SupabaseClient<Database>,
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): Promise<BreedingJobDetailRpcSuccess> {
   noStore();
   const supabase = client ?? (await createServerSupabaseClient());
-  const { data, error } = await supabase.rpc("get_breeding_job_detail", {
+  const { data, error } = await supabase.rpc("get_breeding_job_detail_v2", {
     p_job_id: jobId,
+    p_locale: locale,
   });
   if (error !== null) throw new BreederDataError("DATA_UNAVAILABLE");
   const result = parseBreedingJobDetailRpcResult(data);

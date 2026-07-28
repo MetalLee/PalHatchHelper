@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useCopy } from "@/i18n/client";
 
 const rankStyles: Record<string, string> = {
   "1": "border-[#f7fbff] text-white",
@@ -29,6 +30,7 @@ export function PassiveBadge({
   isNegative?: boolean | null;
   className?: string;
 }>) {
+  const t = useCopy("Pals");
   const key = rankKey(rank);
   const negative = (rank !== null && rank <= -1) || isNegative === true;
   return (
@@ -36,7 +38,7 @@ export function PassiveBadge({
       variant="outline"
       data-rank={key}
       title={name}
-      aria-label={negative ? `${name}，负面被动` : undefined}
+      aria-label={negative ? t("negativePassive", { name }) : undefined}
       className={cn(
         "passive-badge relative isolate z-0 min-h-7 max-w-full overflow-hidden rounded-md border border-l-4 bg-[#202729] px-2.5 py-1 font-semibold tracking-[0.01em] text-ellipsis whitespace-nowrap shadow-sm",
         rankStyles[key],

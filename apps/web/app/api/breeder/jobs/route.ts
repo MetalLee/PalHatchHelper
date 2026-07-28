@@ -12,6 +12,7 @@ import {
   safeBreedingErrorCode,
 } from "@/features/breeder/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isCatalogLocale } from "@/i18n/routing";
 
 const privateHeaders = {
   "cache-control": "private, no-store, max-age=0",
@@ -36,12 +37,15 @@ export async function POST(request: NextRequest) {
       { status: 400, headers: privateHeaders },
     );
   }
-  const { data, error } = await supabase.rpc("create_breeding_job_v2", {
+  const requestedLocale = request.nextUrl.searchParams.get("locale");
+  const locale = isCatalogLocale(requestedLocale) ? requestedLocale : "zh-CN";
+  const { data, error } = await supabase.rpc("create_breeding_job_v3", {
     p_target_pal_id: input.target_pal_id,
     p_desired_passive_ids: [...input.desired_passive_ids],
     p_optimization_mode: input.optimization_mode,
     p_allow_guild_shared: input.allow_guild_shared,
     p_max_generations: input.max_generations,
+    p_locale: locale,
   });
   if (error !== null) {
     const code = safeBreedingErrorCode(error);

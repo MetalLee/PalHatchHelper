@@ -6,10 +6,11 @@ import {
   Settings,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { StatusChip, type StatusTone } from "@/components/status/status-chip";
+import { Link } from "@/i18n/navigation";
+import { catalogLocaleFor, type AppLocale } from "@/i18n/routing";
 
 export const adminPageClasses =
   "mx-auto grid w-full min-w-0 max-w-[90rem] gap-5";
@@ -105,44 +106,48 @@ export function AdminCode({
 const quickLinks = [
   {
     href: "/admin/bindings",
-    label: "玩家绑定",
-    description: "关联用户与游戏角色",
+    labelKey: "bindings",
     icon: Users,
   },
   {
     href: "/admin/save-parser",
-    label: "存档与 Parser",
-    description: "检查只读同步管线",
+    labelKey: "saveParser",
     icon: FileSearch,
   },
   {
     href: "/admin/breeding-data",
-    label: "配种数据版本",
-    description: "审核和切换固定目录",
+    labelKey: "gameData",
     icon: Database,
   },
   {
     href: "/admin/jobs",
-    label: "任务与 AI",
-    description: "诊断队列与降级状态",
+    labelKey: "jobs",
     icon: Activity,
   },
   {
     href: "/admin/settings",
-    label: "系统设置",
-    description: "管理非秘密版本化设置",
+    labelKey: "settings",
     icon: Settings,
   },
 ] as const;
 
-export function AdminQuickLinks() {
+export function AdminQuickLinks({
+  title,
+  labels,
+}: Readonly<{
+  title: string;
+  labels: Record<
+    (typeof quickLinks)[number]["labelKey"],
+    { label: string; description: string }
+  >;
+}>) {
   return (
     <section aria-labelledby="admin-quick-links-title">
       <h2
         id="admin-quick-links-title"
         className="mb-3 text-lg font-bold text-foreground"
       >
-        快捷入口
+        {title}
       </h2>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {quickLinks.map((item) => {
@@ -156,9 +161,11 @@ export function AdminQuickLinks() {
               <span className="grid size-10 place-items-center rounded-xl bg-accent text-primary">
                 <Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
               </span>
-              <strong className="mt-3 text-sm">{item.label}</strong>
+              <strong className="mt-3 text-sm">
+                {labels[item.labelKey].label}
+              </strong>
               <span className="mt-1 text-xs leading-5 text-muted-foreground">
-                {item.description}
+                {labels[item.labelKey].description}
               </span>
               <ArrowRight
                 aria-hidden="true"
@@ -172,9 +179,13 @@ export function AdminQuickLinks() {
   );
 }
 
-export function formatAdminTime(value: string | null): string {
-  if (value === null) return "尚未上报";
-  return new Intl.DateTimeFormat("zh-CN", {
+export function formatAdminTime(
+  value: string | null,
+  locale: AppLocale,
+  empty: string,
+): string {
+  if (value === null) return empty;
+  return new Intl.DateTimeFormat(catalogLocaleFor(locale), {
     dateStyle: "medium",
     timeStyle: "medium",
     timeZone: "Asia/Shanghai",

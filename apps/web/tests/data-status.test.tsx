@@ -97,7 +97,7 @@ describe("data status dashboard", () => {
     expect(
       screen.getByRole("heading", { name: "服务器数据状态" }),
     ).toBeTruthy();
-    expect(screen.getByText("BEACON STATUS")).toBeTruthy();
+    expect(screen.getByText("信标状态")).toBeTruthy();
     expect(screen.getAllByText("数据同步正常").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("data-status-card")).toHaveLength(4);
     expect(screen.queryByText(/属性分布|库存趋势|计划趋势|热度图/)).toBeNull();

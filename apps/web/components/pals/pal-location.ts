@@ -1,4 +1,6 @@
 import type { PalInventoryPage } from "@palhatch/contracts";
+import { getCopy } from "@/i18n/client";
+import type { AppLocale } from "@/i18n/routing";
 
 type PalLocationType = PalInventoryPage["items"][number]["location_type"];
 
@@ -8,26 +10,39 @@ export interface PalLocationFacts {
   location_slot_index: number | null;
 }
 
-const locationLabels: Record<PalLocationType, string> = {
-  player_party: "队伍",
-  player_storage: "终端",
-  base: "据点",
-  dimensional_storage: "次元仓库",
-  viewing_cage: "观赏笼",
-  unknown: "未知位置",
+const locationLabelKeys = {
+  player_party: "party",
+  player_storage: "storage",
+  base: "base",
+  dimensional_storage: "dimensionalStorage",
+  viewing_cage: "viewingCage",
+  unknown: "unknownLocation",
 };
 
-export function palLocationDisplay(location: PalLocationFacts): {
+export function palLocationDisplay(
+  location: PalLocationFacts,
+  locale: AppLocale = "zh",
+): {
   label: string;
   detail: string | null;
 } {
+  const t = getCopy(locale, "Pals");
+  const locationLabels = Object.fromEntries(
+    Object.entries(locationLabelKeys).map(([key, value]) => [
+      key,
+      t(value as "party"),
+    ]),
+  ) as Record<PalLocationType, string>;
   if (location.location_type === "base") {
     const base = location.location_name ?? locationLabels.base;
     return {
       label:
         location.location_slot_index === null
           ? base
-          : `${base} · 工作位 ${location.location_slot_index + 1}`,
+          : t("workSlot", {
+              base,
+              slot: location.location_slot_index + 1,
+            }),
       detail: null,
     };
   }
@@ -38,7 +53,7 @@ export function palLocationDisplay(location: PalLocationFacts): {
   ) {
     return {
       label: locationLabels[location.location_type],
-      detail: storagePage(location.location_slot_index),
+      detail: storagePage(location.location_slot_index, locale),
     };
   }
   if (
@@ -47,19 +62,25 @@ export function palLocationDisplay(location: PalLocationFacts): {
   ) {
     return {
       label: locationLabels.player_party,
-      detail: `队伍第 ${location.location_slot_index + 1} 位`,
+      detail: t("partySlot", { slot: location.location_slot_index + 1 }),
     };
   }
   return { label: locationLabels[location.location_type], detail: null };
 }
 
-export function palLocationText(location: PalLocationFacts): string {
-  const display = palLocationDisplay(location);
+export function palLocationText(
+  location: PalLocationFacts,
+  locale: AppLocale = "zh",
+): string {
+  const display = palLocationDisplay(location, locale);
   return display.detail === null
     ? display.label
     : `${display.label} · ${display.detail}`;
 }
 
-function storagePage(slotIndex: number): string {
-  return `第 ${Math.floor(slotIndex / 30) + 1} 页 · 第 ${(slotIndex % 30) + 1} 格`;
+function storagePage(slotIndex: number, locale: AppLocale): string {
+  return getCopy(locale, "Pals")("storageSlot", {
+    page: Math.floor(slotIndex / 30) + 1,
+    slot: (slotIndex % 30) + 1,
+  });
 }

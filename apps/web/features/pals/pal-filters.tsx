@@ -9,7 +9,6 @@ import {
   List,
   SlidersHorizontal,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -48,6 +47,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
 
 import {
   GenderDisplay,
@@ -57,25 +58,25 @@ import { PassiveBadge } from "@/components/pals/passive-badge";
 import type { PalInventoryView, PalListQuery } from "./query";
 
 const scopes = [
-  ["all", "全部"],
-  ["mine", "我的帕鲁"],
-  ["shared", "公会共享"],
+  ["all", "all"],
+  ["mine", "mine"],
+  ["shared", "guildShared"],
 ] as const;
 
 const genderLabels = {
-  male: "雄性",
-  female: "雌性",
-  genderless: "无性别",
-  unknown: "未知",
+  male: "male",
+  female: "female",
+  genderless: "genderless",
+  unknown: "unknown",
 } as const;
 
 const locationLabels = {
-  player_party: "队伍",
-  player_storage: "终端",
-  base: "据点",
-  dimensional_storage: "次元仓库",
-  viewing_cage: "观赏笼",
-  unknown: "未知",
+  player_party: "party",
+  player_storage: "storage",
+  base: "base",
+  dimensional_storage: "dimensionalStorage",
+  viewing_cage: "viewingCage",
+  unknown: "unknown",
 } as const;
 
 type FilterOption = {
@@ -123,17 +124,18 @@ function ViewToggle({
   view: PalInventoryView;
   viewHrefs: Readonly<Record<PalInventoryView, string>>;
 }>) {
+  const t = useCopy("Pals");
   return (
     <TooltipProvider>
       <div
         className="flex items-center overflow-hidden rounded-lg border border-input bg-background shadow-xs"
-        aria-label="库存展示形式"
+        aria-label={t("viewLabel")}
       >
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
               href={viewHrefs.cards}
-              aria-label="卡片视图"
+              aria-label={t("cardView")}
               aria-current={view === "cards" ? "page" : undefined}
               className={cn(
                 buttonVariants({ variant: "ghost", size: "icon" }),
@@ -145,13 +147,13 @@ function ViewToggle({
               <LayoutGrid aria-hidden="true" className="size-4" />
             </Link>
           </TooltipTrigger>
-          <TooltipContent side="top">卡片视图</TooltipContent>
+          <TooltipContent side="top">{t("cardView")}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
               href={viewHrefs.table}
-              aria-label="表格视图"
+              aria-label={t("tableView")}
               aria-current={view === "table" ? "page" : undefined}
               className={cn(
                 buttonVariants({ variant: "ghost", size: "icon" }),
@@ -163,7 +165,7 @@ function ViewToggle({
               <List aria-hidden="true" className="size-4" />
             </Link>
           </TooltipTrigger>
-          <TooltipContent side="top">表格视图</TooltipContent>
+          <TooltipContent side="top">{t("tableView")}</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>
@@ -227,6 +229,7 @@ function PassiveCombobox({
   initialValues: string[];
   options: PalInventoryPage["filter_options"]["passives"];
 }>) {
+  const t = useCopy("Pals");
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(() =>
     Array.from(new Set(initialValues)).sort().slice(0, 4),
@@ -249,7 +252,7 @@ function PassiveCombobox({
   return (
     <div className="grid min-w-0 gap-1.5">
       <Label htmlFor={id} className="text-xs text-muted-foreground">
-        被动技能
+        {t("passiveSkill")}
       </Label>
       {value.map((passive) => (
         <input key={passive} type="hidden" name="passive" value={passive} />
@@ -265,9 +268,11 @@ function PassiveCombobox({
             className="w-full justify-between bg-white/82 px-3 font-normal"
           >
             {value.length === 0 ? (
-              <span className="truncate">全部被动</span>
+              <span className="truncate">{t("allPassives")}</span>
             ) : selectedOptions.length === 0 ? (
-              <span className="truncate">已选择 {value.length} 个被动</span>
+              <span className="truncate">
+                {t("selectedPassives", { count: value.length })}
+              </span>
             ) : (
               <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 <PassiveBadge
@@ -294,24 +299,27 @@ function PassiveCombobox({
           className="w-[min(22rem,var(--radix-popover-content-available-width))] p-0"
         >
           <Command>
-            <CommandInput placeholder="搜索被动名称" />
+            <CommandInput placeholder={t("searchPassive")} />
             <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border/70 px-3 py-1.5 text-xs text-muted-foreground">
-              <span>已选择 {value.length} / 4</span>
+              <span>{t("selectionCount", { count: value.length })}</span>
               {value.length > 0 ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-label="清空被动筛选"
+                  aria-label={t("clearPassive")}
                   className="h-7 px-2 text-xs"
                   onClick={() => setValue([])}
                 >
-                  清空
+                  {t("clear")}
                 </Button>
               ) : null}
             </div>
-            <CommandList aria-label="被动技能选项" aria-multiselectable="true">
-              <CommandEmpty>没有匹配的被动</CommandEmpty>
+            <CommandList
+              aria-label={t("passiveOptions")}
+              aria-multiselectable="true"
+            >
+              <CommandEmpty>{t("noPassiveMatch")}</CommandEmpty>
               <CommandGroup>
                 {orderedOptions.map((option) => {
                   const selected = value.includes(option.value);
@@ -321,7 +329,7 @@ function PassiveCombobox({
                       key={option.value}
                       value={option.label}
                       disabled={disabled}
-                      aria-label={`${option.label}${selected ? "，已选择" : ""}`}
+                      aria-label={`${option.label}${selected ? t("selectedSuffix") : ""}`}
                       onSelect={() => toggleValue(option.value)}
                       className="gap-2"
                     >
@@ -359,18 +367,20 @@ function FilterFields({
   page: PalInventoryPage;
   viewHrefs: Readonly<Record<PalInventoryView, string>>;
 }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Pals");
   const genders = page.filter_options.genders.map((value) => ({
     value,
-    label: genderLabels[value],
+    label: t(genderLabels[value]),
     gender: value,
   }));
   const locations = page.filter_options.locations.map((value) => ({
     value,
-    label: locationLabels[value],
+    label: t(locationLabels[value]),
   }));
 
   return (
-    <form action="/pals" method="get" className="grid gap-4">
+    <form action={`/${locale}/pals`} method="get" className="grid gap-4">
       <input type="hidden" name="scope" value={query.scope} />
       {query.page_size !== 24 ? (
         <input type="hidden" name="page_size" value={query.page_size} />
@@ -382,7 +392,7 @@ function FilterFields({
         <Tabs value={query.scope} className="min-w-0 shrink-0">
           <TabsList
             role="navigation"
-            aria-label="库存范围"
+            aria-label={t("scopeLabel")}
             className="grid w-full grid-cols-3 bg-accent/70 sm:w-auto"
           >
             {scopes.map(([scope, label]) => (
@@ -395,7 +405,7 @@ function FilterFields({
                   query.scope === scope && "bg-white text-foreground shadow-sm",
                 )}
               >
-                {label}
+                {t(label)}
               </Link>
             ))}
           </TabsList>
@@ -407,14 +417,14 @@ function FilterFields({
               htmlFor="pal-filter-query"
               className="text-xs text-muted-foreground"
             >
-              名称或图鉴编号
+              {t("queryLabel")}
             </Label>
             <Input
               id="pal-filter-query"
               type="search"
               name="query"
               defaultValue={query.query}
-              placeholder="棉悠悠 / 1"
+              placeholder={t("queryPlaceholder")}
               className="bg-white/82"
             />
           </div>
@@ -427,9 +437,9 @@ function FilterFields({
           </div>
           <div className="flex items-end gap-2">
             <Button asChild variant="outline" className="px-3">
-              <Link href={resetHref(query)}>清除</Link>
+              <Link href={resetHref(query)}>{t("reset")}</Link>
             </Button>
-            <Button type="submit">应用筛选</Button>
+            <Button type="submit">{t("apply")}</Button>
             <ViewToggle view={query.view} viewHrefs={viewHrefs} />
           </div>
         </div>
@@ -442,36 +452,36 @@ function FilterFields({
         <FilterSelect
           id="pal-filter-owner"
           name="owner"
-          label="所有者"
-          emptyLabel="全部所有者"
+          label={t("owner")}
+          emptyLabel={t("allOwners")}
           initialValue={query.owner}
           options={page.filter_options.owners}
         />
         <FilterSelect
           id="pal-filter-gender"
           name="gender"
-          label="性别"
-          emptyLabel="全部性别"
+          label={t("gender")}
+          emptyLabel={t("allGenders")}
           initialValue={query.gender}
           options={genders}
         />
         <FilterSelect
           id="pal-filter-location"
           name="location"
-          label="位置"
-          emptyLabel="全部位置"
+          label={t("location")}
+          emptyLabel={t("allLocations")}
           initialValue={query.location}
           options={locations}
         />
         <FilterSelect
           id="pal-filter-shared"
           name="shared"
-          label="共享状态"
-          emptyLabel="全部状态"
+          label={t("sharing")}
+          emptyLabel={t("allStatuses")}
           initialValue={query.shared === null ? "" : String(query.shared)}
           options={[
-            { value: "true", label: "公会可用" },
-            { value: "false", label: "仅自己" },
+            { value: "true", label: t("shareEnabled") },
+            { value: "false", label: t("shareDisabled") },
           ]}
         />
       </CollapsibleContent>
@@ -488,6 +498,7 @@ export function PalFilters({
   page: PalInventoryPage;
   viewHrefs: Readonly<Record<PalInventoryView, string>>;
 }>) {
+  const t = useCopy("Pals");
   const activeAdvancedFilterCount = [
     query.owner,
     query.gender,
@@ -506,13 +517,13 @@ export function PalFilters({
     >
       <section
         className="rounded-3xl border border-glass-border bg-white/78 p-3 shadow-soft backdrop-blur-xl sm:p-4"
-        aria-label="库存筛选"
+        aria-label={t("filterLabel")}
       >
         <FilterFields query={query} page={page} viewHrefs={viewHrefs} />
       </section>
 
       <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-        <span className="hidden sm:inline">还想缩小范围？</span>
+        <span className="hidden sm:inline">{t("narrowPrompt")}</span>
         <CollapsibleTrigger asChild>
           <Button
             type="button"
@@ -522,7 +533,7 @@ export function PalFilters({
             className="gap-1.5 px-2 text-muted-foreground hover:text-foreground"
           >
             <SlidersHorizontal aria-hidden="true" className="size-3.5" />
-            {advancedOpen ? "收起筛选" : "更多筛选"}
+            {advancedOpen ? t("collapseFilters") : t("moreFilters")}
             {activeAdvancedFilterCount > 0 ? (
               <span className="text-xs">({activeAdvancedFilterCount})</span>
             ) : null}

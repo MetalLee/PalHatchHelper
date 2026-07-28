@@ -1,6 +1,5 @@
 import type { InventoryDataStatus, PlanSummary } from "@palhatch/contracts";
 import { ArrowRight, Dna, PawPrint } from "lucide-react";
-import Link from "next/link";
 
 import { PageHero } from "@/components/layout/page-hero";
 import { PalPortrait } from "@/components/pals/pal-portrait";
@@ -9,6 +8,8 @@ import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { GlassPanel } from "@/components/surfaces/glass-panel";
 import { StatusChip } from "@/components/status/status-chip";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { userFacingCatalogName } from "@/lib/user-facing-name";
 
@@ -24,19 +25,25 @@ const outlineLinkClass =
 const ghostLinkClass =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-primary no-underline transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40";
 
-function formatDateTime(value: string | null): string {
-  if (value === null) return "尚无成功同步";
-  return new Intl.DateTimeFormat("zh-CN", {
+function formatDateTime(
+  value: string | null,
+  locale: "zh" | "en",
+  emptyValue: string,
+): string {
+  if (value === null) return emptyValue;
+  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
 }
 
 function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Overview");
   const targetName = userFacingCatalogName(
     plan.target_pal_display_name,
     plan.target_pal_id,
-    "名称暂不可用",
+    t("nameUnavailable"),
   );
   return (
     <Link
@@ -52,12 +59,17 @@ function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
           <StatusChip
             tone={plan.feasibility_status === "ready" ? "good" : "warning"}
           >
-            {plan.feasibility_status === "ready" ? "库存可执行" : "需补库存"}
+            {plan.feasibility_status === "ready"
+              ? t("inventoryReady")
+              : t("inventoryMissing")}
           </StatusChip>
         </span>
         <span className="mt-1 block text-xs text-muted-foreground">
-          {plan.generation_count} 代 · {plan.step_count} 步 · 保存于{" "}
-          {formatDateTime(plan.saved_at)}
+          {t("planMeta", {
+            generations: plan.generation_count,
+            steps: plan.step_count,
+            date: formatDateTime(plan.saved_at, locale, t("noSuccessfulSync")),
+          })}
         </span>
       </span>
       <ArrowRight
@@ -81,29 +93,31 @@ export function OverviewDashboard({
   dataStatus: InventoryDataStatus;
   planFeed: OverviewPlanFeed;
 }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Overview");
   return (
     <div
       className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8"
       data-testid="overview-dashboard"
     >
       <PageHero
-        eyebrow="PALWORLD SERVER CONSOLE"
-        title={`欢迎回来，${playerNickname}`}
-        description={`${worldName} · ${guildName ?? "未加入公会"}`}
+        eyebrow={t("eyebrow")}
+        title={t("welcome", { name: playerNickname })}
+        description={`${worldName} · ${guildName ?? t("noGuild")}`}
         className="min-h-[21rem] border-white/80 bg-white/72 sm:min-h-[22rem] lg:min-h-[21rem] lg:pr-[32%]"
         background={<ForestScenery variant="hero" />}
         actions={
           <>
             <Link href="/breeder" className={primaryLinkClass}>
               <Dna aria-hidden="true" className="size-4" />
-              开始配种
+              {t("startBreeding")}
             </Link>
             <Link
               href="/pals"
               className={cn(outlineLinkClass, "min-h-12 px-6")}
             >
               <PawPrint aria-hidden="true" className="size-4" />
-              查看帕鲁
+              {t("viewPals")}
             </Link>
           </>
         }
@@ -112,8 +126,8 @@ export function OverviewDashboard({
       {planFeed.unavailable ? (
         <PageError
           code="DATA_UNAVAILABLE"
-          title="计划数据暂不可用"
-          description="库存统计仍来自当前真实快照；收藏区域不会用占位数据代替失败查询。"
+          title={t("planUnavailableTitle")}
+          description={t("planUnavailableDescription")}
         />
       ) : null}
 
@@ -126,17 +140,17 @@ export function OverviewDashboard({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-                  Saved routes
+                  {t("savedRoutes")}
                 </p>
                 <h2
                   id="saved-plans-heading"
                   className="mt-2 text-xl font-bold tracking-tight sm:text-2xl"
                 >
-                  最近收藏的计划
+                  {t("recentPlans")}
                 </h2>
               </div>
               <Link href="/plans" className={ghostLinkClass}>
-                查看全部
+                {t("viewAll")}
                 <ArrowRight aria-hidden="true" className="size-4" />
               </Link>
             </div>
@@ -147,21 +161,21 @@ export function OverviewDashboard({
                 ))
               ) : planFeed.unavailable ? (
                 <div className="rounded-2xl bg-muted/64 p-5 text-sm leading-6 text-muted-foreground">
-                  收藏计划暂时无法确认。
+                  {t("savedUnavailable")}
                 </div>
               ) : (
                 <div className="rounded-2xl bg-muted/64 p-5">
                   <h3 className="font-semibold text-foreground">
-                    暂无收藏计划
+                    {t("emptyTitle")}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    在配种结果中保存路线后，可从这里快速返回。
+                    {t("emptyDescription")}
                   </p>
                   <Link
                     href="/breeder"
                     className={cn(primaryLinkClass, "mt-4 min-h-11 px-4")}
                   >
-                    打开配种器
+                    {t("openBreeder")}
                   </Link>
                 </div>
               )}
@@ -175,36 +189,40 @@ export function OverviewDashboard({
         >
           <div>
             <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-              Beacon status
+              {t("beaconStatus")}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <h2
                 id="data-status-heading"
                 className="text-xl font-bold tracking-tight"
               >
-                当前数据基线
+                {t("baseline")}
               </h2>
             </div>
           </div>
           <dl className="mt-5 grid gap-3 text-sm">
             <div className="rounded-xl bg-white/72 p-3">
-              <dt className="text-muted-foreground">最新同步</dt>
+              <dt className="text-muted-foreground">{t("latestSync")}</dt>
               <dd className="mt-1 font-semibold text-foreground">
-                {formatDateTime(dataStatus.captured_at)}
+                {formatDateTime(
+                  dataStatus.captured_at,
+                  locale,
+                  t("noSuccessfulSync"),
+                )}
               </dd>
             </div>
             <div className="rounded-xl bg-white/72 p-3">
-              <dt className="text-muted-foreground">游戏数据</dt>
+              <dt className="text-muted-foreground">{t("gameData")}</dt>
               <dd className="mt-1 break-words font-semibold text-foreground">
                 {dataStatus.game_version ??
                   dataStatus.game_data_version_id?.slice(0, 8) ??
-                  "尚未配置"}
+                  t("notConfigured")}
               </dd>
             </div>
             <div className="rounded-xl bg-white/72 p-3">
-              <dt className="text-muted-foreground">确定性算法</dt>
+              <dt className="text-muted-foreground">{t("algorithm")}</dt>
               <dd className="mt-1 break-words font-semibold text-foreground">
-                {dataStatus.algorithm_version ?? "尚未提供"}
+                {dataStatus.algorithm_version ?? t("notProvided")}
               </dd>
             </div>
           </dl>
@@ -212,7 +230,7 @@ export function OverviewDashboard({
             href="/data-status"
             className={cn(outlineLinkClass, "mt-5 w-full")}
           >
-            查看详细状态
+            {t("viewDetails")}
           </Link>
         </GlassPanel>
       </section>

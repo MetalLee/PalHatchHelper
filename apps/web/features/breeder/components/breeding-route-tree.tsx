@@ -1,8 +1,11 @@
+"use client";
+
 import type { BreedingRoute } from "@palhatch/contracts";
 import { ArrowDown, GitBranch, Plus, TriangleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 import {
@@ -13,7 +16,6 @@ import {
   type BreedingTreeOccurrence,
   type BreedingTreePassiveFact,
 } from "../lib/build-breeding-tree";
-import { genderLabel } from "../presentation";
 import {
   BreedingTreeNode,
   type BreedingTreeNodeOverlay,
@@ -51,10 +53,10 @@ export function BreedingRouteTree({
   passiveFacts,
   stepOverlays,
   compactPreview = false,
-  ariaLabel = "当前路线的配种路径树",
-  eyebrow = "Breeding route tree",
-  title = "当前路线的配种路径",
-  description = "初始亲本 → 中间代 → 最终目标；连接线只表达确定的配种关系。",
+  ariaLabel,
+  eyebrow,
+  title,
+  description,
   summary,
 }: Readonly<{
   route?: BreedingRoute | null;
@@ -71,6 +73,12 @@ export function BreedingRouteTree({
   description?: string | null;
   summary?: string;
 }>) {
+  const t = useCopy("Breeder");
+  const effectiveAriaLabel = ariaLabel ?? t("treeDefaultLabel");
+  const effectiveEyebrow = eyebrow === undefined ? t("treeEyebrow") : eyebrow;
+  const effectiveTitle = title ?? t("treeDefaultTitle");
+  const effectiveDescription =
+    description === undefined ? t("treeDefaultDescription") : description;
   let model: BreedingTreeModel;
   try {
     model =
@@ -82,13 +90,13 @@ export function BreedingRouteTree({
         ? error.code
         : "INVALID_BREEDING_TREE";
     return (
-      <section className="min-w-0 max-w-full" aria-label={ariaLabel}>
+      <section className="min-w-0 max-w-full" aria-label={effectiveAriaLabel}>
         <Alert
           variant="destructive"
           className="rounded-3xl border-rose-200 bg-rose-50/94"
         >
           <TriangleAlert aria-hidden="true" />
-          <AlertTitle>路线树数据不一致</AlertTitle>
+          <AlertTitle>{t("treeInvalid")}</AlertTitle>
           <AlertDescription className="font-mono break-all">
             {code}
           </AlertDescription>
@@ -101,15 +109,15 @@ export function BreedingRouteTree({
     return (
       <section
         className="min-w-0 max-w-full rounded-3xl border border-dashed border-border bg-white/68 p-6 text-center"
-        aria-label={ariaLabel}
+        aria-label={effectiveAriaLabel}
       >
         <GitBranch
           aria-hidden="true"
           className="mx-auto size-8 text-muted-foreground"
         />
-        <h3 className="mt-3 font-bold text-foreground">没有可绘制的路线</h3>
+        <h3 className="mt-3 font-bold text-foreground">{t("treeEmpty")}</h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          当前结果未提供合法配种步骤，不会生成虚构节点。
+          {t("treeEmptyDescription")}
         </p>
       </section>
     );
@@ -126,37 +134,41 @@ export function BreedingRouteTree({
   return (
     <section
       className="min-w-0 max-w-full overflow-hidden rounded-[1.75rem] border border-glass-border bg-white/72 shadow-soft"
-      aria-label={ariaLabel}
+      aria-label={effectiveAriaLabel}
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 border-b border-border bg-white/70 px-4 py-4 sm:px-6">
         <div>
-          {eyebrow === null ? null : (
+          {effectiveEyebrow === null ? null : (
             <p className="text-xs font-bold tracking-[0.14em] text-primary uppercase">
-              {eyebrow}
+              {effectiveEyebrow}
             </p>
           )}
           <h3
             className={cn(
               "text-xl font-bold text-foreground",
-              eyebrow === null && "mt-0",
-              eyebrow !== null && "mt-1",
+              effectiveEyebrow === null && "mt-0",
+              effectiveEyebrow !== null && "mt-1",
             )}
           >
-            {title}
+            {effectiveTitle}
           </h3>
           {description === null ? null : (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {effectiveDescription}
+            </p>
           )}
         </div>
         <p className="rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-muted-foreground">
           {summary ??
-            `${model.steps.length} 个步骤 · ${
-              model.feasibilityStatus === "ready"
-                ? "库存可执行"
-                : model.feasibilityStatus === "needs_inventory"
-                  ? "需要补充库存"
-                  : "已采用路线"
-            }`}
+            t("treeSummary", {
+              steps: model.steps.length,
+              status:
+                model.feasibilityStatus === "ready"
+                  ? t("ready")
+                  : model.feasibilityStatus === "needs_inventory"
+                    ? t("needsInventory")
+                    : t("adoptedRoute"),
+            })}
         </p>
       </div>
 
@@ -199,6 +211,7 @@ function DesktopTree({
   stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
   compactPreview: boolean;
 }>) {
+  const t = useCopy("Breeder");
   const gridStyle: CSSProperties = {
     width: layout.width,
     minHeight: layout.height,
@@ -218,7 +231,7 @@ function DesktopTree({
       <div
         className="max-w-full overflow-x-auto overscroll-x-contain px-6 pt-5 pb-7 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         tabIndex={0}
-        aria-label="桌面配种树，可在树区域内横向滚动"
+        aria-label={t("desktopTreeLabel")}
       >
         <div className="mb-3 grid" style={headerStyle}>
           {Array.from({ length: layout.columnCount }, (_, generation) => (
@@ -227,7 +240,9 @@ function DesktopTree({
               className="text-center text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase"
               style={{ gridColumn: generation + 1 }}
             >
-              {generation === 0 ? "初始亲本" : `第 ${generation} 代`}
+              {generation === 0
+                ? t("initialParents")
+                : t("generation", { generation })}
             </p>
           ))}
         </div>
@@ -362,7 +377,7 @@ function DesktopTree({
                 <BreedingTreeNode
                   entity={entity}
                   occurrence={occurrence}
-                  roleLabel={occurrenceRoleLabel(occurrence, entity)}
+                  roleLabel={occurrenceRoleLabel(occurrence, entity, t)}
                   palNames={palNames}
                   passiveNames={passiveNames}
                   overlay={overlayFor(occurrence, stepOverlays)}
@@ -395,6 +410,7 @@ function MobileTree({
   stepOverlays?: ReadonlyMap<number, BreedingTreeNodeOverlay>;
   compactPreview: boolean;
 }>) {
+  const t = useCopy("Breeder");
   if (model.steps.length === 0 && model.targetOccurrenceId !== null) {
     const targetOccurrence = occurrenceById.get(model.targetOccurrenceId);
     const targetEntity =
@@ -409,7 +425,7 @@ function MobileTree({
         <BreedingTreeNode
           entity={targetEntity}
           occurrence={targetOccurrence}
-          roleLabel="库存中的目标"
+          roleLabel={t("inventoryTarget")}
           palNames={palNames}
           passiveNames={passiveNames}
           overlay={overlayFor(targetOccurrence, stepOverlays)}
@@ -451,14 +467,17 @@ function MobileTree({
           >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h4 className="font-bold text-foreground">
-                步骤 {index + 1} · 第 {step.generation} 代
+                {t("stepGeneration", {
+                  step: index + 1,
+                  generation: step.generation,
+                })}
               </h4>
               <span className="text-xs font-semibold text-muted-foreground">
                 {step.recipeType === "special"
-                  ? "特殊配方"
+                  ? t("specialRecipe")
                   : step.recipeType === "normal"
-                    ? "常规配方"
-                    : "配方类型未提供"}
+                    ? t("normalRecipe")
+                    : t("unknownRecipe")}
               </span>
             </div>
             <BreedingTreeNode
@@ -467,30 +486,32 @@ function MobileTree({
                 ...parentAOccurrence,
                 requiredPassiveIds: step.parentA.requiredPassiveIds,
               }}
-              roleLabel={parentRoleLabel(parentAEntity, "a")}
+              roleLabel={parentRoleLabel(parentAEntity, "a", t)}
               palNames={palNames}
               passiveNames={passiveNames}
               overlay={overlayFor(parentAOccurrence, stepOverlays)}
               compactPreview={compactPreview}
             />
-            <Connector icon={Plus} label="与" />
+            <Connector icon={Plus} label={t("with")} />
             <BreedingTreeNode
               entity={parentBEntity}
               occurrence={{
                 ...parentBOccurrence,
                 requiredPassiveIds: step.parentB.requiredPassiveIds,
               }}
-              roleLabel={parentRoleLabel(parentBEntity, "b")}
+              roleLabel={parentRoleLabel(parentBEntity, "b", t)}
               palNames={palNames}
               passiveNames={passiveNames}
               overlay={overlayFor(parentBOccurrence, stepOverlays)}
               compactPreview={compactPreview}
             />
-            <Connector icon={ArrowDown} label="配种产出" />
+            <Connector icon={ArrowDown} label={t("breedingOutput")} />
             <BreedingTreeNode
               entity={childEntity}
               occurrence={childOccurrence}
-              roleLabel={childEntity.isTarget ? "最终目标" : "中间子代"}
+              roleLabel={
+                childEntity.isTarget ? t("finalTarget") : t("intermediateChild")
+              }
               palNames={palNames}
               passiveNames={passiveNames}
               overlay={overlayFor(childOccurrence, stepOverlays)}
@@ -604,15 +625,20 @@ function spreadRows(count: number, maximum: number): number[] {
 function occurrenceRoleLabel(
   occurrence: BreedingTreeOccurrence,
   entity: BreedingTreeEntity,
+  t: ReturnType<typeof useCopy<"Breeder">>,
 ): string {
   if (occurrence.role === "child") {
-    return entity.isTarget ? "最终目标" : "中间子代";
+    return entity.isTarget ? t("finalTarget") : t("intermediateChild");
   }
-  return parentRoleLabel(entity, occurrence.role === "parent_a" ? "a" : "b");
+  return parentRoleLabel(entity, occurrence.role === "parent_a" ? "a" : "b", t);
 }
 
-function parentRoleLabel(entity: BreedingTreeEntity, side: "a" | "b"): string {
-  if (genderLabel(entity.gender) === "雄性") return "父本";
-  if (genderLabel(entity.gender) === "雌性") return "母本";
-  return side === "a" ? "亲本 A" : "亲本 B";
+function parentRoleLabel(
+  entity: BreedingTreeEntity,
+  side: "a" | "b",
+  t: ReturnType<typeof useCopy<"Breeder">>,
+): string {
+  if (entity.gender === "male") return t("father");
+  if (entity.gender === "female") return t("mother");
+  return side === "a" ? t("parentA") : t("parentB");
 }

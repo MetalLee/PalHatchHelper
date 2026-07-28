@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Activity,
   Database,
@@ -6,9 +8,6 @@ import {
   Settings,
   Users,
 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-
 import {
   Select,
   SelectContent,
@@ -17,19 +16,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCopy } from "@/i18n/client";
+import { Link, useRouter } from "@/i18n/navigation";
 
 const items = [
-  { href: "/admin", label: "管理员概览", icon: LayoutDashboard },
-  { href: "/admin/bindings", label: "玩家绑定", icon: Users },
-  { href: "/admin/save-parser", label: "存档与 Parser", icon: FileSearch },
-  { href: "/admin/breeding-data", label: "配种数据", icon: Database },
-  { href: "/admin/jobs", label: "任务与 AI", icon: Activity },
-  { href: "/admin/settings", label: "系统设置", icon: Settings },
+  { href: "/admin", labelKey: "overviewNav", icon: LayoutDashboard },
+  { href: "/admin/bindings", labelKey: "bindingsNav", icon: Users },
+  { href: "/admin/save-parser", labelKey: "saveParserNav", icon: FileSearch },
+  { href: "/admin/breeding-data", labelKey: "gameDataNav", icon: Database },
+  { href: "/admin/jobs", labelKey: "jobsNav", icon: Activity },
+  { href: "/admin/settings", labelKey: "settingsNav", icon: Settings },
 ] as const;
 
 export function AdminNavigation({
   activePath,
 }: Readonly<{ activePath: string }>) {
+  const t = useCopy("Admin");
   const router = useRouter();
   const activeHref =
     items.find(
@@ -39,12 +41,12 @@ export function AdminNavigation({
     )?.href ?? "/admin";
 
   return (
-    <nav className="min-w-0" aria-label="管理员导航">
+    <nav className="min-w-0" aria-label={t("navigationLabel")}>
       <div className="md:hidden">
         <Select value={activeHref} onValueChange={(href) => router.push(href)}>
           <SelectTrigger
             className="w-full rounded-xl bg-white/75"
-            aria-label="选择管理页面"
+            aria-label={t("choosePage")}
           >
             <SelectValue />
           </SelectTrigger>
@@ -54,7 +56,7 @@ export function AdminNavigation({
               return (
                 <SelectItem key={item.href} value={item.href}>
                   <Icon aria-hidden="true" className="size-4" />
-                  {item.label}
+                  {t(item.labelKey)}
                 </SelectItem>
               );
             })}
@@ -87,7 +89,7 @@ export function AdminNavigation({
                       className="size-4"
                       strokeWidth={1.8}
                     />
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 </TabsTrigger>
               );

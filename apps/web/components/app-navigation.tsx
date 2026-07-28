@@ -8,7 +8,6 @@ import {
   PawPrint,
   type LucideIcon,
 } from "lucide-react";
-import Link from "next/link";
 import {
   type Dispatch,
   type SetStateAction,
@@ -19,30 +18,40 @@ import {
 } from "react";
 
 import { cn } from "@/lib/utils";
+import { getCopy, useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
+import type { AppLocale } from "@/i18n/routing";
+
+type NavigationLabelKey =
+  | "home"
+  | "inventory"
+  | "breeder"
+  | "plans"
+  | "dataStatus";
 
 export interface NavigationItem {
   href: string;
-  label: string;
+  labelKey: NavigationLabelKey;
   icon: LucideIcon;
 }
 
 export const workspaceNavigationItems: readonly NavigationItem[] = [
-  { href: "/overview", label: "首页", icon: House },
-  { href: "/pals", label: "帕鲁库存", icon: PawPrint },
-  { href: "/breeder", label: "配种工作台", icon: Dna },
-  { href: "/plans", label: "我的计划", icon: ClipboardList },
-  { href: "/data-status", label: "数据状态", icon: Database },
+  { href: "/overview", labelKey: "home", icon: House },
+  { href: "/pals", labelKey: "inventory", icon: PawPrint },
+  { href: "/breeder", labelKey: "breeder", icon: Dna },
+  { href: "/plans", labelKey: "plans", icon: ClipboardList },
+  { href: "/data-status", labelKey: "dataStatus", icon: Database },
 ];
 
 const routeTitles = [
-  { href: "/admin/bindings", label: "玩家绑定" },
-  { href: "/admin/save-parser", label: "存档与 Parser" },
-  { href: "/admin/breeding-data", label: "游戏数据" },
-  { href: "/admin/jobs", label: "任务与 AI" },
-  { href: "/admin/settings", label: "系统设置" },
-  { href: "/admin", label: "管理中心" },
-  { href: "/account", label: "账号" },
-  ...workspaceNavigationItems,
+  { href: "/admin/bindings", labelKey: "bindings" },
+  { href: "/admin/save-parser", labelKey: "saveParser" },
+  { href: "/admin/breeding-data", labelKey: "gameData" },
+  { href: "/admin/jobs", labelKey: "jobsAi" },
+  { href: "/admin/settings", labelKey: "settings" },
+  { href: "/admin", labelKey: "admin" },
+  { href: "/account", labelKey: "account" },
+  ...workspaceNavigationItems.map(({ href, labelKey }) => ({ href, labelKey })),
 ] as const;
 
 export function isNavigationItemActive(
@@ -52,11 +61,15 @@ export function isNavigationItemActive(
   return activePath === href || activePath.startsWith(`${href}/`);
 }
 
-export function currentPageTitle(activePath: string): string {
-  return (
-    routeTitles.find(({ href }) => isNavigationItemActive(activePath, href))
-      ?.label ?? "工作台"
-  );
+export function currentPageTitle(
+  activePath: string,
+  locale: AppLocale = "zh",
+): string {
+  const t = getCopy(locale, "Navigation");
+  const labelKey = routeTitles.find(({ href }) =>
+    isNavigationItemActive(activePath, href),
+  )?.labelKey;
+  return labelKey === undefined ? t("workspace") : t(labelKey);
 }
 
 interface HighlightGeometry {
@@ -75,6 +88,7 @@ export function AppNavigation({
   activePath,
   className,
 }: Readonly<{ activePath: string; className?: string }>) {
+  const t = useCopy("Navigation");
   const activeHref = useMemo(
     () =>
       workspaceNavigationItems.find((item) =>
@@ -154,7 +168,7 @@ export function AppNavigation({
   return (
     <nav
       ref={navRef}
-      aria-label="主导航"
+      aria-label={t("mainLabel")}
       data-active-href={activeHref ?? undefined}
       data-hovered-href={hoverHref ?? undefined}
       className={cn(
@@ -222,7 +236,7 @@ export function AppNavigation({
             onBlur={() => setFocusedHref(null)}
           >
             <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </Link>
         );
       })}

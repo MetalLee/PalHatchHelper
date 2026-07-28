@@ -1,3 +1,5 @@
+"use client";
+
 import type { InventoryDataStatus } from "@palhatch/contracts";
 import {
   AlertTriangle,
@@ -18,15 +20,21 @@ import { GlassPanel } from "@/components/surfaces/glass-panel";
 import { StatusChip } from "@/components/status/status-chip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { catalogLocaleFor, type AppLocale } from "@/i18n/routing";
 
 import {
   dataStatusPresentation,
   gameDataStatusPresentation,
 } from "./presentation";
 
-export function formatDataStatusTime(value: string | null): string {
-  if (value === null) return "暂无";
-  return new Intl.DateTimeFormat("zh-CN", {
+export function formatDataStatusTime(
+  value: string | null,
+  locale: AppLocale,
+  empty: string,
+): string {
+  if (value === null) return empty;
+  return new Intl.DateTimeFormat(catalogLocaleFor(locale), {
     dateStyle: "medium",
     timeStyle: "medium",
     timeZone: "Asia/Shanghai",
@@ -92,25 +100,29 @@ function StatusCard({
 export function DataStatusDashboard({
   data,
 }: Readonly<{ data: InventoryDataStatus }>) {
-  const inventory = dataStatusPresentation(data.state);
-  const gameData = gameDataStatusPresentation(data.game_data_state);
+  const locale = useAppLocale();
+  const t = useCopy("DataStatus");
+  const formatTime = (value: string | null) =>
+    formatDataStatusTime(value, locale, t("none"));
+  const inventory = dataStatusPresentation(data.state, t);
+  const gameData = gameDataStatusPresentation(data.game_data_state, t);
   const parserValue =
     data.parser_name === null
-      ? "尚未上报"
-      : `${data.parser_name} · ${data.parser_version ?? "unknown"}`;
+      ? t("notReported")
+      : `${data.parser_name} · ${data.parser_version ?? t("unknown")}`;
   const parserState =
     data.state === "parse_error"
-      ? { title: "Parser 异常", tone: "danger" as const }
+      ? { title: t("parserError"), tone: "danger" as const }
       : data.parser_name === null
-        ? { title: "Parser 未上报", tone: "neutral" as const }
-        : { title: "Parser 已就绪", tone: "good" as const };
+        ? { title: t("parserMissing"), tone: "neutral" as const }
+        : { title: t("parserReady"), tone: "good" as const };
 
   return (
     <div className="grid min-w-0 gap-5">
       <PageHero
-        eyebrow="BEACON STATUS"
-        title="服务器数据状态"
-        description="查看 PalBeacon 与游戏存档之间的数据同步、解析和版本状态。"
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description")}
         actions={
           <StatusChip tone={inventory.tone}>{inventory.title}</StatusChip>
         }
@@ -127,39 +139,39 @@ export function DataStatusDashboard({
 
       <section
         className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="数据状态摘要"
+        aria-label={t("summaryLabel")}
       >
         <StatusCard
-          label="存档同步"
+          label={t("saveSync")}
           value={inventory.title}
           detail={
             data.using_previous_snapshot
-              ? "当前安全保留上一份成功发布的库存。"
+              ? t("previousSnapshotDetail")
               : inventory.description
           }
           icon={data.state === "parse_error" ? FileWarning : RefreshCw}
           tone={inventory.tone}
         />
         <StatusCard
-          label="解析状态"
+          label={t("parserStatus")}
           value={parserState.title}
           detail={parserValue}
           icon={data.state === "parse_error" ? FileWarning : FileCheck2}
           tone={parserState.tone}
         />
         <StatusCard
-          label="最近更新时间"
-          value={formatDataStatusTime(data.captured_at)}
-          detail={`最近同步尝试：${formatDataStatusTime(data.last_attempt_at)}`}
+          label={t("latestUpdate")}
+          value={formatTime(data.captured_at)}
+          detail={t("lastAttempt", { date: formatTime(data.last_attempt_at) })}
           icon={Clock3}
           tone={data.state === "stale" ? "warning" : "neutral"}
         />
         <StatusCard
-          label="数据或目录版本"
+          label={t("dataVersion")}
           value={gameData.title}
           detail={
             data.game_build_id === null
-              ? "Build 尚未配置"
+              ? t("buildMissing")
               : `Build ${data.game_build_id}`
           }
           icon={Database}
@@ -178,28 +190,28 @@ export function DataStatusDashboard({
                 id="sync-timeline-title"
                 className="text-lg font-bold text-foreground"
               >
-                同步时间线
+                {t("timeline")}
               </h2>
               <p className="text-sm text-muted-foreground">
-                仅展示当前安全投影中的三个时间事实。
+                {t("timelineDescription")}
               </p>
             </div>
           </div>
           <ol className="mt-5 grid gap-4">
             {[
               {
-                label: "存档最后修改",
-                value: formatDataStatusTime(data.source_modified_at),
+                label: t("sourceModified"),
+                value: formatTime(data.source_modified_at),
                 icon: FileClock,
               },
               {
-                label: "有效快照捕获",
-                value: formatDataStatusTime(data.captured_at),
+                label: t("snapshotCaptured"),
+                value: formatTime(data.captured_at),
                 icon: FileCheck2,
               },
               {
-                label: "最近同步尝试",
-                value: formatDataStatusTime(data.last_attempt_at),
+                label: t("lastAttemptLabel"),
+                value: formatTime(data.last_attempt_at),
                 icon: RefreshCw,
               },
             ].map((event) => {
@@ -233,38 +245,40 @@ export function DataStatusDashboard({
             </span>
             <div>
               <h2 id="version-title" className="text-lg font-bold">
-                版本信息
+                {t("versionInfo")}
               </h2>
               <p className="text-sm text-muted-foreground">
-                配种计算固定使用确定性版本。
+                {t("versionDescription")}
               </p>
             </div>
           </div>
           <dl className="mt-5 grid gap-3 text-sm">
             <div className="rounded-2xl bg-white/60 p-4">
-              <dt className="text-muted-foreground">Parser 名称与版本</dt>
+              <dt className="text-muted-foreground">{t("parserVersion")}</dt>
               <dd className="mt-1 font-semibold text-foreground">
                 {parserValue}
               </dd>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-white/60 p-4">
-                <dt className="text-muted-foreground">游戏版本</dt>
+                <dt className="text-muted-foreground">{t("gameVersion")}</dt>
                 <dd className="mt-1 font-semibold text-foreground">
-                  {data.game_version ?? "未知"}
+                  {data.game_version ?? t("unknown")}
                 </dd>
               </div>
               <div className="rounded-2xl bg-white/60 p-4">
                 <dt className="text-muted-foreground">Build</dt>
                 <dd className="mt-1 font-semibold text-foreground">
-                  {data.game_build_id ?? "未知"}
+                  {data.game_build_id ?? t("unknown")}
                 </dd>
               </div>
             </div>
             <div className="rounded-2xl bg-white/60 p-4">
-              <dt className="text-muted-foreground">确定性算法版本</dt>
+              <dt className="text-muted-foreground">{t("algorithmVersion")}</dt>
               <dd className="mt-1">
-                <SafeCode>{data.algorithm_version ?? "未配置"}</SafeCode>
+                <SafeCode>
+                  {data.algorithm_version ?? t("notConfigured")}
+                </SafeCode>
               </dd>
             </div>
           </dl>
@@ -278,7 +292,7 @@ export function DataStatusDashboard({
               <AlertTriangle aria-hidden="true" className="size-5" />
             </span>
             <h2 id="warning-title" className="text-lg font-bold">
-              异常提醒
+              {t("warnings")}
             </h2>
           </div>
           {data.error_code !== null || data.using_previous_snapshot ? (
@@ -289,19 +303,19 @@ export function DataStatusDashboard({
               <AlertTriangle aria-hidden="true" />
               <AlertTitle>
                 {data.using_previous_snapshot
-                  ? "当前使用上一份有效快照"
-                  : "最近同步存在异常"}
+                  ? t("usingPrevious")
+                  : t("recentFailure")}
               </AlertTitle>
               <AlertDescription className="space-y-2">
-                <p>失败解析结果不会部分发布；玩家仍看到上一份完整有效库存。</p>
+                <p>{t("failureDescription")}</p>
                 <SafeCode>{data.error_code ?? "NO_ERROR_CODE"}</SafeCode>
               </AlertDescription>
             </Alert>
           ) : (
             <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4">
-              <p className="font-semibold text-emerald-900">未发现同步异常</p>
+              <p className="font-semibold text-emerald-900">{t("noFailure")}</p>
               <p className="mt-1 text-sm text-emerald-800">
-                当前没有稳定错误码，也没有使用上一份有效快照。
+                {t("noFailureDescription")}
               </p>
             </div>
           )}
@@ -324,24 +338,30 @@ export function DataStatusDashboard({
             </span>
             <div>
               <h2 id="fixed-data-title" className="text-lg font-bold">
-                固定数据详情
+                {t("fixedDetails")}
               </h2>
               <p className="text-sm text-muted-foreground">
-                UUID 可选中复制，不包含源存档哈希。
+                {t("fixedDescription")}
               </p>
             </div>
           </div>
           <dl className="mt-5 grid gap-3">
             <div className="rounded-2xl bg-white/60 p-4">
-              <dt className="text-sm text-muted-foreground">库存快照 ID</dt>
+              <dt className="text-sm text-muted-foreground">
+                {t("snapshotId")}
+              </dt>
               <dd className="mt-1">
-                <SafeCode>{data.snapshot_id ?? "暂无"}</SafeCode>
+                <SafeCode>{data.snapshot_id ?? t("none")}</SafeCode>
               </dd>
             </div>
             <div className="rounded-2xl bg-white/60 p-4">
-              <dt className="text-sm text-muted-foreground">游戏数据版本 ID</dt>
+              <dt className="text-sm text-muted-foreground">
+                {t("gameDataVersionId")}
+              </dt>
               <dd className="mt-1">
-                <SafeCode>{data.game_data_version_id ?? "未配置"}</SafeCode>
+                <SafeCode>
+                  {data.game_data_version_id ?? t("notConfigured")}
+                </SafeCode>
               </dd>
             </div>
           </dl>

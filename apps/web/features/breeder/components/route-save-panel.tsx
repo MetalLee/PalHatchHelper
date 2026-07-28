@@ -1,7 +1,10 @@
+"use client";
+
 import type { BreederJobStatus, BreedingRoute } from "@palhatch/contracts";
-import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
 
 export function RouteSavePanel({
   route,
@@ -20,18 +23,21 @@ export function RouteSavePanel({
   onSave: () => void;
   onRemove: () => void;
 }>) {
+  const t = useCopy("Breeder");
   const completed = jobStatus === "completed";
   return (
     <section className="min-w-0 rounded-3xl border border-primary/20 bg-emerald-50/78 p-5 sm:p-6">
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-lg font-bold text-foreground">收藏当前路径</h2>
+          <h2 className="text-lg font-bold text-foreground">
+            {t("saveRouteTitle")}
+          </h2>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            保存后可在“我的计划”随时查看完整路线；收藏不会推进配种进度。
+            {t("saveRouteDescription")}
           </p>
           {route.feasibility_status === "needs_inventory" ? (
             <p className="mt-2 text-xs font-semibold text-orange-800">
-              该路线仍需补齐库存，但可以先收藏备用。
+              {t("saveMissingDescription")}
             </p>
           ) : null}
         </div>
@@ -39,7 +45,7 @@ export function RouteSavePanel({
           {saved ? (
             <>
               <Button asChild size="lg">
-                <Link href={`/plans/${route.route_id}`}>查看我的计划</Link>
+                <Link href={`/plans/${route.route_id}`}>{t("viewPlan")}</Link>
               </Button>
               <Button
                 type="button"
@@ -48,7 +54,7 @@ export function RouteSavePanel({
                 disabled={busy}
                 onClick={onRemove}
               >
-                {busy ? "正在处理…" : "移除收藏"}
+                {busy ? t("processingAction") : t("removeSaved")}
               </Button>
             </>
           ) : (
@@ -59,10 +65,10 @@ export function RouteSavePanel({
               onClick={onSave}
             >
               {busy
-                ? "正在保存…"
+                ? t("saving")
                 : completed
-                  ? "保存到我的计划"
-                  : "任务完成后可保存"}
+                  ? t("saveToPlans")
+                  : t("saveAfterComplete")}
             </Button>
           )}
         </div>

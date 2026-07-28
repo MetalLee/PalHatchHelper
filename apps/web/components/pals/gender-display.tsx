@@ -1,6 +1,8 @@
 import { CircleDashed, CircleHelp, CircleOff, Mars, Venus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { getCopy, useAppLocale } from "@/i18n/client";
+import type { AppLocale } from "@/i18n/routing";
 
 export type DisplayGender =
   | "male"
@@ -13,27 +15,27 @@ export type DisplayGender =
 const genderPresentation = {
   male: {
     icon: Mars,
-    label: "雄性",
+    labelKey: "male",
     iconClassName: "text-sky-500",
   },
   female: {
     icon: Venus,
-    label: "雌性",
+    labelKey: "female",
     iconClassName: "text-rose-400",
   },
   genderless: {
     icon: CircleOff,
-    label: "无性别",
+    labelKey: "genderless",
     iconClassName: "text-slate-500",
   },
   unknown: {
     icon: CircleHelp,
-    label: "未知",
+    labelKey: "unknown",
     iconClassName: "text-amber-500",
   },
   pending: {
     icon: CircleDashed,
-    label: "待定",
+    labelKey: "pending",
     iconClassName: "text-slate-400",
   },
 } as const;
@@ -42,8 +44,11 @@ function presentationFor(gender: DisplayGender) {
   return genderPresentation[gender ?? "pending"];
 }
 
-export function genderDisplayLabel(gender: DisplayGender): string {
-  return presentationFor(gender).label;
+export function genderDisplayLabel(
+  gender: DisplayGender,
+  locale: AppLocale = "zh",
+): string {
+  return getCopy(locale, "Pals")(presentationFor(gender).labelKey);
 }
 
 export function GenderIcon({
@@ -71,7 +76,7 @@ export function GenderMarker({
   className?: string;
   iconClassName?: string;
 }>) {
-  const label = genderDisplayLabel(gender);
+  const label = genderDisplayLabel(gender, useAppLocale());
   return (
     <span
       role="img"
@@ -95,10 +100,11 @@ export function GenderDisplay({
   className?: string;
   iconClassName?: string;
 }>) {
+  const locale = useAppLocale();
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-1.5", className)}>
       <GenderIcon gender={gender} className={iconClassName} />
-      <span>{label ?? genderDisplayLabel(gender)}</span>
+      <span>{label ?? genderDisplayLabel(gender, locale)}</span>
     </span>
   );
 }

@@ -1208,6 +1208,7 @@ class AIExplanationRouteSummary(BaseModel):
 class AIExplanationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    locale: Literal["zh-CN", "en-US"]
     target_pal_id: BreederStableId
     desired_passive_ids: Annotated[
         list[BreederStableId],
@@ -1831,6 +1832,7 @@ class ReadinessStatus(BaseModel):
 class BreedingJob(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    locale: Literal["zh-CN", "en-US"]
     job_id: UUID
     requester_user_id: UUID
     world_id: UUID

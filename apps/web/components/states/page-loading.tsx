@@ -1,10 +1,14 @@
+"use client";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useCopy } from "@/i18n/client";
 
 export function PageLoading({
-  label = "正在加载",
+  label,
   className,
 }: Readonly<{ label?: string; className?: string }>) {
+  const t = useCopy("Errors");
   return (
     <div
       className={cn(
@@ -14,7 +18,7 @@ export function PageLoading({
       role="status"
       aria-live="polite"
     >
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t("loading")}</span>
       <div aria-hidden="true" className="flex items-center gap-4">
         <Skeleton className="size-12 rounded-2xl" />
         <div className="grid flex-1 gap-2">

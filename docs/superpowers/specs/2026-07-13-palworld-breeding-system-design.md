@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -1212,6 +1212,51 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 /admin/jobs
 /admin/settings
 ```
+
+### 17.13 中英文国际化与语言路由
+
+所有浏览器页面使用 Next.js App Router 顶层动态语言段，公开 URL 固定带语言前缀：
+
+```text
+/zh/login
+/zh/overview
+/zh/pals
+/zh/breeder
+/zh/plans
+/zh/admin
+
+/en/login
+/en/overview
+/en/pals
+/en/breeder
+/en/plans
+/en/admin
+```
+
+`zh` 与 `en` 是 URL 语言标识；读取固定游戏目录时分别映射为 `zh-CN` 与 `en-US`。页面路径中的
+显式语言优先，其次使用已保存的语言 Cookie 与浏览器 `Accept-Language`，最终默认中文。旧的无
+前缀页面 URL 必须保留查询参数并重定向到对应语言地址；`/api`、Next.js 内部资源与静态资产不增加
+语言前缀。未知语言返回本地化 404，不得静默映射到不相关语言。
+
+应用 UI 文案与游戏内容本地化分层管理：
+
+1. 导航、表单、状态、错误、空状态、可访问名称、Tooltip、Metadata、日期、数字和复数来自按功能
+   命名空间组织的中英文应用消息，不在 React 组件中散落玩家可见硬编码文案。
+2. 帕鲁、被动、主动技能、伙伴技能及后续游戏内容继续只从任务或世界固定的
+   `catalog_localizations` 读取；应用消息文件不得复制这些版本化事实。
+3. 内部 ID、状态码、算法/评分字段与关系保持稳定英文值。翻译缺失时使用当前语言的中性降级，
+   不显示内部 ID、不混用另一语言，也不改变配种合法性或评分。
+4. 新目录发布必须校验面向玩家的已声明名称/描述键在 `zh-CN` 与 `en-US` 中的覆盖。历史固定版本
+   保持不可变，缺失内容按中性降级只读展示。
+5. 数据库浏览器投影显式接收受支持的 locale，并在响应中回传实际 locale；现有 RPC 保留兼容，
+   新 Web 使用前向版本化 RPC。API 路径保持无前缀，由经过校验的请求字段传递 locale。
+6. AI 解释与本地模板同样声明语言。自由文本只在请求语言匹配时展示；历史解释语言不匹配时，
+   使用相同确定性路线事实生成当前语言模板，禁止中英混排。AI 仍不得创造事实或修改分数。
+
+语言选择器使用 shadcn/Radix Dropdown Menu 的单选语义与 Lucide 语言图标。桌面端位于用户头像
+左侧，移动端位于菜单按钮左侧；登录页因没有用户头像，在卡片右上角提供同款紧凑入口。切换必须
+保留当前页面、动态参数和查询参数，更新语言 Cookie，并具备键盘导航、清晰焦点、当前值、可访问
+名称和至少 44 像素点击区域，不使用国旗代表语言。
 
 ## 18. 服务器进程与部署
 

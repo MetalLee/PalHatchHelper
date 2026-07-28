@@ -8,18 +8,20 @@ import { PassiveBadge } from "@/components/pals/passive-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 import { userFacingCatalogName } from "@/lib/user-facing-name";
 
 type PassiveOption = BreederFormContext["passive_skills"][number];
 
 function PassiveMetadata({ skill }: Readonly<{ skill: PassiveOption }>) {
+  const t = useCopy("Breeder");
   const displayName = userFacingCatalogName(
     skill.display_name,
     skill.passive_skill_id,
-    "被动名称暂不可用",
+    t("nameUnavailable"),
   );
-  const effectText = skill.effect_text?.trim() || "效果说明暂不可用";
+  const effectText = skill.effect_text?.trim() || t("effectUnavailable");
   return (
     <span className="grid min-w-0 gap-1.5">
       <span className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -46,6 +48,7 @@ export function PassiveSkillPicker({
   selectedIds: string[];
   onToggle: (id: string) => void;
 }>) {
+  const t = useCopy("Breeder");
   const [query, setQuery] = useState("");
   const visibleSkills = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("zh-CN");
@@ -54,12 +57,12 @@ export function PassiveSkillPicker({
       userFacingCatalogName(
         skill.display_name,
         skill.passive_skill_id,
-        "被动名称暂不可用",
+        t("nameUnavailable"),
       )
         .toLocaleLowerCase("zh-CN")
         .includes(normalized),
     );
-  }, [query, skills]);
+  }, [query, skills, t]);
   const selectedSkills = selectedIds.flatMap((id) => {
     const skill = skills.find((candidate) => candidate.passive_skill_id === id);
     return skill === undefined ? [] : [skill];
@@ -69,15 +72,17 @@ export function PassiveSkillPicker({
     <div className="grid min-w-0 gap-4">
       <section
         className="grid min-w-0 gap-3 rounded-2xl border border-border bg-white/48 p-3 sm:p-4"
-        aria-label="已选择的被动"
+        aria-label={t("chosenPassivesLabel")}
         data-passive-layout="2x2"
       >
         <div className="flex min-w-0 items-center">
-          <strong className="text-sm">已选择 {selectedIds.length} / 4</strong>
+          <strong className="text-sm">
+            {t("chosenCount", { count: selectedIds.length })}
+          </strong>
         </div>
         {selectedSkills.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border/80 px-3 py-2.5 text-sm text-muted-foreground">
-            尚未选择被动
+            {t("noPassiveSelected")}
           </p>
         ) : (
           <div className="grid min-w-0 auto-rows-min grid-cols-[repeat(2,minmax(0,20rem))] content-start items-start justify-start gap-2">
@@ -85,7 +90,13 @@ export function PassiveSkillPicker({
               <button
                 type="button"
                 key={skill.passive_skill_id}
-                aria-label={`移除${userFacingCatalogName(skill.display_name, skill.passive_skill_id, "被动名称暂不可用")}`}
+                aria-label={t("removePassive", {
+                  name: userFacingCatalogName(
+                    skill.display_name,
+                    skill.passive_skill_id,
+                    t("nameUnavailable"),
+                  ),
+                })}
                 onClick={() => onToggle(skill.passive_skill_id)}
                 className="group relative inline-flex h-11 min-w-0 w-full cursor-pointer items-center rounded-lg text-left focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
               >
@@ -93,7 +104,7 @@ export function PassiveSkillPicker({
                   name={userFacingCatalogName(
                     skill.display_name,
                     skill.passive_skill_id,
-                    "被动名称暂不可用",
+                    t("nameUnavailable"),
                   )}
                   rank={skill.rank}
                   isNegative={skill.is_negative}
@@ -111,7 +122,7 @@ export function PassiveSkillPicker({
 
       <div className="grid min-w-0 gap-1.5">
         <Label htmlFor="passive-search" className="text-sm font-semibold">
-          搜索被动名称
+          {t("searchPassiveName")}
         </Label>
         <div className="relative min-w-0">
           <Search
@@ -121,10 +132,10 @@ export function PassiveSkillPicker({
           <Input
             id="passive-search"
             type="search"
-            aria-label="搜索被动"
+            aria-label={t("searchPassive")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="筛选被动"
+            placeholder={t("filterPassive")}
             className="rounded-xl pl-9"
           />
         </div>
@@ -132,11 +143,11 @@ export function PassiveSkillPicker({
 
       <ScrollArea
         className="h-72 rounded-2xl border border-border bg-white/66 p-2"
-        aria-label="被动技能选择"
+        aria-label={t("passivePickerLabel")}
       >
         {visibleSkills.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">
-            没有匹配的被动
+            {t("noPassiveMatch")}
           </p>
         ) : (
           <div className="grid min-w-0 gap-1 pr-3">
@@ -146,7 +157,16 @@ export function PassiveSkillPicker({
                 <button
                   type="button"
                   key={skill.passive_skill_id}
-                  aria-label={`${selected ? "移除" : "选择"}${userFacingCatalogName(skill.display_name, skill.passive_skill_id, "被动名称暂不可用")}，${skill.effect_text?.trim() || "效果说明暂不可用"}`}
+                  aria-label={`${t(
+                    selected ? "removePassive" : "choosePassive",
+                    {
+                      name: userFacingCatalogName(
+                        skill.display_name,
+                        skill.passive_skill_id,
+                        t("nameUnavailable"),
+                      ),
+                    },
+                  )}, ${skill.effect_text?.trim() || t("effectUnavailable")}`}
                   aria-pressed={selected}
                   onClick={() => onToggle(skill.passive_skill_id)}
                   className={cn(

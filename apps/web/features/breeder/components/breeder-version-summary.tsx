@@ -13,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 function compactIdentifier(value: string): string {
@@ -27,20 +28,24 @@ export function BreederVersionSummary({
   context: BreederFormContext;
   mode: CreateBreedingJobRequest["optimization_mode"];
 }>) {
+  const t = useCopy("Breeder");
   const [open, setOpen] = useState(false);
   const details = [
-    ["库存数据", context.inventory_snapshot_id],
-    ["游戏数据", context.game_data_version_id],
-    ["数据校验值", context.game_data_content_hash],
-    ["游戏内容", `${context.game_version} · Build ${context.game_build_id}`],
-    ["计算方式", context.algorithm_version],
-    ["推荐方式", context.scoring_profile_versions[mode]],
+    [t("inventoryData"), context.inventory_snapshot_id],
+    [t("gameData"), context.game_data_version_id],
+    [t("contentHash"), context.game_data_content_hash],
+    [
+      t("gameContent"),
+      `${context.game_version} · Build ${context.game_build_id}`,
+    ],
+    [t("algorithm"), context.algorithm_version],
+    [t("scoring"), context.scoring_profile_versions[mode]],
   ] as const;
 
   return (
     <aside
       className="min-w-0 rounded-3xl border border-glass-border bg-glass p-4 shadow-soft backdrop-blur-md sm:p-5"
-      aria-label="本次计算依据"
+      aria-label={t("calculationBasis")}
     >
       <Collapsible open={open} onOpenChange={setOpen}>
         <div className="flex min-w-0 items-start gap-3">
@@ -48,13 +53,15 @@ export function BreederVersionSummary({
             <Database aria-hidden="true" className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-bold text-foreground">本次计算依据</p>
+            <p className="font-bold text-foreground">{t("calculationBasis")}</p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              将使用当前库存和游戏数据，创建后的结果不会随数据更新而改变。
+              {t("calculationBasisDescription")}
             </p>
             <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-              库存 {compactIdentifier(context.inventory_snapshot_id)} · 游戏数据{" "}
-              {compactIdentifier(context.game_data_version_id)}
+              {t("inventoryShort", {
+                inventory: compactIdentifier(context.inventory_snapshot_id),
+                gameData: compactIdentifier(context.game_data_version_id),
+              })}
             </p>
           </div>
         </div>
@@ -64,9 +71,9 @@ export function BreederVersionSummary({
             type="button"
             variant="ghost"
             className="mt-3 w-full justify-between text-primary"
-            aria-label={open ? "收起详细信息" : "查看详细信息"}
+            aria-label={open ? t("collapseDetails") : t("viewDetails")}
           >
-            {open ? "收起详细信息" : "查看详细信息"}
+            {open ? t("collapseDetails") : t("viewDetails")}
             <ChevronDown
               aria-hidden="true"
               className={cn(

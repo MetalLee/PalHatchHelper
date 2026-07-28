@@ -580,6 +580,54 @@ values
     'zh-CN',
     'fixture.passive.private',
     '独行'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'fixture.test_parent_a.name',
+    'Lamball'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'fixture.test_parent_b.name',
+    'Woolipop'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'fixture.test_child_pal.name',
+    'Prismatic Cub'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'pal_name.PAL_NAME_FixtureInventoryOnly',
+    'Inventory-only Fixture Pal'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'fixture.passive.a',
+    'Serious'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'fixture.passive.a.description',
+    'Work speed +20%'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'fixture.passive.b',
+    'Artisan'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'en-US',
+    'fixture.passive.private',
+    'Independent'
   );
 
 -- The legacy breeding-data compatibility trigger creates placeholder metadata.
@@ -601,7 +649,7 @@ set
     'extractor_name', 'palhatch-local-fixture',
     'extractor_version', '1.0.0',
     'created_at', '2026-07-13T07:00:00Z',
-    'locales', jsonb_build_array('zh-CN'),
+    'locales', jsonb_build_array('zh-CN', 'en-US'),
     'counts', jsonb_build_object(
       'pals', 8,
       'passive_skills', 3,
@@ -609,7 +657,7 @@ set
       'pal_active_skills', 0,
       'partner_skills', 0,
       'breeding_recipes', 2,
-      'localizations', 6
+      'localizations', 16
     ),
     'files', jsonb_build_array(
       jsonb_build_object('filename', 'pals.jsonl', 'sha256', repeat('c', 64), 'record_count', 8),
@@ -618,7 +666,7 @@ set
       jsonb_build_object('filename', 'pal-active-skills.jsonl', 'sha256', repeat('c', 64), 'record_count', 0),
       jsonb_build_object('filename', 'partner-skills.jsonl', 'sha256', repeat('c', 64), 'record_count', 0),
       jsonb_build_object('filename', 'breeding-recipes.jsonl', 'sha256', repeat('c', 64), 'record_count', 2),
-      jsonb_build_object('filename', 'localizations.jsonl', 'sha256', repeat('c', 64), 'record_count', 6)
+      jsonb_build_object('filename', 'localizations.jsonl', 'sha256', repeat('c', 64), 'record_count', 16)
     ),
     'compression', 'tar.zst'
   )

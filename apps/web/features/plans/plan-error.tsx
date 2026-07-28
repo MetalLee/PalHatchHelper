@@ -1,16 +1,18 @@
-import { PageError } from "@/components/states/page-error";
+"use client";
 
-const messages: Record<string, [string, string]> = {
-  PLAN_NOT_FOUND: ["计划不存在", "该计划不存在，或当前账号无权查看。"],
-  PLAN_ACCESS_DENIED: ["权限不足", "只能查看和操作自己的收藏计划。"],
-  DATA_UNAVAILABLE: [
-    "计划数据暂不可用",
-    "请稍后重试；已有结果会保留，不会改用其他数据代替。",
-  ],
-};
+import { PageError } from "@/components/states/page-error";
+import { useCopy } from "@/i18n/client";
 
 export function PlanError({ code }: Readonly<{ code: string }>) {
-  const [title, description] = messages[code] ?? ["操作未完成", code];
+  const t = useCopy("Plans");
+  const messageKeys = {
+    PLAN_NOT_FOUND: ["notFoundTitle", "notFoundDescription"],
+    PLAN_ACCESS_DENIED: ["deniedTitle", "deniedDescription"],
+    DATA_UNAVAILABLE: ["unavailableTitle", "unavailableDescription"],
+  } as const;
+  const keys = messageKeys[code as keyof typeof messageKeys];
+  const title = keys ? t(keys[0]) : t("failedTitle");
+  const description = keys ? t(keys[1]) : code;
   return (
     <PageError
       code={code}

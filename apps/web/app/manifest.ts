@@ -6,8 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: brand.name,
     short_name: brand.name,
-    description: brand.description,
-    start_url: "/",
+    description: "PalBeacon Pal breeding workspace",
+    start_url: "/zh",
     display: "standalone",
     background_color: "#f4fbf7",
     theme_color: "#287a54",

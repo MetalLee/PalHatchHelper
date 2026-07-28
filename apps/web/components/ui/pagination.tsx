@@ -1,13 +1,17 @@
+"use client";
+
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useCopy } from "@/i18n/client";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+  const t = useCopy("Common");
   return (
     <nav
       role="navigation"
-      aria-label="分页"
+      aria-label={t("pagination")}
       data-slot="pagination"
       className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
@@ -63,14 +67,15 @@ function PaginationPrevious({
   children,
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  const t = useCopy("Common");
   return (
     <PaginationLink
-      aria-label="上一页"
+      aria-label={t("previous")}
       className={cn("gap-1 px-3 sm:w-auto", className)}
       {...props}
     >
       <ChevronLeft aria-hidden="true" className="size-4" />
-      <span className="hidden sm:inline">{children ?? "上一页"}</span>
+      <span className="hidden sm:inline">{children ?? t("previous")}</span>
     </PaginationLink>
   );
 }
@@ -80,13 +85,14 @@ function PaginationNext({
   children,
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  const t = useCopy("Common");
   return (
     <PaginationLink
-      aria-label="下一页"
+      aria-label={t("next")}
       className={cn("gap-1 px-3 sm:w-auto", className)}
       {...props}
     >
-      <span className="hidden sm:inline">{children ?? "下一页"}</span>
+      <span className="hidden sm:inline">{children ?? t("next")}</span>
       <ChevronRight aria-hidden="true" className="size-4" />
     </PaginationLink>
   );
@@ -96,6 +102,7 @@ function PaginationEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  const t = useCopy("Common");
   return (
     <span
       aria-hidden="true"
@@ -107,7 +114,7 @@ function PaginationEllipsis({
       {...props}
     >
       <MoreHorizontal aria-hidden="true" className="size-4" />
-      <span className="sr-only">更多页面</span>
+      <span className="sr-only">{t("morePages")}</span>
     </span>
   );
 }

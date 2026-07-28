@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useAppLocale, useCopy } from "@/i18n/client";
 
 import { PalIdentity } from "./pal-identity";
 import { PalPassiveList } from "./pal-passive-list";
@@ -29,11 +30,15 @@ export function PalInventoryCard({
   pending: boolean;
   onToggleShare: (palInstanceUid: string, enabled: boolean) => void;
 }>) {
-  const location = palLocationDisplay(pal);
+  const locale = useAppLocale();
+  const t = useCopy("Pals");
+  const location = palLocationDisplay(pal, locale);
   const dimensionalSharingUnresolved = isDimensionalSharingUnresolved(pal);
   const switchId = `pal-share-${pal.pal_instance_uid}`;
   const accessibleName =
-    pal.catalog_entry_state === "resolved" ? pal.pal_display_name : "此帕鲁";
+    pal.catalog_entry_state === "resolved"
+      ? pal.pal_display_name
+      : t("thisPal");
 
   return (
     <Card
@@ -48,7 +53,7 @@ export function PalInventoryCard({
       <CardContent className="grid gap-3 px-3 py-3 sm:px-4">
         <dl className="grid gap-2 text-sm">
           <div className="flex min-w-0 items-center gap-2">
-            <dt className="sr-only">所有者</dt>
+            <dt className="sr-only">{t("owner")}</dt>
             <UserRound
               aria-hidden="true"
               className="size-3.5 shrink-0 text-muted-foreground"
@@ -58,7 +63,7 @@ export function PalInventoryCard({
             </dd>
           </div>
           <div className="flex min-w-0 items-start gap-2">
-            <dt className="sr-only">位置</dt>
+            <dt className="sr-only">{t("location")}</dt>
             <MapPin
               aria-hidden="true"
               className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
@@ -79,7 +84,7 @@ export function PalInventoryCard({
 
         <div>
           <p className="mb-1.5 text-xs font-semibold text-muted-foreground">
-            被动词条
+            {t("passives")}
           </p>
           <PalPassiveList pal={pal} passiveRanks={passiveRanks} />
         </div>
@@ -93,19 +98,19 @@ export function PalInventoryCard({
               : "good"
           }
         >
-          {palShareLabel(pal, dimensionalSharingUnresolved)}
+          {palShareLabel(pal, dimensionalSharingUnresolved, locale)}
         </StatusChip>
 
         {pal.is_owned_by_requester && !dimensionalSharingUnresolved ? (
           <div className="flex shrink-0 items-center gap-2">
             <Label htmlFor={switchId} className="text-xs font-semibold">
-              共享
+              {t("share")}
             </Label>
             <Switch
               id={switchId}
               checked={pal.share_enabled}
               disabled={pending}
-              aria-label={`${accessibleName} 公会共享`}
+              aria-label={t("guildShareLabel", { name: accessibleName })}
               aria-busy={pending}
               onCheckedChange={(enabled) =>
                 onToggleShare(pal.pal_instance_uid, enabled)
@@ -114,7 +119,7 @@ export function PalInventoryCard({
           </div>
         ) : dimensionalSharingUnresolved ? (
           <p className="max-w-36 text-right text-[0.68rem] leading-4 text-muted-foreground">
-            次元仓库权限未确认
+            {t("dimensionalUnresolved")}
           </p>
         ) : null}
       </CardFooter>

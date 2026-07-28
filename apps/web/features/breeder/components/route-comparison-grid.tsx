@@ -1,4 +1,8 @@
+"use client";
+
 import type { BreedingRoute } from "@palhatch/contracts";
+
+import { useCopy } from "@/i18n/client";
 
 import { RouteComparisonCard } from "./route-comparison-card";
 
@@ -11,6 +15,7 @@ export function RouteComparisonGrid({
   selectedRouteKey: string | null;
   onSelect: (routeKey: string) => void;
 }>) {
+  const t = useCopy("Breeder");
   const visibleRoutes = [...routes]
     .sort((left, right) => left.rank - right.rank)
     .slice(0, 3);
@@ -30,22 +35,20 @@ export function RouteComparisonGrid({
             id="route-comparison-heading"
             className="text-xl font-bold tracking-tight text-foreground"
           >
-            方案比较
+            {t("comparisonTitle")}
           </h2>
         </div>
         <p className="flex flex-wrap gap-x-1 rounded-full border border-border bg-white/72 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-          <span>库存可执行方案</span>
-          <span>{readyCount}</span>
+          <span>{t("readyRouteCount", { count: readyCount })}</span>
           <span aria-hidden="true">·</span>
-          <span>需补充库存的备选方案</span>
-          <span>{fallbackCount}</span>
+          <span>{t("fallbackRouteCount", { count: fallbackCount })}</span>
         </p>
       </div>
 
       <div
         className="mt-4 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3"
         role="group"
-        aria-label="路线方案切换"
+        aria-label={t("routeSwitcher")}
       >
         {visibleRoutes.map((route) => (
           <RouteComparisonCard

@@ -31,6 +31,7 @@
     }
   },
   "required": [
+    "locale",
     "job_id",
     "requester_user_id",
     "world_id",
@@ -54,6 +55,7 @@
     "completed_at"
   ],
   "properties": {
+    "locale": { "type": "string", "enum": ["zh-CN", "en-US"] },
     "job_id": { "type": "string", "format": "uuid" },
     "requester_user_id": { "type": "string", "format": "uuid" },
     "world_id": { "type": "string", "format": "uuid" },

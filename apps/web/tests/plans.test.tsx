@@ -386,6 +386,6 @@ describe("My Plans route saves", () => {
         cache: "no-store",
       }),
     );
-    expect(locationAssign).toHaveBeenCalledWith("/plans");
+    expect(locationAssign).toHaveBeenCalledWith("/zh/plans");
   });
 });

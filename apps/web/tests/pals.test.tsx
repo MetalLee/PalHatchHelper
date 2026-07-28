@@ -279,12 +279,10 @@ describe("pal inventory", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("navigation", { name: "帕鲁列表分页" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "库存分页" })).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "第 6 页" })
+        .getByRole("link", { name: "第 6 / 12 页" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(
@@ -592,7 +590,7 @@ describe("pal inventory", () => {
 
     expect(screen.queryByRole("status")).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "没有匹配的帕鲁" }),
+      screen.getByRole("heading", { name: "没有找到符合条件的帕鲁" }),
     ).toBeTruthy();
   });
 });

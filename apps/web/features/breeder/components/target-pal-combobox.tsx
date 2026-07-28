@@ -20,12 +20,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 import { userFacingCatalogName } from "@/lib/user-facing-name";
-
-function catalogNumber(value: number | null): string {
-  return value === null ? "图鉴编号未知" : `#${String(value).padStart(3, "0")}`;
-}
 
 export function TargetPalCombobox({
   pals,
@@ -36,6 +33,11 @@ export function TargetPalCombobox({
   value: string;
   onValueChange: (palId: string) => void;
 }>) {
+  const t = useCopy("Breeder");
+  const catalogNumber = (catalogValue: number | null) =>
+    catalogValue === null
+      ? t("catalogUnknown")
+      : `#${String(catalogValue).padStart(3, "0")}`;
   const [open, setOpen] = useState(false);
   const selected = pals.find((pal) => pal.pal_id === value);
   const selectedName =
@@ -44,7 +46,7 @@ export function TargetPalCombobox({
       : userFacingCatalogName(
           selected.display_name,
           selected.pal_id,
-          "名称暂不可用",
+          t("nameUnavailable"),
         );
 
   return (
@@ -53,7 +55,7 @@ export function TargetPalCombobox({
         htmlFor="target-pal-combobox"
         className="text-sm font-semibold text-foreground"
       >
-        目标帕鲁
+        {t("targetPal")}
       </Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -62,7 +64,7 @@ export function TargetPalCombobox({
             type="button"
             variant="outline"
             role="combobox"
-            aria-label="目标帕鲁"
+            aria-label={t("targetPal")}
             aria-expanded={open}
             className={cn(
               "h-auto w-full min-w-0 justify-between rounded-xl border-border bg-white/72 px-3 text-left font-normal hover:border-primary/25 hover:bg-accent/45",
@@ -71,13 +73,13 @@ export function TargetPalCombobox({
           >
             {selected === undefined ? (
               <span className="truncate text-muted-foreground">
-                搜索名称或图鉴编号
+                {t("searchTarget")}
               </span>
             ) : (
               <span className="flex min-w-0 flex-1 items-center gap-3">
                 <PalPortrait
                   palId={selected.pal_id}
-                  name={selectedName ?? "名称暂不可用"}
+                  name={selectedName ?? t("nameUnavailable")}
                   catalogNumber={selected.encyclopedia_no}
                   size={72}
                   className="size-18 rounded-2xl ring-2 ring-primary/15"
@@ -102,19 +104,19 @@ export function TargetPalCombobox({
           align="start"
           className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] rounded-xl p-0"
         >
-          <Command label="搜索目标帕鲁" className="rounded-xl">
+          <Command label={t("searchTargetLabel")} className="rounded-xl">
             <CommandInput
-              aria-label="搜索目标帕鲁"
-              placeholder="输入名称或图鉴编号"
+              aria-label={t("searchTargetLabel")}
+              placeholder={t("searchTargetPlaceholder")}
             />
             <CommandList className="max-h-80">
-              <CommandEmpty>没有匹配的目标帕鲁</CommandEmpty>
-              <CommandGroup aria-label="目标帕鲁候选">
+              <CommandEmpty>{t("noTargetMatch")}</CommandEmpty>
+              <CommandGroup aria-label={t("targetCandidates")}>
                 {pals.map((pal) => {
                   const displayName = userFacingCatalogName(
                     pal.display_name,
                     pal.pal_id,
-                    "名称暂不可用",
+                    t("nameUnavailable"),
                   );
                   return (
                     <CommandItem

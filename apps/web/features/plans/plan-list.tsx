@@ -2,16 +2,19 @@
 
 import type { PlanListPage, PlanSummary } from "@palhatch/contracts";
 import { ChevronRight, GitBranch, Sparkles } from "lucide-react";
-import Link from "next/link";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
 import { StatusChip } from "@/components/status/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAppLocale, useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
+import { catalogLocaleFor } from "@/i18n/routing";
 import { userFacingCatalogName } from "@/lib/user-facing-name";
 
 export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
+  const t = useCopy("Plans");
   return (
     <div className="grid min-w-0 max-w-full gap-6 overflow-x-clip">
       {page.items.length === 0 ? (
@@ -22,21 +25,21 @@ export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
             </span>
             <div>
               <h2 className="text-xl font-bold text-foreground">
-                暂无收藏计划
+                {t("emptyTitle")}
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                在配种结果页保存一条路线后，它会出现在这里。
+                {t("emptyDescription")}
               </p>
             </div>
             <Button asChild>
-              <Link href="/breeder">开始规划</Link>
+              <Link href="/breeder">{t("start")}</Link>
             </Button>
           </CardContent>
         </Card>
       ) : (
         <section
           className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,32rem),32rem))] justify-start gap-3"
-          aria-label="计划列表"
+          aria-label={t("listLabel")}
         >
           {page.items.map((plan) => (
             <PlanCard key={plan.route_id} plan={plan} />
@@ -49,7 +52,7 @@ export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
           <Link
             href={`/plans?cursor=${encodeURIComponent(page.next_cursor)}&boundary=${encodeURIComponent(page.query_boundary)}`}
           >
-            下一页
+            {t("next")}
             <ChevronRight aria-hidden="true" className="size-4" />
           </Link>
         </Button>
@@ -59,10 +62,12 @@ export function PlanList({ page }: Readonly<{ page: PlanListPage }>) {
 }
 
 function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
+  const locale = useAppLocale();
+  const t = useCopy("Plans");
   const targetName = userFacingCatalogName(
     plan.target_pal_display_name,
     plan.target_pal_id,
-    "名称暂不可用",
+    t("nameUnavailable"),
   );
   return (
     <Card
@@ -78,11 +83,13 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
                 tone={plan.feasibility_status === "ready" ? "good" : "warning"}
               >
                 {plan.feasibility_status === "ready"
-                  ? "库存可执行"
-                  : "还需准备帕鲁"}
+                  ? t("ready")
+                  : t("needsPals")}
               </StatusChip>
               <span className="text-xs text-muted-foreground">
-                保存于 {formatDateTime(plan.saved_at)}
+                {t("savedAt", {
+                  date: formatDateTime(plan.saved_at, catalogLocaleFor(locale)),
+                })}
               </span>
             </div>
             <h2 className="mt-2 truncate text-lg font-bold text-foreground">
@@ -90,19 +97,22 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
             </h2>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
               <GitBranch aria-hidden="true" className="size-4" />
-              {plan.generation_count} 代 · {plan.step_count} 步 · 借用{" "}
-              {plan.borrowed_pal_count} 只
+              {t("routeMeta", {
+                generations: plan.generation_count,
+                steps: plan.step_count,
+                borrowed: plan.borrowed_pal_count,
+              })}
             </p>
           </div>
         </div>
 
         <div>
           <p className="text-xs font-semibold text-muted-foreground">
-            想要的被动
+            {t("desiredPassives")}
           </p>
           {plan.desired_passives.length === 0 ? (
             <p className="mt-2 min-h-[3.875rem] text-sm text-muted-foreground">
-              无指定被动
+              {t("noDesiredPassives")}
             </p>
           ) : (
             <div
@@ -115,7 +125,7 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
                   name={userFacingCatalogName(
                     passive.display_name,
                     passive.passive_skill_id,
-                    "被动名称暂不可用",
+                    t("passiveNameUnavailable"),
                   )}
                   rank={passive.rank}
                   isNegative={passive.is_negative}
@@ -127,18 +137,24 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
         </div>
 
         <dl className="grid grid-cols-2 gap-3 rounded-2xl bg-muted/55 p-4 text-sm sm:grid-cols-4">
-          <Metric label="推荐分" value={plan.total_score.toFixed(2)} />
+          <Metric label={t("score")} value={plan.total_score.toFixed(2)} />
           <Metric
-            label="尝试"
-            value={`${plan.estimated_attempts_min}–${plan.estimated_attempts_max} 次`}
+            label={t("attempts")}
+            value={t("attemptValue", {
+              min: plan.estimated_attempts_min,
+              max: plan.estimated_attempts_max,
+            })}
           />
-          <Metric label="难度" value={difficultyLabel(plan.difficulty)} />
-          <Metric label="还差" value={`${plan.missing_pal_count} 只`} />
+          <Metric label={t("difficulty")} value={t(plan.difficulty)} />
+          <Metric
+            label={t("missing")}
+            value={t("palCount", { count: plan.missing_pal_count })}
+          />
         </dl>
 
         <Button asChild className="mt-auto w-full">
           <Link href={`/plans/${plan.route_id}`}>
-            查看计划
+            {t("view")}
             <ChevronRight aria-hidden="true" className="size-4" />
           </Link>
         </Button>
@@ -156,13 +172,9 @@ function Metric({ label, value }: Readonly<{ label: string; value: string }>) {
   );
 }
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("zh-CN", {
+function formatDateTime(value: string, locale: "zh-CN" | "en-US"): string {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function difficultyLabel(value: PlanSummary["difficulty"]): string {
-  return { low: "低", medium: "中", high: "高" }[value];
 }

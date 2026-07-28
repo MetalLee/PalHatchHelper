@@ -5,6 +5,7 @@ import { parsePalListQuery } from "@/features/pals/query";
 import { listPals, Phase5DataError } from "@/features/pals/server";
 import { authUserErrorCode, phase5HttpStatus } from "@/features/phase5-errors";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { isCatalogLocale } from "@/i18n/routing";
 
 const privateHeaders = {
   "cache-control": "private, no-store, max-age=0",
@@ -25,9 +26,12 @@ export async function GET(request: NextRequest) {
     );
   }
   try {
+    const requestedLocale = request.nextUrl.searchParams.get("locale");
+    const locale = isCatalogLocale(requestedLocale) ? requestedLocale : "zh-CN";
     const page = await listPals(
       parsePalListQuery(request.nextUrl.searchParams),
       supabase,
+      locale,
     );
     return NextResponse.json(page, { headers: privateHeaders });
   } catch (error) {

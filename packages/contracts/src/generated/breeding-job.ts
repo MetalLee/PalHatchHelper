@@ -16,6 +16,7 @@ export type BreedingJobStatus =
  * Player-visible breeding job with database-fixed input versions.
  */
 export interface BreedingJob {
+  locale: "zh-CN" | "en-US";
   job_id: string;
   requester_user_id: string;
   world_id: string;

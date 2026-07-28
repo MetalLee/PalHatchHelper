@@ -7,6 +7,7 @@ import {
   dataStatusPresentation,
   gameDataStatusPresentation,
 } from "../features/data-status/presentation";
+import { getCopy } from "../i18n/client";
 
 describe("Phase 5 states and navigation", () => {
   it("renders loading, empty, unbound, forbidden, stale and parse error states", () => {
@@ -24,12 +25,13 @@ describe("Phase 5 states and navigation", () => {
     rerender(<ErrorState code="FORBIDDEN" />);
     expect(screen.getByText(/没有权限/)).toBeTruthy();
 
-    expect(dataStatusPresentation("stale").title).toMatch(/过期/);
-    expect(dataStatusPresentation("parse_error").title).toMatch(/解析异常/);
-    expect(gameDataStatusPresentation("review_pending").title).toMatch(
+    const t = getCopy("zh", "DataStatus");
+    expect(dataStatusPresentation("stale", t).title).toMatch(/过期/);
+    expect(dataStatusPresentation("parse_error", t).title).toMatch(/解析异常/);
+    expect(gameDataStatusPresentation("review_pending", t).title).toMatch(
       /待审核/,
     );
-    expect(gameDataStatusPresentation("blocked").title).toMatch(/受阻/);
+    expect(gameDataStatusPresentation("blocked", t).title).toMatch(/受阻/);
   });
 
   it("exposes every workspace destination in top navigation", () => {

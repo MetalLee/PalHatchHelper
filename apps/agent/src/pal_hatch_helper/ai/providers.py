@@ -35,10 +35,22 @@ class ConcurrencyLimitedAIProvider:
 
 class TemplateProvider:
     async def explain(self, request: AIExplanationRequest) -> AIExplanationResult:
-        if request.routes:
+        english = request.locale == "en-US"
+        mode = _optimization_mode_label(request.optimization_mode.value, english=english)
+        if request.routes and english:
             overall = (
-                f"已按 {request.optimization_mode.value} 模式展示确定性计算结果;"
-                "解释使用本地模板, 配方、分数和实例分配均未改变。"
+                f"Deterministic results are shown in {mode} mode. The local template "
+                "does not change recipes, scores, or instance assignments."
+            )
+        elif request.routes:
+            overall = (
+                f"已按{mode}模式展示确定性计算结果；"  # noqa: RUF001
+                "解释使用本地模板，配方、分数和实例分配均未改变。"  # noqa: RUF001
+            )
+        elif english:
+            overall = (
+                "The bounded search returned no route for the fixed inputs. Try fewer "
+                "desired passives, a different generation limit, or confirm guild sharing."
             )
         else:
             overall = (
@@ -48,12 +60,18 @@ class TemplateProvider:
         route_explanations = [
             AIRouteExplanation(
                 route_key=route.route_key,
-                explanation=(
-                    f"第 {route.rank} 条路线需要 {route.generation_count} 代, "
-                    f"借用 {route.borrowed_pal_count} 只, 库存覆盖率 "
-                    f"{route.inventory_coverage:.0%}。"
+                explanation=_template_route_explanation(
+                    rank=route.rank,
+                    generations=route.generation_count,
+                    borrowed_count=route.borrowed_pal_count,
+                    inventory_coverage=route.inventory_coverage,
+                    english=english,
                 ),
-                labels=_template_labels(route.borrowed_pal_count, route.difficulty.value),
+                labels=_template_labels(
+                    route.borrowed_pal_count,
+                    route.difficulty.value,
+                    english=english,
+                ),
             )
             for route in request.routes
         ]
@@ -111,7 +129,8 @@ class OpenAICompatibleProvider:
                     "role": "system",
                     "content": (
                         "Explain only the supplied deterministic routes. Return JSON only. "
-                        "Never invent recipes, change scores, or add inventory facts."
+                        "Never invent recipes, change scores, or add inventory facts. "
+                        f"Write all user-facing text in locale {request.locale}."
                     ),
                 },
                 {"role": "user", "content": request.model_dump_json()},
@@ -182,8 +201,8 @@ class CodexCliProvider:
     async def explain(self, request: AIExplanationRequest) -> AIExplanationResult:
         prompt = (
             "Return one JSON object with explanation and route_explanations. "
-            "Only explain supplied facts; do not change recipes, scores, or assignments.\n"
-            + request.model_dump_json()
+            "Only explain supplied facts; do not change recipes, scores, or assignments. "
+            f"Write all user-facing text in locale {request.locale}.\n" + request.model_dump_json()
         ).encode()
         process: asyncio.subprocess.Process | None = None
         try:
@@ -222,12 +241,50 @@ class CodexCliProvider:
             raise _output_invalid() from error
 
 
-def _template_labels(borrowed_count: int, difficulty: str) -> list[str]:
-    labels = ["确定性路线"]
-    labels.append("无需借用" if borrowed_count == 0 else "包含公会借用")
+def _template_labels(
+    borrowed_count: int,
+    difficulty: str,
+    *,
+    english: bool,
+) -> list[str]:
+    labels = ["Deterministic route" if english else "确定性路线"]
+    if english:
+        labels.append("No borrowing" if borrowed_count == 0 else "Guild borrowing")
+    else:
+        labels.append("无需借用" if borrowed_count == 0 else "包含公会借用")
     if difficulty == "low":
-        labels.append("较易推进")
+        labels.append("Easy to advance" if english else "较易推进")
     return labels
+
+
+def _optimization_mode_label(mode: str, *, english: bool) -> str:
+    labels = {
+        "balanced": ("均衡", "balanced"),
+        "fastest": ("最快", "fastest"),
+        "highest_success": ("高成功率", "highest-success"),
+        "least_borrowing": ("少借用", "least-borrowing"),
+    }
+    localized = labels.get(mode, ("自定义", "custom"))
+    return localized[1] if english else localized[0]
+
+
+def _template_route_explanation(
+    *,
+    rank: int,
+    generations: int,
+    borrowed_count: int,
+    inventory_coverage: float,
+    english: bool,
+) -> str:
+    if english:
+        return (
+            f"Route {rank} takes {generations} generations, borrows {borrowed_count} Pals, "
+            f"and has {inventory_coverage:.0%} inventory coverage."
+        )
+    return (
+        f"第 {rank} 条路线需要 {generations} 代，借用 {borrowed_count} 只，"  # noqa: RUF001
+        f"库存覆盖率 {inventory_coverage:.0%}。"
+    )
 
 
 def _codex_environment() -> dict[str, str]:

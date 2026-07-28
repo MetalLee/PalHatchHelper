@@ -289,6 +289,7 @@ export interface AIExplanationRouteSummary {
   score_breakdown: RouteScoreBreakdown;
 }
 export interface AIExplanationRequest {
+  locale: "zh-CN" | "en-US";
   target_pal_id: BreederStableId;
   /**
    * @maxItems 4
