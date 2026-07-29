@@ -34,7 +34,7 @@ export function configDirectory(): string {
   const xdg = process.env.XDG_CONFIG_HOME;
   return join(
     xdg && xdg.length > 0 ? xdg : join(homedir(), ".config"),
-    "palbeacon-sync",
+    "palbeacon",
   );
 }
 

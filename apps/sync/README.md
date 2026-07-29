@@ -1,4 +1,4 @@
-# palbeacon-sync
+# palbeacon
 
 [简体中文](README.zh-CN.md)
 
@@ -10,7 +10,7 @@ inventory for collaborative breeding plans without modifying your save.
 Linux x64 and Node.js 22 or later are required.
 
 ```bash
-npm install -g palbeacon-sync
+npm install -g palbeacon-cli
 ```
 
 ## Use
@@ -19,7 +19,7 @@ Create a sync device in your PalBeacon account and copy its pairing code. Then
 run:
 
 ```bash
-palbeacon-sync init
+palbeacon init
 ```
 
 Enter the pairing code and your Palworld save directory when prompted.
@@ -27,7 +27,7 @@ Enter the pairing code and your Palworld save directory when prompted.
 After pairing, start synchronization:
 
 ```bash
-palbeacon-sync run
+palbeacon run
 ```
 
 The client syncs immediately, then checks for save changes every five minutes.
@@ -36,12 +36,12 @@ Keep the command running to continue synchronization.
 ## Other commands
 
 ```bash
-palbeacon-sync status
-palbeacon-sync logout
+palbeacon status
+palbeacon logout
 ```
 
 The CLI follows your system language when possible and falls back to English.
 Use `--locale en` or `--locale zh-CN` before or after a command to override it.
 
-palbeacon-sync only reads save data. It never modifies Palworld saves or runs
+palbeacon only reads save data. It never modifies Palworld saves or runs
 server control commands.

@@ -1,4 +1,4 @@
-# palbeacon-sync systemd 运行手册
+# palbeacon systemd 运行手册
 
 本目录提供公共 Sync 客户端的生产模板。它以专用非 root 用户运行，只读取
 Palworld 存档，不需要 Docker Socket、RCON 或 Palworld 写权限。模板中的
@@ -34,15 +34,15 @@ sudo setfacl -R -d -m u:palbeacon-sync:r-X __PALWORLD_SAVE_DIRECTORY__
 
 ## 3. 安装精确版本
 
-只有 `palbeacon-sync@0.1.0` 已按发布手册人工发布并完成 tgz 校验后，才安装精确
+只有 `palbeacon-cli@0.1.1` 已按发布手册人工发布并完成 tgz 校验后，才安装精确
 版本；不要使用 `latest`：
 
 ```bash
-sudo npm install --global --ignore-scripts=false palbeacon-sync@0.1.0
-/usr/local/bin/palbeacon-sync --version
+sudo npm install --global --ignore-scripts=false palbeacon-cli@0.1.1
+/usr/local/bin/palbeacon --version
 ```
 
-版本输出必须为 `0.1.0`。生产安装不从本地重新打包另一个 tarball。
+版本输出必须为 `0.1.1`。生产安装不从本地重新打包另一个 tarball。
 
 ## 4. 以服务用户初始化
 
@@ -50,20 +50,20 @@ sudo npm install --global --ignore-scripts=false palbeacon-sync@0.1.0
 
 ```bash
 sudo -u palbeacon-sync env XDG_CONFIG_HOME=/var/lib/palbeacon-sync \
-  /usr/local/bin/palbeacon-sync init \
+  /usr/local/bin/palbeacon init \
   --url https://www.palbeacon.app \
   --code __ONE_TIME_PAIRING_CODE__ \
   --save-dir __PALWORLD_SAVE_DIRECTORY__
 ```
 
 配置文件应位于
-`/var/lib/palbeacon-sync/palbeacon-sync/config.json`。检查所有者和权限，不要打印
+`/var/lib/palbeacon-sync/palbeacon/config.json`。检查所有者和权限，不要打印
 文件内容：
 
 ```bash
 sudo stat -c '%U %G %a %n' \
-  /var/lib/palbeacon-sync/palbeacon-sync \
-  /var/lib/palbeacon-sync/palbeacon-sync/config.json
+  /var/lib/palbeacon-sync/palbeacon \
+  /var/lib/palbeacon-sync/palbeacon/config.json
 ```
 
 目录必须为 `0700`，配置必须为 `0600` 且由 `palbeacon-sync` 所有。
@@ -74,7 +74,7 @@ sudo stat -c '%U %G %a %n' \
 
 ```bash
 sudo -u palbeacon-sync env XDG_CONFIG_HOME=/var/lib/palbeacon-sync \
-  /usr/local/bin/palbeacon-sync sync --once
+  /usr/local/bin/palbeacon sync --once
 ```
 
 随后必须运行受控 cutover 验证脚本，确认 world UUID、绑定、库存数量和 Parser

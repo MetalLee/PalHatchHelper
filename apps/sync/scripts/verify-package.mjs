@@ -31,7 +31,7 @@ const fixtureRoot = join(
   "parser-fixtures",
   "plm-minimal",
 );
-const temporaryRoot = await mkdtemp(join(tmpdir(), "palbeacon-sync-package-"));
+const temporaryRoot = await mkdtemp(join(tmpdir(), "palbeacon-package-"));
 
 try {
   const { stdout: tarOutput } = await execFileAsync("tar", ["-tzf", tarball], {
@@ -148,7 +148,7 @@ try {
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
     { cwd: installRoot, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 },
   );
-  const installedPackage = join(installRoot, "node_modules", "palbeacon-sync");
+  const installedPackage = join(installRoot, "node_modules", "palbeacon-cli");
   const installedParser = join(
     installedPackage,
     "dist",
@@ -169,17 +169,17 @@ try {
     installRoot,
     "node_modules",
     ".bin",
-    "palbeacon-sync",
+    "palbeacon",
   );
   const { stdout: helpOutput } = await execFileAsync(installedCli, ["--help"], {
     cwd: installRoot,
     encoding: "utf8",
   });
   if (
-    !helpOutput.includes("palbeacon-sync") ||
+    !helpOutput.includes("palbeacon") ||
     !helpOutput.includes("Sync Palworld server saves to PalBeacon.") ||
-    !helpOutput.includes("palbeacon-sync init") ||
-    !helpOutput.includes("palbeacon-sync run") ||
+    !helpOutput.includes("palbeacon init") ||
+    !helpOutput.includes("palbeacon run") ||
     helpOutput.includes("inspect") ||
     helpOutput.includes("Parser")
   )
@@ -255,7 +255,7 @@ try {
     "npx",
     [
       "--no-install",
-      "palbeacon-sync",
+      "palbeacon",
       "inspect",
       "--save-dir",
       snapshot,

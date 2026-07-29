@@ -70,7 +70,7 @@ function parseOptions(
 
 export function helpText(version: string, locale: CliLocale = "en"): string {
   const text = messages(locale);
-  return `palbeacon-sync ${version}
+  return `palbeacon ${version}
 
 ${text.description}
 
@@ -81,8 +81,8 @@ ${text.commandsHeading}
   logout    ${text.commands.logout}
 
 ${text.gettingStartedHeading}
-  palbeacon-sync init
-  palbeacon-sync run
+  palbeacon init
+  palbeacon run
 
 ${text.localeHint}`;
 }

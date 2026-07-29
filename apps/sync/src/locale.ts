@@ -122,7 +122,7 @@ const EN_MESSAGES: LocalizedMessages = {
     logout: "Delete this device's local configuration",
   },
   authorizationRevoked:
-    "Device authorization has expired or been revoked. Run palbeacon-sync init to pair again.",
+    "Device authorization has expired or been revoked. Run palbeacon init to pair again.",
   fatalPrefix: "Operation failed: ",
   replacePrompt:
     "This computer is already paired. Continuing will replace the current device configuration. Continue? [y/N]\n> ",
@@ -136,7 +136,7 @@ const EN_MESSAGES: LocalizedMessages = {
     "",
     "Now run:",
     "",
-    "palbeacon-sync run",
+    "palbeacon run",
     "",
     "to start scheduled synchronization.",
   ],
@@ -163,7 +163,7 @@ const EN_MESSAGES: LocalizedMessages = {
   errors: {
     ARGUMENTS_INVALID: "Invalid arguments. Use --help for examples.",
     COMMAND_UNKNOWN: "Unknown command. Use --help to list available commands.",
-    SYNC_ONCE_REQUIRED: "Use palbeacon-sync sync --once.",
+    SYNC_ONCE_REQUIRED: "Use palbeacon sync --once.",
     SAVE_DIRECTORY_INVALID:
       "The save directory does not exist, is not a directory, or is a symbolic link.",
     WORLD_SAVE_NOT_FOUND: "No Level.sav was found in the specified directory.",
@@ -181,9 +181,9 @@ const EN_MESSAGES: LocalizedMessages = {
     CONFIG_ALREADY_EXISTS:
       "This computer is already paired. To replace it, run the command again with --force.",
     SYNC_CONFIG_NOT_FOUND:
-      "This computer is not paired. Run palbeacon-sync init first.",
+      "This computer is not paired. Run palbeacon init first.",
     SYNC_CONFIG_INVALID:
-      "The local configuration is invalid. Run palbeacon-sync init to pair again.",
+      "The local configuration is invalid. Run palbeacon init to pair again.",
     CONFIRMATION_INVALID: "Enter y or n.",
     INSPECT_OUTPUT_EXISTS:
       "An inspect output file already exists; no file was overwritten.",
@@ -216,7 +216,7 @@ const ZH_CN_MESSAGES: LocalizedMessages = {
     logout: "删除本机设备配置",
   },
   authorizationRevoked:
-    "设备授权已失效或被撤销，请执行 palbeacon-sync init 重新配对。",
+    "设备授权已失效或被撤销，请执行 palbeacon init 重新配对。",
   fatalPrefix: "操作失败：",
   replacePrompt:
     "本机已经完成配对。继续会替换当前设备配置，是否继续？[y/N]\n> ",
@@ -230,7 +230,7 @@ const ZH_CN_MESSAGES: LocalizedMessages = {
     "",
     "现在运行：",
     "",
-    "palbeacon-sync run",
+    "palbeacon run",
     "",
     "即可开始定时同步。",
   ],
@@ -256,7 +256,7 @@ const ZH_CN_MESSAGES: LocalizedMessages = {
   errors: {
     ARGUMENTS_INVALID: "参数格式无效，请使用 --help 查看示例。",
     COMMAND_UNKNOWN: "未知命令，请使用 --help 查看可用命令。",
-    SYNC_ONCE_REQUIRED: "请使用 palbeacon-sync sync --once。",
+    SYNC_ONCE_REQUIRED: "请使用 palbeacon sync --once。",
     SAVE_DIRECTORY_INVALID: "存档目录不存在、不是目录或是符号链接。",
     WORLD_SAVE_NOT_FOUND: "没有在指定目录中找到 Level.sav。",
     MULTIPLE_WORLD_SAVES_FOUND:
@@ -270,8 +270,8 @@ const ZH_CN_MESSAGES: LocalizedMessages = {
     DEVICE_NAME_INVALID: "设备名称不能为空。",
     CONFIG_ALREADY_EXISTS:
       "本机已经完成配对；如需替换配置，请重新运行并添加 --force。",
-    SYNC_CONFIG_NOT_FOUND: "本机尚未完成配对，请先执行 palbeacon-sync init。",
-    SYNC_CONFIG_INVALID: "本机配置无效，请执行 palbeacon-sync init 重新配对。",
+    SYNC_CONFIG_NOT_FOUND: "本机尚未完成配对，请先执行 palbeacon init。",
+    SYNC_CONFIG_INVALID: "本机配置无效，请执行 palbeacon init 重新配对。",
     CONFIRMATION_INVALID: "请输入 y 或 n。",
     INSPECT_OUTPUT_EXISTS: "inspect 输出文件已存在，未覆盖任何文件。",
     INSPECT_OUTPUT_PATH_INVALID: "两个 inspect 输出路径必须不同。",
