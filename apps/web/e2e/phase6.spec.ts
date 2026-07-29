@@ -12,7 +12,7 @@ async function login(page: Page) {
   await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill("player-a@palhatch.fixture.invalid");
   await page.getByLabel("密码").fill(fixturePassword);
-  await page.getByRole("button", { name: "登录工作台" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/overview$/);
 }
 

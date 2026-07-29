@@ -6,7 +6,7 @@ async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
   await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill(email);
   await page.getByLabel("密码").fill(fixturePassword);
-  await page.getByRole("button", { name: "登录工作台" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/overview$/, { timeout: 15_000 });
 }
 
@@ -28,13 +28,13 @@ test("login reports failed credentials and then succeeds", async ({ page }) => {
   await page.goto("/zh/login");
   await page.getByLabel("邮箱").fill("player-a@palhatch.fixture.invalid");
   await page.getByLabel("密码").fill("definitely-wrong");
-  await page.getByRole("button", { name: "登录工作台" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page.getByText("邮箱或密码不正确。")).toBeVisible({
     timeout: 15_000,
   });
 
   await page.getByLabel("密码").fill(fixturePassword);
-  await page.getByRole("button", { name: "登录工作台" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/overview$/, { timeout: 15_000 });
 });
 
