@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  AlertCircle,
-  Gamepad2,
-  LoaderCircle,
-  LockKeyhole,
-  Mail,
-} from "lucide-react";
+import { AlertCircle, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
+import Image from "next/image";
 import { type FormEvent, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -78,7 +73,7 @@ export function LoginForm({
 
   const passwordForm = (
     <form
-      className="mt-8 grid min-w-0 gap-5"
+      className="grid min-w-0 gap-5"
       onSubmit={(event) => void submit(event)}
     >
       <div className="grid gap-2">
@@ -140,16 +135,6 @@ export function LoginForm({
         ) : null}
         {pending ? t("submitting") : t("submit")}
       </Button>
-      <p className="text-center text-xs leading-5 text-muted-foreground">
-        {t("noAccount")}{" "}
-        <span
-          aria-disabled="true"
-          className="cursor-not-allowed font-semibold text-primary/65"
-          title={t("registerUnavailable")}
-        >
-          {t("register")}
-        </span>
-      </p>
     </form>
   );
 
@@ -165,6 +150,7 @@ export function LoginForm({
           <AlertDescription className="text-rose-800">{error}</AlertDescription>
         </Alert>
       ) : null}
+      {passwordLoginEnabled ? passwordForm : null}
       <Button
         asChild
         className="h-12 w-full rounded-xl bg-[#1b2838] text-white shadow-[0_12px_30px_rgb(27_40_56_/_0.22)] hover:bg-[#223b52]"
@@ -172,23 +158,29 @@ export function LoginForm({
         <a
           href={`/api/auth/steam/start?next=${encodeURIComponent(destination)}`}
         >
-          <Gamepad2 aria-hidden="true" className="size-5" />
+          <Image
+            alt=""
+            aria-hidden="true"
+            className="size-5 shrink-0"
+            height={20}
+            src="/brand/steam-icon.svg"
+            unoptimized
+            width={20}
+          />
           {t("steamSubmit")}
         </a>
       </Button>
-      <p className="text-center text-xs leading-5 text-muted-foreground">
-        {t("steamPrivacy")}
-      </p>
       {passwordLoginEnabled ? (
-        <details
-          open
-          className="rounded-xl border border-border/70 bg-white/45 px-4 py-3"
-        >
-          <summary className="cursor-pointer text-sm font-semibold text-foreground">
-            {t("adminFallback")}
-          </summary>
-          {passwordForm}
-        </details>
+        <p className="text-center text-xs leading-5 text-muted-foreground">
+          {t("noAccount")}{" "}
+          <span
+            aria-disabled="true"
+            className="cursor-not-allowed font-semibold text-primary/65"
+            title={t("registerUnavailable")}
+          >
+            {t("register")}
+          </span>
+        </p>
       ) : null}
     </div>
   );

@@ -73,8 +73,6 @@
     "register": "Create account",
     "registerUnavailable": "Registration is not available yet",
     "steamSubmit": "Sign in with Steam",
-    "steamPrivacy": "Uses official Steam OpenID only. PalBeacon never asks for your password, Steam Guard, or cloud saves.",
-    "adminFallback": "Administrator fallback sign-in",
     "steamConflict": "This Steam account is already linked to another PalBeacon account.",
     "steamStateInvalid": "This Steam sign-in request has expired. Start again.",
     "steamVerificationFailed": "Steam identity verification failed. Please try again.",
