@@ -2,7 +2,7 @@
 
 PalBeacon 是面向《幻兽帕鲁》私人服务器的数据监控、帕鲁库存与配种协作控制台。服务器状态、帕鲁库存与配种计划，尽在一个看板。Keep your world visible. 时刻掌握你的帕鲁世界。
 
-第一版继续以安全同步库存、确定性配种路线比较和“我的计划”只读收藏为核心闭环。代码仓库与内部工程标识仍为 `PalHatchHelper`；Supabase、Vercel 和腾讯云私有 Agent 已完成生产部署，当前发布标识与回滚引用记录在 [v1 生产发布记录](docs/releases/v1-production-deployment.md)。开发与测试默认仍只使用 fixture 和本地 Supabase，不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
+第一版继续以安全同步库存、确定性配种路线比较和“我的计划”只读收藏为核心闭环。公开入口使用 Steam OpenID 登录；自建服务器可通过 `palbeacon-sync` 配对并定时上传脱敏后的标准化库存。原有私有 Agent 发布路径继续保留。代码仓库与内部工程标识仍为 `PalHatchHelper`；Supabase、Vercel 和腾讯云私有 Agent 已完成生产部署，当前发布标识与回滚引用记录在 [v1 生产发布记录](docs/releases/v1-production-deployment.md)。开发与测试默认仍只使用 fixture 和本地 Supabase，不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
 
 ## 前置工具
 
@@ -47,6 +47,15 @@ uv run pal-hatch-helper api
 ```
 
 同一镜像还提供 `job-worker`、`save-worker`、`command-worker` 和 `catalog` 命令边界。Job Worker 在本地数据库与 Service Role 配置齐全时组装 Phase 6 确定性 Handler，也支持 `--once` 完成单任务验收；Save Worker 仅在数据库、世界、明确确认的只读路径和 Parser 配置齐全时运行；Command Worker 只领取共享契约允许的白名单命令；catalog 只接收结构化目录，不实现游戏包提取。
+
+本地构建公开 Sync CLI：
+
+```bash
+pnpm --filter palbeacon-sync build
+node apps/sync/dist/cli.js --help
+```
+
+第一版只支持 Linux x64。CLI 包含仓库现有 Go Parser，但不包含或下载 Oodle 库；完整用法见 [apps/sync/README.md](apps/sync/README.md)。
 
 访问 `http://localhost:3000`、`http://127.0.0.1:18765/healthz` 和 `http://127.0.0.1:18765/readyz`。
 

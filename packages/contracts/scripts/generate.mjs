@@ -22,6 +22,7 @@ const contracts = [
   "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
+  "sync-api",
   "phase5-web",
   "phase6-breeder",
   "phase7-execution-plans",
@@ -36,11 +37,20 @@ const pythonContracts = [
   "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
+  "sync-api",
   "phase6-breeder",
   "phase7-execution-plans",
   "phase8-admin",
 ];
 const bundledContractModels = {
+  "sync-api": [
+    "SyncPairRequest",
+    "SyncPairResponse",
+    "SyncHeartbeatRequest",
+    "SyncPairingCodeResponse",
+    "SyncDevice",
+    "SyncClaimablePlayer",
+  ],
   "game-catalog": [
     "GameCatalogManifest",
     "BreedingSourceProvenance",

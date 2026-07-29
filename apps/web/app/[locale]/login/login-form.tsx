@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertCircle, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
+import {
+  AlertCircle,
+  Gamepad2,
+  LoaderCircle,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,14 +14,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppLocale, useCopy } from "@/i18n/client";
+import { safeNextPath } from "@/features/auth/safe-next";
 
 export function LoginForm({
   onNavigate = (path) => window.location.assign(path),
-}: Readonly<{ onNavigate?: (path: string) => void }>) {
+  passwordLoginEnabled = process.env.NODE_ENV === "test",
+  next,
+  initialErrorCode,
+}: Readonly<{
+  onNavigate?: (path: string) => void;
+  passwordLoginEnabled?: boolean;
+  next?: string;
+  initialErrorCode?: string;
+}>) {
   const locale = useAppLocale();
   const t = useCopy("Login");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    initialErrorCode ? steamErrorMessage(initialErrorCode, t) : null,
+  );
+  const safeDestination = safeNextPath(next);
+  const destination =
+    safeDestination === "/overview" && next !== "/overview"
+      ? `/${locale}/overview`
+      : safeDestination;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,7 +68,7 @@ export function LoginForm({
       }
       // A full navigation guarantees the freshly written Supabase session cookie is
       // visible to middleware and the first protected Server Component request.
-      onNavigate(`/${locale}/overview`);
+      onNavigate(destination);
     } catch {
       setError(t("unavailable"));
     } finally {
@@ -54,7 +76,7 @@ export function LoginForm({
     }
   }
 
-  return (
+  const passwordForm = (
     <form
       className="mt-8 grid min-w-0 gap-5"
       onSubmit={(event) => void submit(event)}
@@ -106,16 +128,6 @@ export function LoginForm({
           />
         </div>
       </div>
-      {error !== null ? (
-        <Alert
-          variant="destructive"
-          role="alert"
-          className="rounded-xl border-rose-200 bg-rose-50/90 text-rose-900"
-        >
-          <AlertCircle aria-hidden="true" />
-          <AlertDescription className="text-rose-800">{error}</AlertDescription>
-        </Alert>
-      ) : null}
       <Button
         className="h-12 w-full rounded-xl shadow-[0_12px_30px_rgb(40_122_84_/_0.2)]"
         type="submit"
@@ -140,4 +152,62 @@ export function LoginForm({
       </p>
     </form>
   );
+
+  return (
+    <div className="mt-8 grid min-w-0 gap-5">
+      {error !== null ? (
+        <Alert
+          variant="destructive"
+          role="alert"
+          className="rounded-xl border-rose-200 bg-rose-50/90 text-rose-900"
+        >
+          <AlertCircle aria-hidden="true" />
+          <AlertDescription className="text-rose-800">{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Button
+        asChild
+        className="h-12 w-full rounded-xl bg-[#1b2838] text-white shadow-[0_12px_30px_rgb(27_40_56_/_0.22)] hover:bg-[#223b52]"
+      >
+        <a
+          href={`/api/auth/steam/start?next=${encodeURIComponent(destination)}`}
+        >
+          <Gamepad2 aria-hidden="true" className="size-5" />
+          {t("steamSubmit")}
+        </a>
+      </Button>
+      <p className="text-center text-xs leading-5 text-muted-foreground">
+        {t("steamPrivacy")}
+      </p>
+      {passwordLoginEnabled ? (
+        <details
+          open
+          className="rounded-xl border border-border/70 bg-white/45 px-4 py-3"
+        >
+          <summary className="cursor-pointer text-sm font-semibold text-foreground">
+            {t("adminFallback")}
+          </summary>
+          {passwordForm}
+        </details>
+      ) : null}
+    </div>
+  );
 }
+
+function steamErrorMessage(
+  code: string,
+  t: (key: SteamErrorMessageKey) => string,
+): string {
+  if (code === "STEAM_IDENTITY_CONFLICT") return t("steamConflict");
+  if (code.startsWith("STEAM_STATE_")) return t("steamStateInvalid");
+  if (code === "STEAM_ASSERTION_INVALID" || code === "STEAM_ID_INVALID") {
+    return t("steamVerificationFailed");
+  }
+  return t("steamUnavailable");
+}
+
+type SteamErrorMessageKey =
+  | "steamConflict"
+  | "steamStateInvalid"
+  | "steamVerificationFailed"
+  | "steamUnavailable";

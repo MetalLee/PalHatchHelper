@@ -8,7 +8,7 @@
 - 不修改或在 `/opt/palworld` 执行其 Compose，不停止、重启或升级 Palworld、mihomo。
 - Palworld Compose 与源存档只读挂载；Agent 只把稳定副本写入自己的数据目录。
 - Agent 健康接口只能通过宿主 `127.0.0.1:18765` 访问，不开放新公网端口。
-- 浏览器只使用用户 JWT 和 Supabase anon key。Service Role 只进入 Agent 容器。
+- 浏览器只使用用户 JWT 和 Supabase anon key。Service Role 只进入 Web Server Route 和 Agent 容器。
 - 镜像必须为 `repository:git-short-sha@sha256:digest`，不得使用 `latest`。
 - 只应用向前 migration；禁止 `supabase db reset --linked`。
 - 任一核心验证失败就停止后续步骤并执行对应回滚。
@@ -30,8 +30,17 @@ Vercel Production 只允许：
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_APP_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`（仅 Server Route）
+- `STEAM_WEB_API_KEY`（可选；未配置不阻断登录）
+- `ENABLE_PASSWORD_LOGIN=false`
+- `SYNC_MAX_PAYLOAD_BYTES=5242880`
+- `SYNC_PAIRING_CODE_TTL_SECONDS=600`
 
 任何 Service Role、数据库密码、AI Key 或 Agent Token 都不得带 `NEXT_PUBLIC_` 前缀。
+`NEXT_PUBLIC_APP_URL` 是 Steam realm、return_to 和 Sync API 返回地址的唯一公开 URL 来源；不要再配置
+重复的 `PALBEACON_PUBLIC_URL`。Steam 后台必须允许正式 HTTPS 域名回调到
+`/api/auth/steam/callback`。上线前检查构建产物和日志中不含 Service Role、magic-link token hash、Steam Key
+或设备 token。
 
 ## 部署前检查
 
@@ -116,6 +125,10 @@ non-GVAS、world UID mismatch 或截断错误都必须保留上一份有效库�
 ## Vercel
 
 确认 project/org link 与自定义域名后，检查环境变量名称但不打印值；运行 production build，再执行 `vercel --prod`。记录 deployment ID/URL，并确认自定义域名指向新 deployment。`/api/health` 显示 `VERCEL_GIT_COMMIT_SHA`；管理员和玩家数据响应必须是 `private, no-store`。
+
+部署公开 Sync 前，先独立构建并验证 `palbeacon-sync` npm tarball：包内只能包含 Linux x64 Parser、manifest、
+CLI 与文档，不得包含 Oodle。Parser SHA-256 必须与 manifest 一致；npm 发布是单独的人工批准步骤，Web 部署
+不会自动发布 npm 或执行远程安装脚本。
 
 ## 首个管理员
 

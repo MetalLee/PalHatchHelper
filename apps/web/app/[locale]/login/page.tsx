@@ -10,13 +10,19 @@ import { brand } from "@/config/brand";
 import { isAppLocale } from "@/i18n/routing";
 
 import { LoginForm } from "./login-form";
+import { isPasswordLoginEnabled } from "@/features/auth/password-login";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({
   params,
-}: Readonly<{ params: Promise<{ locale: string }> }>) {
+  searchParams = Promise.resolve({}),
+}: Readonly<{
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ next?: string; error?: string }>;
+}>) {
   const { locale } = await params;
+  const query = await searchParams;
   if (!isAppLocale(locale)) notFound();
   const [brandCopy, login] = await Promise.all([
     getTranslations({ locale, namespace: "Brand" }),
@@ -79,7 +85,11 @@ export default async function LoginPage({
           <p className="mt-2 text-sm text-muted-foreground sm:text-base">
             {login("subtitle")}
           </p>
-          <LoginForm />
+          <LoginForm
+            passwordLoginEnabled={isPasswordLoginEnabled()}
+            next={query.next}
+            initialErrorCode={query.error}
+          />
         </section>
       </div>
     </main>

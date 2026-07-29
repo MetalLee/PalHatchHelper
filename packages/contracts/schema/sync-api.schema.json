@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/sync-api.schema.json",
+  "title": "SyncApiContracts",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "SyncPairRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "device_name", "platform"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Za-z2-9]{4}[- ]?[A-Za-z2-9]{4}$"
+        },
+        "device_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "platform": { "type": "string", "const": "linux-x64" },
+        "app_version": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 40,
+          "default": null
+        }
+      }
+    },
+    "SyncPairResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_id", "device_token", "api_base_url"],
+      "properties": {
+        "device_id": { "type": "string", "format": "uuid" },
+        "device_token": { "type": "string", "minLength": 47, "maxLength": 128 },
+        "api_base_url": { "type": "string", "format": "uri", "maxLength": 500 }
+      }
+    },
+    "SyncHeartbeatRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "app_version": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 40,
+          "default": null
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ok", "unchanged", "idle", "error"],
+          "default": "ok"
+        }
+      }
+    },
+    "SyncPairingCodeResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "expires_at"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z2-9]{4}-[A-Z2-9]{4}$" },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SyncDevice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "platform",
+        "token_prefix",
+        "app_version",
+        "world_id",
+        "last_seen_at",
+        "last_snapshot_at",
+        "revoked_at",
+        "created_at"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "name": { "type": "string" },
+        "platform": { "type": "string" },
+        "token_prefix": { "type": "string" },
+        "app_version": { "type": ["string", "null"] },
+        "world_id": { "type": ["string", "null"], "format": "uuid" },
+        "last_seen_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_snapshot_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "revoked_at": { "type": ["string", "null"], "format": "date-time" },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SyncClaimablePlayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "player_id",
+        "nickname",
+        "level",
+        "guild_name",
+        "world_name",
+        "discriminator"
+      ],
+      "properties": {
+        "player_id": { "type": "string", "format": "uuid" },
+        "nickname": { "type": "string" },
+        "level": { "type": ["integer", "null"] },
+        "guild_name": { "type": ["string", "null"] },
+        "world_name": { "type": "string" },
+        "discriminator": { "type": "string" }
+      }
+    }
+  }
+}

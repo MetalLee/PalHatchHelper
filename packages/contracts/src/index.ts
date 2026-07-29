@@ -1,5 +1,12 @@
 export type { Database, Json } from "./database.types";
 export {
+  parseCanonicalSnapshot,
+  parseInventoryPublishPayload,
+  parseSyncHeartbeatRequest,
+  parseSyncPairRequest,
+  PublicSyncContractError,
+} from "./public-sync-validation";
+export {
   parseInventoryDataStatusRpcResult,
   parsePalInventoryRpcResult,
   parsePhase5Error,
@@ -155,6 +162,14 @@ export type {
   InventoryPublishRpcRequest,
   InventoryValidationWarning,
 } from "./generated/inventory-sync";
+export type {
+  SyncClaimablePlayer,
+  SyncDevice,
+  SyncHeartbeatRequest,
+  SyncPairingCodeResponse,
+  SyncPairRequest,
+  SyncPairResponse,
+} from "./generated/sync-api";
 export type {
   BreedingDataDiffCounts,
   BreedingDataDiffReport,

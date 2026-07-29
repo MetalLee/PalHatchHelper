@@ -88,3 +88,23 @@ Service Role 专用函数还检查 JWT role，不能只依赖函数授权。浏�
 ## 索引依据
 
 索引围绕 world/UID 唯一性、latest snapshot owner/guild 列表、被动 GIN 查询、任务 requester 历史、pending claim 队列和失效 heartbeat 建立。活动任务 fingerprint 使用 partial unique index，避免重复点击并行创建相同工作。Phase 5 未在缺少目标规模完整 RPC 基准的情况下新增推测性分页索引；后续若证明需要，必须使用独立并发迁移并记录数据规模、完整查询延迟和写入并发证据。
+
+## Steam 身份与公开 Sync
+
+公开登录继续以 `auth.users.id` 作为唯一账户主键。`steam_identities` 只保存 Steam OpenID 验证后的
+一对一映射和展示资料；普通用户只能读取自己的记录，所有写入由 Web 服务端的受控 Admin Client 完成。
+`profiles.role` 仍是唯一角色来源，Steam metadata 不参与权限判断。
+
+`sync_pairing_codes` 只保存十分钟有效的一次性配对码 SHA-256；原子消费 RPC 同时创建
+`sync_devices`。设备 token 具有至少 32 字节随机熵，只在配对响应返回一次，数据库仅保存哈希和非秘密前缀。
+浏览器通过列级权限和 owner RPC 只能看到自己的设备非秘密字段、撤销自己的设备，不能读取
+`token_hash`。上传与 heartbeat 由 Web Server Route 校验 Bearer token 后以 Service Role 调用限定 RPC；
+撤销状态在同一数据库事务内检查。
+
+设备第一次成功发布时绑定由脱敏 world UID 标识的单一 `worlds` 记录，之后不能切换 world。发布 RPC
+只负责设备认证、world 绑定和脱敏断言，实际库存仍委托既有 `private.publish_inventory_snapshot`，因此
+不可变快照、异常下降保护和 latest pointer 的事务语义保持一致；原私有 Agent 的发布 RPC 和权限不变。
+
+角色认领 RPC 不接受调用方提供的 world：候选 world 必须来自当前用户未撤销的已绑定设备，玩家必须
+出现在该 world 的最新快照且尚未绑定。`player_bindings` 原有双向唯一约束负责并发收敛，成功后所有库存、
+配种和计划 RLS 继续沿用既有路径。

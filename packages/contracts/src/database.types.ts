@@ -2187,6 +2187,44 @@ export type Database = {
         };
         Relationships: [];
       };
+      steam_identities: {
+        Row: {
+          user_id: string;
+          steam_id: string;
+          persona_name: string | null;
+          avatar_url: string | null;
+          profile_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          steam_id: string;
+          persona_name?: string | null;
+          avatar_url?: string | null;
+          profile_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          steam_id?: string;
+          persona_name?: string | null;
+          avatar_url?: string | null;
+          profile_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "steam_identities_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       step_offspring_candidates: {
         Row: {
           step_id: string;
@@ -2290,6 +2328,101 @@ export type Database = {
             columns: ["step_id"];
             isOneToOne: false;
             referencedRelation: "breeding_steps";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sync_devices: {
+        Row: {
+          id: string;
+          owner_user_id: string;
+          world_id: string | null;
+          name: string;
+          platform: string;
+          token_hash: string;
+          token_prefix: string;
+          app_version: string | null;
+          last_seen_at: string | null;
+          last_snapshot_at: string | null;
+          revoked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_user_id: string;
+          world_id?: string | null;
+          name: string;
+          platform: string;
+          token_hash: string;
+          token_prefix: string;
+          app_version?: string | null;
+          last_seen_at?: string | null;
+          last_snapshot_at?: string | null;
+          revoked_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_user_id?: string;
+          world_id?: string | null;
+          name?: string;
+          platform?: string;
+          token_hash?: string;
+          token_prefix?: string;
+          app_version?: string | null;
+          last_seen_at?: string | null;
+          last_snapshot_at?: string | null;
+          revoked_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sync_devices_owner_user_id_fkey";
+            columns: ["owner_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sync_devices_world_id_fkey";
+            columns: ["world_id"];
+            isOneToOne: false;
+            referencedRelation: "worlds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sync_pairing_codes: {
+        Row: {
+          id: string;
+          owner_user_id: string;
+          code_hash: string;
+          expires_at: string;
+          consumed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_user_id: string;
+          code_hash: string;
+          expires_at: string;
+          consumed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_user_id?: string;
+          code_hash?: string;
+          expires_at?: string;
+          consumed_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sync_pairing_codes_owner_user_id_fkey";
+            columns: ["owner_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
         ];
@@ -2400,6 +2533,12 @@ export type Database = {
         };
         Returns: Database["public"]["Tables"]["breeding_jobs"]["Row"][];
       };
+      claim_synced_player: {
+        Args: {
+          p_player_id: string;
+        };
+        Returns: string;
+      };
       complete_breeding_job: {
         Args: {
           p_job_id: string;
@@ -2415,6 +2554,17 @@ export type Database = {
           p_source_type: Database["public"]["Enums"]["game_data_source_type"];
           p_source_url?: string | null;
           p_enabled?: boolean;
+        };
+        Returns: string;
+      };
+      consume_sync_pairing_code: {
+        Args: {
+          p_code_hash: string;
+          p_device_name: string;
+          p_platform: string;
+          p_app_version: string;
+          p_token_hash: string;
+          p_token_prefix: string;
         };
         Returns: string;
       };
@@ -2482,6 +2632,13 @@ export type Database = {
           p_idempotency_key: string;
         };
         Returns: Json;
+      };
+      create_sync_pairing_code: {
+        Args: {
+          p_code_hash: string;
+          p_ttl_seconds?: number;
+        };
+        Returns: string;
       };
       current_guild_id: {
         Args: Record<string, never>;
@@ -2615,6 +2772,14 @@ export type Database = {
           p_lease_token: string;
         };
         Returns: boolean;
+      };
+      heartbeat_sync_device: {
+        Args: {
+          p_token_hash: string;
+          p_app_version: string;
+          p_status: string;
+        };
+        Returns: string;
       };
       is_admin: {
         Args: Record<string, never>;
@@ -2760,6 +2925,17 @@ export type Database = {
         };
         Returns: Json;
       };
+      list_claimable_synced_players: {
+        Args: Record<string, never>;
+        Returns: {
+          player_id: string;
+          nickname: string;
+          level: number;
+          guild_name: string;
+          world_name: string;
+          discriminator: string;
+        }[];
+      };
       list_player_binding_events: {
         Args: {
           p_user_id?: string | null;
@@ -2785,6 +2961,21 @@ export type Database = {
           p_locale?: string;
         };
         Returns: Json;
+      };
+      list_sync_devices: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          name: string;
+          platform: string;
+          token_prefix: string;
+          app_version: string;
+          world_id: string;
+          last_seen_at: string;
+          last_snapshot_at: string;
+          revoked_at: string;
+          created_at: string;
+        }[];
       };
       mark_admin_catalog_upload_ready: {
         Args: {
@@ -2822,6 +3013,13 @@ export type Database = {
         };
         Returns: string;
       };
+      publish_sync_device_snapshot: {
+        Args: {
+          p_token_hash: string;
+          p_snapshot: Json;
+        };
+        Returns: Json;
+      };
       record_inventory_snapshot_failure: {
         Args: {
           p_world_id: string;
@@ -2857,6 +3055,12 @@ export type Database = {
           p_route_id: string;
         };
         Returns: Json;
+      };
+      revoke_sync_device: {
+        Args: {
+          p_device_id: string;
+        };
+        Returns: undefined;
       };
       rollback_runtime_settings: {
         Args: {

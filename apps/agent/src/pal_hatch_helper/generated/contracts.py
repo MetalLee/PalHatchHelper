@@ -902,6 +902,63 @@ class InventoryFailureRpcRequest(BaseModel):
     failure: InventoryFailurePayload
 
 
+class SyncPairRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: Annotated[str, Field(pattern="^[A-Za-z2-9]{4}[- ]?[A-Za-z2-9]{4}$")]
+    device_name: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    platform: Literal["linux-x64"]
+    app_version: Annotated[str, Field(min_length=1), Field(max_length=40)] | None = None
+
+
+class SyncPairResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    device_id: UUID
+    device_token: Annotated[str, Field(min_length=47), Field(max_length=128)]
+    api_base_url: Annotated[str, Field(max_length=500)]
+
+
+class SyncHeartbeatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    app_version: Annotated[str, Field(min_length=1), Field(max_length=40)] | None = None
+    status: Literal["ok", "unchanged", "idle", "error"] = "ok"
+
+
+class SyncPairingCodeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: Annotated[str, Field(pattern="^[A-Z2-9]{4}-[A-Z2-9]{4}$")]
+    expires_at: AwareDatetime
+
+
+class SyncDevice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    name: str
+    platform: str
+    token_prefix: str
+    app_version: str | None
+    world_id: UUID | None
+    last_seen_at: AwareDatetime | None
+    last_snapshot_at: AwareDatetime | None
+    revoked_at: AwareDatetime | None
+    created_at: AwareDatetime
+
+
+class SyncClaimablePlayer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    player_id: UUID
+    nickname: str
+    level: int | None
+    guild_name: str | None
+    world_name: str
+    discriminator: str
+
+
 type BreederStableId = Annotated[
     str,
     Field(min_length=1),
@@ -1955,6 +2012,10 @@ class InventoryPublishRpcRequest(BaseModel):
 
     world_id: UUID
     snapshot: InventoryPublishPayload
+
+
+class SyncApiContracts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class CreateBreedingJobRequest(BaseModel):

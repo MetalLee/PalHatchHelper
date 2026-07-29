@@ -7,7 +7,7 @@
 - 原始存档只允许只读挂载和复制，禁止修改。
 - Agent API 只能绑定 `127.0.0.1:18765`；不开放新公网端口。
 - 不设置系统或 Docker 全局代理；镜像仓库连接应在命令作用域内绕过代理。
-- 浏览器只能使用用户 JWT，Service Role 仅供 Agent 和受控运维脚本使用。
+- 浏览器只能使用用户 JWT，Service Role 仅供 Web Server Route、Agent 和受控运维脚本使用。
 - 只新增向前 migration；不删除任务、计划、快照或目录历史。
 
 ## 日常状态检查
@@ -77,6 +77,9 @@ ENV_FILE="$PWD/.env.production" infra/agent/scripts/deploy-production.sh
 - 运维输出不得打印环境值、JWT、Service Role、数据库密码或 AI 密钥。
 - 发布后扫描四个 Agent 容器日志，确认生产秘密值未出现。
 - 管理员页面只允许显示 `configured`、`not_configured` 和 `last_checked_at`。
+- Vercel 服务端配置 `SUPABASE_SERVICE_ROLE_KEY` 与可选的 `STEAM_WEB_API_KEY`，二者均不得使用
+  `NEXT_PUBLIC_` 前缀；不得记录 magic-link token hash 或 Sync 设备 token。
+- Steam 登录与 Sync API 响应保持 `private, no-store`。撤销设备后用该设备 token 的 heartbeat 和上传都应立即返回 401。
 
 ## 当前发布参考
 

@@ -15,6 +15,24 @@ Web/Agent 本地开发允许不配置 Supabase：`APP_ENV=development` 时 Agent
 
 ## Web
 
+`.env.local` 使用 `NEXT_PUBLIC_APP_URL` 作为 Web 的唯一公开 URL 来源，不另设重复的
+`PALBEACON_PUBLIC_URL`。Steam OpenID 在本地仍要求浏览器可通过 HTTPS 回调；纯单元测试会 mock Steam HTTP，
+不会访问真实 Steam。开发 fixture 需要邮箱登录时设置 `ENABLE_PASSWORD_LOGIN=true`。
+
+公开登录与 Sync Route 所需服务端变量：
+
+```text
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+STEAM_WEB_API_KEY=
+ENABLE_PASSWORD_LOGIN=true
+SUPABASE_SERVICE_ROLE_KEY=<local service role only>
+SYNC_MAX_PAYLOAD_BYTES=5242880
+SYNC_PAIRING_CODE_TTL_SECONDS=600
+```
+
+`STEAM_WEB_API_KEY` 可留空，登录会使用安全显示名兜底。Service Role 只能进入 Web Server Route 和既有
+Agent，不能使用 `NEXT_PUBLIC_` 前缀，也不能出现在浏览器 bundle、URL 或日志中。
+
 ```bash
 pnpm --filter @palhatch/web dev
 curl --fail http://localhost:3000/api/health
@@ -30,6 +48,20 @@ curl --fail http://127.0.0.1:18765/readyz
 ```
 
 不要把 `--host` 改为 `0.0.0.0` 用于服务器部署。Compose 模板显式映射 `127.0.0.1:18765`。
+
+## PalBeacon Sync CLI
+
+```bash
+pnpm --filter palbeacon-sync build
+node apps/sync/dist/cli.js init \
+  --url http://localhost:3000 \
+  --code ABCD-EFGH \
+  --save-dir /path/to/Pal/Saved/SaveGames \
+  --oodle-lib /local/path/liboo2corelinux64.so.9
+```
+
+开发可用 `PALBEACON_PARSER_BIN` 指向本地 Linux x64 Parser。CLI 不访问 Docker Socket、RCON 或远程命令，
+也不修改原始存档；它只解析稳定的临时只读副本。不得把真实存档或 Oodle 库加入 fixture 或提交。
 
 ## 配置
 
