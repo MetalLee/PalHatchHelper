@@ -1,5 +1,6 @@
 import {
   chmod,
+  lstat,
   mkdtemp,
   mkdir,
   readFile,
@@ -42,6 +43,9 @@ describe("read-only save snapshots", () => {
     } finally {
       await snapshot.cleanup();
     }
+    await expect(lstat(snapshot.path)).rejects.toMatchObject({
+      code: "ENOENT",
+    });
   });
 
   it("skips a source that changes between the two stat checks", async () => {

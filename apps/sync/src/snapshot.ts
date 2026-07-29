@@ -8,6 +8,7 @@ import {
   mkdtemp,
   opendir,
   readFile,
+  readdir,
   rm,
   stat,
 } from "node:fs/promises";
@@ -70,13 +71,29 @@ export async function createReadOnlySnapshot(
       hash,
       sourceModifiedAt: new Date(latestMilliseconds).toISOString(),
       cleanup: async () => {
-        await chmod(temporaryRoot, 0o700).catch(() => undefined);
+        await makeDirectoryTreeRemovable(temporaryRoot);
         await rm(temporaryRoot, { recursive: true, force: true });
       },
     };
   } finally {
-    if (!complete) await rm(temporaryRoot, { recursive: true, force: true });
+    if (!complete) {
+      await makeDirectoryTreeRemovable(temporaryRoot);
+      await rm(temporaryRoot, { recursive: true, force: true });
+    }
   }
+}
+
+async function makeDirectoryTreeRemovable(root: string): Promise<void> {
+  const info = await lstat(root).catch(() => undefined);
+  if (!info?.isDirectory() || info.isSymbolicLink()) return;
+
+  await chmod(root, 0o700);
+  const entries = await readdir(root, { withFileTypes: true });
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink())
+      .map((entry) => makeDirectoryTreeRemovable(join(root, entry.name))),
+  );
 }
 
 async function sourceFiles(sourceDirectory: string): Promise<SourceFile[]> {
