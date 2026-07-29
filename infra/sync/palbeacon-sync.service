@@ -1,0 +1,23 @@
+[Unit]
+Description=PalBeacon read-only Palworld save sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=palbeacon-sync
+Group=palbeacon-sync
+Environment=XDG_CONFIG_HOME=/var/lib/palbeacon-sync
+ExecStart=/usr/local/bin/palbeacon-sync run
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+ReadWritePaths=/var/lib/palbeacon-sync
+ReadOnlyPaths=__PALWORLD_SAVE_DIRECTORY__
+
+[Install]
+WantedBy=multi-user.target

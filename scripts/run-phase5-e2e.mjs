@@ -36,6 +36,8 @@ function localSupabaseEnvironment(source) {
   return {
     NEXT_PUBLIC_SUPABASE_URL: url,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+    NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+    ENABLE_PASSWORD_LOGIN: "true",
     PALHATCH_E2E_SUPABASE_URL: url,
     PALHATCH_E2E_SERVICE_ROLE_KEY: serviceRoleKey,
     PALHATCH_E2E_AGENT_DATA_DIR: `/tmp/palhatch-phase6-e2e-${process.pid}`,

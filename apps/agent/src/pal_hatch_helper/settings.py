@@ -65,11 +65,6 @@ class Settings(BaseSettings):
     parser_version: str | None = Field(default=None, min_length=1, max_length=100)
     parser_command_json: str | None = None
     parser_required_files_json: str | None = None
-    palhatch_oodle_lib: Path | None = None
-    palhatch_oodle_sha256: str | None = Field(
-        default=None,
-        pattern=r"^[0-9a-f]{64}$",
-    )
     save_poll_interval_seconds: float = Field(default=300, gt=0, le=3600)
     save_stability_delay_seconds: float = Field(default=10, ge=0, le=300)
     parser_timeout_seconds: float = Field(default=180, gt=0, le=1800)
@@ -147,13 +142,6 @@ class Settings(BaseSettings):
             errors.append("parser_required_files_missing")
         elif not self.parser_required_files:
             errors.append("parser_required_files_invalid")
-        if self.parser_name == "palhatch-plm-save-parser":
-            if self.palhatch_oodle_lib is None:
-                errors.append("palhatch_oodle_lib_missing")
-            elif not self.palhatch_oodle_lib.is_absolute():
-                errors.append("palhatch_oodle_lib_invalid")
-            if self.palhatch_oodle_sha256 is None:
-                errors.append("palhatch_oodle_sha256_missing")
         return tuple(errors)
 
     @property

@@ -24,11 +24,11 @@ const patterns = [
   },
   {
     name: "assigned service role",
-    regex: /SUPABASE_SERVICE_ROLE_KEY\s*=\s*(?!example-|\$\{|<)[^\s]+/,
+    regex: /SUPABASE_SERVICE_ROLE_KEY[ \t]*=[ \t]*(?!example-|\$\{|<)[^\s]+/,
   },
   {
     name: "assigned API key",
-    regex: /(?:OPENAI_API_KEY|API_KEY)\s*=\s*(?!example-|\$\{|<)[^\s]+/,
+    regex: /(?:OPENAI_API_KEY|API_KEY)[ \t]*=[ \t]*(?!example-|\$\{|<)[^\s]+/,
   },
 ];
 

@@ -1,11 +1,23 @@
+import asyncio
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 from pal_hatch_helper.ai.providers import ConcurrencyLimitedAIProvider
-from pal_hatch_helper.cli import _build_ai_provider, build_parser, main
+from pal_hatch_helper.cli import (
+    _build_ai_provider,
+    _build_inventory_sync_service,
+    build_parser,
+    main,
+)
 from pal_hatch_helper.models.errors import ErrorCode
+from pal_hatch_helper.repositories.database import SupabaseDatabaseClient
 from pal_hatch_helper.settings import Settings
+
+PARSER_VERSION = (
+    (Path(__file__).parents[3] / "parser" / "VERSION").read_text(encoding="utf-8").strip()
+)
 
 
 @pytest.mark.parametrize("command", ["api", "job-worker", "save-worker", "command-worker"])
@@ -118,3 +130,47 @@ def test_job_worker_has_a_template_safe_ai_chain_without_external_credentials() 
 
     assert isinstance(provider, ConcurrencyLimitedAIProvider)
     assert external is None
+
+
+def test_save_worker_constructs_self_contained_parser_without_runtime_files(
+    tmp_path: Path,
+) -> None:
+    compose = tmp_path / "compose"
+    saves = tmp_path / "saves"
+    compose.mkdir()
+    saves.mkdir()
+
+    class FixtureDatabase:
+        async def rpc(self, function: str, parameters: dict[str, Any]) -> object:
+            assert function == "get_inventory_catalog_ids_for_agent"
+            assert parameters["p_world_id"] == "10000000-0000-4000-8000-000000000001"
+            return {"pal_ids": ["grassmon"], "passive_skill_ids": ["artisan"]}
+
+    settings = Settings(
+        app_env="test",
+        supabase_url="http://127.0.0.1:54321",
+        supabase_service_role_key="fixture-service-role",
+        palhatch_data_dir=tmp_path / "data",
+        palworld_compose_dir=compose,
+        palworld_save_root=saves,
+        palworld_world_id="10000000-0000-4000-8000-000000000001",
+        palworld_world_uid="fixture-world-001",
+        parser_name="palhatch-plm-save-parser",
+        parser_version=PARSER_VERSION,
+        parser_command_json=(
+            '["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}",'
+            '"--output","{output_path}"]'
+        ),
+        parser_required_files_json='["Level.sav"]',
+    )
+
+    service = asyncio.run(
+        _build_inventory_sync_service(
+            settings,
+            cast(SupabaseDatabaseClient, FixtureDatabase()),
+        )
+    )
+
+    parser = service._parser
+    assert parser._runtime_read_paths == ()
+    assert parser._environment == {"PALHATCH_WORLD_UID": "fixture-world-001"}

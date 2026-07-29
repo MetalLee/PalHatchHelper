@@ -6,3 +6,17 @@ export function getPublicSupabaseConfig(): { url: string; anonKey: string } {
   }
   return { url, anonKey };
 }
+
+export function getPublicAppUrl(): string {
+  const value = process.env.NEXT_PUBLIC_APP_URL;
+  if (!value) throw new Error("NEXT_PUBLIC_APP_URL_REQUIRED");
+  const url = new URL(value);
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password
+  ) {
+    throw new Error("NEXT_PUBLIC_APP_URL_INVALID");
+  }
+  return url.origin;
+}

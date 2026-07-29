@@ -36,8 +36,8 @@ func readContainer(data []byte) ([]byte, containerHeader, error) {
 		return nil, h, &parseLimitError{Kind: "decompressed save bytes", Value: uint64(h.RawLen), Limit: uint64(maxBytes)}
 	}
 	bodyStart := h.Offset + 12
-	if int(h.CompressedLen) > len(data)-bodyStart {
-		return nil, h, fmt.Errorf("sav: compressed length %d exceeds %d-byte body", h.CompressedLen, len(data)-bodyStart)
+	if int(h.CompressedLen) != len(data)-bodyStart {
+		return nil, h, fmt.Errorf("sav: compressed length %d does not match %d-byte body", h.CompressedLen, len(data)-bodyStart)
 	}
 	src := data[bodyStart : bodyStart+int(h.CompressedLen)]
 	var raw []byte
@@ -54,7 +54,7 @@ func readContainer(data []byte) ([]byte, containerHeader, error) {
 		if h.SaveType != 0x31 {
 			return nil, h, fmt.Errorf("sav: unsupported PlM save type %#x", h.SaveType)
 		}
-		raw, err = oodleDecoder(src, int(h.RawLen))
+		raw, err = plmDecoder(src, int(h.RawLen))
 	default:
 		err = fmt.Errorf("sav: unsupported container magic %q", h.Magic)
 	}

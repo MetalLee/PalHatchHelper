@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 from pydantic import SecretStr, ValidationError
 
@@ -134,7 +132,7 @@ def test_save_worker_accepts_only_explicit_confirmed_configuration() -> None:
     )
 
 
-def test_plm_parser_requires_explicit_oodle_path_and_sha256_pin() -> None:
+def test_plm_parser_is_configured_without_external_decompression_runtime() -> None:
     settings = Settings(
         app_env="test",
         supabase_url="http://127.0.0.1:54321",
@@ -152,15 +150,5 @@ def test_plm_parser_requires_explicit_oodle_path_and_sha256_pin() -> None:
         parser_required_files_json='["Level.sav"]',
     )
 
-    assert settings.save_worker_configuration_errors()[-2:] == (
-        "palhatch_oodle_lib_missing",
-        "palhatch_oodle_sha256_missing",
-    )
-
-    configured = settings.model_copy(
-        update={
-            "palhatch_oodle_lib": Path("/app/parser/lib/liboo2corelinux64.so.9"),
-            "palhatch_oodle_sha256": "a" * 64,
-        }
-    )
-    assert configured.save_worker_configuration_errors() == ()
+    assert settings.save_worker_configuration_errors() == ()
+    assert settings.save_worker_configured

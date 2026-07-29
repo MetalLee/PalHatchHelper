@@ -1,0 +1,2 @@
+# Preserve byte-for-byte upstream decoder files, including upstream whitespace.
+parser/third_party/palooz/ooz/dep/ooz/** whitespace=-blank-at-eol,-blank-at-eof

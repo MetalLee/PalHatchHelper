@@ -8,7 +8,7 @@
 - 不修改或在 `/opt/palworld` 执行其 Compose，不停止、重启或升级 Palworld、mihomo。
 - Palworld Compose 与源存档只读挂载；Agent 只把稳定副本写入自己的数据目录。
 - Agent 健康接口只能通过宿主 `127.0.0.1:18765` 访问，不开放新公网端口。
-- 浏览器只使用用户 JWT 和 Supabase anon key。Service Role 只进入 Agent 容器。
+- 浏览器只使用用户 JWT 和 Supabase anon key。Service Role 只进入 Web Server Route 和 Agent 容器。
 - 镜像必须为 `repository:git-short-sha@sha256:digest`，不得使用 `latest`。
 - 只应用向前 migration；禁止 `supabase db reset --linked`。
 - 任一核心验证失败就停止后续步骤并执行对应回滚。
@@ -17,21 +17,26 @@
 
 将 [`infra/agent/.env.production.example`](../../infra/agent/.env.production.example) 复制到部署目录的 `.env.production`，通过受控渠道填值后执行 `chmod 0600`。不得在终端、日志、文档或 Git diff 打印值。部署工具只读取这一个文件。
 
-必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.1.0`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；`PARSER_REQUIRED_FILES_JSON` 需同时声明要同步的普通玩家存档与对应 `_dps.sav` 次元仓库存档。不得继续配置旧 `palworld-save-tools` CLI。
+必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.2.0`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；`PARSER_REQUIRED_FILES_JSON` 需同时声明要同步的普通玩家存档与对应 `_dps.sav` 次元仓库存档。不得继续配置旧 `palworld-save-tools` CLI。
 
-Oodle 库不属于发布制品。经授权的运维人员从已确认且有权使用的来源人工取得
-`liboo2corelinux64.so.9`，把来源产品/版本、取得日期和 SHA-256 记入受控变更单，然后放到
-`${PARSER_BUNDLE_DIR}/lib/`。库和真实摘要都不提交 Git，库不进入 Agent 镜像，任何部署脚本
-都不得联网获取它。将人工计算的摘要通过秘密配置渠道固定为 `PALHATCH_OODLE_SHA256`，库的
-容器路径固定为 `PALHATCH_OODLE_LIB=/app/parser/lib/liboo2corelinux64.so.9`。
+Parser bundle 现在只有自包含 Linux x64 可执行文件及许可证/来源材料，不需要 Python 或额外解压运行库，也不允许部署脚本联网获取依赖。PlM 解码来自固定 PalworldSaveTools commit 的开源 palooz/ooz decode-only 源码；PalBeacon 不分发专有 Oodle 文件。Parser 组合二进制以 GPL-3.0-or-later 分发，精确上游来源和 vendored 文件哈希见 `parser/third_party/palooz/UPSTREAM.md`。
 
 Vercel Production 只允许：
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_APP_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`（仅 Server Route）
+- `STEAM_WEB_API_KEY`（可选；未配置不阻断登录）
+- `ENABLE_PASSWORD_LOGIN=false`
+- `SYNC_MAX_PAYLOAD_BYTES=5242880`
+- `SYNC_PAIRING_CODE_TTL_SECONDS=600`
 
 任何 Service Role、数据库密码、AI Key 或 Agent Token 都不得带 `NEXT_PUBLIC_` 前缀。
+`NEXT_PUBLIC_APP_URL` 是 Steam realm、return_to 和 Sync API 返回地址的唯一公开 URL 来源；不要再配置
+重复的 `PALBEACON_PUBLIC_URL`。Steam 后台必须允许正式 HTTPS 域名回调到
+`/api/auth/steam/callback`。上线前检查构建产物和日志中不含 Service Role、magic-link token hash、Steam Key
+或设备 token。
 
 ## 部署前检查
 
@@ -41,17 +46,19 @@ Vercel Production 只允许：
 4. 只读确认服务器仍为 Build `24181105`、`v1.0.1.100619`，appmanifest SHA-256 为 `98ef29829ebfde6d71528f5a83883e6bfda96fa77ce363e52630205353c1a189`。不一致时停止并报告 `TARGET_SERVER_VERSION_CHANGED`。
 5. 记录 `/opt/palworld/docker-compose.yml` 和源存档的只读校验值，部署后比较；不写这些文件。
 6. 对所有脚本先运行 `--dry-run`。脚本会检查仓库根、Git SHA、镜像 digest、磁盘、端口和 Compose 配置，并且不打印秘密。
-7. 只读核对 Parser bundle：可执行文件存在且可执行、Oodle 文件是普通文件而非 symlink，
-   并在不打印配置摘要的前提下比较人工 pin：
+7. 只读核对 Parser bundle：可执行文件存在且可执行、不是 symlink、版本来自仓库
+   `parser/VERSION`，并记录 SHA-256 与动态依赖：
 
 ```bash
 test -x "${PARSER_BUNDLE_DIR}/palworld-save-parser"
-test -f "${PARSER_BUNDLE_DIR}/lib/liboo2corelinux64.so.9"
-test ! -L "${PARSER_BUNDLE_DIR}/lib/liboo2corelinux64.so.9"
-oodle_actual="$(sha256sum "${PARSER_BUNDLE_DIR}/lib/liboo2corelinux64.so.9" | cut -d ' ' -f1)"
-test "${oodle_actual}" = "${PALHATCH_OODLE_SHA256}"
-unset oodle_actual
+test ! -L "${PARSER_BUNDLE_DIR}/palworld-save-parser"
+test "$("${PARSER_BUNDLE_DIR}/palworld-save-parser" --version)" = "$(cat parser/VERSION)"
+sha256sum "${PARSER_BUNDLE_DIR}/palworld-save-parser"
+ldd "${PARSER_BUNDLE_DIR}/palworld-save-parser"
 ```
+
+`ldd` 只能显示 glibc/系统加载器，不应显示单独的 C++、GCC 或解压动态库。检查只读记录结果，
+不修改 bundle；版本或依赖不符时停止发布。
 
 ## 备份
 
@@ -110,12 +117,16 @@ ENV_FILE=/data/projects/PalHatchHelper/.env.production \
 runtime tmpfs，容器禁网并以 UID 10001 运行。确认输出小于 64 MiB、通过
 `canonical-snapshot.schema.json`，且 smoke 前后 fixture SHA-256 一致。真实存档验收只能由
 Agent 先创建只读副本，再对该副本运行相同命令；严禁让 Parser 参数指向
-`PALWORLD_SAVE_ROOT`，也严禁修改 magic、重编码或写回 `.sav`。任何缺库、hash mismatch、
+`PALWORLD_SAVE_ROOT`，也严禁修改 magic、重编码或写回 `.sav`。任何解压失败、长度不符、
 non-GVAS、world UID mismatch 或截断错误都必须保留上一份有效库存。
 
 ## Vercel
 
 确认 project/org link 与自定义域名后，检查环境变量名称但不打印值；运行 production build，再执行 `vercel --prod`。记录 deployment ID/URL，并确认自定义域名指向新 deployment。`/api/health` 显示 `VERCEL_GIT_COMMIT_SHA`；管理员和玩家数据响应必须是 `private, no-store`。
+
+部署公开 Sync 前，先独立构建并验证 `palbeacon-sync` npm tarball：包内只能包含 Linux x64 Parser、manifest、
+CLI 与文档，不得包含专有 Oodle 文件、Python runtime、真实存档或原生扩展。Parser SHA-256 必须与
+manifest 一致，tarball 必须含 GPL/Apache/MIT 全文、第三方通知和精确源码 commit；npm 发布是单独的人工批准步骤，Web 部署不会自动发布 npm、运行远程安装脚本或在用户机器编译 C++。
 
 ## 首个管理员
 

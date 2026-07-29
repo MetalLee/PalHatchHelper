@@ -39,6 +39,36 @@ uv run mypy src
 uv run pytest
 ```
 
+## 自包含 Parser 与 Sync 候选包
+
+Parser 标准构建需要 Linux amd64、Go 1.26.5、GCC/G++ 和 CGO：
+
+```bash
+docker run --rm -v "$PWD:/workspace" -w /workspace/parser golang:1.26.5-bookworm \
+  sh -c 'go test -mod=vendor ./... && go vet ./... && ./scripts/build-linux-amd64.sh'
+file parser/palworld-save-parser
+ldd parser/palworld-save-parser
+sha256sum parser/palworld-save-parser
+```
+
+重复构建到两个临时输出并比较 SHA-256。`ldd` 只能显示 glibc/系统加载器；Parser 必须无需额外环境即可解析 `data/parser-fixtures/plm-minimal/Level.sav`。
+
+Sync 候选包验证不会发布 npm：
+
+```bash
+pnpm --filter palbeacon-sync lint
+pnpm --filter palbeacon-sync typecheck
+pnpm --filter palbeacon-sync test
+pnpm --filter palbeacon-sync build
+cd apps/sync
+npm pack --dry-run --ignore-scripts
+tarball="$(npm pack --silent)"
+node scripts/verify-package.mjs "$tarball"
+sha256sum "$tarball"
+```
+
+验证脚本会展开并干净安装 tgz，执行 `npx --no-install palbeacon-sync --help`/`--version`、核对可执行权限和 manifest 哈希、检查 `ldd`，并用真正的合成 Mermaid PlM fixture 烟测包内 Parser。tarball 不得含 Python runtime、专有解压文件、真实存档或未声明原生扩展。
+
 ## Compose 与镜像
 
 Docker 可用时执行：

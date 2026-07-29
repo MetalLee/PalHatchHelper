@@ -2,6 +2,7 @@ import type { Phase5Error } from "@palhatch/contracts";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { authenticate } from "@/features/auth/authenticate";
+import { isPasswordLoginEnabled } from "@/features/auth/password-login";
 import { phase5HttpStatus } from "@/features/phase5-errors";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -11,6 +12,12 @@ const privateHeaders = {
 };
 
 export async function POST(request: NextRequest) {
+  if (!isPasswordLoginEnabled()) {
+    return NextResponse.json(
+      { error_code: "PASSWORD_LOGIN_DISABLED" },
+      { status: 404, headers: privateHeaders },
+    );
+  }
   const body = (await request.json().catch(() => null)) as {
     email?: unknown;
     password?: unknown;

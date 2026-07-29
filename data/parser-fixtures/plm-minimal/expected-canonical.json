@@ -1,0 +1,89 @@
+{
+  "server": {
+    "world_uid": "fixture-world-001",
+    "save_version": "PlM/0x31",
+    "captured_at": "2026-07-18T16:00:00Z"
+  },
+  "guilds": [
+    {
+      "guild_uid": "32323232-3232-3232-3232-323232323232",
+      "name": "Ironpaw"
+    }
+  ],
+  "players": [
+    {
+      "player_uid": "11111111-1111-1111-1111-111111111111",
+      "nickname": "Ada",
+      "level": 5,
+      "guild_uid": "32323232-3232-3232-3232-323232323232"
+    }
+  ],
+  "pals": [
+    {
+      "instance_uid": "21212121-2121-2121-2121-212121212121",
+      "owner_player_uid": "11111111-1111-1111-1111-111111111111",
+      "guild_uid": "32323232-3232-3232-3232-323232323232",
+      "pal_id": "grassmon",
+      "is_boss": false,
+      "gender": "female",
+      "level": 12,
+      "passive_skill_ids": ["craftspeed_up2", "pal_allattack_up1"],
+      "location_type": "unknown",
+      "location_name": null,
+      "location_id": null,
+      "location_slot_index": null,
+      "location_access_scope": "unresolved",
+      "metadata": {
+        "source_internal_name": "Grassmon",
+        "source_passive_skill_internal_names": [
+          "CraftSpeed_up2",
+          "PAL_ALLAttack_up1"
+        ]
+      }
+    },
+    {
+      "instance_uid": "22222222-2222-2222-2222-222222222222",
+      "owner_player_uid": "11111111-1111-1111-1111-111111111111",
+      "guild_uid": "32323232-3232-3232-3232-323232323232",
+      "pal_id": "rockmon",
+      "is_boss": false,
+      "gender": "female",
+      "level": 7,
+      "passive_skill_ids": ["craftspeed_up2", "pal_allattack_up1"],
+      "location_type": "unknown",
+      "location_name": null,
+      "location_id": null,
+      "location_slot_index": null,
+      "location_access_scope": "unresolved",
+      "metadata": {
+        "source_internal_name": "Rockmon",
+        "source_passive_skill_internal_names": [
+          "CraftSpeed_up2",
+          "PAL_ALLAttack_up1"
+        ]
+      }
+    },
+    {
+      "instance_uid": "23232323-2323-2323-2323-232323232323",
+      "owner_player_uid": "11111111-1111-1111-1111-111111111111",
+      "guild_uid": "32323232-3232-3232-3232-323232323232",
+      "pal_id": "wildmon",
+      "is_boss": false,
+      "gender": "female",
+      "level": 3,
+      "passive_skill_ids": ["craftspeed_up2", "pal_allattack_up1"],
+      "location_type": "unknown",
+      "location_name": null,
+      "location_id": null,
+      "location_slot_index": null,
+      "location_access_scope": "unresolved",
+      "metadata": {
+        "source_internal_name": "Wildmon",
+        "source_passive_skill_internal_names": [
+          "CraftSpeed_up2",
+          "PAL_ALLAttack_up1"
+        ]
+      }
+    }
+  ]
+}

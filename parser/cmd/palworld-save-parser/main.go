@@ -10,15 +10,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	parserversion "github.com/MetalLee/PalHatchHelper/parser"
 	"github.com/MetalLee/PalHatchHelper/parser/internal/canonical"
 	"github.com/MetalLee/PalHatchHelper/parser/internal/sav"
 )
 
 const (
 	parserName     = "palhatch-plm-save-parser"
-	parserVersion  = "1.1.0"
 	maxOutputBytes = 64 * 1024 * 1024
 )
+
+var parserVersion = parserversion.Version()
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -28,6 +30,10 @@ func main() {
 }
 
 func run(arguments []string) error {
+	if len(arguments) == 1 && arguments[0] == "--version" {
+		fmt.Println(parserVersion)
+		return nil
+	}
 	flags := flag.NewFlagSet(parserName, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	snapshotArgument := flags.String("snapshot", "", "read-only snapshot directory")
@@ -87,6 +93,9 @@ func validatePaths(snapshotArgument, outputArgument string) (string, string, err
 	if err != nil {
 		return "", "", errors.New("SNAPSHOT_INPUT_INVALID")
 	}
+	if err := validateSnapshotInputs(snapshot); err != nil {
+		return "", "", err
+	}
 	output, err := filepath.Abs(outputArgument)
 	if err != nil {
 		return "", "", errors.New("OUTPUT_PATH_INVALID")
@@ -104,6 +113,21 @@ func validatePaths(snapshotArgument, outputArgument string) (string, string, err
 		return "", "", errors.New("OUTPUT_PATH_INVALID")
 	}
 	return snapshot, output, nil
+}
+
+func validateSnapshotInputs(snapshot string) error {
+	levelInfo, err := os.Lstat(filepath.Join(snapshot, "Level.sav"))
+	if err != nil || !levelInfo.Mode().IsRegular() || levelInfo.Mode()&os.ModeSymlink != 0 {
+		return errors.New("SNAPSHOT_INPUT_INVALID")
+	}
+	playersInfo, err := os.Lstat(filepath.Join(snapshot, "Players"))
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil || !playersInfo.IsDir() || playersInfo.Mode()&os.ModeSymlink != 0 {
+		return errors.New("SNAPSHOT_INPUT_INVALID")
+	}
+	return nil
 }
 
 type limitedWriter struct {
@@ -156,10 +180,7 @@ func errorCode(err error) string {
 	known := []string{
 		"ARGUMENTS_INVALID", "SNAPSHOT_INPUT_INVALID", "OUTPUT_PATH_INVALID",
 		"OUTPUT_TOO_LARGE", "OUTPUT_WRITE_FAILED", "WORLD_UID_MISSING", "WORLD_UID_MISMATCH",
-		"GAME_ID_NORMALIZATION_COLLISION",
-		"OODLE_LIBRARY_MISSING", "OODLE_LIBRARY_INVALID", "OODLE_LIBRARY_PATH_INVALID",
-		"OODLE_LIBRARY_UNREADABLE", "OODLE_HASH_PIN_MISSING", "OODLE_HASH_PIN_INVALID",
-		"OODLE_HASH_MISMATCH", "OODLE_LIBRARY_LOAD_FAILED", "OODLE_DECOMPRESSION_FAILED",
+		"GAME_ID_NORMALIZATION_COLLISION", "PLM_DECOMPRESSION_FAILED",
 	}
 	for _, code := range known {
 		if strings.Contains(message, code) {
