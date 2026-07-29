@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -17,6 +18,7 @@ from pal_hatch_helper.parsers.subprocess import SubprocessParserAdapter
 
 REPOSITORY_ROOT = Path(__file__).parents[4]
 PARSER = REPOSITORY_ROOT / "parser" / "palworld-save-parser"
+PARSER_VERSION = (REPOSITORY_ROOT / "parser" / "VERSION").read_text(encoding="utf-8").strip()
 FIXTURE = REPOSITORY_ROOT / "data" / "parser-fixtures" / "plm-minimal"
 EXPECTED_GVAS_SHA256 = "ff7665e4f70d30eb31a747c229cf1bd348e050e535b8fe37397d3fe8072158a1"
 FIXED_MTIME = 1_784_390_400
@@ -36,36 +38,6 @@ def gvas_body() -> bytes:
     assert hashlib.sha256(body).hexdigest() == EXPECTED_GVAS_SHA256
     assert body.startswith(b"GVAS")
     return body
-
-
-@pytest.fixture()
-def fake_oodle_library(tmp_path: Path) -> tuple[Path, str]:
-    compiler = shutil.which("gcc")
-    assert compiler is not None, "gcc is required to build the temporary Oodle ABI test shim"
-    source = tmp_path / "fake_oodle.c"
-    library = tmp_path / "liboo2corelinux64.so.9"
-    source.write_text(
-        """
-        #include <stdint.h>
-        #include <stddef.h>
-        #include <string.h>
-        intptr_t OodleLZ_Decompress(
-            const void *src, intptr_t src_len, void *dst, intptr_t dst_len,
-            int a, int b, int c, void *d, size_t e, void *f, void *g,
-            void *h, size_t i, int j) {
-            if (src_len != dst_len || src_len <= 0) return 0;
-            memcpy(dst, src, (size_t)src_len);
-            return dst_len;
-        }
-        """,
-        encoding="utf-8",
-    )
-    subprocess.run(
-        [compiler, "-shared", "-fPIC", "-O2", "-o", str(library), str(source)],
-        check=True,
-        capture_output=True,
-    )
-    return library, hashlib.sha256(library.read_bytes()).hexdigest()
 
 
 def _container(
@@ -92,14 +64,9 @@ def _snapshot(tmp_path: Path, level: bytes, *, player: bytes | None = None) -> P
     return snapshot
 
 
-def _environment(*, oodle: tuple[Path, str] | None = None) -> dict[str, str]:
+def _environment() -> dict[str, str]:
     environment = os.environ.copy()
-    environment.pop("PALHATCH_OODLE_LIB", None)
-    environment.pop("PALHATCH_OODLE_SHA256", None)
     environment["PALHATCH_WORLD_UID"] = "fixture-world-001"
-    if oodle is not None:
-        environment["PALHATCH_OODLE_LIB"] = str(oodle[0])
-        environment["PALHATCH_OODLE_SHA256"] = oodle[1]
     return environment
 
 
@@ -119,25 +86,27 @@ def _run(
     )
 
 
-def test_plm_header_and_canonical_snapshot_contract(
+def test_self_contained_parser_decodes_real_plm_fixture(
     parser_binary: Path,
-    gvas_body: bytes,
-    fake_oodle_library: tuple[Path, str],
     tmp_path: Path,
 ) -> None:
-    plm_fixture = _container(gvas_body, magic=b"PlM", save_type=0x31)
+    isolated_parser = tmp_path / "palworld-save-parser"
+    shutil.copy2(parser_binary, isolated_parser)
+    plm_fixture = (FIXTURE / "Level.sav").read_bytes()
+    source_hash = hashlib.sha256(plm_fixture).hexdigest()
     snapshot = _snapshot(tmp_path, plm_fixture, player=plm_fixture)
     output = tmp_path / "canonical.json"
 
     result = _run(
-        parser_binary,
+        isolated_parser,
         snapshot,
         output,
-        environment=_environment(oodle=fake_oodle_library),
+        environment=_environment(),
     )
 
     assert result.returncode == 0, result.stderr.decode("utf-8")
     payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload == json.loads((FIXTURE / "expected-canonical.json").read_text(encoding="utf-8"))
     schema = json.loads(
         (REPOSITORY_ROOT / "packages/contracts/schema/canonical-snapshot.schema.json").read_text(
             encoding="utf-8"
@@ -147,24 +116,17 @@ def test_plm_header_and_canonical_snapshot_contract(
         schema,
         format_checker=jsonschema.FormatChecker(),
     ).validate(payload)
-    assert payload["server"] == {
-        "world_uid": "fixture-world-001",
-        "save_version": "PlM/0x31",
-        "captured_at": "2026-07-18T16:00:00Z",
-    }
-    assert len(payload["guilds"]) == 1
-    assert len(payload["players"]) == 1
-    assert [pal["pal_id"] for pal in payload["pals"]] == [
-        "grassmon",
-        "rockmon",
-        "wildmon",
-    ]
-    assert payload["pals"][0]["metadata"]["source_internal_name"] == "Grassmon"
+    assert hashlib.sha256((snapshot / "Level.sav").read_bytes()).hexdigest() == source_hash
+    assert (
+        hashlib.sha256(
+            (snapshot / "Players" / "11111111111111111111111111111111.sav").read_bytes()
+        ).hexdigest()
+        == source_hash
+    )
     assert output.stat().st_size < 64 * 1024 * 1024
     assert {path.name for path in tmp_path.iterdir()} == {
         "canonical.json",
-        "fake_oodle.c",
-        "liboo2corelinux64.so.9",
+        "palworld-save-parser",
         "snapshot",
     }
 
@@ -191,61 +153,6 @@ def test_plz_read_only_compatibility(
     assert json.loads(output.read_bytes())["server"]["save_version"] == f"PlZ/0x{save_type:02x}"
 
 
-def test_oodle_library_missing_fails_without_network_or_output(
-    parser_binary: Path,
-    gvas_body: bytes,
-    tmp_path: Path,
-) -> None:
-    snapshot = _snapshot(tmp_path, _container(gvas_body, magic=b"PlM", save_type=0x31))
-    output = tmp_path / "canonical.json"
-
-    environment = _environment()
-    environment["PALHATCH_OODLE_LIB"] = str(tmp_path / "missing-oodle-library")
-    result = _run(parser_binary, snapshot, output, environment=environment)
-
-    assert result.returncode == 1
-    assert result.stderr == b"PALHATCH_PARSER_ERROR code=OODLE_LIBRARY_MISSING\n"
-    assert not output.exists()
-
-
-def test_oodle_hash_mismatch_fails_before_library_load(
-    parser_binary: Path,
-    gvas_body: bytes,
-    fake_oodle_library: tuple[Path, str],
-    tmp_path: Path,
-) -> None:
-    snapshot = _snapshot(tmp_path, _container(gvas_body, magic=b"PlM", save_type=0x31))
-    output = tmp_path / "canonical.json"
-    environment = _environment(oodle=fake_oodle_library)
-    environment["PALHATCH_OODLE_SHA256"] = "0" * 64
-
-    result = _run(parser_binary, snapshot, output, environment=environment)
-
-    assert result.returncode == 1
-    assert result.stderr == b"PALHATCH_PARSER_ERROR code=OODLE_HASH_MISMATCH\n"
-    assert not output.exists()
-
-
-def test_decompressed_non_gvas_body_fails_closed(
-    parser_binary: Path,
-    fake_oodle_library: tuple[Path, str],
-    tmp_path: Path,
-) -> None:
-    snapshot = _snapshot(tmp_path, _container(b"NOPE", magic=b"PlM", save_type=0x31))
-    output = tmp_path / "canonical.json"
-
-    result = _run(
-        parser_binary,
-        snapshot,
-        output,
-        environment=_environment(oodle=fake_oodle_library),
-    )
-
-    assert result.returncode == 1
-    assert result.stderr == b"PALHATCH_PARSER_ERROR code=DECOMPRESSED_BODY_INVALID\n"
-    assert not output.exists()
-
-
 @pytest.mark.parametrize(
     "contents", [b"short", _container(b"tiny", magic=b"PlM", save_type=0x31, raw_length=4096)]
 )
@@ -258,6 +165,36 @@ def test_corrupted_or_truncated_file_fails_without_partial_output(
     output = tmp_path / "canonical.json"
 
     result = _run(parser_binary, snapshot, output, environment=_environment())
+
+    assert result.returncode == 1
+    assert not output.exists()
+
+
+def test_truncated_real_plm_fails_without_partial_output(
+    parser_binary: Path,
+    tmp_path: Path,
+) -> None:
+    truncated = (FIXTURE / "Level.sav").read_bytes()[:-1]
+    snapshot = _snapshot(tmp_path, truncated)
+    output = tmp_path / "canonical.json"
+
+    result = _run(parser_binary, snapshot, output, environment=_environment())
+
+    assert result.returncode != 0
+    assert not output.exists()
+    assert (snapshot / "Level.sav").read_bytes() == truncated
+
+
+def test_declared_raw_length_limit_fails_before_output(
+    parser_binary: Path,
+    tmp_path: Path,
+) -> None:
+    snapshot = _snapshot(tmp_path, (FIXTURE / "Level.sav").read_bytes())
+    output = tmp_path / "canonical.json"
+    environment = _environment()
+    environment["PALHATCH_SAV_MAX_BYTES"] = "1024"
+
+    result = _run(parser_binary, snapshot, output, environment=environment)
 
     assert result.returncode == 1
     assert not output.exists()
@@ -316,26 +253,16 @@ def test_output_is_deterministic_and_does_not_read_configured_source_root(
 
 def test_agent_sandbox_runs_exact_parser_command_against_read_only_snapshot(
     parser_binary: Path,
-    gvas_body: bytes,
     tmp_path: Path,
 ) -> None:
-    compressed = zlib.compress(gvas_body)
-    snapshot = _snapshot(
-        tmp_path,
-        _container(
-            compressed,
-            magic=b"PlZ",
-            save_type=0x31,
-            raw_length=len(gvas_body),
-        ),
-    )
+    snapshot = _snapshot(tmp_path, (FIXTURE / "Level.sav").read_bytes())
     (snapshot / "Level.sav").chmod(0o444)
     (snapshot / "Players").chmod(0o555)
     snapshot.chmod(0o555)
     output = tmp_path / "sandbox-output.json"
     adapter = SubprocessParserAdapter(
         name="palhatch-plm-save-parser",
-        version="1.0.0",
+        version=PARSER_VERSION,
         command=(
             str(parser_binary),
             "--snapshot",
@@ -354,7 +281,29 @@ def test_agent_sandbox_runs_exact_parser_command_against_read_only_snapshot(
 
     assert result.payload["server"] == {
         "world_uid": "fixture-world-001",
-        "save_version": "PlZ/0x31",
+        "save_version": "PlM/0x31",
         "captured_at": "2026-07-18T16:00:00Z",
     }
     assert (snapshot / "Level.sav").stat().st_mode & 0o222 == 0
+
+
+def test_parser_version_and_dynamic_dependencies(parser_binary: Path) -> None:
+    version = subprocess.run(
+        [str(parser_binary), "--version"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert version.stdout == f"{PARSER_VERSION}\n"
+    readelf = shutil.which("readelf")
+    assert readelf is not None, "readelf is required for Parser dependency inspection"
+    dynamic = subprocess.run(
+        [readelf, "-d", str(parser_binary)],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    ).stdout
+    needed = re.findall(r"Shared library: \[([^]]+)]", dynamic)
+    assert needed == ["libc.so.6"]

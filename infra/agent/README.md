@@ -4,6 +4,8 @@
 
 四个容器固定使用 UID/GID 10001、只读根文件系统、`cap_drop: ALL`、`no-new-privileges`、资源/PID 限额和日志轮转。Agent 数据目录可写；Palworld Compose、源存档和 Parser bundle 均只读。镜像变量必须是 `repository:git-tag@sha256:digest`，拒绝 `latest`。
 
+Save Worker 使用 Parser 1.2.0 的单一自包含 Linux x64 可执行文件。Compose 不再要求或挂载外部解压运行库；旧部署 `.env` 中即使暂时残留已废弃变量，也不会被新 Compose 传入容器。Parser bundle 仍必须只读挂载，并继续受独立进程、Landlock/seccomp、CPU、内存、PID、超时和 64 MiB 输出限制保护。
+
 `.env.production.example` 只有假值。真实文件位于部署目录、权限必须为 `0600`，不得提交。开发阶段只执行静态配置检查：
 
 ```bash

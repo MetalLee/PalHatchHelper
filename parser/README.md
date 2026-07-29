@@ -1,53 +1,80 @@
-# PalHatchHelper PlM CanonicalSnapshot Parser
+# PalBeacon PlM CanonicalSnapshot Parser
 
-`palworld-save-parser` is a Linux x86-64, decode-only parser for Palworld
-`Level.sav` and declared `Players/*.sav` files. It supports:
+`palworld-save-parser` 1.2.0 is a Linux x86-64, decode-only parser for
+Palworld `Level.sav` and declared `Players/*.sav` files. It supports:
 
-- `PlM/0x31`: Oodle Mermaid through an operator-supplied, SHA-256-pinned
-  `liboo2corelinux64.so.9`.
-- `PlZ/0x31`: one zlib layer.
-- `PlZ/0x32`: two zlib layers.
+- `PlM/0x31`, including Mermaid streams, through the vendored open-source
+  palooz/ooz decoder;
+- `PlZ/0x31` with one zlib layer;
+- `PlZ/0x32` with two zlib layers.
 
-It has no save encoder, no write-back operation, no network client, and no
-child-process call. The decompressed body must begin with `GVAS`.
+The palooz/ooz source is pinned to PalworldSaveTools commit
+`3395e393466fc1f384dee54dabb3e597e611435e`. The exact vendored files,
+SHA-256 values, decode-only patch, and manual update procedure are in
+[`third_party/palooz/UPSTREAM.md`](third_party/palooz/UPSTREAM.md).
 
-## Runtime
+The executable is self-contained apart from the normal Linux glibc runtime.
+It does not need Python, palsav, a proprietary Oodle library, a package
+installer, or a network download. PalBeacon does not distribute proprietary
+Oodle files.
 
-```text
-PALHATCH_WORLD_UID=<configured REST worldguid>
-PALHATCH_OODLE_LIB=/app/parser/lib/liboo2corelinux64.so.9
-PALHATCH_OODLE_SHA256=<64 lowercase hex characters>
-```
-
-If `PALHATCH_OODLE_LIB` is absent, the parser checks only
-`<parser-bundle>/lib/liboo2corelinux64.so.9`. The hash pin comes from
-`PALHATCH_OODLE_SHA256`, or, for standalone operation, the first field of an
-adjacent `.sha256` file. Missing libraries and pins fail closed; nothing is
-downloaded.
+## Read-only runtime
 
 ```bash
-/app/parser/palworld-save-parser \
+PALHATCH_WORLD_UID=<configured-world-uid> \
+  ./palworld-save-parser \
   --snapshot "{snapshot_path}" \
   --output "{output_path}"
 ```
 
-The snapshot directory is the only save-data read root. Output is created
-exclusively at `--output`, must not already exist, cannot be inside the
-snapshot, and is capped at 64 MiB.
+`PALHATCH_WORLD_UID` is needed only when the synthetic or legacy GVAS data
+does not provide an unambiguous matching world identifier. The optional
+`PALHATCH_SAV_MAX_BYTES` can lower the default maximum input size.
 
-## Reproducible build
+The snapshot directory is the only save-data read root. The Parser has no
+network client, child-process call, save encoder, compression path, or
+write-back operation. It creates only the requested output, refuses an
+existing output path or an output inside the snapshot, caps JSON output at
+64 MiB, requires exact decompressed length, and requires the decoded body to
+begin with `GVAS`. Callers additionally run it as a resource-limited,
+network-denied subprocess over a stable read-only copy.
 
-The source and Unicode normalization dependency are vendored. The checked-in
-binary is built in the official Go 1.26.5 Debian container:
+## Build and test
+
+The version has one source: [`VERSION`](VERSION). The Go module and C++
+decoder inputs are vendored. Build in Linux amd64 with Go 1.26.5, GCC/G++,
+and CGO enabled:
 
 ```bash
 docker run --rm \
-  -v "$PWD/parser:/src" -w /src golang:1.26.5-bookworm \
-  sh -c '/usr/local/go/bin/go test -mod=vendor ./... && \
-    CGO_ENABLED=1 /usr/local/go/bin/go build -mod=vendor -trimpath \
-    -ldflags="-s -w -buildid= -extldflags=-Wl,--build-id=none" \
-    -o palworld-save-parser ./cmd/palworld-save-parser'
+  -v "$PWD:/workspace" -w /workspace/parser \
+  golang:1.26.5-bookworm \
+  sh -c './scripts/build-linux-amd64.sh'
 ```
 
-The resulting binary links only glibc/`libdl`; Oodle remains a separately
-loaded runtime file and is never embedded.
+The script uses `-trimpath`, strips symbols, clears Go and ELF build IDs, and
+requests static `libstdc++`/`libgcc` linkage. The resulting executable should
+show only glibc and the Linux loader in `ldd`; it must never link a separate
+decompression runtime.
+
+Run the complete Parser checks in the same environment:
+
+```bash
+go test -mod=vendor ./...
+go vet ./...
+```
+
+The committed `data/parser-fixtures/plm-minimal/Level.sav` is a real Mermaid
+PlM container built from the repository's synthetic GVAS fixture. It contains
+only fictional identifiers and is decoded byte-for-byte by the production
+decoder in tests. The production Parser does not include the one-time fixture
+compression tool.
+
+## Licensing
+
+The combined Parser executable is distributed under GPL-3.0-or-later because
+it integrates the GPL palooz/ooz decoder. Parser code derived from palhelm
+retains its Apache-2.0 notices. This does not relicense the entire
+PalHatchHelper repository or the separate TypeScript Sync CLI. See
+[`LICENSE`](LICENSE), [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), and
+[`LICENSES/`](LICENSES/).

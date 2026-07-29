@@ -55,7 +55,8 @@ pnpm --filter palbeacon-sync build
 node apps/sync/dist/cli.js --help
 ```
 
-第一版只支持 Linux x64。CLI 包含仓库现有 Go Parser，但不包含或下载 Oodle 库；完整用法见 [apps/sync/README.md](apps/sync/README.md)。
+第一版只支持 Linux x64。CLI 包含自包含的 Go Parser 和固定版本的开源
+palooz/ooz 解码核心；最终用户无需 Python、palsav、Oodle 或额外解压库，安装和运行时也不会下载或编译原生代码。Parser 仍然只读且不含编码/写回能力；完整用法、源码定位和 mixed-license 说明见 [apps/sync/README.md](apps/sync/README.md)。
 
 访问 `http://localhost:3000`、`http://127.0.0.1:18765/healthz` 和 `http://127.0.0.1:18765/readyz`。
 

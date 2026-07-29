@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "source_gvas": {
+    "file": "Level.gvas.base64",
+    "sha256": "ff7665e4f70d30eb31a747c229cf1bd348e050e535b8fe37397d3fe8072158a1",
+    "length": 5811,
+    "origin": "8tp/palhelm synthetic build10World fixture",
+    "origin_commit": "e099e8afe4823d6cf6b371e5e3938955e5a1becd"
+  },
+  "compressed_save": {
+    "file": "Level.sav",
+    "sha256": "fb9abae5b96b06520d941061f35e7e520cd1aad6f05406b3352d3e1321599293",
+    "length": 1306,
+    "raw_length": 5811,
+    "compressed_length": 1294,
+    "container_magic": "PlM",
+    "save_type": "0x31",
+    "compression_codec": "Mermaid",
+    "decoder_type": 10
+  },
+  "fixture_generation": {
+    "harness_version": "palbeacon-plm-fixture-v1",
+    "compression_scope": "one-time fixture generation only",
+    "decoder_name": "PalworldSaveTools palooz/ooz Kraken_Decompress",
+    "decoder_package_version": "0.2.0",
+    "decoder_repository": "https://github.com/deafdudecomputers/PalworldSaveTools",
+    "decoder_commit": "3395e393466fc1f384dee54dabb3e597e611435e",
+    "verification": "The pinned open-source decoder returned exactly 5811 bytes matching source_gvas.sha256."
+  }
+}

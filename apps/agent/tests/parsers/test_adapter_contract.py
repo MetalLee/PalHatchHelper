@@ -207,7 +207,7 @@ def test_parser_receives_only_explicit_non_secret_runtime_environment(tmp_path: 
     script = (
         "import json,os,sys; "
         "json.dump({'world':os.environ.get('PALHATCH_WORLD_UID'),"
-        "'oodle':os.environ.get('PALHATCH_OODLE_LIB'),"
+        "'max_save':os.environ.get('PALHATCH_SAV_MAX_BYTES'),"
         "'secret_absent':'SUPABASE_SERVICE_ROLE_KEY' not in os.environ},"
         "open(sys.argv[1],'w'))"
     )
@@ -215,7 +215,7 @@ def test_parser_receives_only_explicit_non_secret_runtime_environment(tmp_path: 
         (sys.executable, "-c", script, "{output_path}"),
         environment={
             "PALHATCH_WORLD_UID": "fixture-world-001",
-            "PALHATCH_OODLE_LIB": "/app/parser/lib/liboo2corelinux64.so.9",
+            "PALHATCH_SAV_MAX_BYTES": "536870912",
         },
     )
 
@@ -223,7 +223,7 @@ def test_parser_receives_only_explicit_non_secret_runtime_environment(tmp_path: 
 
     assert result.payload == {
         "world": "fixture-world-001",
-        "oodle": "/app/parser/lib/liboo2corelinux64.so.9",
+        "max_save": "536870912",
         "secret_absent": True,
     }
 

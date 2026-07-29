@@ -12,6 +12,12 @@ const forbiddenExtensions = new Set([
   ".ubulk",
   ".umap",
   ".usmap",
+  ".sav",
+]);
+const allowedSyntheticSaveFixtures = new Set([
+  "data/parser-fixtures/minimal-save/Players/0001.sav",
+  "data/parser-fixtures/minimal-save/World.sav",
+  "data/parser-fixtures/plm-minimal/Level.sav",
 ]);
 
 const result = spawnSync(
@@ -31,7 +37,11 @@ if (result.status !== 0) {
 const forbidden = result.stdout
   .split("\0")
   .filter(Boolean)
-  .filter((path) => forbiddenExtensions.has(extname(path).toLowerCase()))
+  .filter(
+    (path) =>
+      forbiddenExtensions.has(extname(path).toLowerCase()) &&
+      !allowedSyntheticSaveFixtures.has(path),
+  )
   .sort();
 
 if (forbidden.length > 0) {

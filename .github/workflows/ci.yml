@@ -134,6 +134,71 @@ jobs:
       - run: uv run mypy src
       - run: uv run pytest
 
+  parser-sync-candidate:
+    name: Self-contained Parser and Sync package
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+          cache-dependency-path: parser/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Test and vet Parser
+        working-directory: parser
+        run: |
+          go test -mod=vendor ./...
+          go vet ./...
+          go test -mod=vendor ./internal/sav -run='^$' -fuzz=FuzzParseContainerHeader -fuzztime=3s
+          go test -mod=vendor ./internal/palooz -run='^$' -fuzz=FuzzDecompressBoundaries -fuzztime=3s
+      - name: Reproducibly build and inspect Parser
+        run: |
+          parser/scripts/build-linux-amd64.sh "$RUNNER_TEMP/parser-first"
+          parser/scripts/build-linux-amd64.sh "$RUNNER_TEMP/parser-second"
+          cmp "$RUNNER_TEMP/parser-first" "$RUNNER_TEMP/parser-second"
+          cmp parser/palworld-save-parser "$RUNNER_TEMP/parser-first"
+          test "$("$RUNNER_TEMP/parser-first" --version)" = "$(cat parser/VERSION)"
+          file "$RUNNER_TEMP/parser-first"
+          ldd "$RUNNER_TEMP/parser-first"
+          test "$(readelf -d "$RUNNER_TEMP/parser-first" | sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p')" = "libc.so.6"
+          ! readelf -n "$RUNNER_TEMP/parser-first" | grep -q 'Build ID'
+          ! strings "$RUNNER_TEMP/parser-first" | grep -Eq 'Ooz_Compress|CompressBlock'
+          sha256sum "$RUNNER_TEMP/parser-first" "$RUNNER_TEMP/parser-second"
+      - name: Test and build Sync CLI
+        run: |
+          pnpm --filter palbeacon-sync lint
+          pnpm --filter palbeacon-sync typecheck
+          pnpm --filter palbeacon-sync test
+          pnpm --filter palbeacon-sync build
+          pnpm check:parser-version
+      - name: Pack, install, and smoke-test candidate
+        working-directory: apps/sync
+        run: |
+          npm pack --dry-run --ignore-scripts
+          tarball="$(npm pack --silent)"
+          node scripts/verify-package.mjs "$tarball" > "$RUNNER_TEMP/package-verification.json"
+          mkdir -p "$RUNNER_TEMP/palbeacon-candidate"
+          cp "$tarball" "$RUNNER_TEMP/palbeacon-candidate/"
+          cp ../../parser/palworld-save-parser "$RUNNER_TEMP/palbeacon-candidate/"
+          cp dist/bin/parser-manifest.json "$RUNNER_TEMP/palbeacon-candidate/"
+          cp "$RUNNER_TEMP/package-verification.json" "$RUNNER_TEMP/palbeacon-candidate/"
+          sha256sum "$tarball" ../../parser/palworld-save-parser > "$RUNNER_TEMP/palbeacon-candidate/SHA256SUMS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: palbeacon-sync-linux-x64-candidate
+          path: ${{ runner.temp }}/palbeacon-candidate
+          if-no-files-found: error
+          retention-days: 14
+
   repository:
     name: Structure, docs, and secrets
     runs-on: ubuntu-latest

@@ -5,6 +5,7 @@ import {
   mkdir,
   readFile,
   stat,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -24,6 +25,8 @@ describe("read-only save snapshots", () => {
     await mkdir(join(root, "Players"));
     await writeFile(join(root, "Level.sav"), "level-fixture");
     await writeFile(join(root, "Players", "player.sav"), "player-fixture");
+    const sourceTime = new Date("2026-07-18T16:00:00.000Z");
+    await utimes(join(root, "Level.sav"), sourceTime, sourceTime);
     await chmod(join(root, "Level.sav"), 0o640);
     const before = await stat(join(root, "Level.sav"));
 
@@ -40,6 +43,9 @@ describe("read-only save snapshots", () => {
       expect((await stat(join(snapshot.path, "Level.sav"))).mode & 0o777).toBe(
         0o444,
       );
+      expect(
+        (await stat(join(snapshot.path, "Level.sav"))).mtime.toISOString(),
+      ).toBe(sourceTime.toISOString());
     } finally {
       await snapshot.cleanup();
     }
@@ -59,5 +65,19 @@ describe("read-only save snapshots", () => {
           writeFile(join(root, "Level.sav"), "changed"),
       }),
     ).rejects.toThrowError(/SAVE_SOURCE_UNSTABLE/);
+  });
+
+  it("rejects an input file before copying when it exceeds the configured cap", async () => {
+    const root = await mkdtemp(join(tmpdir(), "palbeacon-sync-oversize-"));
+    roots.push(root);
+    await writeFile(join(root, "Level.sav"), "five!");
+    process.env.PALHATCH_SAV_MAX_BYTES = "4";
+    try {
+      await expect(
+        createReadOnlySnapshot(root, { delayMilliseconds: 0 }),
+      ).rejects.toThrowError(/SAVE_FILE_TOO_LARGE/);
+    } finally {
+      delete process.env.PALHATCH_SAV_MAX_BYTES;
+    }
   });
 });

@@ -57,11 +57,12 @@ node apps/sync/dist/cli.js init \
   --url http://localhost:3000 \
   --code ABCD-EFGH \
   --save-dir /path/to/Pal/Saved/SaveGames \
-  --oodle-lib /local/path/liboo2corelinux64.so.9
+  --sync-now no
 ```
 
 开发可用 `PALBEACON_PARSER_BIN` 指向本地 Linux x64 Parser。CLI 不访问 Docker Socket、RCON 或远程命令，
-也不修改原始存档；它只解析稳定的临时只读副本。不得把真实存档或 Oodle 库加入 fixture 或提交。
+也不修改原始存档；它只解析稳定的临时只读副本。随包 Parser 已集成固定版本的开源 palooz/ooz
+解码核心，不需要 Python 或外部解压库。不得把真实存档或来源不明的二进制加入 fixture 或提交。
 
 ## 配置
 

@@ -10,7 +10,7 @@ import {
   readFile,
   readdir,
   rm,
-  stat,
+  utimes,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -32,15 +32,19 @@ interface SourceFile {
   absolute: string;
 }
 
+const DEFAULT_MAX_SAVE_BYTES = 512 * 1024 * 1024;
+const HARD_MAX_SAVE_BYTES = 2 * 1024 * 1024 * 1024;
+
 export async function createReadOnlySnapshot(
   sourceDirectory: string,
   options: SnapshotOptions = {},
 ): Promise<ReadOnlySnapshot> {
-  const files = await sourceFiles(sourceDirectory);
-  const first = await statFiles(files);
+  const maximumBytes = maximumSaveBytes();
+  const files = await sourceFiles(sourceDirectory, maximumBytes);
+  const first = await statFiles(files, maximumBytes);
   await options.afterFirstStat?.();
   await delay(options.delayMilliseconds ?? 2000);
-  const second = await statFiles(files);
+  const second = await statFiles(files, maximumBytes);
   if (!sameStats(first, second)) throw new Error("SAVE_SOURCE_UNSTABLE");
 
   const temporaryRoot = await mkdtemp(
@@ -48,13 +52,18 @@ export async function createReadOnlySnapshot(
   );
   let complete = false;
   try {
+    const stableMetadata = new Map(
+      second.map((entry) => [entry.relative, entry]),
+    );
     for (const file of files) {
       const destination = join(temporaryRoot, file.relative);
       await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
       await copyFile(file.absolute, destination, constants.COPYFILE_FICLONE);
+      const modified = new Date(stableMetadata.get(file.relative)!.mtimeMs);
+      await utimes(destination, modified, modified);
       await chmod(destination, 0o444);
     }
-    const third = await statFiles(files);
+    const third = await statFiles(files, maximumBytes);
     if (!sameStats(second, third)) throw new Error("SAVE_SOURCE_UNSTABLE");
     const hash = await hashFiles(
       temporaryRoot,
@@ -96,12 +105,15 @@ async function makeDirectoryTreeRemovable(root: string): Promise<void> {
   );
 }
 
-async function sourceFiles(sourceDirectory: string): Promise<SourceFile[]> {
+async function sourceFiles(
+  sourceDirectory: string,
+  maximumBytes: number,
+): Promise<SourceFile[]> {
   const rootInfo = await lstat(sourceDirectory).catch(() => undefined);
   if (!rootInfo?.isDirectory() || rootInfo.isSymbolicLink())
     throw new Error("SAVE_DIRECTORY_INVALID");
   const level = join(sourceDirectory, "Level.sav");
-  await assertRegularFile(level);
+  await assertRegularFile(level, maximumBytes);
   const files: SourceFile[] = [{ relative: "Level.sav", absolute: level }];
   const playersDirectory = join(sourceDirectory, "Players");
   const playersInfo = await lstat(playersDirectory).catch(() => undefined);
@@ -110,7 +122,7 @@ async function sourceFiles(sourceDirectory: string): Promise<SourceFile[]> {
     for await (const entry of handle) {
       if (!entry.isFile() || !entry.name.endsWith(".sav")) continue;
       const absolute = join(playersDirectory, entry.name);
-      await assertRegularFile(absolute);
+      await assertRegularFile(absolute, maximumBytes);
       files.push({ relative: join("Players", basename(entry.name)), absolute });
     }
   }
@@ -119,16 +131,23 @@ async function sourceFiles(sourceDirectory: string): Promise<SourceFile[]> {
   );
 }
 
-async function assertRegularFile(path: string): Promise<void> {
+async function assertRegularFile(
+  path: string,
+  maximumBytes: number,
+): Promise<void> {
   const info = await lstat(path).catch(() => undefined);
   if (!info?.isFile() || info.isSymbolicLink())
     throw new Error("SAVE_FILE_INVALID");
+  if (info.size > maximumBytes) throw new Error("SAVE_FILE_TOO_LARGE");
 }
 
-async function statFiles(files: SourceFile[]) {
+async function statFiles(files: SourceFile[], maximumBytes: number) {
   return Promise.all(
     files.map(async (file) => {
-      const info = await stat(file.absolute);
+      const info = await lstat(file.absolute);
+      if (!info.isFile() || info.isSymbolicLink())
+        throw new Error("SAVE_FILE_INVALID");
+      if (info.size > maximumBytes) throw new Error("SAVE_FILE_TOO_LARGE");
       return {
         relative: file.relative,
         size: info.size,
@@ -137,6 +156,22 @@ async function statFiles(files: SourceFile[]) {
       };
     }),
   );
+}
+
+function maximumSaveBytes(): number {
+  const configured = process.env.PALHATCH_SAV_MAX_BYTES;
+  if (configured === undefined || configured.length === 0)
+    return DEFAULT_MAX_SAVE_BYTES;
+  if (!/^\d+$/.test(configured)) throw new Error("SAVE_SIZE_LIMIT_INVALID");
+  const parsed = Number(configured);
+  if (
+    !Number.isSafeInteger(parsed) ||
+    parsed <= 0 ||
+    parsed > HARD_MAX_SAVE_BYTES
+  ) {
+    throw new Error("SAVE_SIZE_LIMIT_INVALID");
+  }
+  return parsed;
 }
 
 function sameStats(

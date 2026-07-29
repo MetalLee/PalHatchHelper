@@ -3,6 +3,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 
 import { DeviceAuthorizationError, pairDevice } from "./api.js";
+import { helpText, parseArguments } from "./cli-options.js";
 import {
   deleteConfig,
   formatStatus,
@@ -10,11 +11,10 @@ import {
   saveConfig,
   type SyncConfig,
 } from "./config.js";
-import { discoverOodleLibrary, findWorldSave } from "./discovery.js";
+import { findWorldSave } from "./discovery.js";
 import { assertSupportedPlatform } from "./platform.js";
 import { syncOnce } from "./sync.js";
-
-const VERSION = "0.1.0";
+import { VERSION } from "./version.js";
 
 void main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : "UNKNOWN_ERROR";
@@ -70,10 +70,6 @@ async function initialize(options: Map<string, string>): Promise<void> {
       options.get("save-dir") ??
       (await terminal.question("Palworld 存档目录："));
     const saveDirectory = await findWorldSave(providedSaveDirectory.trim());
-    const oodle = await discoverOodleLibrary(
-      saveDirectory,
-      options.get("oodle-lib"),
-    );
     const intervalSeconds = integerOption(
       options.get("interval") ?? "300",
       30,
@@ -90,21 +86,31 @@ async function initialize(options: Map<string, string>): Promise<void> {
       app_version: VERSION,
     });
     const config: SyncConfig = {
+      config_version: 2,
       api_base_url: paired.api_base_url,
       device_id: paired.device_id,
       device_token: paired.device_token,
       save_dir: saveDirectory,
-      oodle_lib: oodle.path,
-      oodle_sha256: oodle.sha256,
       interval_seconds: intervalSeconds,
       device_name: deviceName,
       app_version: VERSION,
     };
     const path = await saveConfig(config);
     console.log(`配对成功。配置已安全保存到 ${path}`);
-    console.log(
-      "可执行 palbeacon-sync sync --once 立即同步，或 palbeacon-sync run 定时运行。",
+    const syncImmediately = parseBooleanChoice(
+      options.get("sync-now") ??
+        (stdin.isTTY
+          ? await terminal.question("是否立即执行首次同步？[y/N]：")
+          : "no"),
     );
+    if (syncImmediately) {
+      const result = await syncOnce(config);
+      console.log(syncResultMessage(result));
+    } else {
+      console.log(
+        "可执行 palbeacon-sync sync --once 立即同步，或 palbeacon-sync run 定时运行。",
+      );
+    }
   } finally {
     terminal.close();
   }
@@ -113,9 +119,7 @@ async function initialize(options: Map<string, string>): Promise<void> {
 async function runSingleSync(): Promise<void> {
   assertSupportedPlatform();
   const result = await syncOnce(await loadConfig());
-  console.log(
-    result === "uploaded" ? "存档同步完成。" : "存档未变化，心跳已发送。",
-  );
+  console.log(syncResultMessage(result));
 }
 
 async function runContinuously(): Promise<void> {
@@ -132,9 +136,7 @@ async function runContinuously(): Promise<void> {
     while (!stopping) {
       try {
         const result = await syncOnce(config);
-        console.log(
-          result === "uploaded" ? "存档同步完成。" : "存档未变化，心跳已发送。",
-        );
+        console.log(syncResultMessage(result));
       } catch (error) {
         if (error instanceof DeviceAuthorizationError) throw error;
         console.error(
@@ -154,37 +156,6 @@ async function runContinuously(): Promise<void> {
   }
 }
 
-function parseArguments(arguments_: string[]): Map<string, string> {
-  const result = new Map<string, string>();
-  for (let index = 0; index < arguments_.length; index += 2) {
-    const option = arguments_[index];
-    const value = arguments_[index + 1];
-    if (
-      option === undefined ||
-      !option.startsWith("--") ||
-      value === undefined ||
-      value.startsWith("--")
-    ) {
-      throw new Error("ARGUMENTS_INVALID");
-    }
-    const key = option.slice(2);
-    if (
-      ![
-        "url",
-        "code",
-        "save-dir",
-        "oodle-lib",
-        "interval",
-        "device-name",
-      ].includes(key)
-    ) {
-      throw new Error("ARGUMENTS_INVALID");
-    }
-    result.set(key, value);
-  }
-  return result;
-}
-
 function normalizeBaseUrl(value: string): string {
   const url = new URL(value.trim());
   const isLocal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
@@ -200,6 +171,17 @@ function normalizeBaseUrl(value: string): string {
     throw new Error("API_URL_INVALID");
   }
   return url.origin;
+}
+
+function parseBooleanChoice(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (["yes", "y", "是"].includes(normalized)) return true;
+  if (["", "no", "n", "否"].includes(normalized)) return false;
+  throw new Error("SYNC_NOW_INVALID");
+}
+
+function syncResultMessage(result: "uploaded" | "unchanged"): string {
+  return result === "uploaded" ? "存档同步完成。" : "存档未变化，心跳已发送。";
 }
 
 function integerOption(
@@ -234,25 +216,17 @@ function friendlyError(code: string): string {
     WORLD_SAVE_NOT_FOUND: "没有在指定目录中找到 Level.sav。",
     MULTIPLE_WORLD_SAVES_FOUND:
       "发现多个世界存档，请将 --save-dir 指向唯一世界目录。",
-    OODLE_LIBRARY_NOT_FOUND:
-      "未发现 Oodle 库，请使用 --oodle-lib 指定本机已有的库。",
     SAVE_SOURCE_UNSTABLE: "存档正在写入，本轮已安全跳过。",
+    SAVE_FILE_TOO_LARGE: "存档文件超过安全大小上限。",
+    SAVE_SIZE_LIMIT_INVALID: "存档大小上限配置无效。",
     PARSER_TIMEOUT: "Parser 超时并已终止。",
     API_URL_INVALID: "PalBeacon 地址无效；公网地址必须使用 HTTPS。",
     INTERVAL_INVALID: "同步间隔必须是 30 到 86400 秒之间的整数。",
+    SYNC_NOW_INVALID: "--sync-now 只接受 yes 或 no。",
   };
   return messages[code] ?? code;
 }
 
 function printHelp(): void {
-  console.log(`palbeacon-sync ${VERSION}
-
-用法：
-  palbeacon-sync init --url <地址> --code <配对码> --save-dir <目录> [--oodle-lib <路径>] [--interval 300] [--device-name <名称>]
-  palbeacon-sync run
-  palbeacon-sync sync --once
-  palbeacon-sync status
-  palbeacon-sync logout
-
-第一版仅支持 Linux x64。程序只读取并复制存档，不修改源文件，也不分发 Oodle。`);
+  console.log(helpText(VERSION));
 }

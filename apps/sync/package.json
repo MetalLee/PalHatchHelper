@@ -4,7 +4,7 @@
   "description": "Read-only Palworld inventory synchronization client for PalBeacon",
   "type": "module",
   "private": false,
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=22 <23"
   },
@@ -13,14 +13,16 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepack": "pnpm build",
+    "prepack": "node scripts/build.mjs --release",
     "lint": "eslint src tests scripts --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {
     "@palhatch/contracts": "workspace:^",
