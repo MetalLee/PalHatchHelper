@@ -189,7 +189,7 @@ describe("command-line interface", () => {
       "",
       "现在运行：",
       "",
-      "palbeacon-sync run",
+      "palbeacon run",
       "",
       "即可开始定时同步。",
     ]);
@@ -371,9 +371,9 @@ describe("command-line interface", () => {
     expect(readme).toContain("Read-only Palworld server save synchronization");
     expect(chineseReadme).toContain("[English](README.md)");
     for (const expected of [
-      "npm install -g palbeacon-sync",
-      "palbeacon-sync init",
-      "palbeacon-sync run",
+      "npm install -g palbeacon-cli",
+      "palbeacon init",
+      "palbeacon run",
     ])
       expect(readme).toContain(expected);
     for (const forbidden of [
@@ -383,7 +383,7 @@ describe("command-line interface", () => {
       "source_save_hash",
       "Service Role",
       "public_sync_world_transition",
-      "palbeacon-sync inspect",
+      "palbeacon inspect",
     ])
       expect(readme).not.toContain(forbidden);
   });

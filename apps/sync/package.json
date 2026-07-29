@@ -1,6 +1,6 @@
 {
-  "name": "palbeacon-sync",
-  "version": "0.1.0",
+  "name": "palbeacon-cli",
+  "version": "0.1.1",
   "description": "Read-only Palworld inventory synchronization client for PalBeacon",
   "type": "module",
   "private": false,
@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "bin": {
-    "palbeacon-sync": "./dist/cli.js"
+    "palbeacon": "./dist/cli.js"
   },
   "files": [
     "dist",

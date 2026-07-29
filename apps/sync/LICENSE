@@ -3,7 +3,7 @@ PalBeacon Sync npm package license notice
 This package is a mixed-license distribution whose components remain under
 their respective licenses:
 
-- The palbeacon-sync TypeScript command-line program is licensed under the
+- The palbeacon TypeScript command-line program is licensed under the
   MIT License. The full text is in dist/LICENSES/MIT.txt.
 - The separate dist/bin/palworld-save-parser Linux x64 executable is licensed
   under GPL-3.0-or-later because it integrates the palooz/ooz decoder. The
