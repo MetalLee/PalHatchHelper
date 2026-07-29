@@ -18,6 +18,7 @@ const allowedSyntheticSaveFixtures = new Set([
   "data/parser-fixtures/minimal-save/Players/0001.sav",
   "data/parser-fixtures/minimal-save/World.sav",
   "data/parser-fixtures/plm-minimal/Level.sav",
+  "data/parser-fixtures/plm-minimal/Level.palooz-kraken.sav",
 ]);
 
 const result = spawnSync(

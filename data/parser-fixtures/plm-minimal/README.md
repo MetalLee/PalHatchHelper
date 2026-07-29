@@ -15,9 +15,15 @@ comments identify every GUID and record as invented. Its decoded SHA-256 is
 `manifest.json`; `expected-canonical.json` is the complete deterministic Parser
 projection. No production or user save bytes are present.
 
-The Mermaid stream was produced once for this synthetic fixture and verified
-byte-for-byte with the open-source palooz/ooz decoder pinned in the manifest.
-The fixture-only compressor and proprietary runtime used to create the stream
-are not committed, linked into the Parser, included in npm, or needed to run
-any test. The production Parser contains decode-only source and has no save
-encoder or write-back path.
+`Level.palooz-kraken.sav` contains the same synthetic bytes in a second genuine
+`PlM/0x31` container. It was generated once with `palooz.compress` 0.2.0 from
+the pinned PalworldSaveTools commit recorded in the manifest (codec ID 8,
+level 4). The pinned public encoder supports Kraken only, while its generic
+decoder also supports the Mermaid stream used by Palworld.
+
+The Mermaid fixture was therefore produced separately and then verified
+byte-for-byte with the same pinned open-source decoder. Its fixture-only
+compressor and proprietary runtime are not committed, linked into the Parser,
+included in npm, or needed to run any test. Neither upstream encoder source nor
+the one-time Python binding is vendored here. The production Parser contains
+decode-only source and has no save encoder or write-back path.

@@ -61,7 +61,7 @@ func TestPlZType31And32RemainCompatible(t *testing.T) {
 	}
 }
 
-func TestRealPlMFixtureDecompressesToSyntheticGVAS(t *testing.T) {
+func TestRealPlMFixturesDecompressToSyntheticGVAS(t *testing.T) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("locate test source")
@@ -69,10 +69,6 @@ func TestRealPlMFixtureDecompressesToSyntheticGVAS(t *testing.T) {
 	fixture := filepath.Join(
 		filepath.Dir(filename), "..", "..", "..", "data", "parser-fixtures", "plm-minimal",
 	)
-	container, err := os.ReadFile(filepath.Join(fixture, "Level.sav"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	wantEncoded, err := os.ReadFile(filepath.Join(fixture, "Level.gvas.base64"))
 	if err != nil {
 		t.Fatal(err)
@@ -82,15 +78,23 @@ func TestRealPlMFixtureDecompressesToSyntheticGVAS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, header, err := readContainer(container)
-	if err != nil {
-		t.Fatalf("decode real PlM fixture: %v", err)
-	}
-	if header.Magic != "PlM" || header.SaveType != 0x31 {
-		t.Fatalf("unexpected fixture header: %#v", header)
-	}
-	if !bytes.Equal(got, want) {
-		t.Fatal("decoded PlM bytes differ from the synthetic GVAS source")
+	for _, name := range []string{"Level.sav", "Level.palooz-kraken.sav"} {
+		t.Run(name, func(t *testing.T) {
+			container, err := os.ReadFile(filepath.Join(fixture, name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, header, err := readContainer(container)
+			if err != nil {
+				t.Fatalf("decode real PlM fixture: %v", err)
+			}
+			if header.Magic != "PlM" || header.SaveType != 0x31 {
+				t.Fatalf("unexpected fixture header: %#v", header)
+			}
+			if !bytes.Equal(got, want) {
+				t.Fatal("decoded PlM bytes differ from the synthetic GVAS source")
+			}
+		})
 	}
 }
 
@@ -114,6 +118,26 @@ func TestPlMFixtureManifestMatchesCommittedBytes(t *testing.T) {
 			SaveType         string `json:"save_type"`
 			Codec            string `json:"compression_codec"`
 		} `json:"compressed_save"`
+		UpstreamGenerated struct {
+			File             string `json:"file"`
+			SHA256           string `json:"sha256"`
+			CompressedSHA256 string `json:"compressed_sha256"`
+			Length           int    `json:"length"`
+			RawLength        int    `json:"raw_length"`
+			CompressedLength int    `json:"compressed_length"`
+			Magic            string `json:"container_magic"`
+			SaveType         string `json:"save_type"`
+			Codec            string `json:"compression_codec"`
+			DecoderType      int    `json:"decoder_type"`
+			Generator        struct {
+				Name           string `json:"name"`
+				PackageVersion string `json:"package_version"`
+				Repository     string `json:"repository"`
+				Commit         string `json:"commit"`
+				CodecID        int    `json:"codec_id"`
+				Level          int    `json:"level"`
+			} `json:"generator"`
+		} `json:"upstream_generated_save"`
 	}
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
 		t.Fatal(err)
@@ -148,6 +172,37 @@ func TestPlMFixtureManifestMatchesCommittedBytes(t *testing.T) {
 		manifest.Compressed.SaveType != "0x31" ||
 		manifest.Compressed.Codec != "Mermaid" {
 		t.Fatalf("fixture metadata mismatch: header=%#v manifest=%#v", header, manifest)
+	}
+	upstreamContainer, err := os.ReadFile(filepath.Join(fixture, manifest.UpstreamGenerated.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	upstreamHeader, err := parseContainerHeader(upstreamContainer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprintf("%x", sha256.Sum256(upstreamContainer)); got != manifest.UpstreamGenerated.SHA256 {
+		t.Fatalf("upstream-generated container hash %s does not match manifest %s", got, manifest.UpstreamGenerated.SHA256)
+	}
+	if got := fmt.Sprintf("%x", sha256.Sum256(upstreamContainer[upstreamHeader.Offset+12:])); got != manifest.UpstreamGenerated.CompressedSHA256 {
+		t.Fatalf("upstream-generated stream hash %s does not match manifest %s", got, manifest.UpstreamGenerated.CompressedSHA256)
+	}
+	if manifest.UpstreamGenerated.File != "Level.palooz-kraken.sav" ||
+		len(upstreamContainer) != manifest.UpstreamGenerated.Length ||
+		manifest.SourceGVAS.Length != manifest.UpstreamGenerated.RawLength ||
+		int(upstreamHeader.RawLen) != manifest.UpstreamGenerated.RawLength ||
+		int(upstreamHeader.CompressedLen) != manifest.UpstreamGenerated.CompressedLength ||
+		upstreamHeader.Magic != manifest.UpstreamGenerated.Magic ||
+		manifest.UpstreamGenerated.SaveType != "0x31" ||
+		manifest.UpstreamGenerated.Codec != "Kraken" ||
+		manifest.UpstreamGenerated.DecoderType != 6 ||
+		manifest.UpstreamGenerated.Generator.Name != "palooz.compress" ||
+		manifest.UpstreamGenerated.Generator.PackageVersion != "0.2.0" ||
+		manifest.UpstreamGenerated.Generator.Repository != "https://github.com/deafdudecomputers/PalworldSaveTools" ||
+		manifest.UpstreamGenerated.Generator.Commit != "3395e393466fc1f384dee54dabb3e597e611435e" ||
+		manifest.UpstreamGenerated.Generator.CodecID != 8 ||
+		manifest.UpstreamGenerated.Generator.Level != 4 {
+		t.Fatalf("upstream fixture metadata mismatch: header=%#v manifest=%#v", upstreamHeader, manifest.UpstreamGenerated)
 	}
 }
 

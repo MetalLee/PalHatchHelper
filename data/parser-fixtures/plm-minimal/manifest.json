@@ -18,6 +18,26 @@
     "compression_codec": "Mermaid",
     "decoder_type": 10
   },
+  "upstream_generated_save": {
+    "file": "Level.palooz-kraken.sav",
+    "sha256": "d19be8cab00a254b8908a17a0d11817b1369a4793853dafe412732dfe6c8686e",
+    "compressed_sha256": "2b6f41c2dbeae40505a3c7730e0a13873db552da127718210ec4f2396abdb811",
+    "length": 1120,
+    "raw_length": 5811,
+    "compressed_length": 1108,
+    "container_magic": "PlM",
+    "save_type": "0x31",
+    "compression_codec": "Kraken",
+    "decoder_type": 6,
+    "generator": {
+      "name": "palooz.compress",
+      "package_version": "0.2.0",
+      "repository": "https://github.com/deafdudecomputers/PalworldSaveTools",
+      "commit": "3395e393466fc1f384dee54dabb3e597e611435e",
+      "codec_id": 8,
+      "level": 4
+    }
+  },
   "fixture_generation": {
     "harness_version": "palbeacon-plm-fixture-v1",
     "compression_scope": "one-time fixture generation only",
