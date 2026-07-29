@@ -53,8 +53,7 @@ sudo -u palbeacon-sync env XDG_CONFIG_HOME=/var/lib/palbeacon-sync \
   /usr/local/bin/palbeacon-sync init \
   --url https://www.palbeacon.app \
   --code __ONE_TIME_PAIRING_CODE__ \
-  --save-dir __PALWORLD_SAVE_DIRECTORY__ \
-  --sync-now no
+  --save-dir __PALWORLD_SAVE_DIRECTORY__
 ```
 
 配置文件应位于

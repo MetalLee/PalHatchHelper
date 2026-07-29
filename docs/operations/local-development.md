@@ -56,8 +56,7 @@ pnpm --filter palbeacon-sync build
 node apps/sync/dist/cli.js init \
   --url http://localhost:3000 \
   --code ABCD-EFGH \
-  --save-dir /path/to/Pal/Saved/SaveGames \
-  --sync-now no
+  --save-dir /path/to/Pal/Saved/SaveGames
 ```
 
 开发可用 `PALBEACON_PARSER_BIN` 指向本地 Linux x64 Parser。CLI 不访问 Docker Socket、RCON 或远程命令，

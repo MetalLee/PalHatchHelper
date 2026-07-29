@@ -66,6 +66,13 @@ export async function loadConfig(
     value = JSON.parse(await readFile(configPath(directory), "utf8"));
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("SYNC_CONFIG_INVALID");
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOENT"
+    )
+      throw new Error("SYNC_CONFIG_NOT_FOUND");
     throw error;
   }
   const config = normalizeSyncConfig(value);

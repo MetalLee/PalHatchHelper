@@ -1049,6 +1049,31 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 - 首次生产启用前完成备份和 dry-run，镜像使用 Git SHA 与 digest；只重启 PalHatchHelper
   服务，不操作 Palworld 或 mihomo。
 
+## 2026-07-29 跨阶段修订：普通用户公共 Sync 安装流程
+
+### 交付顺序
+
+1. 在正式规格中固定 `npm install -g`、无参数 `init` 与前台 `run` 的最短流程，同时保留
+   只读快照、Parser、脱敏、鉴权、设备配对和生产运维边界。
+2. 增加失败测试，覆盖默认 PalBeacon 地址、仅两个交互问题、成功提示、高级覆盖参数、
+   移除 `--sync-now`、已有配置确认/`--force`、首轮立即同步、信号退出、精简帮助与 README。
+3. 最小调整 Sync CLI：默认 URL 固定为 `https://www.palbeacon.app`，`init` 只配对并保存，
+   已有配置必须确认或显式强制；`run` 继续在首轮完成后才进入 300 秒等待。
+4. 把 npm README 收敛为约 30 至 40 行的普通用户文档；许可证、Parser 源码说明和第三方通知
+   继续由 npm 文件清单与包验证脚本保证，不放入普通用户主文档。
+5. 账户页使用中英文三步响应式卡片展示安装、配对和启动，配对码独立复制，高级非交互命令
+   默认折叠；普通界面不展示 URL、systemd、ACL、Parser 或迁移流程。
+6. 更新受影响的高级运维示例以移除失效参数，但不删除 systemd、Save Worker 切换、迁移、
+   验证或回滚能力。局部验证后执行 Sync/Web 全套检查、根聚合检查、npm dry-run 打包、精确 tgz
+   验证、秘密/真实存档检查与 `git diff --check`。
+
+### 回滚与生产约束
+
+- 应用回滚可恢复上一 CLI 与 Web；本修订不修改数据库、共享契约、存档事实、Parser、配种关系、
+  算法、评分或生产运行状态。
+- 不执行 npm publish、生产 migration、Vercel/Agent 部署、远程推送、Palworld/mihomo 操作或
+  Save Worker 切换；不在 postinstall 中执行系统级命令。
+
 ## Phase 8：管理员功能、部署和端到端验收
 
 ### 阶段目标

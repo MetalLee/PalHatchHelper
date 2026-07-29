@@ -164,20 +164,28 @@ try {
   if (sha256(await readFile(installedParser)) !== manifest.sha256)
     throw new Error("INSTALLED_PARSER_HASH_MISMATCH");
 
+  const installedCli = join(
+    installRoot,
+    "node_modules",
+    ".bin",
+    "palbeacon-sync",
+  );
   const { stdout: helpOutput } = await execFileAsync(
-    "npx",
-    ["--no-install", "palbeacon-sync", "--help"],
+    installedCli,
+    ["--help"],
     { cwd: installRoot, encoding: "utf8" },
   );
   if (
     !helpOutput.includes("palbeacon-sync") ||
-    !helpOutput.includes("inspect") ||
-    !helpOutput.includes("不上传数据")
+    !helpOutput.includes("palbeacon-sync init") ||
+    !helpOutput.includes("palbeacon-sync run") ||
+    helpOutput.includes("inspect") ||
+    helpOutput.includes("Parser")
   )
     throw new Error("INSTALLED_HELP_FAILED");
   const { stdout: cliVersion } = await execFileAsync(
-    "npx",
-    ["--no-install", "palbeacon-sync", "--version"],
+    installedCli,
+    ["--version"],
     { cwd: installRoot, encoding: "utf8" },
   );
   const packageMetadata = JSON.parse(
