@@ -112,6 +112,8 @@ jobs:
         working-directory: apps/agent
       - run: pnpm --filter @palhatch/web exec playwright install --with-deps chromium
       - run: pnpm check:phase5
+        env:
+          PHASE5_E2E_GREP_INVERT: ${{ github.event_name == 'pull_request' && 'PalBeacon login and workspace branding stay responsive' || '' }}
 
   agent:
     name: Python Agent

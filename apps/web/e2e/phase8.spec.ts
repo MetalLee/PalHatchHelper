@@ -29,7 +29,7 @@ async function login(page: Page, email: string) {
     undefined,
     { timeout: 30_000 },
   );
-  await page.getByRole("button", { name: "登录工作台" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/overview$/, { timeout: 30_000 });
 }
 

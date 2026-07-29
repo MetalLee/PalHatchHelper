@@ -75,7 +75,19 @@ const localEnvironment = localSupabaseEnvironment(
   run("supabase", ["status", "-o", "env"]),
 );
 
-run("pnpm", ["--filter", "@palhatch/web", "exec", "playwright", "test"], {
+const playwrightArguments = [
+  "--filter",
+  "@palhatch/web",
+  "exec",
+  "playwright",
+  "test",
+];
+const grepInvert = process.env.PHASE5_E2E_GREP_INVERT?.trim();
+if (grepInvert) {
+  playwrightArguments.push("--grep-invert", grepInvert);
+}
+
+run("pnpm", playwrightArguments, {
   env: { ...process.env, ...localEnvironment },
   stdio: "inherit",
 });

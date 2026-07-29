@@ -68,6 +68,30 @@ describe("login page", () => {
     expect(screen.getByText("注册账号").getAttribute("aria-disabled")).toBe(
       "true",
     );
+    expect(screen.queryByText("管理员备用登录")).toBeNull();
+    expect(
+      screen.queryByText(
+        "仅使用 Steam 官方 OpenID，不读取云存档，也不会索取密码或 Steam Guard。",
+      ),
+    ).toBeNull();
+
+    const email = screen.getByLabelText("邮箱");
+    const steamLogin = screen.getByRole("link", { name: "使用 Steam 登录" });
+    const registration = screen.getByText("注册账号").closest("p");
+    expect(
+      email.compareDocumentPosition(steamLogin) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      steamLogin.compareDocumentPosition(registration!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const steamIcon = steamLogin.querySelector<HTMLImageElement>(
+      'img[src="/brand/steam-icon.svg"]',
+    );
+    expect(steamIcon).not.toBeNull();
+    expect(steamIcon?.getAttribute("width")).toBe("20");
+    expect(steamIcon?.getAttribute("height")).toBe("20");
     expect(screen.queryByText(/RLS.*RPC 授权/)).toBeNull();
     expect(screen.queryByText("仅使用当前系统已提供的账号登录。")).toBeNull();
     expect(
@@ -97,7 +121,7 @@ describe("login page", () => {
     fireEvent.change(screen.getByLabelText("密码"), {
       target: { value: "wrong-password" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "登录工作台" }));
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain(
       "邮箱或密码不正确。",
@@ -107,7 +131,7 @@ describe("login page", () => {
       expect.objectContaining({ method: "POST", cache: "no-store" }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "登录工作台" }));
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/zh/overview"));
   });
 
@@ -130,7 +154,7 @@ describe("login page", () => {
     fireEvent.change(screen.getByLabelText("密码"), {
       target: { value: "fixture-password" },
     });
-    const submit = screen.getByRole("button", { name: "登录工作台" });
+    const submit = screen.getByRole("button", { name: "登录" });
     fireEvent.click(submit);
 
     await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(true));
