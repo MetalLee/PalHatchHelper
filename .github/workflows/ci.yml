@@ -138,12 +138,10 @@ jobs:
     name: Self-contained Parser and Sync package
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      PARSER_BUILD_IMAGE: golang@sha256:1ecb7edf62a0408027bd5729dfd6b1b8766e578e8df93995b225dfd0944eb651
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.5"
-          cache-dependency-path: parser/go.sum
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
@@ -154,16 +152,31 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Test and vet Parser
-        working-directory: parser
         run: |
-          go test -mod=vendor ./...
-          go vet ./...
-          go test -mod=vendor ./internal/sav -run='^$' -fuzz=FuzzParseContainerHeader -fuzztime=3s
-          go test -mod=vendor ./internal/palooz -run='^$' -fuzz=FuzzDecompressBoundaries -fuzztime=3s
+          docker run --rm --platform linux/amd64 \
+            -v "$PWD:/workspace:ro" \
+            -w /workspace/parser \
+            "$PARSER_BUILD_IMAGE" \
+            sh -eu -c '
+              go test -mod=vendor ./...
+              go vet ./...
+              go test -mod=vendor ./internal/sav -run="^$" -fuzz=FuzzParseContainerHeader -fuzztime=3s
+              go test -mod=vendor ./internal/palooz -run="^$" -fuzz=FuzzDecompressBoundaries -fuzztime=3s
+            '
       - name: Reproducibly build and inspect Parser
         run: |
-          parser/scripts/build-linux-amd64.sh "$RUNNER_TEMP/parser-first"
-          parser/scripts/build-linux-amd64.sh "$RUNNER_TEMP/parser-second"
+          docker run --rm --platform linux/amd64 \
+            -v "$PWD:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace/parser \
+            "$PARSER_BUILD_IMAGE" \
+            ./scripts/build-linux-amd64.sh /runner-temp/parser-first
+          docker run --rm --platform linux/amd64 \
+            -v "$PWD:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace/parser \
+            "$PARSER_BUILD_IMAGE" \
+            ./scripts/build-linux-amd64.sh /runner-temp/parser-second
           cmp "$RUNNER_TEMP/parser-first" "$RUNNER_TEMP/parser-second"
           cmp parser/palworld-save-parser "$RUNNER_TEMP/parser-first"
           test "$("$RUNNER_TEMP/parser-first" --version)" = "$(cat parser/VERSION)"
