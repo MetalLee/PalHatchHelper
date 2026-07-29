@@ -23,6 +23,6 @@ case "$output_path" in
 esac
 cd "$parser_directory"
 CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-  go build -mod=vendor -trimpath \
+  go build -mod=vendor -trimpath -buildvcs=false \
   -ldflags='-s -w -buildid= -extldflags "-Wl,--build-id=none -static-libstdc++ -static-libgcc"' \
   -o "$output_path" ./cmd/palworld-save-parser

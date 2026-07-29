@@ -52,9 +52,10 @@ docker run --rm \
   sh -c './scripts/build-linux-amd64.sh'
 ```
 
-The script uses `-trimpath`, strips symbols, clears Go and ELF build IDs, and
-requests static `libstdc++`/`libgcc` linkage. The resulting executable should
-show only glibc and the Linux loader in `ldd`; it must never link a separate
+The script uses `-trimpath`, disables embedded VCS metadata with
+`-buildvcs=false`, strips symbols, clears Go and ELF build IDs, and requests
+static `libstdc++`/`libgcc` linkage. The resulting executable should show only
+glibc and the Linux loader in `ldd`; it must never link a separate
 decompression runtime.
 
 Run the complete Parser checks in the same environment:
