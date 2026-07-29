@@ -1,4 +1,5 @@
 import { ShieldCheck } from "lucide-react";
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -9,11 +10,24 @@ import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { brand } from "@/config/brand";
 import { isAppLocale } from "@/i18n/routing";
+import { privatePageMetadata } from "@/config/seo";
 
 import { LoginForm } from "./login-form";
 import { isPasswordLoginEnabled } from "@/features/auth/password-login";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: Readonly<{ params: Promise<{ locale: string }> }>): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isAppLocale(locale)) notFound();
+  const t = await getTranslations({ locale, namespace: "Login" });
+  return {
+    ...privatePageMetadata,
+    title: { absolute: t("metadataTitle") },
+  };
+}
 
 export default async function LoginPage({
   params,

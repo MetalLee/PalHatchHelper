@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -5,8 +6,10 @@ import { requireUserContext } from "@/features/auth/server";
 import { getInventoryDataStatus } from "@/features/pals/server";
 import { requireAppLocale } from "@/i18n/server-locale";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { privatePageMetadata } from "@/config/seo";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = privatePageMetadata;
 
 export default async function WorkspaceLayout({
   children,

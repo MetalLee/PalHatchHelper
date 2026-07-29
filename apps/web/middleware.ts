@@ -19,6 +19,7 @@ const protectedPrefixes = [
 export function withPrivateCacheHeaders(response: NextResponse): NextResponse {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Vary", "Cookie");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   return response;
 }
 
@@ -96,6 +97,9 @@ export async function middleware(request: NextRequest) {
         response,
       ),
     );
+  }
+  if (normalizedPathname === "/login") {
+    return withPrivateCacheHeaders(response);
   }
   if (
     protectedPrefixes.some((prefix) => normalizedPathname.startsWith(prefix))

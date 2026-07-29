@@ -1,8 +1,18 @@
 # PalBeacon
 
-PalBeacon 是面向《幻兽帕鲁》私人服务器的数据监控、帕鲁库存与配种协作控制台。服务器状态、帕鲁库存与配种计划，尽在一个看板。Keep your world visible. 时刻掌握你的帕鲁世界。
+PalBeacon 官网：https://www.palbeacon.app
 
-第一版继续以安全同步库存、确定性配种路线比较和“我的计划”只读收藏为核心闭环。公开入口使用 Steam OpenID 登录；自建服务器可通过 `palbeacon-sync` 配对并定时上传脱敏后的标准化库存。原有私有 Agent 发布路径继续保留。代码仓库与内部工程标识仍为 `PalHatchHelper`；Supabase、Vercel 和腾讯云私有 Agent 已完成生产部署，当前发布标识与回滚引用记录在 [v1 生产发布记录](docs/releases/v1-production-deployment.md)。开发与测试默认仍只使用 fixture 和本地 Supabase，不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
+PalBeacon 是面向《幻兽帕鲁》私人服务器玩家的只读存档同步、帕鲁库存管理、公会协作与多代配种路线规划工具。第一版以安全同步库存、确定性路线比较和“我的计划”只读收藏为核心闭环。公开入口支持 Steam OpenID；同步客户端只上传配种与库存所需的脱敏数据，不上传完整存档。
+
+普通用户的最短同步流程是：
+
+```bash
+npm install -g palbeacon-cli
+palbeacon init
+palbeacon run
+```
+
+完整 CLI 说明以 [apps/sync/README.zh-CN.md](apps/sync/README.zh-CN.md) 为准。代码仓库与内部工程标识仍为 `PalHatchHelper`；生产发布记录见 [v1 生产发布记录](docs/releases/v1-production-deployment.md)。开发与测试默认只使用 fixture 和本地 Supabase，不读取或修改真实 Palworld 存档，也不操作 Palworld 或 mihomo。
 
 ## 前置工具
 
@@ -51,7 +61,7 @@ uv run pal-hatch-helper api
 本地构建公开 Sync CLI：
 
 ```bash
-pnpm --filter palbeacon-sync build
+pnpm --filter palbeacon-cli build
 node apps/sync/dist/cli.js --help
 ```
 

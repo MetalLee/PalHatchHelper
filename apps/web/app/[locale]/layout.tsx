@@ -12,6 +12,8 @@ import { notFound } from "next/navigation";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { brand } from "@/config/brand";
+import { siteVerificationMetadata } from "@/config/seo";
+import { siteConfig } from "@/config/site";
 import { AppLocaleProvider } from "@/i18n/client";
 import { catalogLocaleFor, routing } from "@/i18n/routing";
 
@@ -29,7 +31,9 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "Metadata" });
   const title = t("title");
   const description = t("description");
+  const verification = siteVerificationMetadata();
   return {
+    metadataBase: new URL(siteConfig.url),
     title: { default: title, template: `%s | ${brand.name}` },
     description,
     keywords: [brand.name, "Palworld", ...t("keywords").split(",")],
@@ -45,6 +49,7 @@ export async function generateMetadata({
     openGraph: { title, description, siteName: brand.name, type: "website" },
     twitter: { card: "summary", title, description },
     appleWebApp: { capable: true, title: brand.name },
+    ...(verification ? { verification } : {}),
   };
 }
 

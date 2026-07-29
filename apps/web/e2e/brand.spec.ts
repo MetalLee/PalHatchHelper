@@ -35,7 +35,7 @@ test("PalBeacon login and workspace branding stay responsive", async ({
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/zh/login");
-  await expect(page).toHaveTitle("PalBeacon");
+  await expect(page).toHaveTitle("登录 | PalBeacon");
   await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
   await expect(page.getByText("登录你的 PalBeacon 账号")).toBeVisible();
   await expect(page.getByText("忘记密码？")).toHaveAttribute(

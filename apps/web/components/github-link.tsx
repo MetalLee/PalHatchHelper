@@ -1,10 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { siteConfig } from "@/config/site";
 import { useCopy } from "@/i18n/client";
 import { cn } from "@/lib/utils";
-
-const repositoryUrl = "https://github.com/MetalLee/PalHatchHelper";
 
 export function GitHubLink({ className }: Readonly<{ className?: string }>) {
   const t = useCopy("Shell");
@@ -17,7 +16,7 @@ export function GitHubLink({ className }: Readonly<{ className?: string }>) {
       className={cn("rounded-xl", className)}
     >
       <a
-        href={repositoryUrl}
+        href={siteConfig.repositoryUrl}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={t("githubLabel")}

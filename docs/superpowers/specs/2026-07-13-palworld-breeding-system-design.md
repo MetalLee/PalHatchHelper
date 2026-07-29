@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -1466,11 +1466,55 @@ palbeacon run
 
 1. Logo 组合只显示 PalBeacon 图形与英文 Wordmark，不再附加“帕鲁配种协作工作台”或
    “Pal Breeding Workspace”；Logo 图片替代文本同样只使用 `PalBeacon`。
-2. 浏览器页面标题只使用 `PalBeacon`，中英文页面均不再拼接配种工作台副标题；页面描述、功能
-   标题和配种器产品语义保持不变。
+2. workspace 浏览器页面标题继续使用 `PalBeacon`，不拼接配种工作台副标题；公开语言首页使用
+   对应语言的准确 SEO 标题与描述，登录页使用本地化“登录/Sign in | PalBeacon”标题。页面描述、
+   功能标题和配种器产品语义保持不变。
 3. 数据状态徽标不再作为用户菜单外的独立 Header 入口。桌面用户下拉菜单与移动导航中的
    “数据状态”选项右侧展示紧凑徽标：未绑定角色为“未绑定”，有效最新库存为“最新”，其余
    已绑定但非最新状态为“已过期”；英文分别为 `Unbound`、`Latest`、`Expired`。
 4. GitHub 图标入口位于每个语言切换器左侧，链接固定为
    `https://github.com/MetalLee/PalHatchHelper`，新标签页打开并使用安全的外链关系属性。入口使用
    适配 Header 的 18 像素 GitHub 标记、至少 44 像素点击区域、当前语言可访问名称和清晰焦点。
+
+## 26. 公开双语首页与搜索收录
+
+1. `/zh` 与 `/en` 是无需登录、可静态生成且可索引的产品首页，不再重定向到 `/overview`；根路径
+   继续由 next-intl 按显式语言、语言 Cookie、`Accept-Language` 与默认中文顺序重定向。
+2. 首页只说明当前已实现的存档同步设备、角色认领、权限内库存、公会共享、确定性多代路线、候选
+   比较、路线收藏与数据状态；不得宣传执行进度、候选子代确认或其他已从第一版移除的计划执行能力。
+3. 普通同步流程固定为 `npm install -g palbeacon-cli`、`palbeacon init`、`palbeacon run`。当前 CLI
+   支持 Linux x64 与 Node.js 22+；多个世界必须由用户把路径缩小到目标世界目录，CLI 不替用户猜测。
+4. 正式 SEO host 固定为 `https://www.palbeacon.app`。两个首页使用 self-canonical、完整双向 hreflang、
+   本地化 Open Graph/Twitter 图片和与可见 FAQ 一致的 WebSite、SoftwareApplication、FAQPage JSON-LD。
+5. sitemap 只列出 `/zh` 与 `/en`。登录、workspace、管理员与动态任务/计划页面通过 metadata 和
+   middleware `X-Robots-Tag` 双重 noindex；鉴权、Session Cookie、locale 与 `next` 返回地址保持不变。
+6. 首页不查询 Session、Supabase 私有数据或 Service Role，不依赖客户端 hydration 显示正文。robots
+   允许公开页面、可禁止 `/api/`，但不代替私有 HTML 响应的 noindex。
+7. Hero 以 `Keep your Palworld visible` 为唯一主标题，把 PalBeacon 定位为汇总服务器存档、库存、
+   数据状态和配种方案的清晰控制台；首屏不重复罗列只读、公会共享或脱敏上传等下方已有说明，
+   也不提供重复的 GitHub CTA。
+8. Hero 右侧使用公会库存、配种路线树和收藏计划三屏自动轮播，视觉与现有工作台一致但只使用
+   固定展示数据，不查询 Session 或真实用户库存。轮播必须提供手动切换和暂停，并在 reduced-motion
+   环境停止自动播放；轮播以外的首页正文继续由 Server Component 输出。
+9. 可见文案面向玩家表达，删除实现校验、公开页面不会生成数据、Service Role 名称等开发者说明；
+   同一卖点只在最合适的区块完整解释。中英文标题使用平衡换行，正文使用优化换行并在窄屏避免
+   单字孤行和横向溢出。
+10. 轮播页签是三个画面的唯一标题，画面内部不再重复 PalBeacon 控制台名称或页签标题。路线画面
+    按“初始亲本 → 第 1 代 → 第 2 代”从左到右展开，同代的两个亲本上下排列并以曲线汇合到下一代
+    子代；节点使用接近真实工作台的头像、角色、状态、性别和被动层级，但保持抽象名称，不把展示
+    节点宣传为具体合法配方。
+11. 核心能力区增加面向玩家的通信示意：Palworld 服务器存档由同机同步工具在本地读取，工具仅
+    主动向 PalBeacon 云端同步必要数据，玩家浏览器再按账号与公会权限访问；图中不得暗示云端主动
+    连接游戏服务器、开放新入站端口或上传完整存档。
+12. Footer 品牌句统一为 `Keep your Palworld Visible.`，保留游戏名 `Palworld` 的正确拼写。
+13. 三个轮播画面共享接近一致的内容高度。路线树保留节点所有者与位置信息，但使用紧凑间距减少
+    整体高度；其中至少一个库存亲本展示为公会成员，库存亲本使用具体终端页码而不是“位置已记录”
+    占位。路线下方代数和目标被动数必须与可见树一致；最终目标汇总两组亲本展示的四个被动。
+    公会库存卡按“身份 → 所有者与位置 → 被动”排列，身份与详情之间不增加多余分割线，并适当
+    增加卡片信息密度；收藏计划画面同时展示两张紧凑收藏卡，不用空白填充单卡区域。
+    Landing 中的被动技能必须复用全局 `PassiveBadge` 和目录 rank 视觉规则；示例中的“认真、工匠精神、
+    稀有、灵活”分别按 rank 1、3、4、1 展示，不手写猜测颜色；库存中的皮皮鸡示例使用“稀有”。
+14. 公开首页顶部导航固定覆盖在 Hero 上方：页面位于顶端时背景、边框和阴影完全透明，向下滚动时
+    白色背景、毛玻璃模糊、饱和度、边框和阴影按同一条平滑缓动曲线连续显现，不得在单一阈值突变。顶部 GitHub 入口只显示
+    图标但保留可访问名称；语言切换必须复用控制台的弹出式单选菜单，桌面显示当前语言，移动端使用
+    紧凑图标触发器，不再维护直接跳转到另一语言的第二套顶部控件。

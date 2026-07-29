@@ -59,6 +59,9 @@ describe("protected response caching", () => {
       "private, no-store, max-age=0",
     );
     expect(response.headers.get("vary")).toBe("Cookie");
+    expect(response.headers.get("x-robots-tag")).toBe(
+      "noindex, nofollow, noarchive",
+    );
   });
 
   it("forwards refreshed auth cookies through the locale middleware response", async () => {
@@ -72,6 +75,9 @@ describe("protected response caching", () => {
       "sb-session=refreshed",
     );
     expect(response.cookies.get("sb-session")?.value).toBe("refreshed");
+    expect(response.headers.get("x-robots-tag")).toBe(
+      "noindex, nofollow, noarchive",
+    );
   });
 
   it("keeps the original query only inside the localized login return path", async () => {
@@ -88,5 +94,56 @@ describe("protected response caching", () => {
     expect(location.searchParams.get("scope")).toBeNull();
     expect(location.searchParams.get("next")).toBe("/en/overview?scope=mine");
     expect(response.cookies.get("sb-session")?.value).toBe("refreshed");
+    expect(response.headers.get("x-robots-tag")).toBe(
+      "noindex, nofollow, noarchive",
+    );
+  });
+
+  it("protects every workspace, admin and dynamic private route in both locales", async () => {
+    authState.authenticated = false;
+    const routes = [
+      "/overview",
+      "/pals",
+      "/breeder",
+      "/breeder/jobs/fixture-job",
+      "/plans",
+      "/plans/fixture-plan",
+      "/data-status",
+      "/account",
+      "/admin",
+      "/admin/jobs",
+    ];
+
+    for (const locale of ["zh", "en"] as const) {
+      for (const route of routes) {
+        const path = `/${locale}${route}`;
+        const response = await middleware(
+          new NextRequest(`https://example.invalid${path}`),
+        );
+        const location = new URL(response.headers.get("location") ?? "");
+        expect(location.pathname).toBe(`/${locale}/login`);
+        expect(location.searchParams.get("next")).toBe(path);
+        expect(response.headers.get("cache-control")).toBe(
+          "private, no-store, max-age=0",
+        );
+        expect(response.headers.get("x-robots-tag")).toBe(
+          "noindex, nofollow, noarchive",
+        );
+      }
+    }
+  });
+
+  it("adds noindex response headers to the public sign-in screen", async () => {
+    authState.authenticated = false;
+    const response = await middleware(
+      new NextRequest("https://example.invalid/zh/login"),
+    );
+
+    expect(response.headers.get("x-robots-tag")).toBe(
+      "noindex, nofollow, noarchive",
+    );
+    expect(response.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0",
+    );
   });
 });

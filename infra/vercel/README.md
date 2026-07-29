@@ -20,7 +20,7 @@ Web Server Route 另需服务端 `SUPABASE_SERVICE_ROLE_KEY`，并支持可选�
 
 ## 自定义域名
 
-在 Vercel 项目 Settings → Domains 中添加正式域名，按 Vercel 给出的 DNS 记录配置并等待证书生效。部署前确认 `NEXT_PUBLIC_APP_URL` 与正式 HTTPS 域名完全一致；部署后以 `vercel inspect <domain> --json` 和浏览器健康检查确认域名已经指向本次 production deployment。不得在仓库写入域名验证 Token。
+在 Vercel 项目 Settings → Domains 中把 `www.palbeacon.app` 设为 Primary Domain，并把 `palbeacon.app` 配置为永久跳转到 `www.palbeacon.app`。按 Vercel 给出的 DNS 记录配置并等待证书生效。部署前确认 `NEXT_PUBLIC_APP_URL=https://www.palbeacon.app`；部署后以 `vercel inspect <domain> --json` 和浏览器健康检查确认域名已经指向本次 production deployment。不得在仓库写入域名验证 Token。
 
 Steam OpenID 回调固定为 `<NEXT_PUBLIC_APP_URL>/api/auth/steam/callback`。检查登录、绑定和 Sync API 响应
 均为 `private, no-store`，并检查构建产物与日志不含 Service Role、Steam Key、magic-link token hash 或设备 token。
