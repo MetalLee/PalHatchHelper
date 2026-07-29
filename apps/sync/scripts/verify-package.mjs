@@ -165,12 +165,7 @@ try {
   if (sha256(await readFile(installedParser)) !== manifest.sha256)
     throw new Error("INSTALLED_PARSER_HASH_MISMATCH");
 
-  const installedCli = join(
-    installRoot,
-    "node_modules",
-    ".bin",
-    "palbeacon",
-  );
+  const installedCli = join(installRoot, "node_modules", ".bin", "palbeacon");
   const { stdout: helpOutput } = await execFileAsync(installedCli, ["--help"], {
     cwd: installRoot,
     encoding: "utf8",
