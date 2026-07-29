@@ -34,6 +34,8 @@ describe("configuration security", () => {
     expect(JSON.parse(await readFile(path, "utf8"))).toMatchObject(config);
     expect(formatStatus(config)).not.toContain(config.device_token);
     expect(formatStatus(config)).toContain("https://www.palbeacon.app");
+    expect(formatStatus(config)).toContain("Server:");
+    expect(formatStatus(config, "zh-CN")).toContain("服务器:");
   });
 
   it("reports a stable code when no configuration exists", async () => {

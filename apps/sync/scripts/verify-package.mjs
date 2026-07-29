@@ -42,6 +42,7 @@ try {
   const requiredFiles = [
     "package/LICENSE",
     "package/README.md",
+    "package/README.zh-CN.md",
     "package/package.json",
     "package/dist/cli.js",
     "package/dist/bin/palworld-save-parser",
@@ -170,19 +171,36 @@ try {
     ".bin",
     "palbeacon-sync",
   );
-  const { stdout: helpOutput } = await execFileAsync(
-    installedCli,
-    ["--help"],
-    { cwd: installRoot, encoding: "utf8" },
-  );
+  const { stdout: helpOutput } = await execFileAsync(installedCli, ["--help"], {
+    cwd: installRoot,
+    encoding: "utf8",
+  });
   if (
     !helpOutput.includes("palbeacon-sync") ||
+    !helpOutput.includes("Sync Palworld server saves to PalBeacon.") ||
     !helpOutput.includes("palbeacon-sync init") ||
     !helpOutput.includes("palbeacon-sync run") ||
     helpOutput.includes("inspect") ||
     helpOutput.includes("Parser")
   )
     throw new Error("INSTALLED_HELP_FAILED");
+  const { stdout: chineseHelpBeforeCommand } = await execFileAsync(
+    installedCli,
+    ["--locale", "zh", "--help"],
+    { cwd: installRoot, encoding: "utf8" },
+  );
+  const { stdout: chineseHelpAfterCommand } = await execFileAsync(
+    installedCli,
+    ["--help", "--locale", "zh-CN"],
+    { cwd: installRoot, encoding: "utf8" },
+  );
+  if (
+    !chineseHelpBeforeCommand.includes(
+      "将 Palworld 服务器存档同步到 PalBeacon。",
+    ) ||
+    chineseHelpBeforeCommand !== chineseHelpAfterCommand
+  )
+    throw new Error("INSTALLED_LOCALIZED_HELP_FAILED");
   const { stdout: cliVersion } = await execFileAsync(
     installedCli,
     ["--version"],

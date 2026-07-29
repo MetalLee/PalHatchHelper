@@ -4,7 +4,7 @@
 
 只运行仓库 `supabase/config.toml` 定义的本地实例。不要执行 `supabase link`、`supabase db push` 或带 project ID 的命令，不要读取生产 URL、anon key 或 Service Role Key。本阶段没有执行生产迁移。
 
-需要 Docker Engine、Supabase CLI、Node.js 22 和 pnpm 9。确认工具：
+需要 Docker Engine、Supabase CLI、Node.js 22 或更高版本和 pnpm 9。确认工具：
 
 ```bash
 docker --version

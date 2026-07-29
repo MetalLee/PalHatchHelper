@@ -20,6 +20,12 @@ import {
 } from "./config.js";
 import { findWorldSave } from "./discovery.js";
 import { inspectSave } from "./inspect.js";
+import {
+  extractLocaleOption,
+  messages,
+  resolveLocale,
+  type CliLocale,
+} from "./locale.js";
 import { assertSupportedPlatform } from "./platform.js";
 import { syncOnce } from "./sync.js";
 import { VERSION } from "./version.js";
@@ -50,24 +56,41 @@ export interface RunRuntime {
   wait: (milliseconds: number, stopped: () => boolean) => Promise<void>;
 }
 
-if (isDirectExecution()) void main().catch(handleFatalError);
+if (isDirectExecution()) runDirectly();
 
-function handleFatalError(error: unknown): void {
+function runDirectly(): void {
+  let locale: CliLocale = "en";
+  let arguments_: string[];
+  try {
+    const extracted = extractLocaleOption(process.argv.slice(2));
+    arguments_ = extracted.arguments;
+    locale = resolveLocale(extracted.requestedLocale);
+  } catch (error) {
+    handleFatalError(error, locale);
+    return;
+  }
+  void main(arguments_, locale).catch((error: unknown) =>
+    handleFatalError(error, locale),
+  );
+}
+
+function handleFatalError(error: unknown, locale: CliLocale): void {
+  const text = messages(locale);
   const message = error instanceof Error ? error.message : "UNKNOWN_ERROR";
   if (error instanceof DeviceAuthorizationError) {
-    console.error(
-      "设备授权已失效或被撤销，请执行 palbeacon-sync init 重新配对。",
-    );
+    console.error(text.authorizationRevoked);
   } else {
-    console.error(`操作失败：${friendlyError(error, message)}`);
+    console.error(
+      `${text.fatalPrefix}${friendlyError(error, message, locale)}`,
+    );
   }
   process.exitCode = 1;
 }
 
-async function main(): Promise<void> {
-  const [command, ...arguments_] = process.argv.slice(2);
+async function main(arguments_: string[], locale: CliLocale): Promise<void> {
+  const [command, ...commandArguments] = arguments_;
   if (command === undefined || command === "--help" || command === "-h") {
-    printHelp();
+    printHelp(locale);
     return;
   }
   if (command === "--version" || command === "-v") {
@@ -77,46 +100,55 @@ async function main(): Promise<void> {
   if (command === "init") {
     const terminal = createInterface({ input: stdin, output: stdout });
     try {
-      await initialize(parseArguments(arguments_), {
-        isInteractive: stdin.isTTY,
-        assertSupportedPlatform,
-        question: (prompt) => terminal.question(prompt),
-        loadConfig,
-        findWorldSave,
-        pairDevice,
-        saveConfig,
-        hostname,
-        log: console.log,
-      });
+      await initialize(
+        parseArguments(commandArguments),
+        {
+          isInteractive: stdin.isTTY,
+          assertSupportedPlatform: () =>
+            assertSupportedPlatform(undefined, undefined, locale),
+          question: (prompt) => terminal.question(prompt),
+          loadConfig,
+          findWorldSave,
+          pairDevice,
+          saveConfig,
+          hostname,
+          log: console.log,
+        },
+        locale,
+      );
     } finally {
       terminal.close();
     }
   } else if (command === "run") {
-    assertSupportedPlatform();
-    await runContinuously(defaultRunRuntime());
+    if (commandArguments.length > 0) throw new Error("ARGUMENTS_INVALID");
+    assertSupportedPlatform(undefined, undefined, locale);
+    await runContinuously(defaultRunRuntime(), locale);
   } else if (command === "sync") {
-    if (!arguments_.includes("--once")) throw new Error("SYNC_ONCE_REQUIRED");
-    await runSingleSync();
+    if (commandArguments.length !== 1 || commandArguments[0] !== "--once")
+      throw new Error("SYNC_ONCE_REQUIRED");
+    await runSingleSync(locale);
   } else if (command === "inspect") {
-    assertSupportedPlatform();
-    const outputs = parseInspectArguments(arguments_);
+    assertSupportedPlatform(undefined, undefined, locale);
+    const outputs = parseInspectArguments(commandArguments);
     await inspectSave(outputs);
-    console.log(`离线检查完成：${outputs.canonicalOutput}`);
-    console.log(`脱敏上传载荷：${outputs.payloadOutput}`);
-  } else if (command === "status")
-    console.log(formatStatus(await loadConfig()));
-  else if (command === "logout") {
+    console.log(messages(locale).inspectComplete(outputs.canonicalOutput));
+    console.log(messages(locale).inspectPayload(outputs.payloadOutput));
+  } else if (command === "status") {
+    if (commandArguments.length > 0) throw new Error("ARGUMENTS_INVALID");
+    console.log(formatStatus(await loadConfig(), locale));
+  } else if (command === "logout") {
+    if (commandArguments.length > 0) throw new Error("ARGUMENTS_INVALID");
     await deleteConfig();
-    console.log(
-      "本地设备凭据已删除。如需立即阻止服务器端上传，请同时在 PalBeacon 账户页撤销设备。",
-    );
+    console.log(messages(locale).loggedOut);
   } else throw new Error("COMMAND_UNKNOWN");
 }
 
 export async function initialize(
   options: Map<string, string>,
   runtime: InitRuntime,
+  locale: CliLocale = "en",
 ): Promise<void> {
+  const text = messages(locale);
   runtime.assertSupportedPlatform();
   const hasExistingConfig =
     options.get("force") === "true"
@@ -125,12 +157,10 @@ export async function initialize(
   if (hasExistingConfig && options.get("force") !== "true") {
     if (!runtime.isInteractive) throw new Error("CONFIG_ALREADY_EXISTS");
     const replace = parseConfirmation(
-      await runtime.question(
-        "本机已经完成配对。继续会替换当前设备配置，是否继续？[y/N]\n> ",
-      ),
+      await runtime.question(text.replacePrompt),
     );
     if (!replace) {
-      runtime.log("已取消，当前设备配置保持不变。");
+      runtime.log(text.cancelled);
       return;
     }
   }
@@ -143,18 +173,17 @@ export async function initialize(
 
   const baseUrl = normalizeBaseUrl(options.get("url") ?? DEFAULT_API_BASE_URL);
   const code = (
-    options.get("code") ??
-    (await runtime.question("请输入 PalBeacon 配对码：\n> "))
+    options.get("code") ?? (await runtime.question(text.pairingCodePrompt))
   )
     .trim()
     .toUpperCase();
   const providedSaveDirectory =
     options.get("save-dir") ??
-    (await runtime.question("请输入 Palworld 存档目录：\n> "));
+    (await runtime.question(text.saveDirectoryPrompt));
   const saveDirectory = await runtime.findWorldSave(
     providedSaveDirectory.trim(),
   );
-  runtime.log("✓ 已找到世界存档");
+  runtime.log(text.saveFound);
   const intervalSeconds = integerOption(
     options.get("interval") ?? "300",
     30,
@@ -170,7 +199,7 @@ export async function initialize(
     platform: "linux-x64",
     app_version: VERSION,
   });
-  runtime.log("✓ 设备配对成功");
+  runtime.log(text.paired);
   const config: SyncConfig = {
     config_version: 2,
     api_base_url: paired.api_base_url,
@@ -182,25 +211,21 @@ export async function initialize(
     app_version: VERSION,
   };
   await runtime.saveConfig(config);
-  runtime.log("✓ 配置已保存");
-  for (const line of [
-    "",
-    "现在运行：",
-    "",
-    "palbeacon-sync run",
-    "",
-    "即可开始定时同步。",
-  ])
-    runtime.log(line);
+  runtime.log(text.configSaved);
+  for (const line of text.runNext) runtime.log(line);
 }
 
-async function runSingleSync(): Promise<void> {
-  assertSupportedPlatform();
+async function runSingleSync(locale: CliLocale): Promise<void> {
+  assertSupportedPlatform(undefined, undefined, locale);
   const result = await syncOnce(await loadConfig());
-  console.log(syncResultMessage(result));
+  console.log(syncResultMessage(result, locale));
 }
 
-export async function runContinuously(runtime: RunRuntime): Promise<void> {
+export async function runContinuously(
+  runtime: RunRuntime,
+  locale: CliLocale = "en",
+): Promise<void> {
+  const text = messages(locale);
   const config = await runtime.loadConfig();
   let stopping = false;
   const stop = (): void => {
@@ -208,16 +233,22 @@ export async function runContinuously(runtime: RunRuntime): Promise<void> {
   };
   runtime.addSignalListener("SIGINT", stop);
   runtime.addSignalListener("SIGTERM", stop);
-  runtime.log(`开始定时同步，每 ${config.interval_seconds} 秒检查一次。`);
+  runtime.log(text.runStarted(config.interval_seconds));
   try {
     while (!stopping) {
       try {
         const result = await runtime.syncOnce(config);
-        runtime.log(syncResultMessage(result));
+        runtime.log(syncResultMessage(result, locale));
       } catch (error) {
         if (error instanceof DeviceAuthorizationError) throw error;
         runtime.error(
-          `本轮同步失败：${friendlyError(error, error instanceof Error ? error.message : "UNKNOWN_ERROR")}`,
+          text.syncFailed(
+            friendlyError(
+              error,
+              error instanceof Error ? error.message : "UNKNOWN_ERROR",
+              locale,
+            ),
+          ),
         );
       }
       if (!stopping)
@@ -226,7 +257,7 @@ export async function runContinuously(runtime: RunRuntime): Promise<void> {
   } finally {
     runtime.removeSignalListener("SIGINT", stop);
     runtime.removeSignalListener("SIGTERM", stop);
-    runtime.log("同步已安全停止。");
+    runtime.log(text.stopped);
   }
 }
 
@@ -254,8 +285,12 @@ function parseConfirmation(value: string): boolean {
   throw new Error("CONFIRMATION_INVALID");
 }
 
-function syncResultMessage(result: "uploaded" | "unchanged"): string {
-  return result === "uploaded" ? "存档同步完成。" : "存档未变化，心跳已发送。";
+function syncResultMessage(
+  result: "uploaded" | "unchanged",
+  locale: CliLocale,
+): string {
+  const text = messages(locale);
+  return result === "uploaded" ? text.uploaded : text.unchanged;
 }
 
 function integerOption(
@@ -281,36 +316,21 @@ async function interruptibleDelay(
   }
 }
 
-function friendlyError(error: unknown, code: string): string {
-  const messages: Record<string, string> = {
-    ARGUMENTS_INVALID: "参数格式无效，请使用 --help 查看示例。",
-    COMMAND_UNKNOWN: "未知命令，请使用 --help 查看可用命令。",
-    SYNC_ONCE_REQUIRED: "请使用 palbeacon-sync sync --once。",
-    SAVE_DIRECTORY_INVALID: "存档目录不存在、不是目录或是符号链接。",
-    WORLD_SAVE_NOT_FOUND: "没有在指定目录中找到 Level.sav。",
-    MULTIPLE_WORLD_SAVES_FOUND:
-      "发现多个世界存档，请将 --save-dir 指向唯一世界目录。",
-    SAVE_SOURCE_UNSTABLE: "存档正在写入，本轮已安全跳过。",
-    SAVE_FILE_TOO_LARGE: "存档文件超过安全大小上限。",
-    SAVE_SIZE_LIMIT_INVALID: "存档大小上限配置无效。",
-    PARSER_TIMEOUT: "存档解析超时，本轮稍后重试。",
-    API_URL_INVALID: "PalBeacon 地址无效；公网地址必须使用 HTTPS。",
-    INTERVAL_INVALID: "同步间隔必须是 30 到 86400 秒之间的整数。",
-    CONFIG_ALREADY_EXISTS:
-      "本机已经完成配对；如需替换配置，请重新运行并添加 --force。",
-    SYNC_CONFIG_NOT_FOUND: "本机尚未完成配对，请先执行 palbeacon-sync init。",
-    SYNC_CONFIG_INVALID: "本机配置无效，请执行 palbeacon-sync init 重新配对。",
-    CONFIRMATION_INVALID: "请输入 y 或 n。",
-    INSPECT_OUTPUT_EXISTS: "inspect 输出文件已存在，未覆盖任何文件。",
-    INSPECT_OUTPUT_PATH_INVALID: "两个 inspect 输出路径必须不同。",
-  };
+function friendlyError(
+  error: unknown,
+  code: string,
+  locale: CliLocale,
+): string {
+  const text = messages(locale);
   if (isMissingFileError(error))
-    return "本机尚未完成配对，请先执行 palbeacon-sync init。";
-  return messages[code] ?? "发生错误，请稍后重试。";
+    return (
+      text.errors.SYNC_CONFIG_NOT_FOUND ?? text.errors.UNKNOWN_ERROR ?? code
+    );
+  return text.errors[code] ?? text.errors.UNKNOWN_ERROR ?? code;
 }
 
-function printHelp(): void {
-  console.log(helpText(VERSION));
+function printHelp(locale: CliLocale): void {
+  console.log(helpText(VERSION, locale));
 }
 
 async function existingConfig(

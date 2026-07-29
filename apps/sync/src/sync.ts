@@ -13,7 +13,7 @@ export async function syncOnce(
         app_version: config.app_version,
         status: "unchanged",
       });
-      await updateState(config, snapshot.hash, "存档未变化，已发送心跳");
+      await updateState(config, snapshot.hash, "unchanged");
       return "unchanged";
     }
     const artifacts = await buildUploadArtifacts(snapshot);
@@ -22,7 +22,7 @@ export async function syncOnce(
       config.device_token,
       artifacts.payload,
     );
-    await updateState(config, snapshot.hash, "上传成功");
+    await updateState(config, snapshot.hash, "uploaded");
     return "uploaded";
   } finally {
     await snapshot.cleanup();

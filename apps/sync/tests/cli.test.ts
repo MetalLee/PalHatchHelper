@@ -16,6 +16,7 @@ import {
 } from "../src/cli.js";
 import type { SyncConfig } from "../src/config.js";
 import { DeviceAuthorizationError } from "../src/api.js";
+import { extractLocaleOption, resolveLocale } from "../src/locale.js";
 
 const config: SyncConfig = {
   config_version: 2,
@@ -63,7 +64,7 @@ describe("command-line interface", () => {
 
   it("keeps inspect available without advertising it in the default help", () => {
     const help = helpText("0.1.0");
-    expect(help).toContain("将 Palworld 服务器存档同步到 PalBeacon。");
+    expect(help).toContain("Sync Palworld server saves to PalBeacon.");
     for (const command of ["init", "run", "status", "logout"])
       expect(help).toMatch(new RegExp(`^  ${command}\\s`, "m"));
     for (const hidden of [
@@ -100,6 +101,47 @@ describe("command-line interface", () => {
     ).toThrowError(/ARGUMENTS_INVALID/);
   });
 
+  it("detects supported system languages and falls back to English", () => {
+    expect(resolveLocale(undefined, { LANG: "zh_CN.UTF-8" }, "en-US")).toBe(
+      "zh-CN",
+    );
+    expect(
+      resolveLocale(
+        undefined,
+        { LC_ALL: "en_US.UTF-8", LANG: "zh_CN.UTF-8" },
+        "zh-CN",
+      ),
+    ).toBe("en");
+    expect(resolveLocale(undefined, { LANG: "de_DE.UTF-8" }, "fr-FR")).toBe(
+      "en",
+    );
+    expect(resolveLocale(undefined, { LANG: "de_DE.UTF-8" }, "zh-CN")).toBe(
+      "en",
+    );
+    expect(helpText("0.1.0", "zh-CN")).toContain(
+      "将 Palworld 服务器存档同步到 PalBeacon。",
+    );
+    expect(helpText("0.1.0")).toContain("--locale zh-CN");
+  });
+
+  it("accepts locale overrides before or after the command and rejects invalid values", () => {
+    expect(extractLocaleOption(["--locale", "zh", "status"])).toEqual({
+      arguments: ["status"],
+      requestedLocale: "zh",
+    });
+    expect(extractLocaleOption(["status", "--locale", "en-US"])).toEqual({
+      arguments: ["status"],
+      requestedLocale: "en-US",
+    });
+    expect(resolveLocale("zh", { LANG: "en_US.UTF-8" })).toBe("zh-CN");
+    expect(() => resolveLocale("de", { LANG: "zh_CN.UTF-8" })).toThrowError(
+      /LOCALE_INVALID/,
+    );
+    expect(() => extractLocaleOption(["--locale"])).toThrowError(
+      /LOCALE_INVALID/,
+    );
+  });
+
   it("uses the public PalBeacon URL and asks only for code and save directory", async () => {
     const prompts: string[] = [];
     const output: string[] = [];
@@ -120,7 +162,7 @@ describe("command-line interface", () => {
       log: (message) => output.push(message),
     });
 
-    await initialize(new Map(), runtime);
+    await initialize(new Map(), runtime, "zh-CN");
 
     expect(prompts).toEqual([
       "请输入 PalBeacon 配对码：\n> ",
@@ -227,7 +269,7 @@ describe("command-line interface", () => {
       saveConfig,
     });
 
-    await initialize(new Map(), runtime);
+    await initialize(new Map(), runtime, "zh-CN");
     expect(questions[0]).toContain("本机已经完成配对");
     expect(questions[0]).toContain("替换当前设备配置");
     expect(pairDevice).not.toHaveBeenCalled();
@@ -278,7 +320,7 @@ describe("command-line interface", () => {
         },
       };
 
-      await runContinuously(runtime);
+      await runContinuously(runtime, "zh-CN");
 
       expect(events.slice(0, 4)).toEqual([
         "load",
@@ -308,7 +350,7 @@ describe("command-line interface", () => {
       wait: async () => undefined,
     };
 
-    await expect(runContinuously(runtime)).rejects.toBeInstanceOf(
+    await expect(runContinuously(runtime, "zh-CN")).rejects.toBeInstanceOf(
       DeviceAuthorizationError,
     );
     expect(sync).toHaveBeenCalledTimes(2);
@@ -321,6 +363,13 @@ describe("command-line interface", () => {
       new URL("../README.md", import.meta.url),
       "utf8",
     );
+    const chineseReadme = await readFile(
+      new URL("../README.zh-CN.md", import.meta.url),
+      "utf8",
+    );
+    expect(readme).toContain("[简体中文](README.zh-CN.md)");
+    expect(readme).toContain("Read-only Palworld server save synchronization");
+    expect(chineseReadme).toContain("[English](README.md)");
     for (const expected of [
       "npm install -g palbeacon-sync",
       "palbeacon-sync init",

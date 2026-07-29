@@ -1,40 +1,47 @@
 # palbeacon-sync
 
-PalBeacon 的《幻兽帕鲁》服务器存档同步工具。它会只读解析服务器存档，并将帕鲁库存同步到 PalBeacon，用于生成公会配种路线。
+[简体中文](README.zh-CN.md)
 
-## 安装
+Read-only Palworld server save synchronization for PalBeacon. It uploads Pal
+inventory for collaborative breeding plans without modifying your save.
 
-支持 Linux x64，需要 Node.js 22。
+## Install
+
+Linux x64 and Node.js 22 or later are required.
 
 ```bash
 npm install -g palbeacon-sync
 ```
 
-## 使用
+## Use
 
-先在 PalBeacon 账户页创建同步设备并复制配对码，然后运行：
+Create a sync device in your PalBeacon account and copy its pairing code. Then
+run:
 
 ```bash
 palbeacon-sync init
 ```
 
-根据提示输入 PalBeacon 配对码和 Palworld 存档目录。
+Enter the pairing code and your Palworld save directory when prompted.
 
-完成配对后启动同步：
+After pairing, start synchronization:
 
 ```bash
 palbeacon-sync run
 ```
 
-程序会立即同步一次，之后每 5 分钟自动检查存档变化。
+The client syncs immediately, then checks for save changes every five minutes.
+Keep the command running to continue synchronization.
 
-保持该命令运行即可持续同步。
-
-## 其他命令
+## Other commands
 
 ```bash
 palbeacon-sync status
 palbeacon-sync logout
 ```
 
-palbeacon-sync 只读存档，不会修改 Palworld 存档，也不会执行服务器控制命令。
+The CLI follows your system language when possible and falls back to English.
+Use `--locale en` or `--locale zh-CN` before or after a command to override it.
+
+palbeacon-sync only reads save data. It never modifies Palworld saves or runs
+server control commands.

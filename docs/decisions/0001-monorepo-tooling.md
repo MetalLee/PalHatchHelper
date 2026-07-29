@@ -9,7 +9,9 @@
 
 ## 决策
 
-Node.js 22 项目使用 pnpm workspace 和单一 `pnpm-lock.yaml`。Python 3.12 Agent 使用 uv、独立 `pyproject.toml` 和 `uv.lock`。根 `pnpm check` 编排两套工具链，CI 仍拆分 Web 与 Agent job 以便定位失败和缓存依赖。
+Node.js 22 或更高版本的项目使用 pnpm workspace 和单一 `pnpm-lock.yaml`；`.nvmrc` 与 CI 继续以
+Node.js 22 作为最低兼容基线。Python 3.12 Agent 使用 uv、独立 `pyproject.toml` 和 `uv.lock`。
+根 `pnpm check` 编排两套工具链，CI 仍拆分 Web 与 Agent job 以便定位失败和缓存依赖。
 
 ## 理由
 

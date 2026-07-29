@@ -14,7 +14,7 @@
 ### 前置依赖
 
 - 正式设计规格已存在并完成阅读。
-- 本地可使用 Git；Node.js 22、pnpm、Python 3.12、uv 和 Docker 分别按验证项使用。
+- 本地可使用 Git；Node.js 22 或更高版本、pnpm、Python 3.12、uv 和 Docker 分别按验证项使用。
 
 ### 明确范围
 
@@ -1073,6 +1073,27 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
   算法、评分或生产运行状态。
 - 不执行 npm publish、生产 migration、Vercel/Agent 部署、远程推送、Palworld/mihomo 操作或
   Save Worker 切换；不在 postinstall 中执行系统级命令。
+
+## 2026-07-29 跨阶段修订：公共 Sync 文档与 CLI 本地化
+
+### 交付顺序
+
+1. 正式规格固定 npm README 英文默认、同包简体中文跳转、CLI 系统语言检测顺序、英文回退与
+   `--locale` 显式覆盖语义。
+2. 增加一次失败测试，覆盖英文默认帮助、中文显式/系统 locale、无法识别时英文回退、无效显式
+   locale、命令前后覆盖以及 README 双语入口。
+3. 集中定义 CLI 英文与简体中文消息；帮助、初始化、持续同步、状态、离线检查、退出和错误共享
+   同一 locale。配置中的新同步结果保存稳定代码，展示时兼容既有中文结果。
+4. 把 npm README 改为英文并新增随包发布的简体中文版；包校验确认两个文档和默认英文帮助均可用。
+5. 只对最终状态执行一次 Sync 的 format、lint、typecheck、完整 test、build、npm dry-run/包验证和
+   `git diff --check`；聚合命令已覆盖的检查不重复执行。
+
+### 回滚与生产约束
+
+- 本修订只修改 Sync 文档、CLI 展示与测试，不修改数据库、共享契约、Parser、存档事实、配种算法、
+  `/opt/palworld` 或生产运行状态。
+- 不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖；应用回滚可恢复上一 CLI，已有设备配置
+  与配对凭据保持兼容。
 
 ## Phase 8：管理员功能、部署和端到端验收
 

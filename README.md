@@ -6,7 +6,7 @@ PalBeacon 是面向《幻兽帕鲁》私人服务器的数据监控、帕鲁库�
 
 ## 前置工具
 
-- Node.js 22（见 `.nvmrc`）
+- Node.js 22 或更高版本（`.nvmrc` 提供 Node.js 22 开发基线）
 - pnpm 9.15.x
 - Python 3.12
 - [uv](https://docs.astral.sh/uv/)

@@ -68,18 +68,22 @@ function parseOptions(
   return result;
 }
 
-export function helpText(version: string): string {
+export function helpText(version: string, locale: CliLocale = "en"): string {
+  const text = messages(locale);
   return `palbeacon-sync ${version}
 
-将 Palworld 服务器存档同步到 PalBeacon。
+${text.description}
 
-命令：
-  init      配对 PalBeacon 并选择存档
-  run       立即同步并持续监控存档
-  status    查看当前同步状态
-  logout    删除本机设备配置
+${text.commandsHeading}
+  init      ${text.commands.init}
+  run       ${text.commands.run}
+  status    ${text.commands.status}
+  logout    ${text.commands.logout}
 
-开始使用：
+${text.gettingStartedHeading}
   palbeacon-sync init
-  palbeacon-sync run`;
+  palbeacon-sync run
+
+${text.localeHint}`;
 }
+import { messages, type CliLocale } from "./locale.js";

@@ -1425,7 +1425,7 @@ palbeacon-sync init
 palbeacon-sync run
 ```
 
-1. 第一版支持 Linux x64 和 Node.js 22。`init` 默认连接
+1. 第一版支持 Linux x64 和 Node.js 22 或更高版本。`init` 默认连接
    `https://www.palbeacon.app`，交互流程只询问一次性配对码与 Palworld 存档目录；
    `--url`、`--interval` 和 `--device-name` 仅作为高级覆盖参数。
 2. `init` 检查平台、定位唯一世界存档、完成设备配对并以当前 Linux 用户保存配置，
@@ -1444,3 +1444,7 @@ palbeacon-sync run
    开发和受控运维能力，但不进入普通用户 README、默认帮助或账户页主流程。
 7. npm 包继续包含自包含 Parser、许可证、第三方通知和源码说明；不得在安装脚本中提权、
    创建系统用户、写入 systemd、修改真实存档或控制 Palworld/mihomo。
+8. npm README 默认使用英文，并在开头提供同包简体中文版跳转。CLI 的帮助、交互提示、状态、
+   运行日志和错误信息支持英文与简体中文；默认依次根据 `LC_ALL`、`LC_MESSAGES`、`LANG` 和
+   Node.js locale 判断系统语言，无法判断或不受支持时使用英文。用户可在命令前或后通过
+   `--locale en|en-US|zh|zh-CN` 显式覆盖；无效显式值返回稳定错误，不静默猜测。
