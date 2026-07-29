@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
+import { GitHubLink } from "@/components/github-link";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { brand } from "@/config/brand";
@@ -31,21 +32,17 @@ export default async function LoginPage({
   return (
     <main className="relative min-h-dvh overflow-x-hidden">
       <ForestScenery variant="page" />
-      <div className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-20 sm:right-6">
+      <div className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-20 flex items-center gap-1 sm:right-6">
+        <GitHubLink />
         <LocaleSwitcher />
       </div>
       <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-[90rem] items-center gap-8 px-4 py-6 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(26rem,31rem)] lg:gap-14 lg:px-10">
         <section className="hidden max-w-2xl p-8 text-foreground lg:block">
           <div className="flex items-center gap-3">
             <BrandLogo size={56} priority />
-            <div>
-              <p className="text-xl font-bold tracking-tight">
-                <BrandWordmark />
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {brandCopy("productName")}
-              </p>
-            </div>
+            <p className="text-xl font-bold tracking-tight">
+              <BrandWordmark />
+            </p>
           </div>
           <p className="mt-10 max-w-xl font-bold text-forest">
             <span className="block text-4xl tracking-[-0.04em]">
@@ -67,14 +64,9 @@ export default async function LoginPage({
         <section className="w-full max-w-[31rem] justify-self-center rounded-[2rem] border border-glass-border bg-white/74 p-5 shadow-soft backdrop-blur-xl sm:p-8 lg:justify-self-end">
           <div className="flex items-center gap-3 lg:hidden">
             <BrandLogo size={44} priority />
-            <div>
-              <p className="font-bold text-foreground">
-                <BrandWordmark />
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {brandCopy("productName")}
-              </p>
-            </div>
+            <p className="font-bold text-foreground">
+              <BrandWordmark />
+            </p>
           </div>
           <p className="mt-8 text-xs font-bold tracking-[0.16em] text-primary uppercase lg:mt-0">
             {brand.englishProductName.toUpperCase()}

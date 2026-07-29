@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=blocked_missing_local_auth_fixture、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -1115,6 +1115,38 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 - 本修订只修改规格、计划与 Web 展示/只读 Steam 头像查询，不修改数据库、共享契约、Sync CLI、
   存档事实、Parser、配种算法、`/opt/palworld` 或生产运行状态。
 - 不新增依赖、公网端口，不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖。
+
+## 2026-07-29 跨阶段修订：顶部品牌、数据徽标与 GitHub 入口
+
+### 交付顺序
+
+1. 正式规格固定 Logo 与页面标题只保留 PalBeacon、数据徽标的三态短文案和 GitHub 外链位置、
+   点击区与可访问语义。
+2. 增加一次失败测试，覆盖中英文 Metadata、Logo 替代文本/副标题移除、未绑定/最新/已过期映射、
+   桌面徽标只位于数据状态菜单项右侧，以及 GitHub 入口位于语言切换器左侧。
+3. 提取可复用 GitHub 图标入口并放入桌面、移动与登录页语言控件组；复用现有 Button、内联 GitHub
+   标记和焦点样式，不新增依赖。
+4. 工作区布局根据角色绑定与库存状态生成三态菜单徽标；Header 删除菜单外的独立状态入口，移动
+   菜单保持同一行右侧徽标。
+5. 更新中英文消息与受影响浏览器品牌验收；局部验证后对最终状态运行一次 Web format、lint、
+   typecheck、完整 test、build 和 `git diff --check`，不重复聚合命令已覆盖的检查。
+
+### 回滚与生产约束
+
+- 本修订只修改规格、计划和 Web 展示，不修改数据库、共享契约、Sync CLI、存档事实、Parser、
+  配种算法、`/opt/palworld` 或生产运行状态。
+- 不新增依赖、公网端口，不执行生产部署、远程推送或现有 tgz 覆盖；应用回滚恢复上一 Web 构建。
+
+### 完成验证
+
+- 失败基线：品牌、登录与 Header 的 3 个测试文件中 5 项按预期失败，分别锁定旧 Metadata、Logo
+  替代文本/副标题、菜单外状态入口和缺少 GitHub 入口。
+- 局部验证：同一组 3 个测试文件共 19 项通过。
+- 最终 Web 验证：受影响文件 Prettier 检查、ESLint、TypeScript、28 个测试文件共 155 项测试和
+  Next.js 生产构建全部通过。
+- 品牌浏览器流程在登录前已通过页面标题、Logo、GitHub 外链与无横向溢出断言；当前环境没有可用
+  的本地鉴权 fixture，会话停留在 `/zh/login`，因此登录后的工作区浏览器断言未继续执行。对应
+  Header、三态徽标、外链顺序和移动菜单已由组件测试覆盖。
 
 ## Phase 8：管理员功能、部署和端到端验收
 

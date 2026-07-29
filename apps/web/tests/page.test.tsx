@@ -50,7 +50,14 @@ describe("login page", () => {
       1,
     );
     expect(screen.getAllByLabelText("PalBeacon").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("帕鲁配种协作工作台").length).toBeGreaterThan(0);
+    expect(screen.queryByText("帕鲁配种协作工作台")).toBeNull();
+    expect(
+      screen
+        .getByRole("link", {
+          name: "在 GitHub 上查看 PalHatchHelper",
+        })
+        .getAttribute("href"),
+    ).toBe("https://github.com/MetalLee/PalHatchHelper");
     expect(screen.getByRole("heading", { name: "欢迎回来" })).toBeTruthy();
     expect(screen.getByText("登录你的 PalBeacon 账号")).toBeTruthy();
     expect(screen.queryByText("欢迎回到服务器控制台")).toBeNull();

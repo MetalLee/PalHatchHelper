@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/layout/site-header";
-import type { StatusTone } from "@/components/status/status-chip";
 import { useCopy } from "@/i18n/client";
 import { usePathname } from "@/i18n/navigation";
 
@@ -18,7 +17,7 @@ export function AppShell({
   displayName: string;
   avatarUrl?: string | null;
   role: "admin" | "player";
-  dataStatus?: { label: string; tone: StatusTone };
+  dataStatus?: "unbound" | "latest" | "expired";
 }>) {
   const t = useCopy("Common");
   const pathname = usePathname();

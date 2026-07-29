@@ -35,7 +35,7 @@ test("PalBeacon login and workspace branding stay responsive", async ({
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/zh/login");
-  await expect(page).toHaveTitle("PalBeacon · 帕鲁配种协作工作台");
+  await expect(page).toHaveTitle("PalBeacon");
   await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
   await expect(page.getByText("登录你的 PalBeacon 账号")).toBeVisible();
   await expect(page.getByText("忘记密码？")).toHaveAttribute(
@@ -47,8 +47,11 @@ test("PalBeacon login and workspace branding stay responsive", async ({
     "true",
   );
   await expect(
-    page.getByRole("img", { name: "PalBeacon 帕鲁配种协作工作台" }),
+    page.getByRole("img", { name: "PalBeacon" }).first(),
   ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "在 GitHub 上查看 PalHatchHelper" }),
+  ).toHaveAttribute("href", "https://github.com/MetalLee/PalHatchHelper");
   await expectNoHorizontalOverflow(page);
   await page.screenshot({
     path: resolve(screenshotDirectory, "login-desktop-1440.png"),
@@ -58,11 +61,9 @@ test("PalBeacon login and workspace branding stay responsive", async ({
   await login(page);
   const header = page.getByRole("banner");
   const headerLogo = header.getByRole("img", {
-    name: "PalBeacon 帕鲁配种协作工作台",
+    name: "PalBeacon",
   });
-  await expect(
-    header.getByText("帕鲁配种协作工作台", { exact: true }),
-  ).toBeVisible();
+  await expect(header.getByText("帕鲁配种协作工作台")).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
   expect(Math.round((await headerLogo.boundingBox())?.width ?? 0)).toBe(40);
   await page.screenshot({
@@ -72,6 +73,9 @@ test("PalBeacon login and workspace branding stay responsive", async ({
 
   await header.getByRole("button", { name: /打开用户菜单/ }).click();
   await expect(page.getByRole("menuitem", { name: "账号" })).toBeVisible();
+  await expect(
+    page.getByRole("menuitem", { name: /数据状态.*已过期/ }),
+  ).toBeVisible();
   await page.screenshot({
     path: resolve(screenshotDirectory, "overview-desktop-1440-user-menu.png"),
   });
@@ -88,9 +92,7 @@ test("PalBeacon login and workspace branding stay responsive", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await expectNoHorizontalOverflow(page);
   expect(Math.round((await headerLogo.boundingBox())?.width ?? 0)).toBe(34);
-  await expect(
-    header.getByText("帕鲁配种协作工作台", { exact: true }),
-  ).toBeHidden();
+  await expect(header.getByText("帕鲁配种协作工作台")).toHaveCount(0);
   await page.screenshot({
     path: resolve(screenshotDirectory, "overview-mobile-390.png"),
     fullPage: true,

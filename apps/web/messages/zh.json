@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "PalBeacon · 帕鲁配种协作工作台",
+    "title": "PalBeacon",
     "description": "面向《幻兽帕鲁》私人服务器的数据状态、帕鲁库存与配种协作工作台。",
     "keywords": "幻兽帕鲁,帕鲁服务器,帕鲁库存,帕鲁配种,配种规划"
   },
@@ -50,7 +50,10 @@
   },
   "Shell": {
     "homeLabel": "{brand} 首页",
-    "viewDataStatus": "查看数据状态",
+    "dataUnbound": "未绑定",
+    "dataLatest": "最新",
+    "dataExpired": "已过期",
+    "githubLabel": "在 GitHub 上查看 PalHatchHelper",
     "openUserMenu": "打开用户菜单，{name}",
     "adminRole": "管理员",
     "playerRole": "玩家",

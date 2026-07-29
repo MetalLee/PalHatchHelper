@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "PalBeacon · Pal Breeding Workspace",
+    "title": "PalBeacon",
     "description": "A private Palworld server workspace for data status, Pal inventory and collaborative breeding plans.",
     "keywords": "Palworld,Palworld server,Pal inventory,Pal breeding,breeding planner"
   },
@@ -50,7 +50,10 @@
   },
   "Shell": {
     "homeLabel": "{brand} home",
-    "viewDataStatus": "View data status",
+    "dataUnbound": "Unbound",
+    "dataLatest": "Latest",
+    "dataExpired": "Expired",
+    "githubLabel": "View PalHatchHelper on GitHub",
     "openUserMenu": "Open user menu for {name}",
     "adminRole": "Administrator",
     "playerRole": "Player",

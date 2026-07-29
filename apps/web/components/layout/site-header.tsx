@@ -11,9 +11,10 @@ import {
 import { AppNavigation } from "@/components/app-navigation";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { BrandWordmark } from "@/components/brand/brand-wordmark";
+import { GitHubLink } from "@/components/github-link";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { StatusChip, type StatusTone } from "@/components/status/status-chip";
+import { StatusChip } from "@/components/status/status-chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,22 +38,22 @@ export function SiteHeader({
   displayName,
   avatarUrl,
   role,
-  dataStatus,
+  dataStatus = "unbound",
 }: Readonly<{
   activePath: string;
   displayName: string;
   avatarUrl?: string | null;
   role: "admin" | "player";
-  dataStatus?: { label: string; tone: StatusTone };
+  dataStatus?: "unbound" | "latest" | "expired";
 }>) {
   const locale = useAppLocale();
-  const brandCopy = useCopy("Brand");
   const navigation = useCopy("Navigation");
   const t = useCopy("Shell");
-  const resolvedDataStatus = dataStatus ?? {
-    label: t("viewDataStatus"),
-    tone: "neutral" as const,
-  };
+  const resolvedDataStatus = {
+    unbound: { label: t("dataUnbound"), tone: "neutral" as const },
+    latest: { label: t("dataLatest"), tone: "good" as const },
+    expired: { label: t("dataExpired"), tone: "warning" as const },
+  }[dataStatus];
   const signOut = (): void => {
     void fetch("/api/auth/logout", {
       method: "POST",
@@ -71,33 +72,15 @@ export function SiteHeader({
           className="flex min-w-0 items-center gap-2.5 rounded-xl text-foreground no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
           <BrandLogo size={40} className="size-[34px] sm:size-10" priority />
-          <span className="hidden min-w-0 xl:grid">
-            <strong className="truncate text-sm font-bold tracking-[-0.01em]">
-              <BrandWordmark />
-            </strong>
-            <small className="truncate text-[0.68rem] text-muted-foreground">
-              {brandCopy("productName")}
-            </small>
-          </span>
-          <span className="grid min-w-0 xl:hidden">
-            <strong className="truncate text-sm font-bold">
-              <BrandWordmark />
-            </strong>
-          </span>
+          <strong className="hidden truncate text-sm font-bold tracking-[-0.01em] sm:block">
+            <BrandWordmark />
+          </strong>
         </Link>
 
         <AppNavigation activePath={activePath} className="mx-auto" />
 
         <div className="ml-auto hidden shrink-0 items-center gap-2 lg:flex">
-          <Link
-            href="/data-status"
-            className="rounded-full no-underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-          >
-            <StatusChip tone={resolvedDataStatus.tone}>
-              {resolvedDataStatus.label}
-            </StatusChip>
-          </Link>
-
+          <GitHubLink />
           <LocaleSwitcher />
 
           <DropdownMenu>
@@ -161,7 +144,15 @@ export function SiteHeader({
                   }
                 >
                   <Database aria-hidden="true" />
-                  {navigation("dataStatus")}
+                  <span className="min-w-0 flex-1">
+                    {navigation("dataStatus")}
+                  </span>
+                  <StatusChip
+                    tone={resolvedDataStatus.tone}
+                    className="ml-auto min-h-7 shrink-0 border-0 bg-transparent px-0"
+                  >
+                    {resolvedDataStatus.label}
+                  </StatusChip>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -174,6 +165,7 @@ export function SiteHeader({
         </div>
 
         <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <GitHubLink />
           <LocaleSwitcher compact />
           <MobileNavigation
             activePath={activePath}

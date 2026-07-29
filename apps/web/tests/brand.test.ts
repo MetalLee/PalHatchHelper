@@ -21,8 +21,8 @@ describe("PalBeacon brand configuration", () => {
   });
 
   it("publishes localized metadata copy and a neutral Web App identity", () => {
-    expect(zhMessages.Metadata.title).toContain("帕鲁配种协作工作台");
-    expect(enMessages.Metadata.title).toContain("Pal Breeding Workspace");
+    expect(zhMessages.Metadata.title).toBe("PalBeacon");
+    expect(enMessages.Metadata.title).toBe("PalBeacon");
     expect(zhMessages.Metadata.description).not.toBe(
       enMessages.Metadata.description,
     );

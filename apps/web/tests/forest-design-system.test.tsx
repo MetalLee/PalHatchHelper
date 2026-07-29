@@ -44,9 +44,8 @@ describe("Forest Healing design system", () => {
         ?.hasAttribute("aria-current"),
     ).toBe(false);
     expect(screen.getByRole("link", { name: "PalBeacon 首页" })).toBeTruthy();
-    expect(
-      screen.getByRole("img", { name: "PalBeacon 帕鲁配种协作工作台" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("img", { name: "PalBeacon" })).toBeTruthy();
+    expect(screen.queryByText("帕鲁配种协作工作台")).toBeNull();
     const wordmarks = screen.getAllByLabelText("PalBeacon");
     expect(wordmarks.length).toBeGreaterThan(0);
     for (const wordmark of wordmarks) {
@@ -123,6 +122,62 @@ describe("Forest Healing design system", () => {
       />,
     );
     expect(screen.getByRole("menuitem", { name: "管理中心" })).toBeTruthy();
+  });
+
+  it.each([
+    { dataStatus: undefined, label: "未绑定" },
+    { dataStatus: "latest" as const, label: "最新" },
+    { dataStatus: "expired" as const, label: "已过期" },
+  ])(
+    "keeps the $label data badge inside the user menu",
+    ({ dataStatus, label }) => {
+      render(
+        <SiteHeader
+          activePath="/overview"
+          displayName="Fixture Player A"
+          role="player"
+          dataStatus={dataStatus}
+        />,
+      );
+
+      expect(screen.queryByText(label)).toBeNull();
+      fireEvent.keyDown(
+        screen.getByRole("button", {
+          name: "打开用户菜单，Fixture Player A",
+        }),
+        { key: "Enter", code: "Enter" },
+      );
+      const statusItem = screen.getByRole("menuitem", { name: /数据状态/ });
+      expect(within(statusItem).getByText(label).className).toContain(
+        "ml-auto",
+      );
+    },
+  );
+
+  it("places the GitHub link before the language switcher", () => {
+    render(
+      <SiteHeader
+        activePath="/overview"
+        displayName="Fixture Player A"
+        role="player"
+      />,
+    );
+
+    const github = screen.getAllByRole("link", {
+      name: "在 GitHub 上查看 PalHatchHelper",
+    })[0];
+    const language = screen.getAllByRole("button", {
+      name: "当前语言：中文",
+    })[0];
+    if (!github || !language) throw new Error("Header controls are missing");
+    expect(github.getAttribute("href")).toBe(
+      "https://github.com/MetalLee/PalHatchHelper",
+    );
+    expect(github.getAttribute("target")).toBe("_blank");
+    expect(
+      github.compareDocumentPosition(language) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("opens the mobile navigation sheet", () => {

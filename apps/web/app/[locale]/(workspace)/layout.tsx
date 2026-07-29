@@ -1,9 +1,7 @@
-import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { requireUserContext } from "@/features/auth/server";
-import { dataStatusPresentation } from "@/features/data-status/presentation";
 import { getInventoryDataStatus } from "@/features/pals/server";
 import { requireAppLocale } from "@/i18n/server-locale";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -17,8 +15,7 @@ export default async function WorkspaceLayout({
   children: ReactNode;
   params: Promise<{ locale: string }>;
 }>) {
-  const locale = requireAppLocale((await params).locale);
-  const t = await getTranslations({ locale, namespace: "DataStatus" });
+  requireAppLocale((await params).locale);
   const context = await requireUserContext();
   const supabase = await createServerSupabaseClient();
   const { data: steamIdentity } = await supabase
@@ -26,20 +23,14 @@ export default async function WorkspaceLayout({
     .select("avatar_url")
     .eq("user_id", context.user_id)
     .maybeSingle();
-  let dataStatus:
-    | { label: string; tone: "good" | "warning" | "danger" }
-    | undefined;
+  let dataStatus: "unbound" | "latest" | "expired" = "unbound";
 
   if (context.binding !== null) {
     try {
       const status = await getInventoryDataStatus();
-      const presentation = dataStatusPresentation(status.state, t);
-      dataStatus = {
-        label: presentation.title,
-        tone: presentation.tone,
-      };
+      dataStatus = status.state === "healthy" ? "latest" : "expired";
     } catch {
-      dataStatus = { label: t("dataUnavailable"), tone: "danger" };
+      dataStatus = "expired";
     }
   }
 

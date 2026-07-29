@@ -41,7 +41,6 @@ export function MobileNavigation({
   onSignOut: () => void;
 }>) {
   const locale = useAppLocale();
-  const brandCopy = useCopy("Brand");
   const navigation = useCopy("Navigation");
   const shell = useCopy("Shell");
   const hydrated = useSyncExternalStore(
@@ -76,7 +75,6 @@ export function MobileNavigation({
                 <BrandWordmark />
               </SheetTitle>
               <SheetDescription>
-                {brandCopy("productName")} ·{" "}
                 {navigation("currentPage", {
                   page: currentPageTitle(activePath, locale),
                 })}
