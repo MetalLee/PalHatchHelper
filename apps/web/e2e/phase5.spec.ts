@@ -38,9 +38,16 @@ test("login reports failed credentials and then succeeds", async ({ page }) => {
   await expect(page).toHaveURL(/\/overview$/, { timeout: 15_000 });
 });
 
-test("unbound test account receives the binding state", async ({ page }) => {
+test("unbound test account receives the sync setup", async ({ page }) => {
   await login(page, "unbound@palhatch.fixture.invalid");
-  await expect(page.getByText("尚未绑定游戏角色")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "存档同步" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "常见问题" })).toBeVisible();
+
+  await page.getByRole("button", { name: "打开导航菜单" }).click();
+  const menu = page.getByRole("dialog", { name: "PalBeacon" });
+  await expect(
+    menu.getByRole("link", { name: /数据状态.*未绑定/ }),
+  ).toBeVisible();
 });
 
 test("overview stays within a 390px viewport and uses CSS-only hero scenery", async ({
