@@ -9,6 +9,8 @@ import {
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { messages, type CliLocale } from "./locale.js";
+
 const LEGACY_RUNTIME_PATH_FIELD = ["oodle", "lib"].join("_");
 const LEGACY_RUNTIME_HASH_FIELD = ["oodle", "sha256"].join("_");
 
@@ -66,6 +68,13 @@ export async function loadConfig(
     value = JSON.parse(await readFile(configPath(directory), "utf8"));
   } catch (error) {
     if (error instanceof SyntaxError) throw new Error("SYNC_CONFIG_INVALID");
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOENT"
+    )
+      throw new Error("SYNC_CONFIG_NOT_FOUND");
     throw error;
   }
   const config = normalizeSyncConfig(value);
@@ -87,15 +96,28 @@ export async function deleteConfig(
   await rm(configPath(directory), { force: true });
 }
 
-export function formatStatus(config: SyncConfig): string {
+export function formatStatus(
+  config: SyncConfig,
+  locale: CliLocale = "en",
+): string {
+  const text = messages(locale);
   return [
-    `服务器：${config.api_base_url}`,
-    `设备：${config.device_name} (${config.device_id})`,
-    `存档：${config.save_dir}`,
-    `间隔：${config.interval_seconds} 秒`,
-    `最近结果：${config.state?.last_result ?? "尚未同步"}`,
-    `最近时间：${config.state?.last_sync_at ?? "尚未同步"}`,
+    `${text.status.server}: ${config.api_base_url}`,
+    `${text.status.device}: ${config.device_name} (${config.device_id})`,
+    `${text.status.save}: ${config.save_dir}`,
+    `${text.status.interval}: ${config.interval_seconds} ${text.status.seconds}`,
+    `${text.status.lastResult}: ${localizedResult(config.state?.last_result, locale)}`,
+    `${text.status.lastTime}: ${config.state?.last_sync_at ?? text.status.never}`,
   ].join("\n");
+}
+
+function localizedResult(value: string | undefined, locale: CliLocale): string {
+  const text = messages(locale);
+  if (value === undefined) return text.status.never;
+  if (value === "uploaded" || value === "上传成功") return text.uploaded;
+  if (value === "unchanged" || value === "存档未变化，已发送心跳")
+    return text.unchanged;
+  return value;
 }
 
 function normalizeSyncConfig(value: unknown): SyncConfig | undefined {

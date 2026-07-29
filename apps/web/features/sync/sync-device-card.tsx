@@ -3,6 +3,7 @@
 import type { SyncClaimablePlayer, SyncDevice } from "@palhatch/contracts";
 import {
   CheckCircle2,
+  ChevronDown,
   Copy,
   Link2,
   LoaderCircle,
@@ -15,6 +16,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAppLocale, useCopy } from "@/i18n/client";
 
 type PairingCode = { code: string; expires_at: string };
@@ -28,6 +34,7 @@ export function SyncDeviceCard({
   const [devices, setDevices] = useState<SyncDevice[]>([]);
   const [players, setPlayers] = useState<SyncClaimablePlayer[]>([]);
   const [pairing, setPairing] = useState<PairingCode | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,9 +116,7 @@ export function SyncDeviceCard({
     }
   }
 
-  const command = pairing
-    ? `npx palbeacon-sync@latest init \\\n+  --url ${windowOrigin()} \\\n+  --code ${pairing.code} \\\n+  --save-dir /path/to/Pal/Saved/SaveGames`
-    : null;
+  const advancedCommand = `palbeacon-sync init \\\n  --code ${pairing?.code ?? "ABCD-EFGH"} \\\n  --save-dir /path/to/world`;
 
   return (
     <Card className="border-glass-border bg-card/90 py-0 shadow-soft">
@@ -149,33 +154,89 @@ export function SyncDeviceCard({
           </Alert>
         ) : null}
 
-        {pairing !== null && command !== null ? (
-          <div className="grid gap-3 rounded-2xl bg-muted/60 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-semibold text-foreground">
-                {t("pairingCode")}:{" "}
-                <span className="font-mono text-lg">{pairing.code}</span>
+        <ol className="grid gap-3 lg:grid-cols-3" aria-label={t("stepsLabel")}>
+          <li className="grid content-start gap-3 rounded-2xl border border-border/70 bg-muted/35 p-4">
+            <h3 className="font-bold text-foreground">{t("installStep")}</h3>
+            <p className="text-sm text-muted-foreground">
+              {t("installDescription")}
+            </p>
+            <CommandBlock command="npm install -g palbeacon-sync" />
+          </li>
+          <li className="grid content-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <h3 className="font-bold text-foreground">{t("pairStep")}</h3>
+            <CommandBlock command="palbeacon-sync init" />
+            {pairing === null ? (
+              <p className="text-sm text-muted-foreground">
+                {t("pairingHint")}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {t("expires", {
-                  date: new Date(pairing.expires_at).toLocaleTimeString(locale),
-                })}
-              </p>
+            ) : (
+              <div className="grid gap-2 rounded-xl bg-background/75 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      {t("pairingCode")}
+                    </p>
+                    <p className="mt-1 font-mono text-xl font-bold tracking-wider text-foreground">
+                      {pairing.code}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    aria-label={t("copyPairingCode")}
+                    onClick={() =>
+                      void navigator.clipboard.writeText(pairing.code)
+                    }
+                  >
+                    <Copy aria-hidden="true" className="size-4" />
+                    {t("copy")}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("expires", {
+                    date: new Date(pairing.expires_at).toLocaleTimeString(
+                      locale,
+                    ),
+                  })}
+                </p>
+              </div>
+            )}
+          </li>
+          <li className="grid content-start gap-3 rounded-2xl border border-border/70 bg-muted/35 p-4">
+            <h3 className="font-bold text-foreground">{t("runStep")}</h3>
+            <CommandBlock command="palbeacon-sync run" />
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p>{t("runDescription")}</p>
+              <p>{t("keepRunning")}</p>
             </div>
-            <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-emerald-100">
-              <code>{command}</code>
-            </pre>
+          </li>
+        </ol>
+
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+          <CollapsibleTrigger asChild>
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               type="button"
-              className="justify-self-start"
-              onClick={() => void navigator.clipboard.writeText(command)}
+              className="group justify-self-start"
             >
-              <Copy aria-hidden="true" className="size-4" />
-              {t("copyCommand")}
+              {t("advancedUsage")}
+              <ChevronDown
+                aria-hidden="true"
+                className="size-4 transition-transform group-data-[state=open]:rotate-180"
+              />
             </Button>
-          </div>
-        ) : null}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <div className="grid gap-2 rounded-2xl bg-muted/45 p-4">
+              <p className="text-sm text-muted-foreground">
+                {t("advancedDescription")}
+              </p>
+              <CommandBlock command={advancedCommand} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         <div className="grid gap-3">
           {devices.length === 0 ? (
@@ -286,10 +347,12 @@ export function SyncDeviceCard({
   );
 }
 
-function windowOrigin(): string {
-  return typeof window === "undefined"
-    ? "https://www.palbeacon.app"
-    : window.location.origin;
+function CommandBlock({ command }: Readonly<{ command: string }>) {
+  return (
+    <pre className="overflow-x-auto rounded-xl bg-slate-950 px-3 py-2 text-xs leading-6 text-emerald-100 shadow-inner">
+      <code>{command}</code>
+    </pre>
+  );
 }
 
 function isOnline(value: string | null): boolean {

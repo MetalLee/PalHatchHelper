@@ -14,7 +14,7 @@
 ### 前置依赖
 
 - 正式设计规格已存在并完成阅读。
-- 本地可使用 Git；Node.js 22、pnpm、Python 3.12、uv 和 Docker 分别按验证项使用。
+- 本地可使用 Git；Node.js 22 或更高版本、pnpm、Python 3.12、uv 和 Docker 分别按验证项使用。
 
 ### 明确范围
 
@@ -1048,6 +1048,52 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
   上一有效库存。
 - 首次生产启用前完成备份和 dry-run，镜像使用 Git SHA 与 digest；只重启 PalHatchHelper
   服务，不操作 Palworld 或 mihomo。
+
+## 2026-07-29 跨阶段修订：普通用户公共 Sync 安装流程
+
+### 交付顺序
+
+1. 在正式规格中固定 `npm install -g`、无参数 `init` 与前台 `run` 的最短流程，同时保留
+   只读快照、Parser、脱敏、鉴权、设备配对和生产运维边界。
+2. 增加失败测试，覆盖默认 PalBeacon 地址、仅两个交互问题、成功提示、高级覆盖参数、
+   移除 `--sync-now`、已有配置确认/`--force`、首轮立即同步、信号退出、精简帮助与 README。
+3. 最小调整 Sync CLI：默认 URL 固定为 `https://www.palbeacon.app`，`init` 只配对并保存，
+   已有配置必须确认或显式强制；`run` 继续在首轮完成后才进入 300 秒等待。
+4. 把 npm README 收敛为约 30 至 40 行的普通用户文档；许可证、Parser 源码说明和第三方通知
+   继续由 npm 文件清单与包验证脚本保证，不放入普通用户主文档。
+5. 账户页使用中英文三步响应式卡片展示安装、配对和启动，配对码独立复制，高级非交互命令
+   默认折叠；普通界面不展示 URL、systemd、ACL、Parser 或迁移流程。
+6. 更新受影响的高级运维示例以移除失效参数，但不删除 systemd、Save Worker 切换、迁移、
+   验证或回滚能力。局部验证后执行 Sync/Web 全套检查、根聚合检查、npm dry-run 打包、精确 tgz
+   验证、秘密/真实存档检查与 `git diff --check`。
+
+### 回滚与生产约束
+
+- 应用回滚可恢复上一 CLI 与 Web；本修订不修改数据库、共享契约、存档事实、Parser、配种关系、
+  算法、评分或生产运行状态。
+- 不执行 npm publish、生产 migration、Vercel/Agent 部署、远程推送、Palworld/mihomo 操作或
+  Save Worker 切换；不在 postinstall 中执行系统级命令。
+
+## 2026-07-29 跨阶段修订：公共 Sync 文档与 CLI 本地化
+
+### 交付顺序
+
+1. 正式规格固定 npm README 英文默认、同包简体中文跳转、CLI 系统语言检测顺序、英文回退与
+   `--locale` 显式覆盖语义。
+2. 增加一次失败测试，覆盖英文默认帮助、中文显式/系统 locale、无法识别时英文回退、无效显式
+   locale、命令前后覆盖以及 README 双语入口。
+3. 集中定义 CLI 英文与简体中文消息；帮助、初始化、持续同步、状态、离线检查、退出和错误共享
+   同一 locale。配置中的新同步结果保存稳定代码，展示时兼容既有中文结果。
+4. 把 npm README 改为英文并新增随包发布的简体中文版；包校验确认两个文档和默认英文帮助均可用。
+5. 只对最终状态执行一次 Sync 的 format、lint、typecheck、完整 test、build、npm dry-run/包验证和
+   `git diff --check`；聚合命令已覆盖的检查不重复执行。
+
+### 回滚与生产约束
+
+- 本修订只修改 Sync 文档、CLI 展示与测试，不修改数据库、共享契约、Parser、存档事实、配种算法、
+  `/opt/palworld` 或生产运行状态。
+- 不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖；应用回滚可恢复上一 CLI，已有设备配置
+  与配对凭据保持兼容。
 
 ## Phase 8：管理员功能、部署和端到端验收
 

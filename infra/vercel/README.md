@@ -2,7 +2,7 @@
 
 `apps/web` 是未来 Vercel Root Directory。构建命令为 `pnpm --filter @palhatch/web build`，Install Command 为 `pnpm install --frozen-lockfile`。
 
-生产项目的 Root Directory 固定为 `apps/web`，配置由 [`apps/web/vercel.json`](../../apps/web/vercel.json) 提供。Build Command 使用 `pnpm build`，Install Command 使用 `pnpm install --frozen-lockfile`，Node.js 固定为仓库声明的 22.x。
+生产项目的 Root Directory 固定为 `apps/web`，配置由 [`apps/web/vercel.json`](../../apps/web/vercel.json) 提供。Build Command 使用 `pnpm build`，Install Command 使用 `pnpm install --frozen-lockfile`，Node.js 使用仓库声明的 22 或更高版本。
 
 允许暴露给浏览器的生产变量只有：
 

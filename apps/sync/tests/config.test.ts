@@ -29,10 +29,24 @@ describe("configuration security", () => {
     };
     const path = await saveConfig(config, root);
 
+    expect((await stat(root)).mode & 0o777).toBe(0o700);
     expect((await stat(path)).mode & 0o777).toBe(0o600);
     expect(JSON.parse(await readFile(path, "utf8"))).toMatchObject(config);
     expect(formatStatus(config)).not.toContain(config.device_token);
     expect(formatStatus(config)).toContain("https://www.palbeacon.app");
+    expect(formatStatus(config)).toContain("Server:");
+    expect(formatStatus(config, "zh-CN")).toContain("服务器:");
+  });
+
+  it("reports a stable code when no configuration exists", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "palbeacon-sync-config-missing-"),
+    );
+    roots.push(root);
+
+    await expect(loadConfig(root)).rejects.toThrowError(
+      /SYNC_CONFIG_NOT_FOUND/,
+    );
   });
 
   it("migrates the branch's legacy config without losing pairing credentials", async () => {
