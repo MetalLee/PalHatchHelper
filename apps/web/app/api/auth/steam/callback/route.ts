@@ -1,10 +1,15 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
   fetchSteamProfile,
+  logSteamLoginFailure,
   resolveSteamLink,
   resolveSteamLogin,
   SteamAccountError,
+  SteamAccountStageError,
+  type SteamLoginStage,
 } from "@/features/auth/steam-account";
 import { createSteamAccountDependencies } from "@/features/auth/steam-supabase";
 import {
@@ -14,7 +19,10 @@ import {
 } from "@/features/auth/steam-openid";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getPublicAppUrl } from "@/lib/supabase/config";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  createServerSupabaseClient,
+  type SupabaseCookieToSet,
+} from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -45,7 +53,20 @@ function errorRedirect(code: string, next = "/overview"): NextResponse {
   );
 }
 
+function successRedirect(next: string, cookies: SupabaseCookieToSet[]) {
+  const response = responseWithClearedState(
+    NextResponse.redirect(new URL(next, getPublicAppUrl()), {
+      headers: privateHeaders,
+    }),
+  );
+  for (const cookie of cookies) {
+    response.cookies.set(cookie.name, cookie.value, cookie.options);
+  }
+  return response;
+}
+
 export async function GET(request: NextRequest) {
+  const requestId = randomUUID();
   let state: { next: string; intent: "login" | "link" };
   try {
     state = validateSteamState({
@@ -58,36 +79,55 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  let stage: SteamLoginStage = "verify_assertion";
+  let steamId: string | undefined;
   try {
-    const steamId = await verifySteamAssertion(request.nextUrl.searchParams);
+    steamId = await verifySteamAssertion(request.nextUrl.searchParams);
+    stage = "fetch_profile";
     const profile = await fetchSteamProfile(
       steamId,
       process.env.STEAM_WEB_API_KEY,
     );
-    const session = await createServerSupabaseClient();
+    const sessionCookies: SupabaseCookieToSet[] = [];
+    const session = await createServerSupabaseClient((cookies) => {
+      sessionCookies.push(...cookies);
+    });
     const dependencies = createSteamAccountDependencies(
       createAdminSupabaseClient(),
       session,
     );
     if (state.intent === "link") {
+      stage = "get_auth_user";
       const { data, error } = await session.auth.getUser();
       if (error || data.user === null) {
         return errorRedirect("STEAM_LINK_AUTH_REQUIRED", state.next);
       }
+      stage = "find_identity";
       await resolveSteamLink(dependencies, data.user.id, steamId, profile);
     } else {
-      await resolveSteamLogin(dependencies, steamId, profile);
+      stage = "find_identity";
+      await resolveSteamLogin(dependencies, steamId, profile, { requestId });
     }
-    return responseWithClearedState(
-      NextResponse.redirect(new URL(state.next, getPublicAppUrl()), {
-        headers: privateHeaders,
-      }),
-    );
+    return successRedirect(state.next, sessionCookies);
   } catch (error) {
     const code =
       error instanceof SteamAuthError || error instanceof SteamAccountError
         ? error.code
         : "STEAM_AUTH_UNAVAILABLE";
+    const failureStage =
+      error instanceof SteamAccountStageError ? error.stage : stage;
+    logSteamLoginFailure({
+      stage: failureStage,
+      errorCode: code,
+      requestId,
+      steamId,
+      databaseCode:
+        error instanceof SteamAccountStageError
+          ? error.databaseCode
+          : undefined,
+      httpStatus:
+        error instanceof SteamAccountStageError ? error.httpStatus : undefined,
+    });
     return errorRedirect(code, state.next);
   }
 }
