@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/page-state";
 import { PageError } from "@/components/states/page-error";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { requireUserContext } from "@/features/auth/server";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { PalFilters } from "@/features/pals/pal-filters";
 import { PalInventory } from "@/features/pals/pal-inventory";
 import { PalPagination } from "@/features/pals/pal-pagination";
@@ -89,8 +90,7 @@ export default async function PalsPage({
   const catalogLocale = catalogLocaleFor(locale);
   const t = await getTranslations({ locale, namespace: "Pals" });
   const context = await requireUserContext();
-  if (context.binding === null)
-    return <ErrorState code="PLAYER_BINDING_REQUIRED" />;
+  if (context.binding === null) return <PlayerBindingSetup />;
 
   const rawParams = toUrlSearchParams(await searchParams);
   const query = parsePalListQuery(rawParams);

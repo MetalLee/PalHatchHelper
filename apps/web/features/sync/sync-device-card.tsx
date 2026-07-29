@@ -116,7 +116,7 @@ export function SyncDeviceCard({
     }
   }
 
-  const advancedCommand = `palbeacon-sync init \\\n  --code ${pairing?.code ?? "ABCD-EFGH"} \\\n  --save-dir /path/to/world`;
+  const advancedCommand = `palbeacon init \\\n  --code ${pairing?.code ?? "ABCD-EFGH"} \\\n  --save-dir /path/to/world`;
 
   return (
     <Card className="border-glass-border bg-card/90 py-0 shadow-soft">
@@ -157,14 +157,14 @@ export function SyncDeviceCard({
         <ol className="grid gap-3 lg:grid-cols-3" aria-label={t("stepsLabel")}>
           <li className="grid content-start gap-3 rounded-2xl border border-border/70 bg-muted/35 p-4">
             <h3 className="font-bold text-foreground">{t("installStep")}</h3>
+            <CommandBlock command="npm install -g palbeacon-cli" />
             <p className="text-sm text-muted-foreground">
               {t("installDescription")}
             </p>
-            <CommandBlock command="npm install -g palbeacon-sync" />
           </li>
           <li className="grid content-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <h3 className="font-bold text-foreground">{t("pairStep")}</h3>
-            <CommandBlock command="palbeacon-sync init" />
+            <CommandBlock command="palbeacon init" />
             {pairing === null ? (
               <p className="text-sm text-muted-foreground">
                 {t("pairingHint")}
@@ -205,7 +205,7 @@ export function SyncDeviceCard({
           </li>
           <li className="grid content-start gap-3 rounded-2xl border border-border/70 bg-muted/35 p-4">
             <h3 className="font-bold text-foreground">{t("runStep")}</h3>
-            <CommandBlock command="palbeacon-sync run" />
+            <CommandBlock command="palbeacon run" />
             <div className="space-y-1 text-sm text-muted-foreground">
               <p>{t("runDescription")}</p>
               <p>{t("keepRunning")}</p>

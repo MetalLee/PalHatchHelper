@@ -1,5 +1,6 @@
 import { ErrorState } from "@/components/page-state";
 import { requireUserContext } from "@/features/auth/server";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { DataStatusDashboard } from "@/features/data-status/data-status-dashboard";
 import {
   getInventoryDataStatus,
@@ -10,8 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DataStatusPage() {
   const context = await requireUserContext();
-  if (context.binding === null)
-    return <ErrorState code="PLAYER_BINDING_REQUIRED" />;
+  if (context.binding === null) return <PlayerBindingSetup />;
   let data;
   try {
     data = await getInventoryDataStatus();

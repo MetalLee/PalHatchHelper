@@ -14,7 +14,7 @@ import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { StatusChip, type StatusTone } from "@/components/status/status-chip";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,11 +35,13 @@ function displayInitial(displayName: string): string {
 export function SiteHeader({
   activePath,
   displayName,
+  avatarUrl,
   role,
   dataStatus,
 }: Readonly<{
   activePath: string;
   displayName: string;
+  avatarUrl?: string | null;
   role: "admin" | "player";
   dataStatus?: { label: string; tone: StatusTone };
 }>) {
@@ -107,6 +109,9 @@ export function SiteHeader({
                 aria-label={t("openUserMenu", { name: displayName })}
               >
                 <Avatar className="size-8 border border-white shadow-sm">
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                  ) : null}
                   <AvatarFallback className="bg-accent text-xs font-bold text-accent-foreground">
                     {displayInitial(displayName)}
                   </AvatarFallback>

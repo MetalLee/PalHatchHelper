@@ -6,6 +6,7 @@ import { requireUserContext } from "@/features/auth/server";
 import { dataStatusPresentation } from "@/features/data-status/presentation";
 import { getInventoryDataStatus } from "@/features/pals/server";
 import { requireAppLocale } from "@/i18n/server-locale";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,12 @@ export default async function WorkspaceLayout({
   const locale = requireAppLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "DataStatus" });
   const context = await requireUserContext();
+  const supabase = await createServerSupabaseClient();
+  const { data: steamIdentity } = await supabase
+    .from("steam_identities")
+    .select("avatar_url")
+    .eq("user_id", context.user_id)
+    .maybeSingle();
   let dataStatus:
     | { label: string; tone: "good" | "warning" | "danger" }
     | undefined;
@@ -39,6 +46,7 @@ export default async function WorkspaceLayout({
   return (
     <AppShell
       displayName={context.display_name}
+      avatarUrl={steamIdentity?.avatar_url ?? null}
       role={context.role}
       dataStatus={dataStatus}
     >

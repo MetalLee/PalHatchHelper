@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Settings, ShieldCheck } from "lucide-react";
+import { Database, LogOut, Menu, Settings, ShieldCheck } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 import {
@@ -108,14 +108,6 @@ export function MobileNavigation({
                   <span className="min-w-0 flex-1">
                     {navigation(item.labelKey)}
                   </span>
-                  {item.href === "/data-status" ? (
-                    <StatusChip
-                      tone={dataStatus.tone}
-                      className="min-h-7 shrink-0 border-0 bg-transparent px-0"
-                    >
-                      {dataStatus.label}
-                    </StatusChip>
-                  ) : null}
                 </Link>
               </SheetClose>
             );
@@ -142,6 +134,26 @@ export function MobileNavigation({
               </Link>
             </SheetClose>
           ) : null}
+          <SheetClose asChild>
+            <Link
+              href="/data-status"
+              aria-current={
+                isNavigationItemActive(activePath, "/data-status")
+                  ? "page"
+                  : undefined
+              }
+              className="flex min-h-12 items-center gap-3 rounded-2xl px-4 text-sm font-semibold text-muted-foreground no-underline hover:bg-accent hover:text-accent-foreground"
+            >
+              <Database aria-hidden="true" className="size-5" />
+              <span className="min-w-0 flex-1">{navigation("dataStatus")}</span>
+              <StatusChip
+                tone={dataStatus.tone}
+                className="min-h-7 shrink-0 border-0 bg-transparent px-0"
+              >
+                {dataStatus.label}
+              </StatusChip>
+            </Link>
+          </SheetClose>
           <SheetClose asChild>
             <Link
               href="/account"

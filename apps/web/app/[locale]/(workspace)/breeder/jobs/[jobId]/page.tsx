@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { requireUserContext } from "@/features/auth/server";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { BreederError } from "@/features/breeder/breeder-error";
 import { BreedingJobView } from "@/features/breeder/breeding-job-view";
 import { BreederDataError, loadBreedingJob } from "@/features/breeder/server";
@@ -16,8 +17,7 @@ export default async function BreedingJobPage({
   params: Promise<{ locale: string; jobId: string }>;
 }) {
   const user = await requireUserContext();
-  if (user.binding === null)
-    return <BreederError code="PLAYER_BINDING_REQUIRED" />;
+  if (user.binding === null) return <PlayerBindingSetup />;
   const { locale: localeParam, jobId } = await params;
   const locale = requireAppLocale(localeParam);
   const t = await getTranslations({ locale, namespace: "Breeder" });

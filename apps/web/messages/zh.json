@@ -543,7 +543,15 @@
     "level": "等级 {level}",
     "claim": "这是我",
     "claimFailed": "角色认领失败，可能已被其他账号认领。",
-    "refresh": "刷新设备状态"
+    "refresh": "刷新设备状态",
+    "faqTitle": "常见问题",
+    "faqDescription": "第一次同步时，这些说明可以帮你确认角色、目录和数据安全。",
+    "faqMatchingQuestion": "角色匹配是怎么完成的？",
+    "faqMatchingAnswer": "设备完成首次同步后，这里会列出该世界尚未认领的角色。找到自己的游戏昵称，点击“这是我”即可完成匹配。",
+    "faqSaveDirectoryQuestion": "Palworld 存档目录怎么选？",
+    "faqSaveDirectoryAnswer": "选择包含 Level.sav 和 Players 文件夹的世界目录。init 会检查目录结构；有多个世界时，请选择你要同步的那个世界。",
+    "faqSafetyQuestion": "存档数据安全吗？",
+    "faqSafetyAnswer": "同步工具只读检查存档并在本地创建安全副本，只上传配种所需的脱敏库存数据；不会修改真实存档，也不会上传完整存档。"
   },
   "DataStatus": {
     "healthyTitle": "数据同步正常",

@@ -543,7 +543,15 @@
     "level": "Level {level}",
     "claim": "This is me",
     "claimFailed": "Character claim failed. Another account may have claimed it.",
-    "refresh": "Refresh device status"
+    "refresh": "Refresh device status",
+    "faqTitle": "Frequently asked questions",
+    "faqDescription": "Use these notes to confirm character matching, save selection, and data safety before your first sync.",
+    "faqMatchingQuestion": "How does character matching work?",
+    "faqMatchingAnswer": "After the first sync, unclaimed characters from that world appear here. Find your in-game nickname and select “This is me” to finish matching.",
+    "faqSaveDirectoryQuestion": "Which Palworld save directory should I choose?",
+    "faqSaveDirectoryAnswer": "Choose the world directory containing Level.sav and the Players folder. init validates the structure; if you have several worlds, select the one you want to sync.",
+    "faqSafetyQuestion": "Is my save data safe?",
+    "faqSafetyAnswer": "The tool reads the save and creates a safe local copy. It uploads only sanitized inventory data needed for breeding, never changes the live save, and never uploads the complete save."
   },
   "DataStatus": {
     "healthyTitle": "Data sync healthy",

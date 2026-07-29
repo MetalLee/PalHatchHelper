@@ -1,5 +1,6 @@
 import { ErrorState } from "@/components/page-state";
 import { requireUserContext } from "@/features/auth/server";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import {
   OverviewDashboard,
   type OverviewPlanFeed,
@@ -20,8 +21,7 @@ export default async function OverviewPage({
   const locale = requireAppLocale((await params).locale);
   const catalogLocale = catalogLocaleFor(locale);
   const context = await requireUserContext();
-  if (context.binding === null)
-    return <ErrorState code="PLAYER_BINDING_REQUIRED" />;
+  if (context.binding === null) return <PlayerBindingSetup />;
 
   const [dataStatusResult, plansResult] = await Promise.allSettled([
     getInventoryDataStatus(),

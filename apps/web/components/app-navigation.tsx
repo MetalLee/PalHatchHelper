@@ -2,7 +2,6 @@
 
 import {
   ClipboardList,
-  Database,
   Dna,
   House,
   PawPrint,
@@ -40,7 +39,6 @@ export const workspaceNavigationItems: readonly NavigationItem[] = [
   { href: "/pals", labelKey: "inventory", icon: PawPrint },
   { href: "/breeder", labelKey: "breeder", icon: Dna },
   { href: "/plans", labelKey: "plans", icon: ClipboardList },
-  { href: "/data-status", labelKey: "dataStatus", icon: Database },
 ];
 
 const routeTitles = [
@@ -51,6 +49,7 @@ const routeTitles = [
   { href: "/admin/settings", labelKey: "settings" },
   { href: "/admin", labelKey: "admin" },
   { href: "/account", labelKey: "account" },
+  { href: "/data-status", labelKey: "dataStatus" },
   ...workspaceNavigationItems.map(({ href, labelKey }) => ({ href, labelKey })),
 ] as const;
 

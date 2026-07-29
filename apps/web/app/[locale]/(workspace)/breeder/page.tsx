@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHero } from "@/components/layout/page-hero";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { requireUserContext } from "@/features/auth/server";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { BreederError } from "@/features/breeder/breeder-error";
 import { BreederForm } from "@/features/breeder/breeder-form";
 import { BreederFlowProgress } from "@/features/breeder/components/breeder-flow-progress";
@@ -21,8 +22,7 @@ export default async function BreederPage({
   const locale = requireAppLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "Breeder" });
   const user = await requireUserContext();
-  if (user.binding === null)
-    return <BreederError code="PLAYER_BINDING_REQUIRED" />;
+  if (user.binding === null) return <PlayerBindingSetup />;
   let context;
   try {
     context = await loadBreederFormContext(undefined, catalogLocaleFor(locale));

@@ -5,6 +5,7 @@ import { PageHero } from "@/components/layout/page-hero";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { Button } from "@/components/ui/button";
 import { requireUserContext } from "@/features/auth/server";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { PlanError } from "@/features/plans/plan-error";
 import { PlanList } from "@/features/plans/plan-list";
 import { PlanDataError, loadPlans } from "@/features/plans/server";
@@ -24,8 +25,7 @@ export default async function PlansPage({
   const locale = requireAppLocale((await params).locale);
   const t = await getTranslations({ locale, namespace: "Plans" });
   const user = await requireUserContext();
-  if (user.binding === null)
-    return <PlanError code="PLAYER_BINDING_REQUIRED" />;
+  if (user.binding === null) return <PlayerBindingSetup />;
   const query = await searchParams;
   let page;
   try {

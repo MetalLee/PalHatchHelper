@@ -1,12 +1,11 @@
 import { getTranslations } from "next-intl/server";
 
 import { PageHero } from "@/components/layout/page-hero";
-import { ErrorState } from "@/components/page-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { requireUserContext } from "@/features/auth/server";
-import { SyncDeviceCard } from "@/features/sync/sync-device-card";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { requireAppLocale } from "@/i18n/server-locale";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -113,10 +112,7 @@ export default async function AccountPage({
           )}
         </CardContent>
       </Card>
-      <SyncDeviceCard hasBinding={context.binding !== null} />
-      {context.binding === null ? (
-        <ErrorState code="PLAYER_BINDING_REQUIRED" headingLevel="h2" />
-      ) : null}
+      <PlayerBindingSetup hasBinding={context.binding !== null} />
     </div>
   );
 }

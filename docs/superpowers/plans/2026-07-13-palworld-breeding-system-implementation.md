@@ -1,7 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
 - 日期：2026-07-13
-- 状态：2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 状态：2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -1094,6 +1094,27 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
   `/opt/palworld` 或生产运行状态。
 - 不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖；应用回滚可恢复上一 CLI，已有设备配置
   与配对凭据保持兼容。
+
+## 2026-07-29 跨阶段修订：未绑定引导、Steam 头像与导航收口
+
+### 交付顺序
+
+1. 正式规格固定 Steam 头像优先、数据状态只保留用户菜单入口、未绑定页面复用同步卡片与 FAQ，
+   并固定 `palbeacon-cli` 包名、`palbeacon` CLI 名及三步命令在说明上方的顺序。
+2. 增加一次失败测试，覆盖头像图片与首字母降级、桌面主导航不再出现数据状态、同步安装第一步
+   命令顺序、FAQ 三类说明，以及各未绑定页面不再渲染 `PLAYER_BINDING_REQUIRED` 错误组件。
+3. 工作区布局只读查询当前用户 Steam 身份头像并传给共享 Header；复用现有 Radix AvatarImage，
+   保留加载失败后的 AvatarFallback、下拉键盘语义和现有 CSP 白名单。
+4. 提取可复用的未绑定同步引导，组合现有 `SyncDeviceCard` 与新 FAQ 卡片；概览、库存、配种器、
+   配种结果、计划列表/详情和数据状态页在无绑定时直接返回该引导，账号页也在同步卡片后展示 FAQ。
+5. 开发中只运行一次受影响失败基线与一次局部验证；最终状态运行一次 Web format、lint、typecheck、
+   完整 test、build 和 `git diff --check`，聚合命令已覆盖的检查不重复执行。
+
+### 回滚与生产约束
+
+- 本修订只修改规格、计划与 Web 展示/只读 Steam 头像查询，不修改数据库、共享契约、Sync CLI、
+  存档事实、Parser、配种算法、`/opt/palworld` 或生产运行状态。
+- 不新增依赖、公网端口，不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖。
 
 ## Phase 8：管理员功能、部署和端到端验收
 

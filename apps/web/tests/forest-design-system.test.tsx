@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { SiteHeader } from "../components/layout/site-header";
 import { PalPortrait } from "../components/pals/pal-portrait";
@@ -57,6 +57,45 @@ describe("Forest Healing design system", () => {
         wordmark.querySelector('[data-brand-part="beacon"]')?.className,
       ).toContain("text-sky-700");
     }
+  });
+
+  it("uses the Steam avatar before the display-name initial", () => {
+    vi.stubGlobal(
+      "Image",
+      class {
+        complete = true;
+        naturalWidth = 32;
+        crossOrigin: string | null = null;
+        referrerPolicy = "";
+        src = "";
+        addEventListener() {}
+        removeEventListener() {}
+      },
+    );
+    const { rerender } = render(
+      <SiteHeader
+        activePath="/overview"
+        displayName="Fixture Player A"
+        role="player"
+        avatarUrl="https://avatars.steamstatic.com/fixture.jpg"
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", { name: "Fixture Player A" }).getAttribute("src"),
+    ).toBe("https://avatars.steamstatic.com/fixture.jpg");
+
+    rerender(
+      <SiteHeader
+        activePath="/overview"
+        displayName="Fixture Player A"
+        role="player"
+        avatarUrl={null}
+      />,
+    );
+    expect(screen.queryByRole("img", { name: "Fixture Player A" })).toBeNull();
+    expect(screen.getByText("F")).toBeTruthy();
+    vi.unstubAllGlobals();
   });
 
   it("only exposes the admin center to administrators", () => {

@@ -10,11 +10,13 @@ import { usePathname } from "@/i18n/navigation";
 export function AppShell({
   children,
   displayName,
+  avatarUrl,
   role,
   dataStatus,
 }: Readonly<{
   children: ReactNode;
   displayName: string;
+  avatarUrl?: string | null;
   role: "admin" | "player";
   dataStatus?: { label: string; tone: StatusTone };
 }>) {
@@ -31,6 +33,7 @@ export function AppShell({
       <SiteHeader
         activePath={pathname}
         displayName={displayName}
+        avatarUrl={avatarUrl}
         role={role}
         dataStatus={dataStatus}
       />

@@ -34,7 +34,7 @@ describe("Phase 5 states and navigation", () => {
     expect(gameDataStatusPresentation("blocked", t).title).toMatch(/受阻/);
   });
 
-  it("exposes every workspace destination in top navigation", () => {
+  it("keeps data status out of the primary workspace navigation", () => {
     render(<AppNavigation activePath="/pals" />);
 
     expect(
@@ -49,9 +49,7 @@ describe("Phase 5 states and navigation", () => {
     expect(
       screen.getAllByRole("link", { name: "我的计划" }).length,
     ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByRole("link", { name: "数据状态" }).length,
-    ).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "数据状态" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "底部导航" })).toBeNull();
   });
 });

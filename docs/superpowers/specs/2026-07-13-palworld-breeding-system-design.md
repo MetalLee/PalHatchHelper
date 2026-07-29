@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 文档状态：已完成设计评审；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 文档状态：已完成设计评审；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -916,9 +916,10 @@ requester
 帕鲁列表
 配种器
 我的计划
-
-数据状态（固定在底部）
 ```
+
+数据状态不再作为主导航项；桌面端状态入口保留在用户下拉菜单，移动端保留在菜单中的状态入口，
+避免同一目标重复出现。
 
 管理员入口放入用户头像菜单：
 
@@ -1184,6 +1185,12 @@ AI 失败但算法成功时，任务仍成功并显示模板说明。
 - 权限不足。
 - 账号未绑定游戏角色。
 
+账号未绑定游戏角色时，概览、帕鲁列表、配种器、配种结果、我的计划、计划详情和数据状态页不显示
+`PLAYER_BINDING_REQUIRED` 错误框，而是复用账号页的完整“存档同步”卡片，并在其下方紧邻展示同一
+FAQ 卡片。同步卡片必须让用户可直接完成安装、设备配对、前台启动同步与角色匹配；FAQ 至少解释
+角色匹配步骤、Palworld 世界存档目录选择和存档数据安全。账号页无论是否已经绑定都保留同步卡片
+与 FAQ，方便管理同步设备和复查说明。
+
 没有合法路线时提供可操作建议，例如放宽最大代数、减少期望被动或查看缺失帕鲁。
 
 ### 17.12 路由
@@ -1420,10 +1427,13 @@ save-worker
 公共存档同步客户端面向自行运行 Palworld 服务器的普通用户提供最短前台流程：
 
 ```text
-npm install -g palbeacon-sync
-palbeacon-sync init
-palbeacon-sync run
+npm install -g palbeacon-cli
+palbeacon init
+palbeacon run
 ```
+
+账户页与所有未绑定引导中的 npm 包名固定为 `palbeacon-cli`，可执行 CLI 名固定为 `palbeacon`。
+三步卡片的命令块均放在对应说明文字上方，形成一致的“标题 → 命令 → 说明”阅读顺序。
 
 1. 第一版支持 Linux x64 和 Node.js 22 或更高版本。`init` 默认连接
    `https://www.palbeacon.app`，交互流程只询问一次性配对码与 Palworld 存档目录；
@@ -1448,3 +1458,6 @@ palbeacon-sync run
    运行日志和错误信息支持英文与简体中文；默认依次根据 `LC_ALL`、`LC_MESSAGES`、`LANG` 和
    Node.js locale 判断系统语言，无法判断或不受支持时使用英文。用户可在命令前或后通过
    `--locale en|en-US|zh|zh-CN` 显式覆盖；无效显式值返回稳定错误，不静默猜测。
+9. 工作区左上角用户入口优先显示当前账号已绑定 Steam 身份的头像；头像不存在、不可加载或账号
+   未绑定 Steam 时才显示当前显示名称的首字母。头像替代文本、下拉触发器可访问名称和首字母
+   降级均使用当前界面语言与现有用户显示名称。

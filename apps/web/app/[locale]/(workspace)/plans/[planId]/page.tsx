@@ -1,4 +1,5 @@
 import { requireUserContext } from "@/features/auth/server";
+import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { PlanDetail } from "@/features/plans/plan-detail";
 import { PlanError } from "@/features/plans/plan-error";
 import { PlanDataError, loadPlanDetail } from "@/features/plans/server";
@@ -13,8 +14,7 @@ export default async function PlanDetailPage({
   params: Promise<{ locale: string; planId: string }>;
 }) {
   const user = await requireUserContext();
-  if (user.binding === null)
-    return <PlanError code="PLAYER_BINDING_REQUIRED" />;
+  if (user.binding === null) return <PlayerBindingSetup />;
   const { locale: localeParam, planId } = await params;
   const locale = requireAppLocale(localeParam);
   if (!/^[0-9a-f-]{36}$/i.test(planId))

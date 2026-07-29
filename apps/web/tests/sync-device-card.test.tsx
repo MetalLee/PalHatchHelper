@@ -44,16 +44,22 @@ describe("SyncDeviceCard installation guidance", () => {
       screen.getByRole("heading", { name: "2. 完成设备配对" }),
     ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "3. 启动同步" })).toBeTruthy();
-    expect(screen.getByText("npm install -g palbeacon-sync")).toBeTruthy();
-    expect(screen.getByText("palbeacon-sync init")).toBeTruthy();
-    expect(screen.getByText("palbeacon-sync run")).toBeTruthy();
+    expect(screen.getByText("npm install -g palbeacon-cli")).toBeTruthy();
+    expect(screen.getByText("palbeacon init")).toBeTruthy();
+    expect(screen.getByText("palbeacon run")).toBeTruthy();
     expect(
       screen.getByText("程序会立即同步一次，之后每 5 分钟自动检查存档变化。"),
     ).toBeTruthy();
     expect(screen.getByText("保持命令运行即可持续同步。")).toBeTruthy();
+    expect(screen.queryByText(/--url|--sync-now|palbeacon-sync/)).toBeNull();
+    const installCommand = screen.getByText("npm install -g palbeacon-cli");
+    const installDescription = screen.getByText(
+      "在运行 Palworld 服务器的 Linux x64 主机上安装。",
+    );
     expect(
-      screen.queryByText(/--url|--sync-now|npx palbeacon-sync/),
-    ).toBeNull();
+      installCommand.compareDocumentPosition(installDescription) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "添加同步设备" }));
     expect(await screen.findByText(pairing.code)).toBeTruthy();
