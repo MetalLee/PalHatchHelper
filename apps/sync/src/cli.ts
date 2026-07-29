@@ -3,7 +3,11 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 
 import { DeviceAuthorizationError, pairDevice } from "./api.js";
-import { helpText, parseArguments } from "./cli-options.js";
+import {
+  helpText,
+  parseArguments,
+  parseInspectArguments,
+} from "./cli-options.js";
 import {
   deleteConfig,
   formatStatus,
@@ -12,6 +16,7 @@ import {
   type SyncConfig,
 } from "./config.js";
 import { findWorldSave } from "./discovery.js";
+import { inspectSave } from "./inspect.js";
 import { assertSupportedPlatform } from "./platform.js";
 import { syncOnce } from "./sync.js";
 import { VERSION } from "./version.js";
@@ -43,6 +48,12 @@ async function main(): Promise<void> {
   else if (command === "sync") {
     if (!arguments_.includes("--once")) throw new Error("SYNC_ONCE_REQUIRED");
     await runSingleSync();
+  } else if (command === "inspect") {
+    assertSupportedPlatform();
+    const outputs = parseInspectArguments(arguments_);
+    await inspectSave(outputs);
+    console.log(`离线检查完成：${outputs.canonicalOutput}`);
+    console.log(`脱敏上传载荷：${outputs.payloadOutput}`);
   } else if (command === "status")
     console.log(formatStatus(await loadConfig()));
   else if (command === "logout") {
@@ -223,6 +234,8 @@ function friendlyError(code: string): string {
     API_URL_INVALID: "PalBeacon 地址无效；公网地址必须使用 HTTPS。",
     INTERVAL_INVALID: "同步间隔必须是 30 到 86400 秒之间的整数。",
     SYNC_NOW_INVALID: "--sync-now 只接受 yes 或 no。",
+    INSPECT_OUTPUT_EXISTS: "inspect 输出文件已存在，未覆盖任何文件。",
+    INSPECT_OUTPUT_PATH_INVALID: "两个 inspect 输出路径必须不同。",
   };
   return messages[code] ?? code;
 }

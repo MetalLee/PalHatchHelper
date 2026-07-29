@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const tarballArgument = process.argv[2];
@@ -169,7 +169,11 @@ try {
     ["--no-install", "palbeacon-sync", "--help"],
     { cwd: installRoot, encoding: "utf8" },
   );
-  if (!helpOutput.includes("palbeacon-sync"))
+  if (
+    !helpOutput.includes("palbeacon-sync") ||
+    !helpOutput.includes("inspect") ||
+    !helpOutput.includes("不上传数据")
+  )
     throw new Error("INSTALLED_HELP_FAILED");
   const { stdout: cliVersion } = await execFileAsync(
     "npx",
@@ -217,6 +221,48 @@ try {
     sha256(await readFile(player)) !== playerHash
   ) {
     throw new Error("PACKAGED_PARSER_MODIFIED_INPUT");
+  }
+
+  const inspectCanonical = join(temporaryRoot, "inspect-canonical.json");
+  const inspectPayload = join(temporaryRoot, "inspect-payload.json");
+  await execFileAsync(
+    "npx",
+    [
+      "--no-install",
+      "palbeacon-sync",
+      "inspect",
+      "--save-dir",
+      snapshot,
+      "--canonical-output",
+      inspectCanonical,
+      "--payload-output",
+      inspectPayload,
+    ],
+    {
+      cwd: installRoot,
+      encoding: "utf8",
+      env: { ...process.env, PALHATCH_WORLD_UID: "fixture-world-001" },
+      timeout: 30_000,
+    },
+  );
+  const inspectedCanonical = JSON.parse(
+    await readFile(inspectCanonical, "utf8"),
+  );
+  const inspectedPayload = JSON.parse(await readFile(inspectPayload, "utf8"));
+  if (!isDeepStrictEqual(inspectedCanonical, expectedCanonical))
+    throw new Error("PACKAGED_INSPECT_CANONICAL_MISMATCH");
+  if (
+    inspectedPayload.server?.world_uid !==
+      "pb1_02dc68a40c54afcc8f35ce23928f5e47069c4116177ffccdd29388bd1bffca36" ||
+    inspectedPayload.parser_version !== manifest.version
+  ) {
+    throw new Error("PACKAGED_INSPECT_PAYLOAD_INVALID");
+  }
+  if (
+    sha256(await readFile(level)) !== levelHash ||
+    sha256(await readFile(player)) !== playerHash
+  ) {
+    throw new Error("PACKAGED_INSPECT_MODIFIED_INPUT");
   }
 
   process.stdout.write(

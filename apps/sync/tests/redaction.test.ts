@@ -43,6 +43,26 @@ const canonical: CanonicalSnapshot = {
 
 describe("upload redaction", () => {
   it("uses a stable namespaced hash for every sensitive UID", () => {
+    const vectors = new Map([
+      [
+        "fixture-world-local",
+        "pb1_5f9e8f9da19f9e744f70723081bf058d9241375c30c56690aa7be452c71b5ba4",
+      ],
+      [
+        "fixture-guild-alpha",
+        "pb1_3eace36823bdb2610a8e6c6485e86706408a3ee2ab5628fa61a5622c1690b05a",
+      ],
+      [
+        "fixture-player-a-uid",
+        "pb1_925481877daf8e6b9bc893a484c9f2b66320582cd173a91338bde7d91c04d0ba",
+      ],
+      [
+        "fixture-pal-b-private-001",
+        "pb1_f7094b3c7ae3ef6eb7e34c13a7a11409b2e10861024d52707653f6a02509625a",
+      ],
+    ]);
+    for (const [rawUid, expected] of vectors)
+      expect(redactUid(rawUid)).toBe(expected);
     expect(redactUid("raw-world-uid")).toBe(redactUid("raw-world-uid"));
     expect(redactUid("raw-world-uid")).toMatch(/^pb1_[0-9a-f]{64}$/);
     expect(redactUid("raw-world-uid")).not.toBe(redactUid("raw-guild-uid"));

@@ -34,6 +34,12 @@ describe("read-only save snapshots", () => {
       delayMilliseconds: 0,
     });
     try {
+      expect(snapshot.hash).toBe(
+        "c7c68938565e0ac2c20f46a57e6d92dedf712528a0de04f331c89c4b6b9c3607",
+      );
+      expect(snapshot.hash).not.toBe(
+        "72f4f8718024eb6d1c8614ffa89513ecf481feff0a0b2b49f4490f13b0e6073b",
+      );
       expect(await readFile(join(root, "Level.sav"), "utf8")).toBe(
         "level-fixture",
       );

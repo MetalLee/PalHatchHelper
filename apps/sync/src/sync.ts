@@ -1,7 +1,6 @@
 import { saveConfig, type SyncConfig } from "./config.js";
 import { sendHeartbeat, uploadSnapshot } from "./api.js";
-import { bundledParserManifest, parseSnapshot } from "./parser.js";
-import { toInventoryPublishPayload } from "./redaction.js";
+import { buildUploadArtifacts } from "./pipeline.js";
 import { createReadOnlySnapshot } from "./snapshot.js";
 
 export async function syncOnce(
@@ -17,14 +16,12 @@ export async function syncOnce(
       await updateState(config, snapshot.hash, "存档未变化，已发送心跳");
       return "unchanged";
     }
-    const canonical = await parseSnapshot(snapshot.path);
-    const parserManifest = await bundledParserManifest();
-    const payload = toInventoryPublishPayload(canonical, {
-      sourceHash: snapshot.hash,
-      sourceModifiedAt: snapshot.sourceModifiedAt,
-      parserVersion: parserManifest.version,
-    });
-    await uploadSnapshot(config.api_base_url, config.device_token, payload);
+    const artifacts = await buildUploadArtifacts(snapshot);
+    await uploadSnapshot(
+      config.api_base_url,
+      config.device_token,
+      artifacts.payload,
+    );
     await updateState(config, snapshot.hash, "上传成功");
     return "uploaded";
   } finally {

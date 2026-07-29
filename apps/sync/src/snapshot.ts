@@ -34,6 +34,7 @@ interface SourceFile {
 
 const DEFAULT_MAX_SAVE_BYTES = 512 * 1024 * 1024;
 const HARD_MAX_SAVE_BYTES = 2 * 1024 * 1024 * 1024;
+const SNAPSHOT_HASH_DOMAIN = "palbeacon-sync-snapshot-v1\0";
 
 export async function createReadOnlySnapshot(
   sourceDirectory: string,
@@ -186,6 +187,7 @@ async function hashFiles(
   relativePaths: string[],
 ): Promise<string> {
   const hash = createHash("sha256");
+  hash.update(SNAPSHOT_HASH_DOMAIN);
   for (const relativePath of relativePaths) {
     hash.update(relativePath);
     hash.update("\0");
