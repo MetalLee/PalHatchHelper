@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, parse, win32 } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -27,7 +27,9 @@ describe("world-save discovery", () => {
       await mkdir(world, { recursive: true });
       await writeFile(join(world, "Level.sav"), "fixture", "utf8");
 
-      await expect(findWorldSave(join(root, segment))).resolves.toBe(world);
+      await expect(findWorldSave(join(root, segment))).resolves.toBe(
+        await realpath(world),
+      );
     },
   );
 

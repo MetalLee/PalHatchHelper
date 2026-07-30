@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CanonicalSnapshot } from "@palhatch/contracts";
 
 import { toInventoryPublishPayload } from "../src/redaction.js";
-import { assertCutoverReport } from "../../../scripts/operations/verify-public-sync-cutover.mjs";
+import { assertCutoverReport } from "../../../scripts/operations/public-sync-cutover.mjs";
 import { removeTestDirectory } from "./support.js";
 
 const repositoryRoot = join(

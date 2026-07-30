@@ -25,6 +25,8 @@ import {
 import { removeTestDirectory } from "./support.js";
 
 const roots: string[] = [];
+const hashMismatchPlatforms: Array<"linux-x64" | "win32-x64"> =
+  process.platform === "win32" ? ["win32-x64"] : ["linux-x64", "win32-x64"];
 afterEach(async () => Promise.all(roots.splice(0).map(removeTestDirectory)));
 
 describe("Parser process safety", () => {
@@ -44,7 +46,7 @@ describe("Parser process safety", () => {
     ).toThrowError(/PARSER_MANIFEST_INVALID/);
   });
 
-  it.each(["linux-x64", "win32-x64"] as const)(
+  it.each(hashMismatchPlatforms)(
     "rejects a %s Parser whose SHA-256 does not match its manifest",
     async (platform) => {
       const root = await mkdtemp(join(tmpdir(), "palbeacon-parser-hash-"));

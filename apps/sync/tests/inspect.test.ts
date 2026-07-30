@@ -79,8 +79,12 @@ describe("offline save inspection", () => {
     expect((await readFile(payloadOutput, "utf8")).split("\n")[1]).toMatch(
       /^ {2}"captured_at"/,
     );
-    expect((await lstat(canonicalOutput)).mode & 0o777).toBe(0o600);
-    expect((await lstat(payloadOutput)).mode & 0o777).toBe(0o600);
+    for (const output of [canonicalOutput, payloadOutput]) {
+      const info = await lstat(output);
+      expect(info.isFile()).toBe(true);
+      expect(info.isSymbolicLink()).toBe(false);
+      if (process.platform !== "win32") expect(info.mode & 0o777).toBe(0o600);
+    }
   });
 
   it("refuses existing outputs before reading the save", async () => {
