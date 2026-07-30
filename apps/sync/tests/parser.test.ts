@@ -156,6 +156,7 @@ describe("Parser process safety", () => {
       await parseSnapshot(snapshot, {
         binary: process.execPath,
         binaryArguments: [script],
+        worldUid: "64EAE19D36004D1FA0321A3703BD825F",
       });
     } finally {
       delete process.env[legacyPathVariable];
@@ -165,6 +166,9 @@ describe("Parser process safety", () => {
     const environment = await readFile(capturedEnvironment, "utf8");
     expect(environment).not.toContain(legacyPathVariable);
     expect(environment).not.toContain("PALBEACON_TEST_SECRET");
+    expect(environment).toContain(
+      '"PALHATCH_WORLD_UID":"64EAE19D36004D1FA0321A3703BD825F"',
+    );
   });
 
   it("rejects a Parser that writes output and then fails", async () => {

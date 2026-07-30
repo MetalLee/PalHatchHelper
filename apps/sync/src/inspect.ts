@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { findWorldSave } from "./discovery.js";
 import { buildUploadArtifacts } from "./pipeline.js";
 import { createReadOnlySnapshot } from "./snapshot.js";
+import { worldUidFromSaveDirectory } from "./world-id.js";
 
 export interface InspectOptions {
   saveDirectory: string;
@@ -20,10 +21,11 @@ export async function inspectSave(options: InspectOptions): Promise<void> {
   await assertOutputAbsent(payloadOutput);
 
   const saveDirectory = await findWorldSave(options.saveDirectory);
+  const worldUid = worldUidFromSaveDirectory(saveDirectory);
   const snapshot = await createReadOnlySnapshot(saveDirectory);
   let canonicalCreated = false;
   try {
-    const artifacts = await buildUploadArtifacts(snapshot);
+    const artifacts = await buildUploadArtifacts(snapshot, { worldUid });
     try {
       await writeFile(canonicalOutput, deterministicJson(artifacts.canonical), {
         encoding: "utf8",

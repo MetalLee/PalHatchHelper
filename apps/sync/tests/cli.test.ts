@@ -20,11 +20,12 @@ import { extractLocaleOption, resolveLocale } from "../src/locale.js";
 import type { RuntimePlatform } from "../src/platform.js";
 
 const config: SyncConfig = {
-  config_version: 2,
+  config_version: 3,
   api_base_url: DEFAULT_API_BASE_URL,
   device_id: "00000000-0000-4000-8000-000000000001",
   device_token: "pbs_fixture-secret",
-  save_dir: "/fixture/world",
+  save_dir: "/fixture/64EAE19D36004D1FA0321A3703BD825F",
+  world_uid: "64EAE19D36004D1FA0321A3703BD825F",
   interval_seconds: 300,
   device_name: "Fixture server",
 };
@@ -181,6 +182,7 @@ describe("command-line interface", () => {
       expect.objectContaining({
         api_base_url: DEFAULT_API_BASE_URL,
         interval_seconds: 300,
+        world_uid: "64EAE19D36004D1FA0321A3703BD825F",
       }),
     );
     expect(output).toEqual([
@@ -362,7 +364,7 @@ describe("command-line interface", () => {
     const errors: string[] = [];
     const sync = vi
       .fn<RunRuntime["syncOnce"]>()
-      .mockRejectedValueOnce(new Error("PARSER_FAILED"))
+      .mockRejectedValueOnce(new Error("WORLD_UID_MISSING"))
       .mockRejectedValueOnce(new DeviceAuthorizationError());
     const runtime: RunRuntime = {
       loadConfig: async () => config,
@@ -378,7 +380,9 @@ describe("command-line interface", () => {
       DeviceAuthorizationError,
     );
     expect(sync).toHaveBeenCalledTimes(2);
-    expect(errors).toEqual(["本轮同步失败：发生错误，请稍后重试。"]);
+    expect(errors).toEqual([
+      "本轮同步失败：无法从存档取得世界 ID。请重新执行 palbeacon init，并选择直接包含 Level.sav 的目录。",
+    ]);
     expect(runtime.removeSignalListener).toHaveBeenCalledTimes(2);
   });
 
@@ -421,7 +425,7 @@ function initRuntime(overrides: Partial<InitRuntime> = {}): InitRuntime {
     loadConfig: async () => {
       throw Object.assign(new Error("missing"), { code: "ENOENT" });
     },
-    findWorldSave: async () => "/fixture/world",
+    findWorldSave: async () => "/fixture/64EAE19D36004D1FA0321A3703BD825F",
     pairDevice: async () => ({
       api_base_url: DEFAULT_API_BASE_URL,
       device_id: config.device_id,

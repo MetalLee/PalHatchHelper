@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, parse, win32 } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { findWorldSave } from "../src/discovery.js";
 import { removeTestDirectory } from "./support.js";
 
+const WORLD_UID = "64EAE19D36004D1FA0321A3703BD825F";
+const OTHER_WORLD_UID = "74EAE19D36004D1FA0321A3703BD825F";
 const roots: string[] = [];
+
 afterEach(async () => Promise.all(roots.splice(0).map(removeTestDirectory)));
 
 describe("world-save discovery", () => {
@@ -22,7 +25,7 @@ describe("world-save discovery", () => {
         "Saved",
         "SaveGames",
         "0",
-        "ABC",
+        WORLD_UID,
       );
       await mkdir(world, { recursive: true });
       await writeFile(join(world, "Level.sav"), "fixture", "utf8");
@@ -38,34 +41,69 @@ describe("world-save discovery", () => {
       win32.join(
         "C:\\PalServer\\Pal\\Saved\\SaveGames",
         "0",
-        "ABC",
+        WORLD_UID,
         "Level.sav",
       ),
-    ).toBe("C:\\PalServer\\Pal\\Saved\\SaveGames\\0\\ABC\\Level.sav");
+    ).toBe(`C:\\PalServer\\Pal\\Saved\\SaveGames\\0\\${WORLD_UID}\\Level.sav`);
     expect(
       win32.join(
         "C:\\Program Files\\PalServer\\Pal\\Saved\\SaveGames",
         "0",
-        "ABC",
+        WORLD_UID,
         "Level.sav",
       ),
     ).toBe(
-      "C:\\Program Files\\PalServer\\Pal\\Saved\\SaveGames\\0\\ABC\\Level.sav",
+      `C:\\Program Files\\PalServer\\Pal\\Saved\\SaveGames\\0\\${WORLD_UID}\\Level.sav`,
     );
     expect(
       win32.join(
         "C:\\幻兽帕鲁服务器\\Pal\\Saved\\SaveGames",
         "0",
-        "ABC",
+        WORLD_UID,
         "Level.sav",
       ),
-    ).toBe("C:\\幻兽帕鲁服务器\\Pal\\Saved\\SaveGames\\0\\ABC\\Level.sav");
+    ).toBe(
+      `C:\\幻兽帕鲁服务器\\Pal\\Saved\\SaveGames\\0\\${WORLD_UID}\\Level.sav`,
+    );
   });
 
-  it("refuses to choose when more than one world is present", async () => {
+  it("prefers an explicitly selected live world over nested backups", async () => {
+    const root = await mkdtemp(join(tmpdir(), "palbeacon-discovery-world-"));
+    roots.push(root);
+    const world = join(root, WORLD_UID);
+    await mkdir(join(world, "backup", "world", "20260731"), {
+      recursive: true,
+    });
+    await writeFile(join(world, "Level.sav"), "live", "utf8");
+    await writeFile(
+      join(world, "backup", "world", "20260731", "Level.sav"),
+      "backup",
+      "utf8",
+    );
+
+    await expect(findWorldSave(world)).resolves.toBe(await realpath(world));
+  });
+
+  it("ignores backup trees when discovering from a parent directory", async () => {
+    const root = await mkdtemp(join(tmpdir(), "palbeacon-discovery-parent-"));
+    roots.push(root);
+    const world = join(root, WORLD_UID);
+    await mkdir(world);
+    await mkdir(join(root, "backups", OTHER_WORLD_UID), { recursive: true });
+    await writeFile(join(world, "Level.sav"), "live", "utf8");
+    await writeFile(
+      join(root, "backups", OTHER_WORLD_UID, "Level.sav"),
+      "backup",
+      "utf8",
+    );
+
+    await expect(findWorldSave(root)).resolves.toBe(await realpath(world));
+  });
+
+  it("still rejects two independent live worlds", async () => {
     const root = await mkdtemp(join(tmpdir(), "palbeacon-multi-world-"));
     roots.push(root);
-    for (const worldId of ["ABC", "DEF"]) {
+    for (const worldId of [WORLD_UID, OTHER_WORLD_UID]) {
       const world = join(root, "SaveGames", "0", worldId);
       await mkdir(world, { recursive: true });
       await writeFile(join(world, "Level.sav"), "fixture", "utf8");

@@ -15,6 +15,7 @@ import {
 } from "@palhatch/contracts";
 
 import { runtimePlatform, type RuntimePlatform } from "./platform.js";
+import { normalizeWorldUid } from "./world-id.js";
 
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 const MAX_ERROR_BYTES = 32 * 1024;
@@ -24,6 +25,7 @@ interface ParserOptions {
   binaryArguments?: string[];
   platform?: RuntimePlatform;
   timeoutMilliseconds?: number;
+  worldUid?: string;
 }
 
 export interface ParserManifest {
@@ -71,6 +73,9 @@ export async function parseSnapshot(
       outputPath,
       options.timeoutMilliseconds ?? 180_000,
       platform,
+      options.worldUid === undefined
+        ? undefined
+        : normalizeWorldUid(options.worldUid),
     );
     const outputInfo = await lstat(outputPath);
     if (!outputInfo.isFile() || outputInfo.isSymbolicLink())
@@ -151,12 +156,15 @@ export function parserBinaryName(
     : "palworld-save-parser";
 }
 
-export function parserSpawnOptions(platform: RuntimePlatform): SpawnOptions {
+export function parserSpawnOptions(
+  platform: RuntimePlatform,
+  worldUid?: string,
+): SpawnOptions {
   return {
     detached: platform === "linux-x64",
     windowsHide: platform === "win32-x64",
     stdio: ["ignore", "ignore", "pipe"],
-    env: parserEnvironment(platform),
+    env: parserEnvironment(platform, worldUid),
   };
 }
 
@@ -199,12 +207,13 @@ async function executeParser(
   outputPath: string,
   timeoutMilliseconds: number,
   platform: RuntimePlatform,
+  worldUid: string | undefined,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(
       binary,
       [...binaryArguments, "--snapshot", snapshotPath, "--output", outputPath],
-      parserSpawnOptions(platform),
+      parserSpawnOptions(platform, worldUid),
     );
     let errorOutput = "";
     child.stderr?.setEncoding("utf8");
@@ -254,9 +263,13 @@ async function verifyParserFile(
   }
 }
 
-function parserEnvironment(platform: RuntimePlatform): NodeJS.ProcessEnv {
+function parserEnvironment(
+  platform: RuntimePlatform,
+  worldUid: string | undefined,
+): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = {};
-  const keys = ["PALHATCH_WORLD_UID", "PALHATCH_SAV_MAX_BYTES"];
+  if (worldUid !== undefined) environment.PALHATCH_WORLD_UID = worldUid;
+  const keys = ["PALHATCH_SAV_MAX_BYTES"];
   if (platform === "win32-x64")
     keys.push("SystemRoot", "WINDIR", "TEMP", "TMP");
   for (const key of keys) {

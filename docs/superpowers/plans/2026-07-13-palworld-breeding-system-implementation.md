@@ -1,5 +1,6 @@
 # PalHatch Helper 分阶段实施计划
 
+- 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 日期：2026-07-13
 - 状态：2026-07-30 Landing 轮播真实名称与配方修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
@@ -1276,6 +1277,29 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
    中的存档同步入口，不改变公开路由、metadata、sitemap 或认证流程。
 3. 与登录页入口改动合并执行 Web 最终验证和 `git diff --check`。
 
+## 2026-07-31 跨阶段修订：公共 Sync 世界身份、存档发现与公会有效性
+
+### 交付顺序
+
+1. 正式规格固定显式世界 UID、备份目录过滤、真实多世界错误和未知公会保守同步语义。
+2. 增加失败测试，覆盖配置迁移、`init` 持久化、`run`/`inspect` 显式传参、活动世界优先、
+   `backup`/`backups` 排除、真实多世界保留以及未知名称公会与共享资格清理。
+3. 配置升级为向前兼容的新版本；从最终真实世界目录提取 32 位十六进制 UID，旧配置加载时
+   原地安全迁移并保留设备令牌，不增加第三个交互问题。
+4. 存档发现优先接受用户直接指定的世界根，并在父目录搜索时跳过已知非活动备份目录；仍拒绝
+   符号链接和多个独立活动世界。
+5. ParserAdapter 通过显式选项设置世界 UID；公共脱敏边界排除未知名称公会、清理无效引用，
+   对关联库存采用个人或 unresolved 保守降级并关闭共享资格。
+6. 运行 Sync 局部测试和最终 package 级 format、lint、typecheck、test、build、打包验证及
+   `git diff --check`；不访问真实存档、不连接生产 API、不执行上传。
+
+### 回滚与生产约束
+
+- 配置迁移保留既有设备 ID、令牌、服务地址和同步状态；旧 CLI 回滚无法理解新版本配置时需重新
+  `init`，不得通过删除或改写真实存档解决。
+- 本修订不修改 Parser 事实算法、共享契约、数据库、`/opt/palworld`、Palworld/mihomo 容器或
+  生产运行状态；不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖。
+
 ## Phase 8：管理员功能、部署和端到端验收
 
 ### 阶段目标
@@ -1359,7 +1383,7 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
 3. 从 Sync Schema 生成 TypeScript/Python 模型，追加 forward-only 数据库约束迁移与 pgTAP；不得修改
    已应用 migration 或放宽为任意平台字符串。
 4. 仅在两个 artifact 的版本、源码 commit 与 upstream commit 一致时组装唯一
-   `palbeacon-cli-0.2.0.tgz`，先做平台无关结构检查，再由 Ubuntu/Windows matrix 安装同一 tgz 并
+   `palbeacon-cli-0.2.1.tgz`，先做平台无关结构检查，再由 Ubuntu/Windows matrix 安装同一 tgz 并
    解析相同 fixture。
 5. 最后更新 Web 双语平台说明、普通 README、许可证/源码通知与运维文档。回滚只撤销未发布 npm
    candidate 和 Web/代码变更；不应用生产 migration、不操作 Palworld，也不停止既有同步服务。

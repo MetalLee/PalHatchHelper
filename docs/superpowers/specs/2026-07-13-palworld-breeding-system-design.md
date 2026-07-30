@@ -1,5 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
+- 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 文档状态：已完成设计评审；2026-07-30 Landing 轮播真实名称与配方修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
@@ -1586,3 +1587,17 @@ palbeacon run
 本节覆盖第 27 节中首页第三个存档同步 CTA 的旧要求。首页 Hero 只保留“开始使用”和“打开控制台”
 两个按钮；删除“了解存档同步 / Learn about save sync”。存档同步公开页仍通过首页四张内容卡、
 Footer 和正文内部链接提供可抓取入口。
+
+## 30. 公共 Sync 世界身份、存档发现与公会有效性
+
+1. `init` 选定真实世界目录后，必须从该目录名读取、校验并规范化 32 位十六进制世界 UID，
+   与设备凭据一同持久化；既有配置在加载时从已保存的真实世界目录迁移该字段。`run` 与
+   `inspect` 必须把此显式 UID 传给受控 Parser，不依赖调用者临时设置进程环境变量。
+2. 当用户直接选择包含普通文件 `Level.sav` 的世界目录时，该目录优先成立，目录内的备份不得
+    造成多世界误报；从上级目录发现时跳过 `backup`/`backups` 等非活动备份目录，但两个或以上
+    独立活动世界仍返回 `MULTIPLE_WORLD_SAVES_FOUND`。符号链接不得用于绕过只读发现边界。
+3. Parser 无法取得非空真实名称而标记为 `Unknown guild` 的公会不属于有效同步公会：公共上传
+    不包含该公会记录，并清除玩家和帕鲁对它的公会引用。相关玩家及其个人帕鲁仍可按个人库存
+    同步；仅依赖该未知公会的基地帕鲁保持 unresolved，且所有相关帕鲁均不得进入公会共享库存。
+4. 世界 UID 缺失、格式无效或与存档不匹配必须保留稳定错误码并提供可执行的中英文提示，不能
+    降级为无细节的通用同步错误。

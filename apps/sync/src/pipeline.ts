@@ -12,10 +12,17 @@ export interface UploadArtifacts {
   payload: InventoryPublishPayload;
 }
 
+export interface UploadArtifactOptions {
+  worldUid: string;
+}
+
 export async function buildUploadArtifacts(
   snapshot: ReadOnlySnapshot,
+  options: UploadArtifactOptions,
 ): Promise<UploadArtifacts> {
-  const canonical = await parseSnapshot(snapshot.path);
+  const canonical = await parseSnapshot(snapshot.path, {
+    worldUid: options.worldUid,
+  });
   const parserManifest = await bundledParserManifest();
   return {
     canonical,
