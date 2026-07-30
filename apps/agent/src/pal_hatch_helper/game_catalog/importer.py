@@ -29,6 +29,10 @@ from pal_hatch_helper.generated import (
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 
+LEGACY_NORMALIZATION_EXCLUDED_FIELDS: dict[str, set[str]] = {
+    "passive_skills": {"description_template_key", "effects"},
+}
+
 
 async def stage_catalog_version(
     directory: Path,
@@ -95,7 +99,11 @@ def prepare_normalized_catalog(
         for spec in LEGACY_FILE_SPECS:
             records = list(read_jsonl(input_directory / spec.filename, require_canonical=False))
             validated = [
-                spec.model.model_validate(record).model_dump(mode="json") for record in records
+                spec.model.model_validate(record).model_dump(
+                    mode="json",
+                    exclude=LEGACY_NORMALIZATION_EXCLUDED_FIELDS.get(spec.count_field),
+                )
+                for record in records
             ]
             if spec.count_field == "localizations":
                 locales.update(str(record["locale"]) for record in validated)
