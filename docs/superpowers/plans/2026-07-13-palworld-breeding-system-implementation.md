@@ -1300,6 +1300,19 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 - 本修订不修改 Parser 事实算法、共享契约、数据库、`/opt/palworld`、Palworld/mihomo 容器或
   生产运行状态；不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖。
 
+## 2026-07-31 跨阶段修订：Phase 5 浏览器验收再精简
+
+1. Phase 5 Playwright 删除公开 Landing 的五个重复场景：双语页面/SEO 聚合断言、窄屏排版、四个
+   公开指南逐页导航、英文轮播精确几何和根路径语言协商。
+2. Landing 的服务端内容、轮播事实、公开路由、canonical/hreflang、sitemap、robots 与 middleware
+   继续由现有快速 Vitest 和生产构建覆盖；不删除这些功能门禁。
+3. 保留登录失败与成功、未绑定同步引导、移动端无横向溢出、库存筛选/分享/分页/范围、隐私与
+   越权、公会隔离、数据状态、配种任务与路线比较、计划收藏和管理员主流程。
+4. 先以 Playwright 测试清单确认旧套件仍包含五个低价值场景，再删除对应文件；最终运行 Web 单元
+   测试、精简后的 Phase 5 browser acceptance、格式检查和 `git diff --check`。
+5. 本修订只改变测试分层与 CI 时间，不修改公开页面、认证、数据库、Sync 协议、配种算法、生产
+   环境或 `/opt/palworld`。
+
 ## Phase 8：管理员功能、部署和端到端验收
 
 ### 阶段目标

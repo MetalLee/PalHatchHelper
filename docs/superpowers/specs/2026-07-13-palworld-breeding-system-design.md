@@ -1369,6 +1369,12 @@ save-worker
 11. AI 降级提示。
 12. iPhone Safari、Android Chrome 和微信浏览器基础流程。
 
+Phase 5 的每次提交浏览器验收只保留登录、未绑定引导、移动端关键流程、库存筛选/共享、权限与
+隐私隔离、配种任务、路线收藏和管理员操作等第一版核心闭环。公开 Landing、SEO 与静态内容继续由
+Server Component/Vitest、metadata、sitemap、robots、middleware 和生产构建测试覆盖；链接数量、
+精确几何、轮播排版、窄屏文案换行及逐页公开导航等低价值 UI 断言不进入 Phase 5 Playwright，避免
+与快速测试重复并阻塞无关改动。Landing 专项改版需要时再执行有针对性的浏览器或人工视觉验收。
+
 ## 21. 第一版验收标准
 
 1. Agent 能从确认后的宿主机路径创建只读安全副本。
