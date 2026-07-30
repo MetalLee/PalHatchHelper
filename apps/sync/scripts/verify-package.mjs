@@ -18,6 +18,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual, promisify } from "node:util";
 import { deflateSync } from "node:zlib";
+import { windowsCommandInvocation } from "./windows-command.mjs";
 
 const execFileAsync = promisify(execFile);
 const arguments_ = process.argv.slice(2);
@@ -514,14 +515,17 @@ function peImports(value) {
 }
 
 async function runCli(executable, arguments__, cwd, environment = process.env) {
-  return execFileAsync(executable, arguments__, {
+  const invocation =
+    process.platform === "win32"
+      ? windowsCommandInvocation(executable, arguments__)
+      : { executable, arguments: arguments__ };
+  return execFileAsync(invocation.executable, invocation.arguments, {
     cwd,
     env: environment,
     encoding: "utf8",
     timeout: 30_000,
     maxBuffer: 8 * 1024 * 1024,
     windowsHide: true,
-    ...(process.platform === "win32" ? { shell: true } : {}),
   });
 }
 
