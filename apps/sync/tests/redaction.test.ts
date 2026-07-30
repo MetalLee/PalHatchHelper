@@ -150,4 +150,68 @@ describe("upload redaction", () => {
     expect(serialized).toContain("wood");
     expect(serialized).toContain("stone");
   });
+
+  it("excludes unknown-name guilds and prevents their inventory from being shared", () => {
+    const unknownGuildSnapshot: CanonicalSnapshot = {
+      ...canonical,
+      guilds: [
+        ...canonical.guilds,
+        { guild_uid: "raw-unknown-guild-uid", name: "Unknown guild" },
+      ],
+      players: [
+        ...canonical.players,
+        {
+          player_uid: "raw-unknown-player-uid",
+          nickname: "Unresolved Player",
+          level: 40,
+          guild_uid: "raw-unknown-guild-uid",
+        },
+      ],
+      pals: [
+        {
+          ...canonical.pals[0]!,
+          instance_uid: "raw-unknown-player-pal-uid",
+          owner_player_uid: "raw-unknown-player-uid",
+          guild_uid: "raw-unknown-guild-uid",
+        },
+        {
+          ...canonical.pals[0]!,
+          instance_uid: "raw-unknown-base-pal-uid",
+          owner_player_uid: null,
+          guild_uid: "raw-unknown-guild-uid",
+          location_type: "base",
+          location_access_scope: "guild",
+        },
+      ],
+    };
+
+    const payload = toInventoryPublishPayload(unknownGuildSnapshot, {
+      sourceHash: "b".repeat(64),
+      sourceModifiedAt: "2026-07-29T00:00:00.000Z",
+      parserVersion: "1.2.0",
+    });
+    const unresolvedPlayer = payload.players.find(
+      (player) => player.nickname === "Unresolved Player",
+    );
+    const [playerPal, basePal] = payload.pals;
+
+    expect(payload.guilds).toHaveLength(1);
+    expect(unresolvedPlayer?.guild_uid).toBeNull();
+    expect(playerPal).toMatchObject({
+      guild_uid: null,
+      ownership_scope: "player",
+      owner_resolved: true,
+      guild_resolved: false,
+      shared_eligible: false,
+    });
+    expect(basePal).toMatchObject({
+      guild_uid: null,
+      ownership_scope: "unresolved",
+      owner_resolved: false,
+      guild_resolved: false,
+      shared_eligible: false,
+    });
+    expect(JSON.stringify(payload)).not.toContain("raw-unknown-guild-uid");
+    expect(JSON.stringify(payload)).not.toContain("Unknown guild");
+  });
 });

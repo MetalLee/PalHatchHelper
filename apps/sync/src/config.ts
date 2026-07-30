@@ -11,16 +11,18 @@ import { dirname, join, posix, win32 } from "node:path";
 
 import { messages, type CliLocale } from "./locale.js";
 import { runtimePlatform, type RuntimePlatform } from "./platform.js";
+import { normalizeWorldUid, worldUidFromSaveDirectory } from "./world-id.js";
 
 const LEGACY_RUNTIME_PATH_FIELD = ["oodle", "lib"].join("_");
 const LEGACY_RUNTIME_HASH_FIELD = ["oodle", "sha256"].join("_");
 
 export interface SyncConfig {
-  config_version: 2;
+  config_version: 3;
   api_base_url: string;
   device_id: string;
   device_token: string;
   save_dir: string;
+  world_uid: string;
   interval_seconds: number;
   device_name: string;
   app_version?: string;
@@ -104,7 +106,8 @@ export async function loadConfig(
   if (config === undefined) throw new Error("SYNC_CONFIG_INVALID");
   const record = value as Record<string, unknown>;
   if (
-    record.config_version !== 2 ||
+    record.config_version !== 3 ||
+    record.world_uid !== config.world_uid ||
     LEGACY_RUNTIME_PATH_FIELD in record ||
     LEGACY_RUNTIME_HASH_FIELD in record
   ) {
@@ -151,7 +154,8 @@ function normalizeSyncConfig(value: unknown): SyncConfig | undefined {
   if (
     (config.config_version !== undefined &&
       config.config_version !== 1 &&
-      config.config_version !== 2) ||
+      config.config_version !== 2 &&
+      config.config_version !== 3) ||
     typeof config.api_base_url !== "string" ||
     typeof config.device_id !== "string" ||
     typeof config.device_token !== "string" ||
@@ -167,12 +171,22 @@ function normalizeSyncConfig(value: unknown): SyncConfig | undefined {
     typeof config.app_version === "string" ? config.app_version : undefined;
   const state = normalizeState(config.state);
   if (config.state !== undefined && state === undefined) return undefined;
+  const directoryWorldUid = worldUidFromSaveDirectory(config.save_dir);
+  const worldUid =
+    config.config_version === 3
+      ? typeof config.world_uid === "string"
+        ? normalizeWorldUid(config.world_uid)
+        : undefined
+      : directoryWorldUid;
+  if (worldUid === undefined) throw new Error("WORLD_SAVE_ID_INVALID");
+  if (worldUid !== directoryWorldUid) throw new Error("WORLD_UID_MISMATCH");
   return {
-    config_version: 2,
+    config_version: 3,
     api_base_url: config.api_base_url,
     device_id: config.device_id,
     device_token: config.device_token,
     save_dir: config.save_dir,
+    world_uid: worldUid,
     interval_seconds: config.interval_seconds,
     device_name: config.device_name,
     ...(appVersion === undefined ? {} : { app_version: appVersion }),

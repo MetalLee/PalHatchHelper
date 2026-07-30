@@ -1,7 +1,7 @@
 # PalHatch Helper 第一版系统设计
 
 - 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
-
+- 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 文档状态：已完成设计评审；2026-07-30 Landing 轮播真实名称与配方修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
@@ -1370,6 +1370,12 @@ save-worker
 11. AI 降级提示。
 12. iPhone Safari、Android Chrome 和微信浏览器基础流程。
 
+Phase 5 的每次提交浏览器验收只保留登录、未绑定引导、移动端关键流程、库存筛选/共享、权限与
+隐私隔离、配种任务、路线收藏和管理员操作等第一版核心闭环。公开 Landing、SEO 与静态内容继续由
+Server Component/Vitest、metadata、sitemap、robots、middleware 和生产构建测试覆盖；链接数量、
+精确几何、轮播排版、窄屏文案换行及逐页公开导航等低价值 UI 断言不进入 Phase 5 Playwright，避免
+与快速测试重复并阻塞无关改动。Landing 专项改版需要时再执行有针对性的浏览器或人工视觉验收。
+
 ## 21. 第一版验收标准
 
 1. Agent 能从确认后的宿主机路径创建只读安全副本。
@@ -1589,14 +1595,28 @@ palbeacon run
 两个按钮；删除“了解存档同步 / Learn about save sync”。存档同步公开页仍通过首页四张内容卡、
 Footer 和正文内部链接提供可抓取入口。
 
-## 30. Catalog 2.0、物品库存与递归配方
+## 30. 公共 Sync 世界身份、存档发现与公会有效性
+
+1. `init` 选定真实世界目录后，必须从该目录名读取、校验并规范化 32 位十六进制世界 UID，
+   与设备凭据一同持久化；既有配置在加载时从已保存的真实世界目录迁移该字段。`run` 与
+   `inspect` 必须把此显式 UID 传给受控 Parser，不依赖调用者临时设置进程环境变量。
+2. 当用户直接选择包含普通文件 `Level.sav` 的世界目录时，该目录优先成立，目录内的备份不得
+    造成多世界误报；从上级目录发现时跳过 `backup`/`backups` 等非活动备份目录，但两个或以上
+    独立活动世界仍返回 `MULTIPLE_WORLD_SAVES_FOUND`。符号链接不得用于绕过只读发现边界。
+3. Parser 无法取得非空真实名称而标记为 `Unknown guild` 的公会不属于有效同步公会：公共上传
+    不包含该公会记录，并清除玩家和帕鲁对它的公会引用。相关玩家及其个人帕鲁仍可按个人库存
+    同步；仅依赖该未知公会的基地帕鲁保持 unresolved，且所有相关帕鲁均不得进入公会共享库存。
+4. 世界 UID 缺失、格式无效或与存档不匹配必须保留稳定错误码并提供可执行的中英文提示，不能
+    降级为无细节的通用同步错误。
+
+## 31. Catalog 2.0、物品库存与递归配方
 
 本节是第 2 节“基地布局和生产效率分析”及第 23 节“不提前建设通用监控平台”的窄范围例外，
 只交付公会基地物品库存、趋势和确定性手工制作/烹饪配方计算，不扩展为服务器运行状态、自动化生产、
 基地布局或生产效率监控平台。静态游戏事实继续来自固定游戏构建和确定性提取器，AI 不生成物品、
 被动技能效果、配方或产量事实。
 
-### 30.1 Catalog 2.0 版本边界
+### 31.1 Catalog 2.0 版本边界
 
 1. `game_data_version` 从七类目录升级为九类目录：`pals`、`passive_skills`、`active_skills`、
    `pal_active_skills`、`partner_skills`、`breeding_recipes`、`items`、`item_recipes` 和
@@ -1613,7 +1633,7 @@ Footer 和正文内部链接提供可抓取入口。
 6. 旧物品 ID 通过游戏的静态重定向表规范化；无法映射的物品和配方保留稳定错误码与 source evidence，
    不静默丢弃、不以显示名称建立关系。
 
-### 30.2 被动技能完整效果说明
+### 31.2 被动技能完整效果说明
 
 1. `passive_skills` 增加 `description_template_key` 与结构化 `effects`。每个效果固定记录原始槽位、
    `target_type`、`effect_type`、`value` 和可选元素；`description_key` 继续指向玩家可直接显示的完整文本。
@@ -1625,7 +1645,7 @@ Footer 和正文内部链接提供可抓取入口。
 4. 当前支持的三个 locale 中，每个可显示被动都必须有非空完整说明。原始模板和所有效果字段继续进入
    traceability；现有 Web/Supabase 通过 `description_key` 读取说明的接口保持兼容。
 
-### 30.3 动态物品库存边界
+### 31.3 动态物品库存边界
 
 1. Parser 始终从只读稳定副本解析基地、公会、物品容器和槽位；不得把真实存档路径交给 Parser，
    不得修改、修复或写回存档。CanonicalSnapshot 新版本增加 `bases` 与 `item_stacks`，堆栈至少包含
@@ -1641,7 +1661,7 @@ Footer 和正文内部链接提供可抓取入口。
 5. 被更新的堆栈级明细最多保留 24 小时；小时聚合保留 90 天；日聚合保留 1 年。最新有效快照始终
    保留。趋势查询返回总库存、各基地库存、相邻采样增减量、采样区间和数据新鲜度。
 
-### 30.4 确定性递归产量
+### 31.4 确定性递归产量
 
 1. 产量查询以单个目标物品独立计算，使用当前有效物品快照的虚拟副本，不修改库存。返回
    `on_hand`、`craftable_additional`、`obtainable_total`、确定性 `recipe_plan` 和
@@ -1653,7 +1673,7 @@ Footer 和正文内部链接提供可抓取入口。
 4. 算法通过目标数量可行性检查和有界确定性搜索计算最大新增数量；超出复杂度限制时返回稳定错误码，
    不调用 AI，不给出未经验证的近似数量。所有结果固定物品快照与游戏目录版本以支持审计。
 
-### 30.5 发布、兼容与验收
+### 31.5 发布、兼容与验收
 
 1. 先更新共享 JSON Schema，再生成 TypeScript/Python 契约；Extractor、Agent SQLite cache、Supabase
    staging/finalize、数据库目录表、查询 RPC、Web 和管理员计数必须在同一变更中支持九类目录。

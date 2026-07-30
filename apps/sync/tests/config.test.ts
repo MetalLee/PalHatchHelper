@@ -48,11 +48,12 @@ describe("configuration security", () => {
     const root = await mkdtemp(join(tmpdir(), "palbeacon-sync-config-"));
     roots.push(root);
     const config: SyncConfig = {
-      config_version: 2,
+      config_version: 3,
       api_base_url: "https://www.palbeacon.app",
       device_id: "00000000-0000-4000-8000-000000000001",
       device_token: "pbs_super-secret-device-token",
-      save_dir: "/fixture/save",
+      save_dir: "/fixture/64EAE19D36004D1FA0321A3703BD825F",
+      world_uid: "64EAE19D36004D1FA0321A3703BD825F",
       interval_seconds: 300,
       device_name: "Fixture server",
     };
@@ -91,7 +92,7 @@ describe("configuration security", () => {
         api_base_url: "https://www.palbeacon.app",
         device_id: "00000000-0000-4000-8000-000000000001",
         device_token: "pbs_keep-this-token",
-        save_dir: "/fixture/save",
+        save_dir: "/fixture/64EAE19D36004D1FA0321A3703BD825F",
         [legacyPathField]: "/legacy/runtime.so",
         [legacyHashField]: "a".repeat(64),
         interval_seconds: 300,
@@ -103,10 +104,11 @@ describe("configuration security", () => {
     const migrated = await loadConfig(root);
 
     expect(migrated).toMatchObject({
-      config_version: 2,
+      config_version: 3,
       device_id: "00000000-0000-4000-8000-000000000001",
       device_token: "pbs_keep-this-token",
-      save_dir: "/fixture/save",
+      save_dir: "/fixture/64EAE19D36004D1FA0321A3703BD825F",
+      world_uid: "64EAE19D36004D1FA0321A3703BD825F",
     });
     const persisted = JSON.parse(
       await readFile(join(root, "config.json"), "utf8"),
@@ -119,11 +121,13 @@ describe("configuration security", () => {
     const root = await mkdtemp(join(tmpdir(), "palbeacon-win-config-"));
     roots.push(root);
     const first: SyncConfig = {
-      config_version: 2,
+      config_version: 3,
       api_base_url: "https://www.palbeacon.app",
       device_id: "00000000-0000-4000-8000-000000000001",
       device_token: "pbs_first-secret-token",
-      save_dir: "C:\\PalServer\\Pal\\Saved\\SaveGames\\0\\ABC",
+      save_dir:
+        "C:\\PalServer\\Pal\\Saved\\SaveGames\\0\\64EAE19D36004D1FA0321A3703BD825F",
+      world_uid: "64EAE19D36004D1FA0321A3703BD825F",
       interval_seconds: 300,
       device_name: "Windows fixture",
     };
@@ -142,6 +146,28 @@ describe("configuration security", () => {
     await deleteConfig(root);
     await expect(loadConfig(root)).rejects.toThrowError(
       /SYNC_CONFIG_NOT_FOUND/,
+    );
+  });
+
+  it("rejects a legacy config whose selected directory has no valid world UID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "palbeacon-sync-config-bad-"));
+    roots.push(root);
+    await writeFile(
+      join(root, "config.json"),
+      `${JSON.stringify({
+        config_version: 2,
+        api_base_url: "https://www.palbeacon.app",
+        device_id: "00000000-0000-4000-8000-000000000001",
+        device_token: "pbs_keep-this-token",
+        save_dir: "/fixture/not-a-world-id",
+        interval_seconds: 300,
+        device_name: "Fixture server",
+      })}\n`,
+      "utf8",
+    );
+
+    await expect(loadConfig(root)).rejects.toThrowError(
+      /WORLD_SAVE_ID_INVALID/,
     );
   });
 });

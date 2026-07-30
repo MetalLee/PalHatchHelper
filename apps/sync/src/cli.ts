@@ -19,6 +19,7 @@ import {
   type SyncConfig,
 } from "./config.js";
 import { findWorldSave } from "./discovery.js";
+import { worldUidFromSaveDirectory } from "./world-id.js";
 import { inspectSave } from "./inspect.js";
 import {
   extractLocaleOption,
@@ -182,6 +183,7 @@ export async function initialize(
   const saveDirectory = await runtime.findWorldSave(
     providedSaveDirectory.trim(),
   );
+  const worldUid = worldUidFromSaveDirectory(saveDirectory);
   runtime.log(text.saveFound);
   const intervalSeconds = integerOption(
     options.get("interval") ?? "300",
@@ -200,11 +202,12 @@ export async function initialize(
   });
   runtime.log(text.paired);
   const config: SyncConfig = {
-    config_version: 2,
+    config_version: 3,
     api_base_url: paired.api_base_url,
     device_id: paired.device_id,
     device_token: paired.device_token,
     save_dir: saveDirectory,
+    world_uid: worldUid,
     interval_seconds: intervalSeconds,
     device_name: deviceName,
     app_version: VERSION,

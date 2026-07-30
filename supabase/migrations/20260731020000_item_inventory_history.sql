@@ -349,7 +349,10 @@ begin
     v_snapshot_id, p_world_id, p_source_inventory_snapshot_id,
     p_snapshot->>'source_save_hash', v_captured_at, p_snapshot->>'parser_name',
     p_snapshot->>'parser_version', v_version_id,
-    case when v_status = 'partial' then 'partial' else 'valid' end,
+    case
+      when v_status = 'partial' then 'partial'::public.item_inventory_quality_status
+      else 'valid'::public.item_inventory_quality_status
+    end,
     0, 0
   );
 

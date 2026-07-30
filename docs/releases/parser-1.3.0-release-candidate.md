@@ -8,7 +8,8 @@ Windows x64 PE。固定上游仍为 PalworldSaveTools commit
 `3395e393466fc1f384dee54dabb3e597e611435e`，不增加压缩、编码、联网、子进程或 SAV
 写回能力。
 
-唯一 npm 候选为 `palbeacon-cli-0.2.0.tgz`，同时包含：
+当前 npm 候选为 `palbeacon-cli-0.2.1.tgz`；它在 0.2.0 的双平台候选上增加世界身份、
+备份目录发现和未知名称公会同步修复，同时包含：
 
 - `dist/bin/linux-x64/palworld-save-parser`
 - `dist/bin/win32-x64/palworld-save-parser.exe`
