@@ -20,6 +20,8 @@ public static class CatalogPackager
         "pal-active-skills.jsonl",
         "partner-skills.jsonl",
         "breeding-recipes.jsonl",
+        "items.jsonl",
+        "item-recipes.jsonl",
         "localizations.jsonl",
         "validation-report.json",
         "checksums.sha256",

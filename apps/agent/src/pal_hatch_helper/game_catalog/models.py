@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from pal_hatch_helper.generated import (
     CatalogActiveSkill,
     CatalogBreedingRecipe,
+    CatalogItem,
+    CatalogItemRecipe,
     CatalogLocalization,
     CatalogPal,
     CatalogPalActiveSkill,
@@ -24,6 +26,8 @@ class LoadedGameCatalog:
     partner_skills: tuple[CatalogPartnerSkill, ...]
     breeding_recipes: tuple[CatalogBreedingRecipe, ...]
     localizations: tuple[CatalogLocalization, ...]
+    items: tuple[CatalogItem, ...] = ()
+    item_recipes: tuple[CatalogItemRecipe, ...] = ()
 
     @property
     def content_hash(self) -> str:

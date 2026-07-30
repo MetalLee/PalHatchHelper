@@ -16,10 +16,13 @@ const StableIDSpecification = "palworld-stable-id-v1"
 var stableIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
 type Snapshot struct {
-	Server  Server   `json:"server"`
-	Guilds  []Guild  `json:"guilds"`
-	Players []Player `json:"players"`
-	Pals    []Pal    `json:"pals"`
+	Server              Server      `json:"server"`
+	Guilds              []Guild     `json:"guilds"`
+	Players             []Player    `json:"players"`
+	Pals                []Pal       `json:"pals"`
+	Bases               []Base      `json:"bases"`
+	ItemStacks          []ItemStack `json:"item_stacks"`
+	ItemInventoryStatus string      `json:"item_inventory_status"`
 }
 
 type Server struct {
@@ -38,6 +41,23 @@ type Player struct {
 	Nickname  string  `json:"nickname"`
 	Level     *int    `json:"level"`
 	GuildUID  *string `json:"guild_uid"`
+}
+
+type Base struct {
+	BaseID   string  `json:"base_id"`
+	GuildUID *string `json:"guild_uid"`
+	Name     *string `json:"name"`
+}
+
+type ItemStack struct {
+	ContainerID      string  `json:"container_id"`
+	ItemID           string  `json:"item_id"`
+	Quantity         int     `json:"quantity"`
+	ContainerType    string  `json:"container_type"`
+	BaseID           *string `json:"base_id"`
+	GuildUID         *string `json:"guild_uid"`
+	SlotIndex        int     `json:"slot_index"`
+	ResolutionStatus string  `json:"resolution_status"`
 }
 
 type SourceMetadata struct {
@@ -105,7 +125,8 @@ func Build(
 	version := fmt.Sprintf("%s/0x%02x", format.Magic, format.SaveType)
 	result := Snapshot{
 		Server: Server{WorldUID: worldUID, SaveVersion: &version, CapturedAt: captured.UTC().Format(time.RFC3339Nano)},
-		Guilds: []Guild{}, Players: []Player{}, Pals: []Pal{},
+		Guilds: []Guild{}, Players: []Player{}, Pals: []Pal{}, Bases: []Base{}, ItemStacks: []ItemStack{},
+		ItemInventoryStatus: normalizedItemInventoryStatus(world.ItemInventoryStatus),
 	}
 
 	guildNames := make(map[string]string, len(world.Guilds))
@@ -154,6 +175,15 @@ func Build(
 	bases := make(map[string]sav.BaseCamp, len(world.Bases))
 	for _, base := range world.Bases {
 		bases[strings.ToLower(base.ID)] = base
+		if strings.TrimSpace(base.ID) == "" {
+			warnings.add("BASE_ID_UNKNOWN")
+			continue
+		}
+		result.Bases = append(result.Bases, Base{
+			BaseID: base.ID,
+			GuildUID: optionalString(base.GuildID),
+			Name: optionalString(base.Name),
+		})
 	}
 	palIDs := newStableIDMap()
 	passiveIDs := newStableIDMap()
@@ -257,10 +287,85 @@ func Build(
 		})
 	}
 
+	itemIDs := newStableIDMap()
+	stackKeys := make(map[string]sav.ItemStack, len(world.ItemStacks))
+	for _, source := range world.ItemStacks {
+		if source.Quantity <= 0 || source.SlotIndex < 0 {
+			warnings.add("ITEM_STACK_VALUE_INVALID")
+			continue
+		}
+		containerID := strings.TrimSpace(source.ContainerID)
+		if containerID == "" {
+			warnings.add("ITEM_CONTAINER_ID_UNKNOWN")
+			continue
+		}
+		key := strings.ToLower(containerID) + ":" + fmt.Sprint(source.SlotIndex)
+		if previous, exists := stackKeys[key]; exists {
+			if previous != source {
+				return Snapshot{}, nil, fmt.Errorf("ITEM_STACK_CONFLICT")
+			}
+			continue
+		}
+		stackKeys[key] = source
+		itemID, err := itemIDs.mapID(strings.TrimSpace(source.ItemID))
+		if err != nil {
+			if err.Error() == "GAME_ID_NORMALIZATION_COLLISION" {
+				return Snapshot{}, nil, err
+			}
+			itemID = "unknown"
+			warnings.add("ITEM_ID_UNKNOWN")
+		}
+		baseID := optionalString(source.BaseID)
+		guildUID := (*string)(nil)
+		resolution := "unresolved"
+		containerType := normalizedContainerType(source.ContainerType)
+		if containerType == "unknown" {
+			resolution = "unsupported"
+		}
+		if baseID != nil {
+			if base, ok := bases[strings.ToLower(*baseID)]; ok {
+				guildUID = optionalString(base.GuildID)
+				if guildUID != nil && containerType != "unknown" && itemID != "unknown" {
+					resolution = "resolved"
+				}
+			}
+		}
+		result.ItemStacks = append(result.ItemStacks, ItemStack{
+			ContainerID: containerID, ItemID: itemID, Quantity: source.Quantity,
+			ContainerType: containerType, BaseID: baseID, GuildUID: guildUID,
+			SlotIndex: source.SlotIndex, ResolutionStatus: resolution,
+		})
+	}
+
 	sort.Slice(result.Guilds, func(i, j int) bool { return result.Guilds[i].GuildUID < result.Guilds[j].GuildUID })
 	sort.Slice(result.Players, func(i, j int) bool { return result.Players[i].PlayerUID < result.Players[j].PlayerUID })
 	sort.Slice(result.Pals, func(i, j int) bool { return result.Pals[i].InstanceUID < result.Pals[j].InstanceUID })
+	sort.Slice(result.Bases, func(i, j int) bool { return result.Bases[i].BaseID < result.Bases[j].BaseID })
+	sort.Slice(result.ItemStacks, func(i, j int) bool {
+		if result.ItemStacks[i].ContainerID == result.ItemStacks[j].ContainerID {
+			return result.ItemStacks[i].SlotIndex < result.ItemStacks[j].SlotIndex
+		}
+		return result.ItemStacks[i].ContainerID < result.ItemStacks[j].ContainerID
+	})
 	return result, sortedWarnings(warnings), nil
+}
+
+func normalizedContainerType(value string) string {
+	switch value {
+	case "storage_box", "refrigerator", "feed_box", "production_output":
+		return value
+	default:
+		return "unknown"
+	}
+}
+
+func normalizedItemInventoryStatus(value string) string {
+	switch value {
+	case "available", "partial":
+		return value
+	default:
+		return "unavailable"
+	}
 }
 
 type stableIDMap struct{ sourceByID map[string]string }

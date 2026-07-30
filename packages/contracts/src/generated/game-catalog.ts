@@ -48,6 +48,10 @@ export interface GameCatalogContracts {
   CatalogPartnerSkill: CatalogPartnerSkill;
   CatalogLocalization: CatalogLocalization;
   CatalogBreedingRecipe: CatalogBreedingRecipe;
+  CatalogPassiveEffect: CatalogPassiveEffect;
+  CatalogItem: CatalogItem;
+  CatalogItemRecipeIngredient: CatalogItemRecipeIngredient;
+  CatalogItemRecipe: CatalogItemRecipe;
   CatalogValidationReport: CatalogValidationReport;
   CatalogFileChecksum: CatalogFileChecksum;
 }
@@ -58,6 +62,8 @@ export interface CatalogCounts {
   pal_active_skills: number;
   partner_skills: number;
   breeding_recipes: number;
+  items?: number | null;
+  item_recipes?: number | null;
   localizations: number;
 }
 export interface CatalogFileChecksum {
@@ -68,6 +74,8 @@ export interface CatalogFileChecksum {
     | "pal-active-skills.jsonl"
     | "partner-skills.jsonl"
     | "breeding-recipes.jsonl"
+    | "items.jsonl"
+    | "item-recipes.jsonl"
     | "localizations.jsonl";
   sha256: Sha256;
   record_count: number;
@@ -150,9 +158,26 @@ export interface CatalogPassiveSkill {
   passive_skill_id: StableId;
   name_key: TextKey;
   description_key: TextKey | null;
+  description_template_key?: TextKey | null;
+  /**
+   * @maxItems 4
+   */
+  effects?:
+    | []
+    | [CatalogPassiveEffect]
+    | [CatalogPassiveEffect, CatalogPassiveEffect]
+    | [CatalogPassiveEffect, CatalogPassiveEffect, CatalogPassiveEffect]
+    | [CatalogPassiveEffect, CatalogPassiveEffect, CatalogPassiveEffect, CatalogPassiveEffect];
   rank: number;
   is_negative: boolean;
   metadata: Metadata;
+}
+export interface CatalogPassiveEffect {
+  slot: number;
+  target_type: StableId;
+  effect_type: StableId;
+  value: number;
+  target_element_type?: StableId | null;
 }
 export interface CatalogActiveSkill {
   active_skill_id: StableId;
@@ -188,6 +213,61 @@ export interface CatalogBreedingRecipe {
   parent_b_gender?: "any" | "female" | "male";
   child_pal_id: StableId;
   recipe_type: "normal" | "special";
+  metadata: Metadata;
+}
+export interface CatalogItem {
+  item_id: StableId;
+  name_key: TextKey;
+  description_key: TextKey | null;
+  type_a: StableId;
+  type_b: StableId;
+  max_stack_count: number;
+  enable_handcraft: boolean;
+  is_legal: boolean;
+  restore_health: number;
+  restore_sanity: number;
+  restore_satiety: number;
+  corruption_factor: number;
+  legacy_item_ids?: StableId[];
+  metadata: Metadata;
+}
+export interface CatalogItemRecipeIngredient {
+  slot: number;
+  item_id: StableId;
+  count: number;
+}
+export interface CatalogItemRecipe {
+  recipe_id: StableId;
+  product_item_id: StableId;
+  product_count: number;
+  /**
+   * @minItems 1
+   * @maxItems 5
+   */
+  ingredients:
+    | [CatalogItemRecipeIngredient]
+    | [CatalogItemRecipeIngredient, CatalogItemRecipeIngredient]
+    | [CatalogItemRecipeIngredient, CatalogItemRecipeIngredient, CatalogItemRecipeIngredient]
+    | [
+        CatalogItemRecipeIngredient,
+        CatalogItemRecipeIngredient,
+        CatalogItemRecipeIngredient,
+        CatalogItemRecipeIngredient
+      ]
+    | [
+        CatalogItemRecipeIngredient,
+        CatalogItemRecipeIngredient,
+        CatalogItemRecipeIngredient,
+        CatalogItemRecipeIngredient,
+        CatalogItemRecipeIngredient
+      ];
+  craft_kind: "handcraft" | "cooking" | "other";
+  work_amount: number;
+  workable_attribute: number;
+  energy_type: StableId | null;
+  energy_amount: number;
+  unlock_item_id: StableId | null;
+  deny_recipe_chain: StableId[];
   metadata: Metadata;
 }
 export interface CatalogValidationReport {

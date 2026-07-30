@@ -76,7 +76,7 @@ public sealed class TargetBuildRefreshTests
   }
 
   [Fact]
-  public void SevenCategoryPublicationGateIsUnchanged()
+  public void CatalogV2PublicationGateContainsNineCategories()
   {
     Assert.Equal(
         [
@@ -86,6 +86,8 @@ public sealed class TargetBuildRefreshTests
           "pal_active_skills",
           "partner_skills",
           "breeding_recipes",
+          "items",
+          "item_recipes",
           "localizations",
         ],
         CatalogCategories.All.Select(value => value.CountField));

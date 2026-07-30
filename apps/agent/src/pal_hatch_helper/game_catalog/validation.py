@@ -13,6 +13,8 @@ from pal_hatch_helper.generated import (
     CatalogBreedingRecipe,
     CatalogCounts,
     CatalogFileChecksum,
+    CatalogItem,
+    CatalogItemRecipe,
     CatalogLocalization,
     CatalogPal,
     CatalogPalActiveSkill,
@@ -24,7 +26,7 @@ from pal_hatch_helper.generated import (
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.stable_id import build_stable_id_map
 
-SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.0.0", "1.1.0"})
+SUPPORTED_SCHEMA_VERSIONS = frozenset({"1.0.0", "1.1.0", "2.0.0"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,11 +44,13 @@ CatalogFilename = Literal[
     "pal-active-skills.jsonl",
     "partner-skills.jsonl",
     "breeding-recipes.jsonl",
+    "items.jsonl",
+    "item-recipes.jsonl",
     "localizations.jsonl",
 ]
 
 
-FILE_SPECS = (
+V2_FILE_SPECS = (
     FileSpec("pals.jsonl", "pals", CatalogPal, ("pal_id",)),
     FileSpec(
         "passive-skills.jsonl",
@@ -79,6 +83,13 @@ FILE_SPECS = (
             "recipe_type",
         ),
     ),
+    FileSpec("items.jsonl", "items", CatalogItem, ("item_id",)),
+    FileSpec(
+        "item-recipes.jsonl",
+        "item_recipes",
+        CatalogItemRecipe,
+        ("recipe_id",),
+    ),
     FileSpec(
         "localizations.jsonl",
         "localizations",
@@ -87,7 +98,17 @@ FILE_SPECS = (
     ),
 )
 
-REQUIRED_PACKAGE_FILES = tuple(spec.filename for spec in FILE_SPECS)
+LEGACY_FILE_SPECS = tuple(
+    spec for spec in V2_FILE_SPECS if spec.count_field not in {"items", "item_recipes"}
+)
+FILE_SPECS = LEGACY_FILE_SPECS
+REQUIRED_PACKAGE_FILES = tuple(spec.filename for spec in LEGACY_FILE_SPECS)
+V2_REQUIRED_PACKAGE_FILES = tuple(spec.filename for spec in V2_FILE_SPECS)
+LEGACY_REQUIRED_PACKAGE_FILES = tuple(spec.filename for spec in LEGACY_FILE_SPECS)
+
+
+def file_specs_for_schema(schema_version: str) -> tuple[FileSpec, ...]:
+    return V2_FILE_SPECS if schema_version == "2.0.0" else LEGACY_FILE_SPECS
 
 
 def validate_catalog_directory(
@@ -100,8 +121,10 @@ def validate_catalog_directory(
     parsed: dict[str, list[BaseModel]] = {}
     counts = _empty_counts()
     checksums: list[CatalogFileChecksum] = []
+    manifest = _read_manifest(directory, errors) if require_manifest else None
+    specs = file_specs_for_schema(manifest.schema_version if manifest is not None else "1.0.0")
 
-    for spec in FILE_SPECS:
+    for spec in specs:
         path = directory / spec.filename
         if not path.is_file():
             errors.add("CATALOG_FILE_MISSING")
@@ -137,10 +160,13 @@ def validate_catalog_directory(
             )
         )
 
-    _validate_relationships(parsed, errors)
-    manifest = _read_manifest(directory, errors) if require_manifest else None
+    _validate_relationships(
+        parsed,
+        errors,
+        schema_version=manifest.schema_version if manifest is not None else "1.0.0",
+    )
     content_hash: str | None = None
-    if len(checksums) == len(FILE_SPECS):
+    if len(checksums) == len(specs):
         content_hash = compute_content_hash(
             manifest.schema_version if manifest is not None else "1.0.0",
             ((item.filename, item.sha256, item.record_count) for item in checksums),
@@ -159,10 +185,11 @@ def validate_catalog_directory(
             checksums,
             content_hash,
             localization_locales,
+            specs,
             errors,
         )
         _validate_sidecars(directory, counts, checksums, content_hash, errors)
-        _validate_full_catalog_sidecars(directory, manifest, parsed, errors)
+        _validate_full_catalog_sidecars(directory, manifest, parsed, specs, errors)
 
     return CatalogValidationReport(
         schema_version=manifest.schema_version if manifest is not None else "1.0.0",
@@ -197,11 +224,12 @@ def load_catalog_directory(directory: Path) -> LoadedGameCatalog:
             summary="The requested game catalog schema version is not supported.",
             retryable=False,
         )
+    specs = file_specs_for_schema(manifest.schema_version)
     records = {
         spec.count_field: [
             spec.model.model_validate(item) for item in read_jsonl(directory / spec.filename)
         ]
-        for spec in FILE_SPECS
+        for spec in specs
     }
     return LoadedGameCatalog(
         manifest=manifest,
@@ -211,18 +239,20 @@ def load_catalog_directory(directory: Path) -> LoadedGameCatalog:
         pal_active_skills=tuple(_typed(records["pal_active_skills"], CatalogPalActiveSkill)),
         partner_skills=tuple(_typed(records["partner_skills"], CatalogPartnerSkill)),
         breeding_recipes=tuple(_typed(records["breeding_recipes"], CatalogBreedingRecipe)),
+        items=tuple(_typed(records.get("items", []), CatalogItem)),
+        item_recipes=tuple(_typed(records.get("item_recipes", []), CatalogItemRecipe)),
         localizations=tuple(_typed(records["localizations"], CatalogLocalization)),
     )
 
 
 def validate_manifest_application_requirements(manifest: GameCatalogManifest) -> None:
-    if manifest.schema_version != "1.1.0":
+    if manifest.schema_version not in {"1.1.0", "2.0.0"}:
         return
     provenance = manifest.source_provenance
     if provenance is None or manifest.extractor_name != "palhatch-full-catalog-extractor":
         raise StructuredError(
             code=ErrorCode.GAME_DATA_PROVENANCE_REQUIRED,
-            summary="Catalog schema 1.1.0 requires full source provenance.",
+            summary=f"Catalog schema {manifest.schema_version} requires full source provenance.",
             retryable=False,
         )
     if (
@@ -237,21 +267,24 @@ def validate_manifest_application_requirements(manifest: GameCatalogManifest) ->
             summary="Catalog source provenance is not compatible with the target server facts.",
             retryable=False,
         )
+    required_count_fields = [
+        "pals",
+        "passive_skills",
+        "active_skills",
+        "pal_active_skills",
+        "partner_skills",
+        "breeding_recipes",
+        "localizations",
+    ]
+    if manifest.schema_version == "2.0.0":
+        required_count_fields.extend(["items", "item_recipes"])
     if any(
-        getattr(manifest.counts, field) <= 0
-        for field in (
-            "pals",
-            "passive_skills",
-            "active_skills",
-            "pal_active_skills",
-            "partner_skills",
-            "breeding_recipes",
-            "localizations",
-        )
+        (value := getattr(manifest.counts, field)) is None or value <= 0
+        for field in required_count_fields
     ):
         raise StructuredError(
             code=ErrorCode.GAME_DATA_VALIDATION_FAILED,
-            summary="A full catalog requires all seven categories to be non-empty.",
+            summary="A full catalog requires every schema category to be non-empty.",
             retryable=False,
         )
 
@@ -268,6 +301,8 @@ def _empty_counts() -> CatalogCounts:
         pal_active_skills=0,
         partner_skills=0,
         breeding_recipes=0,
+        items=None,
+        item_recipes=None,
         localizations=0,
     )
 
@@ -293,11 +328,12 @@ def _validate_manifest(
     checksums: list[CatalogFileChecksum],
     content_hash: str | None,
     localization_locales: set[str],
+    specs: tuple[FileSpec, ...],
     errors: set[str],
 ) -> None:
     expected_files = {item.filename: item for item in manifest.files}
     actual_files = {item.filename: item for item in checksums}
-    if set(expected_files) != set(REQUIRED_PACKAGE_FILES):
+    if set(expected_files) != {spec.filename for spec in specs}:
         errors.add("CATALOG_MANIFEST_FILE_SET_INVALID")
     for filename, actual in actual_files.items():
         expected = expected_files.get(filename)
@@ -358,9 +394,10 @@ def _validate_full_catalog_sidecars(
     directory: Path,
     manifest: GameCatalogManifest,
     parsed: dict[str, list[BaseModel]],
+    specs: tuple[FileSpec, ...],
     errors: set[str],
 ) -> None:
-    if manifest.schema_version != "1.1.0":
+    if manifest.schema_version not in {"1.1.0", "2.0.0"}:
         return
     source_manifest_path = directory / "source-package-manifest.json"
     source_evidence_path = directory / "source-evidence.json"
@@ -382,11 +419,11 @@ def _validate_full_catalog_sidecars(
         categories = source_evidence["categories"]
         if (
             not isinstance(categories, dict)
-            or set(categories) != {spec.count_field for spec in FILE_SPECS}
+            or set(categories) != {spec.count_field for spec in specs}
             or source_evidence.get("unresolved_records") != []
         ):
             raise ValueError
-        for spec in FILE_SPECS:
+        for spec in specs:
             entries = categories.get(spec.count_field)
             records = parsed.get(spec.count_field, [])
             expected_keys = {
@@ -454,6 +491,8 @@ def _stable_id_source_field(count_field: str) -> str | None:
         "passive_skills": "passive_skill_id",
         "active_skills": "active_skill_id",
         "partner_skills": "partner_skill_id",
+        "items": "item_id",
+        "item_recipes": "recipe_id",
     }.get(count_field)
 
 
@@ -475,13 +514,20 @@ def _non_empty_text(value: object) -> TypeGuard[str]:
     return isinstance(value, str) and bool(value.strip())
 
 
-def _validate_relationships(parsed: dict[str, list[BaseModel]], errors: set[str]) -> None:
+def _validate_relationships(
+    parsed: dict[str, list[BaseModel]],
+    errors: set[str],
+    *,
+    schema_version: str,
+) -> None:
     pals = _typed(parsed.get("pals", []), CatalogPal)
     passive_skills = _typed(parsed.get("passive_skills", []), CatalogPassiveSkill)
     active_skills = _typed(parsed.get("active_skills", []), CatalogActiveSkill)
     pal_active_skills = _typed(parsed.get("pal_active_skills", []), CatalogPalActiveSkill)
     partner_skills = _typed(parsed.get("partner_skills", []), CatalogPartnerSkill)
     recipes = _typed(parsed.get("breeding_recipes", []), CatalogBreedingRecipe)
+    items = _typed(parsed.get("items", []), CatalogItem)
+    item_recipes = _typed(parsed.get("item_recipes", []), CatalogItemRecipe)
     localizations = _typed(parsed.get("localizations", []), CatalogLocalization)
 
     pal_ids = {record.pal_id for record in pals}
@@ -491,11 +537,20 @@ def _validate_relationships(parsed: dict[str, list[BaseModel]], errors: set[str]
     required_keys.update(record.name_key for record in passive_skills)
     required_keys.update(record.name_key for record in active_skills)
     required_keys.update(record.name_key for record in partner_skills)
+    required_keys.update(record.name_key for record in items)
     required_keys.update(
         record.description_key for record in passive_skills if record.description_key is not None
     )
     required_keys.update(
         record.description_key for record in partner_skills if record.description_key is not None
+    )
+    required_keys.update(
+        record.description_key for record in items if record.description_key is not None
+    )
+    required_keys.update(
+        record.description_template_key
+        for record in passive_skills
+        if record.description_template_key is not None
     )
     if required_keys - localization_keys:
         errors.add("CATALOG_LOCALIZATION_REFERENCE_INVALID")
@@ -507,6 +562,28 @@ def _validate_relationships(parsed: dict[str, list[BaseModel]], errors: set[str]
         errors.add("CATALOG_REFERENCE_INVALID")
     if any(skill.pal_id not in pal_ids for skill in partner_skills):
         errors.add("CATALOG_REFERENCE_INVALID")
+
+    item_ids = {record.item_id for record in items}
+    legacy_item_ids = [item_id for record in items for item_id in record.legacy_item_ids]
+    if len(set(legacy_item_ids)) != len(legacy_item_ids) or bool(set(legacy_item_ids) & item_ids):
+        errors.add("CATALOG_ITEM_REDIRECT_CONFLICT")
+    if any(
+        recipe.product_item_id not in item_ids
+        or any(ingredient.item_id not in item_ids for ingredient in recipe.ingredients)
+        or (recipe.unlock_item_id is not None and recipe.unlock_item_id not in item_ids)
+        or any(item_id not in item_ids for item_id in recipe.deny_recipe_chain)
+        for recipe in item_recipes
+    ):
+        errors.add("CATALOG_REFERENCE_INVALID")
+
+    if schema_version == "2.0.0" and any(
+        passive.description_key is None
+        or not passive.effects
+        or [effect.slot for effect in passive.effects]
+        != sorted({effect.slot for effect in passive.effects})
+        for passive in passive_skills
+    ):
+        errors.add("CATALOG_PASSIVE_DESCRIPTION_INCOMPLETE")
 
     recipe_keys: dict[tuple[str, str, str, str, str], str] = {}
     for recipe in recipes:
@@ -537,6 +614,10 @@ def _validate_relationships(parsed: dict[str, list[BaseModel]], errors: set[str]
     if len({record.passive_skill_id for record in passive_skills}) != len(passive_skills):
         errors.add("CATALOG_DUPLICATE_ID")
     if len({record.active_skill_id for record in active_skills}) != len(active_skills):
+        errors.add("CATALOG_DUPLICATE_ID")
+    if len({record.item_id for record in items}) != len(items):
+        errors.add("CATALOG_DUPLICATE_ID")
+    if len({record.recipe_id for record in item_recipes}) != len(item_recipes):
         errors.add("CATALOG_DUPLICATE_ID")
     if not all((record.locale, record.text_key) for record in localizations):
         errors.add("CATALOG_LOCALIZATION_KEY_INVALID")

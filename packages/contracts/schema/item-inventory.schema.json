@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://palhatch.local/schemas/item-inventory.schema.json",
+  "title": "ItemInventoryContracts",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "ItemInventoryBaseTotal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_id", "name", "quantity"],
+      "properties": {
+        "base_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "name": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "ItemRecipeIngredientView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot", "item_id", "name", "count"],
+      "properties": {
+        "slot": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "count": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+      }
+    },
+    "ItemRecipeView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recipe_id", "product_count", "craft_kind", "ingredients"],
+      "properties": {
+        "recipe_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "product_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "craft_kind": { "type": "string", "enum": ["handcraft", "cooking"] },
+        "ingredients": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/ItemRecipeIngredientView" }
+        }
+      }
+    },
+    "ItemRecipePlanStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recipe_id", "product_item_id", "batches", "produced"],
+      "properties": {
+        "recipe_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "product_item_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "batches": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "produced": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "ItemRecipeLimitingMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_id", "missing"],
+      "properties": {
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "missing": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "ItemRecipeCapacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on_hand",
+        "craftable_additional",
+        "obtainable_total",
+        "selected_recipe_id",
+        "status",
+        "recipe_plan",
+        "limiting_materials"
+      ],
+      "properties": {
+        "on_hand": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "craftable_additional": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "obtainable_total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "selected_recipe_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "no_supported_recipe",
+            "recipe_cycle",
+            "complexity_limit"
+          ]
+        },
+        "recipe_plan": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemRecipePlanStep" }
+        },
+        "limiting_materials": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemRecipeLimitingMaterial" }
+        }
+      }
+    },
+    "PublishedItemRecipeCapacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "guild_uid",
+        "item_id",
+        "on_hand",
+        "craftable_additional",
+        "obtainable_total",
+        "selected_recipe_id",
+        "status",
+        "recipe_plan",
+        "limiting_materials"
+      ],
+      "properties": {
+        "guild_uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "on_hand": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "craftable_additional": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "obtainable_total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "selected_recipe_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "no_supported_recipe",
+            "recipe_cycle",
+            "complexity_limit"
+          ]
+        },
+        "recipe_plan": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemRecipePlanStep" }
+        },
+        "limiting_materials": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemRecipeLimitingMaterial" }
+        }
+      }
+    },
+    "GuildItemInventoryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_id",
+        "name",
+        "type_a",
+        "type_b",
+        "quantity",
+        "bases",
+        "recipes",
+        "capacity"
+      ],
+      "properties": {
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "type_a": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "type_b": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "quantity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "bases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemInventoryBaseTotal" }
+        },
+        "recipes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemRecipeView" }
+        },
+        "capacity": {
+          "anyOf": [
+            { "$ref": "#/$defs/ItemRecipeCapacity" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "GuildItemInventoryResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "snapshot_id", "captured_at", "items"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["available", "partial", "unavailable"]
+        },
+        "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
+        "captured_at": { "type": ["string", "null"], "format": "date-time" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GuildItemInventoryItem" }
+        }
+      }
+    },
+    "ItemInventoryTrendPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sampled_at", "quantity", "delta"],
+      "properties": {
+        "sampled_at": { "type": "string", "format": "date-time" },
+        "quantity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "delta": {
+          "type": ["integer", "null"],
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "ItemInventoryTrendResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_id",
+        "base_id",
+        "bucket",
+        "from_at",
+        "to_at",
+        "points"
+      ],
+      "properties": {
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "base_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "bucket": { "type": "string", "enum": ["hour", "day"] },
+        "from_at": { "type": "string", "format": "date-time" },
+        "to_at": { "type": "string", "format": "date-time" },
+        "points": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemInventoryTrendPoint" }
+        }
+      }
+    }
+  }
+}

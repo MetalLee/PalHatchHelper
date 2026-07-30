@@ -1,5 +1,6 @@
 # PalHatch Helper 分阶段实施计划
 
+- 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
 - 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 日期：2026-07-13
 - 状态：2026-07-30 Landing 轮播真实名称与配方修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
@@ -1386,6 +1387,33 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
    - 验证：`pnpm check && cd apps/agent && uv run pytest && cd ../.. && supabase test db && pnpm --filter @palhatch/web test:e2e`
 
 ## 跨阶段变更规则
+
+## 2026-07-31 跨阶段修订：Catalog 2.0、物品库存与递归配方
+
+本修订按规格第 31 节执行，覆盖静态目录、动态物品库存和玩家查询界面，不扩展到通用服务器监控。
+固定交付顺序如下：
+
+1. 先增加失败测试，锁定 Catalog Schema `2.0.0` 的九类计数、九个 JSONL 文件、历史 `1.1.0`
+   兼容以及所有消费端的精确文件集合；确认测试因当前七类实现真实失败。
+2. 为被动技能增加结构化效果和确定性描述渲染测试，覆盖模板值、`uiCommon`、表现标签、换行、
+   无模板缺省描述、三 locale、未知效果与残留变量。最小实现完成后用当前目标构建验证 115 个可显示
+   被动均有完整说明。
+3. 增加 `items`、`item_recipes` Reader 和物品/Common Text 本地化，读取合法物品、静态 ID 重定向、
+   产品批量、五个有序材料、工作属性与禁止递归标记；source evidence 与排除/未解析总数必须闭合。
+4. 升级共享 Schema、生成契约、Extractor manifest/hash/verifier/packager、Agent validation/cache/gateway、
+   Supabase 目录表和 staging/finalize RPC；旧 1.1.0 目录继续可加载，已发布版本不改写。
+5. 用 fixture 先锁定 CanonicalSnapshot 的基地/容器/槽位语义、容器去重、无法归属和个人背包排除，
+   再最小扩展受控 Parser Adapter。Parser 继续只读取临时稳定副本且不联网、不写回 SAV。
+6. 追加 forward-only 数据库迁移，建立独立物品快照、基地聚合、小时/日趋势和最新有效指针；物品失败
+   不阻断帕鲁库存，RLS 只允许公会成员读取自身公会数据。增加 24 小时、90 天和 1 年边界测试。
+7. 先以失败单元测试覆盖批量产出、中间库存、共享原料、替代配方、`DenyRecipeChain`、叶子物品和
+   环检测，再实现带消费账本的确定性可行性检查与有界搜索。每个目标独立计算，不使用 AI。
+8. 实现公会物品总览、分基地数量、总量/基地趋势曲线和配方树；无有效快照、过期数据、未解析数量、
+   无配方和复杂度限制均提供本地化状态，不显示内部 ID。
+9. 开发过程中只运行最小相关检查；最终状态运行根目录 `pnpm check`、Extractor `dotnet test`、相关
+   本地 Supabase pgTAP、Parser fixture 与真实 Catalog 2.0 只读验收。聚合检查已经覆盖的命令不重复。
+10. 检查 `git diff`、`git diff --check`、秘密与禁止资产；不部署生产、不推送远程、不修改真实存档、
+    `/opt/palworld`、Palworld/mihomo 容器或公网端口。
 
 ### 公共 Sync Windows x64 扩展交付顺序
 

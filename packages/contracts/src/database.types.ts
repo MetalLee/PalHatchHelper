@@ -948,6 +948,167 @@ export type Database = {
           },
         ];
       };
+      catalog_item_recipe_ingredients: {
+        Row: {
+          version_id: string;
+          recipe_id: string;
+          slot: number;
+          item_id: string;
+          count: number;
+        };
+        Insert: {
+          version_id: string;
+          recipe_id: string;
+          slot: number;
+          item_id: string;
+          count: number;
+        };
+        Update: {
+          version_id?: string;
+          recipe_id?: string;
+          slot?: number;
+          item_id?: string;
+          count?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_item_recipe_ingredients_item_fkey";
+            columns: ["version_id", "item_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_items";
+            referencedColumns: ["version_id", "item_id"];
+          },
+          {
+            foreignKeyName: "catalog_item_recipe_ingredients_recipe_fkey";
+            columns: ["version_id", "recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_item_recipes";
+            referencedColumns: ["version_id", "recipe_id"];
+          },
+        ];
+      };
+      catalog_item_recipes: {
+        Row: {
+          version_id: string;
+          recipe_id: string;
+          product_item_id: string;
+          product_count: number;
+          craft_kind: string;
+          work_amount: number;
+          workable_attribute: number;
+          energy_type: string | null;
+          energy_amount: number;
+          unlock_item_id: string | null;
+          deny_recipe_chain: string[];
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          recipe_id: string;
+          product_item_id: string;
+          product_count: number;
+          craft_kind: string;
+          work_amount: number;
+          workable_attribute: number;
+          energy_type?: string | null;
+          energy_amount: number;
+          unlock_item_id?: string | null;
+          deny_recipe_chain?: string[];
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          recipe_id?: string;
+          product_item_id?: string;
+          product_count?: number;
+          craft_kind?: string;
+          work_amount?: number;
+          workable_attribute?: number;
+          energy_type?: string | null;
+          energy_amount?: number;
+          unlock_item_id?: string | null;
+          deny_recipe_chain?: string[];
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_item_recipes_product_fkey";
+            columns: ["version_id", "product_item_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_items";
+            referencedColumns: ["version_id", "item_id"];
+          },
+          {
+            foreignKeyName: "catalog_item_recipes_unlock_fkey";
+            columns: ["version_id", "unlock_item_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_items";
+            referencedColumns: ["version_id", "item_id"];
+          },
+        ];
+      };
+      catalog_items: {
+        Row: {
+          version_id: string;
+          item_id: string;
+          name_key: string;
+          description_key: string | null;
+          type_a: string;
+          type_b: string;
+          max_stack_count: number;
+          enable_handcraft: boolean;
+          is_legal: boolean;
+          restore_health: number;
+          restore_sanity: number;
+          restore_satiety: number;
+          corruption_factor: number;
+          legacy_item_ids: string[];
+          metadata: Json;
+        };
+        Insert: {
+          version_id: string;
+          item_id: string;
+          name_key: string;
+          description_key?: string | null;
+          type_a: string;
+          type_b: string;
+          max_stack_count: number;
+          enable_handcraft: boolean;
+          is_legal: boolean;
+          restore_health: number;
+          restore_sanity: number;
+          restore_satiety: number;
+          corruption_factor: number;
+          legacy_item_ids?: string[];
+          metadata?: Json;
+        };
+        Update: {
+          version_id?: string;
+          item_id?: string;
+          name_key?: string;
+          description_key?: string | null;
+          type_a?: string;
+          type_b?: string;
+          max_stack_count?: number;
+          enable_handcraft?: boolean;
+          is_legal?: boolean;
+          restore_health?: number;
+          restore_sanity?: number;
+          restore_satiety?: number;
+          corruption_factor?: number;
+          legacy_item_ids?: string[];
+          metadata?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_items_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       catalog_localizations: {
         Row: {
           version_id: string;
@@ -1104,6 +1265,8 @@ export type Database = {
           rank: number;
           is_negative: boolean;
           metadata: Json;
+          description_template_key: string | null;
+          effects: Json;
         };
         Insert: {
           version_id: string;
@@ -1113,6 +1276,8 @@ export type Database = {
           rank: number;
           is_negative: boolean;
           metadata?: Json;
+          description_template_key?: string | null;
+          effects?: Json;
         };
         Update: {
           version_id?: string;
@@ -1122,6 +1287,8 @@ export type Database = {
           rank?: number;
           is_negative?: boolean;
           metadata?: Json;
+          description_template_key?: string | null;
+          effects?: Json;
         };
         Relationships: [
           {
@@ -1729,6 +1896,428 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "worlds";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      item_inventory_base_totals: {
+        Row: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          base_id: string;
+          item_id: string;
+          quantity: number;
+        };
+        Insert: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          base_id: string;
+          item_id: string;
+          quantity: number;
+        };
+        Update: {
+          snapshot_id?: string;
+          world_id?: string;
+          guild_id?: string;
+          base_id?: string;
+          item_id?: string;
+          quantity?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_base_totals_base_fkey";
+            columns: ["snapshot_id", "base_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_bases";
+            referencedColumns: ["snapshot_id", "base_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_base_totals_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_base_totals_snapshot_fkey";
+            columns: ["snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
+          },
+        ];
+      };
+      item_inventory_bases: {
+        Row: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          base_id: string;
+          name: string | null;
+        };
+        Insert: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          base_id: string;
+          name?: string | null;
+        };
+        Update: {
+          snapshot_id?: string;
+          world_id?: string;
+          guild_id?: string;
+          base_id?: string;
+          name?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_bases_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_bases_snapshot_fkey";
+            columns: ["snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
+          },
+        ];
+      };
+      item_inventory_daily_rollups: {
+        Row: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          base_key: string;
+          item_id: string;
+          quantity: number;
+          sampled_at: string;
+        };
+        Insert: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          base_key: string;
+          item_id: string;
+          quantity: number;
+          sampled_at: string;
+        };
+        Update: {
+          world_id?: string;
+          guild_id?: string;
+          bucket_at?: string;
+          base_key?: string;
+          item_id?: string;
+          quantity?: number;
+          sampled_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_daily_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_daily_rollups_world_id_fkey";
+            columns: ["world_id"];
+            isOneToOne: false;
+            referencedRelation: "worlds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      item_inventory_hourly_rollups: {
+        Row: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          base_key: string;
+          item_id: string;
+          quantity: number;
+          sampled_at: string;
+        };
+        Insert: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          base_key: string;
+          item_id: string;
+          quantity: number;
+          sampled_at: string;
+        };
+        Update: {
+          world_id?: string;
+          guild_id?: string;
+          bucket_at?: string;
+          base_key?: string;
+          item_id?: string;
+          quantity?: number;
+          sampled_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_hourly_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_hourly_rollups_world_id_fkey";
+            columns: ["world_id"];
+            isOneToOne: false;
+            referencedRelation: "worlds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      item_inventory_recipe_capacities: {
+        Row: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          game_data_version_id: string;
+          item_id: string;
+          on_hand: number;
+          craftable_additional: number;
+          obtainable_total: number;
+          selected_recipe_id: string | null;
+          status: string;
+          recipe_plan: Json;
+          limiting_materials: Json;
+        };
+        Insert: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          game_data_version_id: string;
+          item_id: string;
+          on_hand: number;
+          craftable_additional: number;
+          obtainable_total: number;
+          selected_recipe_id?: string | null;
+          status: string;
+          recipe_plan: Json;
+          limiting_materials: Json;
+        };
+        Update: {
+          snapshot_id?: string;
+          world_id?: string;
+          guild_id?: string;
+          game_data_version_id?: string;
+          item_id?: string;
+          on_hand?: number;
+          craftable_additional?: number;
+          obtainable_total?: number;
+          selected_recipe_id?: string | null;
+          status?: string;
+          recipe_plan?: Json;
+          limiting_materials?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_recipe_capacities_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_recipe_capacities_item_fkey";
+            columns: ["game_data_version_id", "item_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_items";
+            referencedColumns: ["version_id", "item_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_recipe_capacities_recipe_fkey";
+            columns: ["game_data_version_id", "selected_recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_item_recipes";
+            referencedColumns: ["version_id", "recipe_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_recipe_capacities_snapshot_fkey";
+            columns: ["snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
+          },
+        ];
+      };
+      item_inventory_snapshots: {
+        Row: {
+          id: string;
+          world_id: string;
+          source_inventory_snapshot_id: string;
+          source_save_hash: string;
+          captured_at: string;
+          parser_name: string;
+          parser_version: string;
+          game_data_version_id: string;
+          quality_status: Database["public"]["Enums"]["item_inventory_quality_status"];
+          resolved_stack_count: number;
+          unresolved_stack_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          world_id: string;
+          source_inventory_snapshot_id: string;
+          source_save_hash: string;
+          captured_at: string;
+          parser_name: string;
+          parser_version: string;
+          game_data_version_id: string;
+          quality_status: Database["public"]["Enums"]["item_inventory_quality_status"];
+          resolved_stack_count: number;
+          unresolved_stack_count: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          world_id?: string;
+          source_inventory_snapshot_id?: string;
+          source_save_hash?: string;
+          captured_at?: string;
+          parser_name?: string;
+          parser_version?: string;
+          game_data_version_id?: string;
+          quality_status?: Database["public"]["Enums"]["item_inventory_quality_status"];
+          resolved_stack_count?: number;
+          unresolved_stack_count?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_snapshots_game_data_version_id_fkey";
+            columns: ["game_data_version_id"];
+            isOneToOne: false;
+            referencedRelation: "game_data_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "item_inventory_snapshots_source_fkey";
+            columns: ["source_inventory_snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_snapshots_world_id_fkey";
+            columns: ["world_id"];
+            isOneToOne: false;
+            referencedRelation: "worlds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      item_inventory_stack_items: {
+        Row: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string | null;
+          base_id: string | null;
+          container_id: string;
+          slot_index: number;
+          item_id: string;
+          quantity: number;
+          container_type: string;
+          resolution_status: string;
+          captured_at: string;
+        };
+        Insert: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id?: string | null;
+          base_id?: string | null;
+          container_id: string;
+          slot_index: number;
+          item_id: string;
+          quantity: number;
+          container_type: string;
+          resolution_status: string;
+          captured_at: string;
+        };
+        Update: {
+          snapshot_id?: string;
+          world_id?: string;
+          guild_id?: string | null;
+          base_id?: string | null;
+          container_id?: string;
+          slot_index?: number;
+          item_id?: string;
+          quantity?: number;
+          container_type?: string;
+          resolution_status?: string;
+          captured_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_stack_items_base_fkey";
+            columns: ["snapshot_id", "base_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_bases";
+            referencedColumns: ["snapshot_id", "base_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_stack_items_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_stack_items_snapshot_fkey";
+            columns: ["snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
+          },
+        ];
+      };
+      item_inventory_totals: {
+        Row: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          item_id: string;
+          quantity: number;
+        };
+        Insert: {
+          snapshot_id: string;
+          world_id: string;
+          guild_id: string;
+          item_id: string;
+          quantity: number;
+        };
+        Update: {
+          snapshot_id?: string;
+          world_id?: string;
+          guild_id?: string;
+          item_id?: string;
+          quantity?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_totals_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_totals_snapshot_fkey";
+            columns: ["snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
           },
         ];
       };
@@ -2438,6 +3027,7 @@ export type Database = {
           updated_at: string;
           active_game_data_version_id: string | null;
           inventory_source_modified_at: string | null;
+          latest_item_inventory_snapshot_id: string | null;
         };
         Insert: {
           id?: string;
@@ -2449,6 +3039,7 @@ export type Database = {
           updated_at?: string;
           active_game_data_version_id?: string | null;
           inventory_source_modified_at?: string | null;
+          latest_item_inventory_snapshot_id?: string | null;
         };
         Update: {
           id?: string;
@@ -2460,6 +3051,7 @@ export type Database = {
           updated_at?: string;
           active_game_data_version_id?: string | null;
           inventory_source_modified_at?: string | null;
+          latest_item_inventory_snapshot_id?: string | null;
         };
         Relationships: [
           {
@@ -2475,6 +3067,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "game_data_versions";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "worlds_latest_item_inventory_snapshot_fkey";
+            columns: ["latest_item_inventory_snapshot_id", "id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
           },
           {
             foreignKeyName: "worlds_latest_snapshot_fkey";
@@ -3149,7 +3748,9 @@ export type Database = {
         | "pal_active_skills"
         | "partner_skills"
         | "breeding_recipes"
-        | "localizations";
+        | "localizations"
+        | "items"
+        | "item_recipes";
       game_data_import_status: "staging" | "finalized";
       game_data_source_type: "game_package" | "github" | "url" | "upload";
       game_data_status:
@@ -3164,6 +3765,7 @@ export type Database = {
         | "published"
         | "failed"
         | "rejected";
+      item_inventory_quality_status: "valid" | "partial";
       optimization_mode:
         | "balanced"
         | "fastest"

@@ -7,6 +7,11 @@ from uuid import UUID
 import pytest
 
 from pal_hatch_helper.generated import CanonicalSnapshot
+from pal_hatch_helper.item_inventory.recipe_capacity import (
+    IngredientFact,
+    RecipeCapacityCalculator,
+    RecipeFact,
+)
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import CompatibilityResult, ParserResult
@@ -68,7 +73,29 @@ class StubDatabase:
                 "parser_version": "1.0.0",
             }
         if function_name == "get_inventory_catalog_ids_for_agent":
-            return {"pal_ids": ["lamball"], "passive_skill_ids": ["artisan"]}
+            return {
+                "game_data_version_id": "71000000-0000-4000-8000-000000000001",
+                "pal_ids": ["lamball"],
+                "passive_skill_ids": ["artisan"],
+                "item_ids": ["ingot", "nail"],
+                "item_aliases": {"old_ingot": "ingot"},
+                "item_recipes": [
+                    {
+                        "recipe_id": "recipe.nail",
+                        "product_item_id": "nail",
+                        "product_count": 5,
+                        "ingredients": [{"slot": 1, "item_id": "ingot", "count": 2}],
+                        "craft_kind": "handcraft",
+                        "work_amount": 1,
+                        "workable_attribute": 1,
+                        "energy_type": None,
+                        "energy_amount": 0,
+                        "unlock_item_id": None,
+                        "deny_recipe_chain": [],
+                        "metadata": {},
+                    }
+                ],
+            }
         if function_name == "publish_inventory_snapshot":
             return str(SNAPSHOT_ID)
         if function_name == "record_inventory_snapshot_failure":
@@ -95,6 +122,9 @@ def test_repository_writes_only_normalized_payload_via_atomic_rpc() -> None:
         catalog = await repository.catalog_ids(WORLD_ID)
         assert catalog.pal_ids == {"lamball"}
         assert catalog.passive_skill_ids == {"artisan"}
+        assert catalog.game_data_version_id == UUID("71000000-0000-4000-8000-000000000001")
+        assert catalog.item_aliases == {"old_ingot": "ingot"}
+        assert catalog.item_recipes[0].recipe_id == "recipe.nail"
         request = InventoryPublishRequest(
             world_id=WORLD_ID,
             source_save_hash="b" * 64,
@@ -233,6 +263,7 @@ def _service(
     tmp_path: Path,
     parser: FakeParser,
     repository: FakeInventoryRepository,
+    recipe_calculator: RecipeCapacityCalculator | None = None,
 ) -> InventorySyncService:
     return InventorySyncService(
         world_id=WORLD_ID,
@@ -249,6 +280,7 @@ def _service(
             known_passive_skill_ids={"artisan"},
         ),
         repository=repository,
+        recipe_calculator=recipe_calculator,
     )
 
 
@@ -296,6 +328,58 @@ def test_successful_canonical_snapshot_is_published_once(tmp_path: Path) -> None
         assert result.snapshot_id == SNAPSHOT_ID
         assert parser.parse_calls == 1
         assert len(repository.publish_requests) == 1
+
+    import asyncio
+
+    asyncio.run(scenario())
+
+
+def test_successful_item_snapshot_publishes_deterministic_recipe_capacity(
+    tmp_path: Path,
+) -> None:
+    async def scenario() -> None:
+        payload = canonical_payload()
+        payload["bases"] = [
+            {"base_id": "base-1", "guild_uid": "fixture-guild-001", "name": "Ore Base"}
+        ]
+        payload["item_stacks"] = [
+            {
+                "container_id": "box-1",
+                "item_id": "ingot",
+                "quantity": 6,
+                "container_type": "storage_box",
+                "base_id": "base-1",
+                "guild_uid": "fixture-guild-001",
+                "slot_index": 0,
+                "resolution_status": "resolved",
+            }
+        ]
+        payload["item_inventory_status"] = "available"
+        calculator = RecipeCapacityCalculator(
+            [
+                RecipeFact(
+                    recipe_id="recipe.nail",
+                    product_item_id="nail",
+                    product_count=5,
+                    ingredients=(IngredientFact(slot=1, item_id="ingot", count=2),),
+                    craft_kind="handcraft",
+                    deny_recipe_chain=(),
+                )
+            ]
+        )
+        repository = FakeInventoryRepository()
+
+        await _service(
+            tmp_path,
+            FakeParser(payload),
+            repository,
+            recipe_calculator=calculator,
+        ).sync_once()
+
+        capacities = repository.publish_requests[0].item_recipe_capacities
+        assert len(capacities) == 1
+        assert capacities[0].item_id == "nail"
+        assert capacities[0].craftable_additional == 15
 
     import asyncio
 

@@ -184,6 +184,32 @@
           "type": "array",
           "items": { "$ref": "#/$defs/InventoryPublishPal" }
         },
+        "bases": {
+          "type": "array",
+          "items": {
+            "$ref": "canonical-snapshot.schema.json#/$defs/CanonicalBase"
+          },
+          "default": []
+        },
+        "item_stacks": {
+          "type": "array",
+          "items": {
+            "$ref": "canonical-snapshot.schema.json#/$defs/CanonicalItemStack"
+          },
+          "default": []
+        },
+        "item_inventory_status": {
+          "type": "string",
+          "enum": ["available", "partial", "unavailable"],
+          "default": "unavailable"
+        },
+        "item_recipe_capacities": {
+          "type": "array",
+          "items": {
+            "$ref": "item-inventory.schema.json#/$defs/PublishedItemRecipeCapacity"
+          },
+          "default": []
+        },
         "warnings": {
           "type": "array",
           "items": { "$ref": "#/$defs/InventoryValidationWarning" }

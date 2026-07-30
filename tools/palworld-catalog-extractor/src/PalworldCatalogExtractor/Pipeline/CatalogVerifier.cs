@@ -172,11 +172,11 @@ public static class CatalogVerifier
       string contentHash,
       string packageHash)
   {
-    if (manifest["schema_version"]?.GetValue<string>() != "1.1.0")
+    if (manifest["schema_version"]?.GetValue<string>() != "2.0.0")
     {
       throw new ExtractorException(
           ErrorCodes.CatalogSchemaInvalid,
-          "The full-catalog extractor only verifies Catalog Schema 1.1.0 outputs.");
+          "The full-catalog extractor only verifies Catalog Schema 2.0.0 outputs.");
     }
 
     if (manifest["content_hash"]?.GetValue<string>() != contentHash
@@ -223,7 +223,7 @@ public static class CatalogVerifier
     {
       throw new ExtractorException(
           ErrorCodes.CatalogFileMissing,
-          "Manifest must list exactly the seven normalized files.");
+          "Manifest must list exactly the nine normalized files.");
     }
 
     var counts = manifest["counts"]!.AsObject();
@@ -295,6 +295,7 @@ public static class CatalogVerifier
   {
     var pals = Set(records[CatalogCategory.Pals], "pal_id");
     var active = Set(records[CatalogCategory.ActiveSkills], "active_skill_id");
+    var items = Set(records[CatalogCategory.Items], "item_id");
     var localized = Set(records[CatalogCategory.Localizations], "text_key");
     if (records[CatalogCategory.PalActiveSkills].Any(record =>
             !pals.Contains(Text(record, "pal_id")) || !active.Contains(Text(record, "active_skill_id")))
@@ -302,19 +303,28 @@ public static class CatalogVerifier
         || records[CatalogCategory.BreedingRecipes].Any(record =>
             !pals.Contains(Text(record, "parent_a_pal_id"))
             || !pals.Contains(Text(record, "parent_b_pal_id"))
-            || !pals.Contains(Text(record, "child_pal_id"))))
+            || !pals.Contains(Text(record, "child_pal_id")))
+        || records[CatalogCategory.ItemRecipes].Any(record =>
+            !items.Contains(Text(record, "product_item_id"))
+            || record["ingredients"]!.AsArray().Any(ingredient =>
+                !items.Contains(Text(ingredient!.AsObject(), "item_id")))
+            || record["unlock_item_id"] is JsonValue unlock
+                && !items.Contains(unlock.GetValue<string>())
+            || record["deny_recipe_chain"]!.AsArray().Any(item =>
+                !items.Contains(item!.GetValue<string>()))))
     {
       throw new ExtractorException(
           ErrorCodes.CatalogReferenceInvalid,
           "A normalized record references a missing catalog ID.");
     }
 
-    var localizationFields = new[] { "name_key", "description_key" };
+    var localizationFields = new[] { "name_key", "description_key", "description_template_key" };
     var missing = records
         .Where(pair => pair.Key is CatalogCategory.Pals
             or CatalogCategory.PassiveSkills
             or CatalogCategory.ActiveSkills
-            or CatalogCategory.PartnerSkills)
+            or CatalogCategory.PartnerSkills
+            or CatalogCategory.Items)
         .SelectMany(pair => pair.Value)
         .SelectMany(record => localizationFields.Select(field => record[field]))
         .Where(value => value is not null)
@@ -464,7 +474,7 @@ public static class CatalogVerifier
       ["content_hash"] = contentHash,
       ["counts"] = counts,
       ["errors"] = new JsonArray(),
-      ["schema_version"] = "1.1.0",
+      ["schema_version"] = "2.0.0",
       ["valid"] = true,
       ["warnings"] = new JsonArray(),
     };

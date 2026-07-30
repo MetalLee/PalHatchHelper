@@ -42,7 +42,7 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
     {
       throw new ExtractorException(
           ErrorCodes.FullCatalogCategoryEmpty,
-          "A full catalog requires every one of the seven categories to be non-empty.");
+          "A full catalog requires every one of the nine categories to be non-empty.");
     }
 
     CatalogTraceability.ValidateReaderResults(results);
@@ -141,7 +141,7 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
       ["game_version"] = request.GameVersion,
       ["locales"] = new JsonArray(request.Locales.Order(StringComparer.Ordinal).Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
       ["package_hash"] = packageHash,
-      ["schema_version"] = "1.1.0",
+      ["schema_version"] = "2.0.0",
       ["source_provenance"] = request.SourceProvenance.ToJson(),
     };
     DeterministicJson.WriteFile(Path.Combine(request.OutputPath, "manifest.json"), manifest);

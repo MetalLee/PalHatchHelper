@@ -14,6 +14,7 @@ from pydantic import SecretStr
 from pal_hatch_helper.game_catalog.paths import fsync_directory
 from pal_hatch_helper.game_catalog.validation import (
     REQUIRED_PACKAGE_FILES,
+    V2_REQUIRED_PACKAGE_FILES,
     load_catalog_directory,
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
@@ -21,6 +22,12 @@ from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 ARTIFACT_FILENAMES = (
     "manifest.json",
     *REQUIRED_PACKAGE_FILES,
+    "validation-report.json",
+    "checksums.sha256",
+)
+V2_ARTIFACT_FILENAMES = (
+    "manifest.json",
+    *V2_REQUIRED_PACKAGE_FILES,
     "validation-report.json",
     "checksums.sha256",
 )
@@ -283,8 +290,8 @@ class SupabaseCatalogArtifactStore:
 
 def create_catalog_bundle(directory: Path) -> bytes:
     catalog = load_catalog_directory(directory)
-    filenames = ARTIFACT_FILENAMES
-    if catalog.schema_version == "1.1.0":
+    filenames = V2_ARTIFACT_FILENAMES if catalog.schema_version == "2.0.0" else ARTIFACT_FILENAMES
+    if catalog.schema_version in {"1.1.0", "2.0.0"}:
         filenames = (*filenames, *FULL_CATALOG_SIDECAR_FILENAMES)
     output = io.BytesIO()
     with (
@@ -322,6 +329,8 @@ def extract_catalog_bundle_atomic(bundle: bytes, destination: Path) -> None:
             allowed_file_sets = (
                 set(ARTIFACT_FILENAMES),
                 set((*ARTIFACT_FILENAMES, *FULL_CATALOG_SIDECAR_FILENAMES)),
+                set(V2_ARTIFACT_FILENAMES),
+                set((*V2_ARTIFACT_FILENAMES, *FULL_CATALOG_SIDECAR_FILENAMES)),
             )
             if len(members) != len(names) or names not in allowed_file_sets:
                 raise StructuredError(

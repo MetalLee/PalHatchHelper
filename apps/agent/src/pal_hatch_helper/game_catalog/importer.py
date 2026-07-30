@@ -15,7 +15,11 @@ from pal_hatch_helper.game_catalog.jsonl import (
     write_jsonl_atomic,
 )
 from pal_hatch_helper.game_catalog.paths import CatalogPaths, fsync_directory
-from pal_hatch_helper.game_catalog.validation import FILE_SPECS, load_catalog_directory
+from pal_hatch_helper.game_catalog.validation import (
+    LEGACY_FILE_SPECS,
+    file_specs_for_schema,
+    load_catalog_directory,
+)
 from pal_hatch_helper.generated import (
     BreedingSourceProvenance,
     CatalogCounts,
@@ -24,6 +28,10 @@ from pal_hatch_helper.generated import (
     GameCatalogManifest,
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
+
+LEGACY_NORMALIZATION_EXCLUDED_FIELDS: dict[str, set[str]] = {
+    "passive_skills": {"description_template_key", "effects"},
+}
 
 
 async def stage_catalog_version(
@@ -49,7 +57,7 @@ async def stage_catalog_version(
         artifact_bucket=artifact_bucket,
         artifact_path=f"versions/{catalog.content_hash}/catalog.tar.gz",
     )
-    for spec in FILE_SPECS:
+    for spec in file_specs_for_schema(catalog.schema_version):
         records = list(read_jsonl(directory / spec.filename))
         for batch_index, batch in enumerate(_batches(records, batch_size)):
             await gateway.stage_batch(
@@ -88,10 +96,14 @@ def prepare_normalized_catalog(
         file_checksums: list[CatalogFileChecksum] = []
         counts_by_field: dict[str, int] = {}
         locales: set[str] = set()
-        for spec in FILE_SPECS:
+        for spec in LEGACY_FILE_SPECS:
             records = list(read_jsonl(input_directory / spec.filename, require_canonical=False))
             validated = [
-                spec.model.model_validate(record).model_dump(mode="json") for record in records
+                spec.model.model_validate(record).model_dump(
+                    mode="json",
+                    exclude=LEGACY_NORMALIZATION_EXCLUDED_FIELDS.get(spec.count_field),
+                )
+                for record in records
             ]
             if spec.count_field == "localizations":
                 locales.update(str(record["locale"]) for record in validated)

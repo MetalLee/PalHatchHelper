@@ -10,12 +10,14 @@ type Options struct {
 
 // World is the typed, read-only view of a Palworld world save.
 type World struct {
-	Meta    WorldMeta  `json:"meta"`
-	Players []Player   `json:"players"`
-	Pals    []Pal      `json:"pals"`
-	Guilds  []Guild    `json:"guilds"`
-	Bases   []BaseCamp `json:"bases"`
-	Stats   ParseStats `json:"stats"`
+	Meta                WorldMeta   `json:"meta"`
+	Players             []Player    `json:"players"`
+	Pals                []Pal       `json:"pals"`
+	Guilds              []Guild     `json:"guilds"`
+	Bases               []BaseCamp  `json:"bases"`
+	ItemStacks          []ItemStack `json:"itemStacks"`
+	ItemInventoryStatus string      `json:"itemInventoryStatus"`
+	Stats               ParseStats `json:"stats"`
 }
 
 // WorldMeta contains the stable metadata fields found in LevelMeta.sav.
@@ -140,11 +142,26 @@ type BaseCamp struct {
 	// normalizeBaseName: empty when the base was never renamed (whitespace-only
 	// names and the engine's placeholder template both count as unnamed). Empty
 	// is served as null by the API, never a synthetic label.
-	Name     string  `json:"name,omitempty"`
-	Position *Vector `json:"position,omitempty"`
+	Name      string  `json:"name,omitempty"`
+	Position  *Vector `json:"position,omitempty"`
+	AreaRange float64 `json:"areaRange,omitempty"`
 	// WorkerContainerID is decoded from WorkerDirector.RawData and retained only
 	// for internal joins. Public projections expose BaseID, never this raw GUID.
 	WorkerContainerID string `json:"workerContainerId,omitempty"`
+}
+
+// ItemStack is one physical ItemContainerSaveData slot. ContainerID is kept
+// only until the Sync redaction boundary; browser projections never expose it.
+// BaseID and ContainerType are populated only by confirmed container ownership
+// joins. Unknown ownership remains explicit and is never guessed.
+type ItemStack struct {
+	ContainerID   string `json:"containerId"`
+	GuildID       string `json:"guildId,omitempty"`
+	ItemID        string `json:"itemId"`
+	Quantity      int    `json:"quantity"`
+	ContainerType string `json:"containerType"`
+	BaseID        string `json:"baseId,omitempty"`
+	SlotIndex     int    `json:"slotIndex"`
 }
 
 // ParseStats reports data skipped or isolated while tolerantly decoding.

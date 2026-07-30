@@ -12,6 +12,8 @@ from pal_hatch_helper.game_catalog.paths import fsync_directory
 from pal_hatch_helper.generated import (
     CatalogActiveSkill,
     CatalogBreedingRecipe,
+    CatalogItem,
+    CatalogItemRecipe,
     CatalogLocalization,
     CatalogPal,
     CatalogPalActiveSkill,
@@ -27,6 +29,8 @@ _RECORD_TABLES = (
     ("pal_active_skills", CatalogPalActiveSkill, "pal_active_skills"),
     ("partner_skills", CatalogPartnerSkill, "partner_skills"),
     ("breeding_recipes", CatalogBreedingRecipe, "breeding_recipes"),
+    ("items", CatalogItem, "items"),
+    ("item_recipes", CatalogItemRecipe, "item_recipes"),
     ("localizations", CatalogLocalization, "localizations"),
 )
 
@@ -94,6 +98,13 @@ class CatalogSQLiteCache:
                         recipe_type
                       )
                     );
+                    create table items (item_id text primary key, payload text not null);
+                    create table item_recipes (
+                      recipe_id text primary key,
+                      product_item_id text not null,
+                      craft_kind text not null,
+                      payload text not null
+                    );
                     create table localizations (
                       locale text not null,
                       text_key text not null,
@@ -104,6 +115,8 @@ class CatalogSQLiteCache:
                       on breeding_recipes(parent_a_pal_id, parent_b_pal_id);
                     create index passive_rank_idx on passive_skills(passive_skill_id, rank);
                     create index pal_active_pal_idx on pal_active_skills(pal_id, active_skill_id);
+                    create index item_recipe_product_idx
+                      on item_recipes(product_item_id, craft_kind);
                     """
                 )
                 connection.execute(
@@ -180,6 +193,10 @@ class CatalogSQLiteCache:
                     CatalogBreedingRecipe.model_validate(item)
                     for item in values["breeding_recipes"]
                 ),
+                items=tuple(CatalogItem.model_validate(item) for item in values["items"]),
+                item_recipes=tuple(
+                    CatalogItemRecipe.model_validate(item) for item in values["item_recipes"]
+                ),
                 localizations=tuple(
                     CatalogLocalization.model_validate(item) for item in values["localizations"]
                 ),
@@ -242,6 +259,25 @@ class CatalogSQLiteCache:
                     canonical_json(item.model_dump(mode="json")),
                 )
                 for item in catalog.breeding_recipes
+            ),
+        )
+        connection.executemany(
+            "insert into items values (?, ?)",
+            (
+                (item.item_id, canonical_json(item.model_dump(mode="json")))
+                for item in catalog.items
+            ),
+        )
+        connection.executemany(
+            "insert into item_recipes values (?, ?, ?, ?)",
+            (
+                (
+                    item.recipe_id,
+                    item.product_item_id,
+                    item.craft_kind,
+                    canonical_json(item.model_dump(mode="json")),
+                )
+                for item in catalog.item_recipes
             ),
         )
         connection.executemany(

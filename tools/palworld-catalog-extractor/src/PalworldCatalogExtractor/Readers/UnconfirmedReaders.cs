@@ -32,6 +32,10 @@ public sealed class UnconfirmedPartnerSkillReader() : UnconfirmedReader(CatalogC
 
 public sealed class UnconfirmedBreedingRecipeReader() : UnconfirmedReader(CatalogCategory.BreedingRecipes), IBreedingRecipeReader;
 
+public sealed class UnconfirmedItemReader() : UnconfirmedReader(CatalogCategory.Items), IItemReader;
+
+public sealed class UnconfirmedItemRecipeReader() : UnconfirmedReader(CatalogCategory.ItemRecipes), IItemRecipeReader;
+
 public sealed class UnconfirmedLocalizationReader() : UnconfirmedReader(CatalogCategory.Localizations), ILocalizationReader;
 
 public static class ProductionReaderSet
@@ -44,6 +48,8 @@ public static class ProductionReaderSet
         new UnconfirmedPalActiveSkillReader(),
         new UnconfirmedPartnerSkillReader(),
         new UnconfirmedBreedingRecipeReader(),
+        new UnconfirmedItemReader(),
+        new UnconfirmedItemRecipeReader(),
         new UnconfirmedLocalizationReader(),
     ];
 

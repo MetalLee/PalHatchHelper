@@ -105,6 +105,22 @@ class CatalogCounts(BaseModel):
     pal_active_skills: Annotated[int, Field(ge=0)]
     partner_skills: Annotated[int, Field(ge=0)]
     breeding_recipes: Annotated[int, Field(ge=0)]
+    items: Annotated[int, Field(ge=0)] | None = None
+    item_recipes: Annotated[int, Field(ge=0)] | None = None
+    localizations: Annotated[int, Field(ge=0)]
+
+
+class CatalogCountsV2(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pals: Annotated[int, Field(ge=0)]
+    passive_skills: Annotated[int, Field(ge=0)]
+    active_skills: Annotated[int, Field(ge=0)]
+    pal_active_skills: Annotated[int, Field(ge=0)]
+    partner_skills: Annotated[int, Field(ge=0)]
+    breeding_recipes: Annotated[int, Field(ge=0)]
+    items: Annotated[int, Field(ge=0)]
+    item_recipes: Annotated[int, Field(ge=0)]
     localizations: Annotated[int, Field(ge=0)]
 
 
@@ -118,6 +134,8 @@ class CatalogFileChecksum(BaseModel):
         "pal-active-skills.jsonl",
         "partner-skills.jsonl",
         "breeding-recipes.jsonl",
+        "items.jsonl",
+        "item-recipes.jsonl",
         "localizations.jsonl",
     ]
     sha256: Sha256
@@ -214,12 +232,24 @@ class CatalogPal(BaseModel):
     metadata: Metadata
 
 
+class CatalogPassiveEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slot: Annotated[int, Field(ge=1), Field(le=4)]
+    target_type: StableId
+    effect_type: StableId
+    value: float
+    target_element_type: StableId | None = None
+
+
 class CatalogPassiveSkill(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     passive_skill_id: StableId
     name_key: TextKey
     description_key: TextKey | None
+    description_template_key: TextKey | None = None
+    effects: Annotated[list[CatalogPassiveEffect], Field(max_length=4)] = []
     rank: int
     is_negative: bool
     metadata: Metadata
@@ -273,6 +303,54 @@ class CatalogBreedingRecipe(BaseModel):
     parent_b_gender: Literal["any", "female", "male"] = "any"
     child_pal_id: StableId
     recipe_type: Literal["normal", "special"]
+    metadata: Metadata
+
+
+class CatalogItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: StableId
+    name_key: TextKey
+    description_key: TextKey | None
+    type_a: StableId
+    type_b: StableId
+    max_stack_count: Annotated[int, Field(ge=1)]
+    enable_handcraft: bool
+    is_legal: bool
+    restore_health: int
+    restore_sanity: int
+    restore_satiety: int
+    corruption_factor: Annotated[float, Field(ge=0)]
+    legacy_item_ids: Annotated[list[StableId], AfterValidator(_ensure_unique)] = []
+    metadata: Metadata
+
+
+class CatalogItemRecipeIngredient(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slot: Annotated[int, Field(ge=1), Field(le=5)]
+    item_id: StableId
+    count: Annotated[int, Field(ge=1)]
+
+
+class CatalogItemRecipe(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recipe_id: StableId
+    product_item_id: StableId
+    product_count: Annotated[int, Field(ge=1)]
+    ingredients: Annotated[
+        list[CatalogItemRecipeIngredient],
+        Field(min_length=1),
+        Field(max_length=5),
+    ]
+    craft_kind: Literal["handcraft", "cooking", "other"]
+    work_amount: Annotated[float, Field(ge=0)]
+    workable_attribute: Annotated[int, Field(ge=0)]
+    energy_type: StableId | None
+    energy_amount: Annotated[int, Field(ge=0)]
+    unlock_item_id: StableId | None
+    deny_recipe_chain: Annotated[list[StableId], AfterValidator(_ensure_unique)]
     metadata: Metadata
 
 
@@ -779,6 +857,33 @@ class CanonicalPlayer(BaseModel):
     guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
 
 
+class CanonicalBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    base_id: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
+    name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+
+
+class CanonicalItemStack(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    container_id: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    quantity: Annotated[int, Field(ge=1), Field(le=2147483647)]
+    container_type: Literal[
+        "storage_box",
+        "refrigerator",
+        "feed_box",
+        "production_output",
+        "unknown",
+    ]
+    base_id: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)] | None
+    slot_index: Annotated[int, Field(ge=0), Field(le=100000)]
+    resolution_status: Literal["resolved", "unresolved", "unsupported"]
+
+
 class CanonicalPalSourceMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -818,6 +923,115 @@ class CanonicalPal(BaseModel):
     location_slot_index: Annotated[int, Field(ge=0), Field(le=100000)] | None
     location_access_scope: Literal["player", "guild", "unresolved"]
     metadata: CanonicalPalSourceMetadata | None = None
+
+
+class ItemInventoryBaseTotal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    base_id: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    name: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    quantity: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+
+
+class ItemRecipeIngredientView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slot: Annotated[int, Field(ge=1), Field(le=5)]
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    name: Annotated[str, Field(min_length=1), Field(max_length=240)]
+    count: Annotated[int, Field(ge=1), Field(le=2147483647)]
+
+
+class ItemRecipeView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recipe_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    product_count: Annotated[int, Field(ge=1), Field(le=2147483647)]
+    craft_kind: Literal["handcraft", "cooking"]
+    ingredients: Annotated[list[ItemRecipeIngredientView], Field(min_length=1), Field(max_length=5)]
+
+
+class ItemRecipePlanStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recipe_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    product_item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    batches: Annotated[int, Field(ge=1), Field(le=1000000)]
+    produced: Annotated[int, Field(ge=1), Field(le=9007199254740991)]
+
+
+class ItemRecipeLimitingMaterial(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    missing: Annotated[int, Field(ge=1), Field(le=9007199254740991)]
+
+
+class ItemRecipeCapacity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    on_hand: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    craftable_additional: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    obtainable_total: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    selected_recipe_id: Annotated[str, Field(min_length=1), Field(max_length=120)] | None
+    status: Literal["ready", "no_supported_recipe", "recipe_cycle", "complexity_limit"]
+    recipe_plan: list[ItemRecipePlanStep]
+    limiting_materials: list[ItemRecipeLimitingMaterial]
+
+
+class PublishedItemRecipeCapacity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    guild_uid: Annotated[str, Field(min_length=1), Field(max_length=128)]
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    on_hand: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    craftable_additional: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    obtainable_total: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    selected_recipe_id: Annotated[str, Field(min_length=1), Field(max_length=120)] | None
+    status: Literal["ready", "no_supported_recipe", "recipe_cycle", "complexity_limit"]
+    recipe_plan: list[ItemRecipePlanStep]
+    limiting_materials: list[ItemRecipeLimitingMaterial]
+
+
+class GuildItemInventoryItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    name: Annotated[str, Field(min_length=1), Field(max_length=240)]
+    type_a: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    type_b: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    quantity: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    bases: list[ItemInventoryBaseTotal]
+    recipes: list[ItemRecipeView]
+    capacity: ItemRecipeCapacity | None
+
+
+class GuildItemInventoryResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["available", "partial", "unavailable"]
+    snapshot_id: UUID | None
+    captured_at: AwareDatetime | None
+    items: list[GuildItemInventoryItem]
+
+
+class ItemInventoryTrendPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sampled_at: AwareDatetime
+    quantity: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    delta: Annotated[int, Field(ge=-9007199254740991), Field(le=9007199254740991)] | None
+
+
+class ItemInventoryTrendResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    base_id: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
+    bucket: Literal["hour", "day"]
+    from_at: AwareDatetime
+    to_at: AwareDatetime
+    points: list[ItemInventoryTrendPoint]
 
 
 class InventoryValidationWarning(BaseModel):
@@ -879,6 +1093,10 @@ class InventoryPublishPayload(BaseModel):
     guilds: list[CanonicalGuild]
     players: list[CanonicalPlayer]
     pals: list[InventoryPublishPal]
+    bases: list[CanonicalBase] = []
+    item_stacks: list[CanonicalItemStack] = []
+    item_inventory_status: Literal["available", "partial", "unavailable"] = "unavailable"
+    item_recipe_capacities: list[PublishedItemRecipeCapacity] = []
     warnings: list[InventoryValidationWarning]
 
 
@@ -2005,6 +2223,13 @@ class CanonicalSnapshot(BaseModel):
     guilds: list[CanonicalGuild]
     players: list[CanonicalPlayer]
     pals: list[CanonicalPal]
+    bases: list[CanonicalBase] = []
+    item_stacks: list[CanonicalItemStack] = []
+    item_inventory_status: Literal["available", "partial", "unavailable"] = "unavailable"
+
+
+class ItemInventoryContracts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class InventoryPublishRpcRequest(BaseModel):

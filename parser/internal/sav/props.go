@@ -51,6 +51,9 @@ var typeHints = map[string]string{
 	".worldSaveData.BaseCampSaveData.Key":                   "Guid",
 	".worldSaveData.BaseCampSaveData.Value":                 "StructProperty",
 	".worldSaveData.BaseCampSaveData.Value.ModuleMap.Value": "StructProperty",
+	".worldSaveData.ItemContainerSaveData.Key":              "StructProperty",
+	".worldSaveData.ItemContainerSaveData.Value":            "StructProperty",
+	".worldSaveData.MapObjectSaveData.MapObjectSaveData.ConcreteModel.ModuleMap.Value": "StructProperty",
 	// GUID-keyed maps introduced/reachable in Palworld 1.0 worlds. Without these
 	// hints readMap defaults a struct-typed key to "StructProperty" and tries to
 	// read a property list out of a bare 16-byte GUID, which aborts the whole
