@@ -133,7 +133,11 @@ async function verifyStructure() {
     const info = await lstat(binary);
     if (!info.isFile() || info.isSymbolicLink())
       throw new Error("PARSER_BINARY_INVALID");
-    if (target.platform === "linux-x64" && (info.mode & 0o111) === 0)
+    if (
+      process.platform !== "win32" &&
+      target.platform === "linux-x64" &&
+      (info.mode & 0o111) === 0
+    )
       throw new Error("PARSER_NOT_EXECUTABLE");
     const manifest = JSON.parse(
       await readFile(join(directory, "parser-manifest.json"), "utf8"),
