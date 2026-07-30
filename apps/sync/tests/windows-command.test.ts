@@ -47,7 +47,11 @@ describe("Windows command shims", () => {
       const result = await execFileAsync(
         invocation.executable,
         invocation.arguments,
-        { encoding: "utf8", windowsHide: true },
+        {
+          encoding: "utf8",
+          windowsHide: true,
+          windowsVerbatimArguments: true,
+        },
       );
       expect(result.stdout.trim()).toBe("hello world");
     },

@@ -526,6 +526,7 @@ async function runCli(executable, arguments__, cwd, environment = process.env) {
     timeout: 30_000,
     maxBuffer: 8 * 1024 * 1024,
     windowsHide: true,
+    ...(process.platform === "win32" ? { windowsVerbatimArguments: true } : {}),
   });
 }
 
