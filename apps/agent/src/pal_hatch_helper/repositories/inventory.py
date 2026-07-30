@@ -4,8 +4,10 @@ from typing import Literal, Protocol, TypeGuard
 from uuid import UUID
 
 from pal_hatch_helper.generated import (
+    CatalogItemRecipe,
     InventoryFailureRpcRequest,
     InventoryPublishRpcRequest,
+    PublishedItemRecipeCapacity,
 )
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import ValidatedSnapshot
@@ -29,6 +31,7 @@ class InventoryPublishRequest:
     parser_name: str
     parser_version: str
     snapshot: ValidatedSnapshot
+    item_recipe_capacities: tuple[PublishedItemRecipeCapacity, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +50,10 @@ class InventoryFailureRequest:
 class InventoryCatalogIds:
     pal_ids: frozenset[str]
     passive_skill_ids: frozenset[str]
+    item_ids: frozenset[str] = frozenset()
+    game_data_version_id: UUID | None = None
+    item_aliases: dict[str, str] | None = None
+    item_recipes: tuple[CatalogItemRecipe, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,12 +205,32 @@ class SupabaseInventoryRepository:
             raise _invalid_response()
         pal_ids = payload.get("pal_ids")
         passive_ids = payload.get("passive_skill_ids")
-        if not _is_string_list(pal_ids) or not _is_string_list(passive_ids):
+        item_ids = payload.get("item_ids", [])
+        version_id = payload.get("game_data_version_id")
+        item_aliases = payload.get("item_aliases", {})
+        item_recipes = payload.get("item_recipes", [])
+        if (
+            not _is_string_list(pal_ids)
+            or not _is_string_list(passive_ids)
+            or not _is_string_list(item_ids)
+            or (version_id is not None and not isinstance(version_id, str))
+            or not _is_string_mapping(item_aliases)
+            or not isinstance(item_recipes, list)
+        ):
             raise _invalid_response()
-        return InventoryCatalogIds(
-            pal_ids=frozenset(pal_ids),
-            passive_skill_ids=frozenset(passive_ids),
-        )
+        try:
+            return InventoryCatalogIds(
+                pal_ids=frozenset(pal_ids),
+                passive_skill_ids=frozenset(passive_ids),
+                item_ids=frozenset(item_ids),
+                game_data_version_id=UUID(version_id) if version_id is not None else None,
+                item_aliases=dict(item_aliases),
+                item_recipes=tuple(
+                    CatalogItemRecipe.model_validate(recipe) for recipe in item_recipes
+                ),
+            )
+        except (ValueError, TypeError) as error:
+            raise _invalid_response() from error
 
 
 def _publish_payload(request: InventoryPublishRequest) -> dict[str, JSONValue]:
@@ -236,6 +263,15 @@ def _publish_payload(request: InventoryPublishRequest) -> dict[str, JSONValue]:
         "guilds": [_json_object(guild.model_dump(mode="json")) for guild in canonical.guilds],
         "players": [_json_object(player.model_dump(mode="json")) for player in canonical.players],
         "pals": pals,
+        "bases": [_json_object(base.model_dump(mode="json")) for base in canonical.bases],
+        "item_stacks": [
+            _json_object(stack.model_dump(mode="json")) for stack in canonical.item_stacks
+        ],
+        "item_inventory_status": canonical.item_inventory_status,
+        "item_recipe_capacities": [
+            _json_object(capacity.model_dump(mode="json"))
+            for capacity in request.item_recipe_capacities
+        ],
         "warnings": warnings,
     }
 
@@ -262,6 +298,12 @@ def _is_json_object(value: object) -> TypeGuard[dict[str, JSONValue]]:
 
 def _is_string_list(value: object) -> TypeGuard[list[str]]:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+def _is_string_mapping(value: object) -> TypeGuard[dict[str, str]]:
+    return isinstance(value, dict) and all(
+        isinstance(key, str) and isinstance(item, str) for key, item in value.items()
+    )
 
 
 def _is_nonnegative_int(value: object) -> TypeGuard[int]:

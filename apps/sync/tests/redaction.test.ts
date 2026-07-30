@@ -90,4 +90,64 @@ describe("upload redaction", () => {
     expect(serialized).toContain("Artisan");
     expect(serialized).toContain("Fixture Player");
   });
+
+  it("hashes item container ownership and downgrades unprovable base joins", () => {
+    const payload = toInventoryPublishPayload(
+      {
+        ...canonical,
+        bases: [
+          {
+            base_id: "raw-base-id",
+            guild_uid: "raw-guild-uid",
+            name: "Ore Base",
+          },
+        ],
+        item_stacks: [
+          {
+            container_id: "raw-container-valid",
+            item_id: "wood",
+            quantity: 120,
+            container_type: "storage_box",
+            base_id: "raw-base-id",
+            guild_uid: "raw-guild-uid",
+            slot_index: 0,
+            resolution_status: "resolved",
+          },
+          {
+            container_id: "raw-container-unresolved",
+            item_id: "stone",
+            quantity: 80,
+            container_type: "storage_box",
+            base_id: "raw-missing-base",
+            guild_uid: "raw-guild-uid",
+            slot_index: 1,
+            resolution_status: "resolved",
+          },
+        ],
+        item_inventory_status: "partial",
+      },
+      {
+        sourceHash: "a".repeat(64),
+        sourceModifiedAt: "2026-07-29T00:00:00.000Z",
+        parserVersion: "1.3.0",
+      },
+    );
+
+    expect(payload.item_stacks?.[0]?.resolution_status).toBe("resolved");
+    expect(payload.item_stacks?.[1]?.resolution_status).toBe("unresolved");
+    expect(payload.warnings).toContainEqual(
+      expect.objectContaining({ code: "ITEM_STACK_BASE_UNRESOLVED" }),
+    );
+    const serialized = JSON.stringify(payload);
+    for (const raw of [
+      "raw-base-id",
+      "raw-missing-base",
+      "raw-container-valid",
+      "raw-container-unresolved",
+    ]) {
+      expect(serialized).not.toContain(raw);
+    }
+    expect(serialized).toContain("wood");
+    expect(serialized).toContain("stone");
+  });
 });

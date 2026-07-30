@@ -19,6 +19,21 @@
     "pals": {
       "type": "array",
       "items": { "$ref": "#/$defs/CanonicalPal" }
+    },
+    "bases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/CanonicalBase" },
+      "default": []
+    },
+    "item_stacks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/CanonicalItemStack" },
+      "default": []
+    },
+    "item_inventory_status": {
+      "type": "string",
+      "enum": ["available", "partial", "unavailable"],
+      "default": "unavailable"
     }
   },
   "$defs": {
@@ -61,6 +76,68 @@
           "type": ["string", "null"],
           "minLength": 1,
           "maxLength": 128
+        }
+      }
+    },
+    "CanonicalBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_id", "guild_uid", "name"],
+      "properties": {
+        "base_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "guild_uid": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160
+        }
+      }
+    },
+    "CanonicalItemStack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "container_id",
+        "item_id",
+        "quantity",
+        "container_type",
+        "base_id",
+        "guild_uid",
+        "slot_index",
+        "resolution_status"
+      ],
+      "properties": {
+        "container_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "container_type": {
+          "type": "string",
+          "enum": [
+            "storage_box",
+            "refrigerator",
+            "feed_box",
+            "production_output",
+            "unknown"
+          ]
+        },
+        "base_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "guild_uid": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "slot_index": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "resolution_status": {
+          "type": "string",
+          "enum": ["resolved", "unresolved", "unsupported"]
         }
       }
     },

@@ -14,6 +14,7 @@ const generatedPaths = [
   "breeding-engine",
   "canonical-snapshot",
   "inventory-sync",
+  "item-inventory",
   "phase5-web",
   "phase6-breeder",
   "phase7-execution-plans",

@@ -14,6 +14,8 @@ internal static class CatalogTraceability
         [CatalogCategory.PassiveSkills] = "passive_skill_id",
         [CatalogCategory.ActiveSkills] = "active_skill_id",
         [CatalogCategory.PartnerSkills] = "partner_skill_id",
+        [CatalogCategory.Items] = "item_id",
+        [CatalogCategory.ItemRecipes] = "recipe_id",
       };
 
   public static void ValidateReaderResults(IReadOnlyDictionary<CatalogCategory, ReaderResult> results)

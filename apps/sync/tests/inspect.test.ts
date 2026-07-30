@@ -76,9 +76,9 @@ describe("offline save inspection", () => {
           "pb1_a237c1853942de20b1e924d8db51bc916d8b0c837af5a36363934345a889ce9b",
       },
     });
-    expect((await readFile(payloadOutput, "utf8")).split("\n")[1]).toMatch(
-      /^ {2}"captured_at"/,
-    );
+    const payloadText = await readFile(payloadOutput, "utf8");
+    expect(payloadText).toContain('\n  "captured_at":');
+    expect(payloadText.endsWith("\n")).toBe(true);
     for (const output of [canonicalOutput, payloadOutput]) {
       const info = await lstat(output);
       expect(info.isFile()).toBe(true);

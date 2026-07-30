@@ -18,6 +18,10 @@ export interface InventoryPublishPayload {
   guilds: CanonicalGuild[];
   players: CanonicalPlayer[];
   pals: InventoryPublishPal[];
+  bases?: CanonicalBase[];
+  item_stacks?: CanonicalItemStack[];
+  item_inventory_status?: "available" | "partial" | "unavailable";
+  item_recipe_capacities?: PublishedItemRecipeCapacity[];
   warnings: InventoryValidationWarning[];
 }
 export interface CanonicalServer {
@@ -65,6 +69,42 @@ export interface CanonicalPalSourceMetadata {
    * @maxItems 64
    */
   source_passive_skill_internal_names: string[];
+}
+export interface CanonicalBase {
+  base_id: string;
+  guild_uid: string | null;
+  name: string | null;
+}
+export interface CanonicalItemStack {
+  container_id: string;
+  item_id: string;
+  quantity: number;
+  container_type: "storage_box" | "refrigerator" | "feed_box" | "production_output" | "unknown";
+  base_id: string | null;
+  guild_uid: string | null;
+  slot_index: number;
+  resolution_status: "resolved" | "unresolved" | "unsupported";
+}
+export interface PublishedItemRecipeCapacity {
+  guild_uid: string;
+  item_id: string;
+  on_hand: number;
+  craftable_additional: number;
+  obtainable_total: number;
+  selected_recipe_id: string | null;
+  status: "ready" | "no_supported_recipe" | "recipe_cycle" | "complexity_limit";
+  recipe_plan: ItemRecipePlanStep[];
+  limiting_materials: ItemRecipeLimitingMaterial[];
+}
+export interface ItemRecipePlanStep {
+  recipe_id: string;
+  product_item_id: string;
+  batches: number;
+  produced: number;
+}
+export interface ItemRecipeLimitingMaterial {
+  item_id: string;
+  missing: number;
 }
 export interface InventoryValidationWarning {
   code: string;

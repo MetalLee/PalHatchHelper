@@ -23,7 +23,10 @@ func ParseLevel(path string, opts Options) (*World, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := &World{Players: []Player{}, Pals: []Pal{}, Guilds: []Guild{}, Bases: []BaseCamp{}, Stats: stats}
+	w := &World{
+		Players: []Player{}, Pals: []Pal{}, Guilds: []Guild{}, Bases: []BaseCamp{},
+		ItemStacks: []ItemStack{}, ItemInventoryStatus: "unavailable", Stats: stats,
+	}
 	w.Meta = metaFromProperties(g.Properties)
 	levelWorldUID := w.Meta.WorldUID
 	metaPath := filepath.Join(filepath.Dir(path), "LevelMeta.sav")
@@ -91,8 +94,336 @@ func extractWorldSaveData(w *World, props propertyMap) {
 			w.Stats.DecodeFailures["bases"]++
 		}
 	}
+	if p := root["ItemContainerSaveData"]; p != nil {
+		if entries, ok := p.Value.([]mapEntry); ok {
+			w.ItemInventoryStatus = "available"
+			for _, e := range entries {
+				stacks, complete := itemStacksFromEntry(e, &w.Stats)
+				w.ItemStacks = append(w.ItemStacks, stacks...)
+				if !complete {
+					w.ItemInventoryStatus = "partial"
+				}
+			}
+		} else {
+			w.ItemInventoryStatus = "partial"
+			w.Stats.DecodeFailures["item_containers"]++
+		}
+	}
 	assignBaseGuilds(w)
+	assignItemStackOwnership(w, itemContainerOwnershipsFromRoot(root, &w.Stats))
 	assignBaseWorkers(w)
+}
+
+func itemStacksFromEntry(e mapEntry, stats *ParseStats) ([]ItemStack, bool) {
+	containerID := itemContainerIDFromMapKey(e.Key)
+	value, ok := asProperties(e.Value)
+	if !ok || containerID == "" {
+		stats.recordSkip("worldSaveData.ItemContainerSaveData", "invalid-container")
+		return nil, false
+	}
+	guildID := ""
+	if belong, exists := propertyProperties(value, "BelongInfo"); exists {
+		guildID = strings.TrimSpace(firstString(belong, "GroupID", "GroupId", "GuildID", "GuildId"))
+	}
+	property := value["Slots"]
+	if property == nil {
+		property = value["SlotArray"]
+	}
+	if property == nil {
+		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "missing")
+		return nil, false
+	}
+	values, ok := property.Value.([]any)
+	if !ok {
+		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-array")
+		return nil, false
+	}
+	result := make([]ItemStack, 0, len(values))
+	complete := true
+	for index, value := range values {
+		slot, ok := asProperties(value)
+		if !ok {
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-slot")
+			complete = false
+			continue
+		}
+		itemProperties, ok := propertyProperties(slot, "ItemId")
+		if !ok {
+			itemProperties, ok = propertyProperties(slot, "ItemID")
+		}
+		if !ok {
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.ItemId", "missing")
+			complete = false
+			continue
+		}
+		itemID := firstString(itemProperties, "StaticId", "StaticID")
+		quantity, quantityOK := propertyInt(slot, "StackCount")
+		if itemID == "" || !quantityOK || quantity < 0 || quantity > math.MaxInt32 {
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-item-stack")
+			complete = false
+			continue
+		}
+		if itemID == "None" || quantity == 0 {
+			continue
+		}
+		result = append(result, ItemStack{
+			ContainerID:   containerID,
+			GuildID:       guildID,
+			ItemID:        itemID,
+			Quantity:      int(quantity),
+			ContainerType: "unknown",
+			SlotIndex:     index,
+		})
+	}
+	return result, complete
+}
+
+func itemContainerIDFromMapKey(value any) string {
+	if direct, ok := value.(string); ok {
+		return strings.TrimSpace(direct)
+	}
+	properties, ok := asProperties(value)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(firstString(properties, "ID", "Id"))
+}
+
+const (
+	itemSlotAttributeUndefined       uint8 = 0
+	itemSlotAttributeInput           uint8 = 1
+	itemSlotAttributePublicOutput    uint8 = 2
+	itemSlotAttributeFoodProvidable  uint8 = 3
+	itemSlotAttributeCannotTransport uint8 = 4
+	itemContainerUsageStorage        uint8 = 1
+	maxItemContainerSlots                  = 1 << 20
+)
+
+type itemContainerOwnership struct {
+	ContainerID    string
+	Position       Vector
+	UsageType      uint8
+	SlotAttributes map[int]uint8
+}
+
+// itemContainerOwnershipsFromRoot joins only the structural MapObject module
+// that explicitly targets an ItemContainerSaveData GUID. A map object's
+// position is later checked against a same-guild base radius; neither proximity
+// nor the module alone is sufficient evidence of base ownership.
+func itemContainerOwnershipsFromRoot(root propertyMap, stats *ParseStats) map[string]itemContainerOwnership {
+	property := root["MapObjectSaveData"]
+	if property == nil {
+		return nil
+	}
+	values, ok := property.Value.([]any)
+	if !ok {
+		return nil
+	}
+	owners := make(map[string]itemContainerOwnership)
+	ambiguous := make(map[string]bool)
+	for _, value := range values {
+		object, ok := asProperties(value)
+		if !ok {
+			continue
+		}
+		position, ok := firstVector(object, "WorldLocation", "Location")
+		if !ok || !finiteBaseCoord(position.X) || !finiteBaseCoord(position.Y) || !finiteBaseCoord(position.Z) {
+			continue
+		}
+		concreteModel, ok := propertyProperties(object, "ConcreteModel")
+		if !ok {
+			continue
+		}
+		modules, ok := propertyMapEntries(concreteModel, "ModuleMap")
+		if !ok {
+			continue
+		}
+		for _, moduleEntry := range modules {
+			if !isItemContainerModuleKey(moduleEntry.Key) {
+				continue
+			}
+			module, ok := asProperties(moduleEntry.Value)
+			if !ok {
+				stats.DecodeFailures["item_container_ownership"]++
+				continue
+			}
+			raw, ok := propertyBytes(module, "RawData")
+			if !ok {
+				stats.DecodeFailures["item_container_ownership"]++
+				continue
+			}
+			decoded, ok := decodeItemContainerModuleRaw(raw)
+			if !ok {
+				stats.DecodeFailures["item_container_ownership"]++
+				continue
+			}
+			decoded.Position = position
+			key := strings.ToLower(decoded.ContainerID)
+			if _, exists := owners[key]; exists {
+				delete(owners, key)
+				ambiguous[key] = true
+				continue
+			}
+			if !ambiguous[key] {
+				owners[key] = decoded
+			}
+		}
+	}
+	return owners
+}
+
+func isItemContainerModuleKey(value any) bool {
+	var key string
+	switch typed := value.(type) {
+	case string:
+		key = typed
+	case enumData:
+		key = typed.Value
+	default:
+		return false
+	}
+	key = strings.TrimSpace(key)
+	return key == "ItemContainer" || strings.HasSuffix(key, "::ItemContainer")
+}
+
+// decodeItemContainerModuleRaw decodes the confirmed retail 1.x payload:
+// target container GUID, grouped slot indexes, the complete per-slot attribute
+// array, drop flag and EPalContainerUsageType. Any count, duplicate or trailing
+// byte drift fails closed so a future layout cannot silently misclassify stock.
+func decodeItemContainerModuleRaw(raw []byte) (itemContainerOwnership, bool) {
+	r := newReader(raw)
+	containerID, err := readGUID(r)
+	if err != nil || guidIdentityKey(containerID) == strings.Repeat("0", 32) {
+		return itemContainerOwnership{}, false
+	}
+	groupCount, err := r.u32()
+	if err != nil || groupCount > maxItemContainerSlots {
+		return itemContainerOwnership{}, false
+	}
+	grouped := make(map[int]uint8)
+	for range groupCount {
+		attribute, readErr := r.u8()
+		if readErr != nil {
+			return itemContainerOwnership{}, false
+		}
+		indexCount, readErr := r.u32()
+		if readErr != nil || indexCount > maxItemContainerSlots || uint64(indexCount)*4 > uint64(r.remaining()) {
+			return itemContainerOwnership{}, false
+		}
+		for range indexCount {
+			index, indexErr := r.i32()
+			if indexErr != nil || index < 0 || index >= maxItemContainerSlots {
+				return itemContainerOwnership{}, false
+			}
+			if previous, exists := grouped[int(index)]; exists && previous != attribute {
+				return itemContainerOwnership{}, false
+			}
+			grouped[int(index)] = attribute
+		}
+	}
+	attributeCount, err := r.u32()
+	if err != nil || attributeCount > maxItemContainerSlots || uint64(attributeCount) > uint64(r.remaining()) {
+		return itemContainerOwnership{}, false
+	}
+	attributes, err := r.read(int(attributeCount))
+	if err != nil {
+		return itemContainerOwnership{}, false
+	}
+	allAttributes := make(map[int]uint8, len(attributes))
+	for index, attribute := range attributes {
+		if groupedAttribute, exists := grouped[index]; exists && groupedAttribute != attribute {
+			return itemContainerOwnership{}, false
+		}
+		allAttributes[index] = attribute
+	}
+	for index := range grouped {
+		if index >= len(attributes) {
+			return itemContainerOwnership{}, false
+		}
+	}
+	dropItem, err := r.u32()
+	if err != nil || dropItem > 1 {
+		return itemContainerOwnership{}, false
+	}
+	usageType, err := r.u8()
+	if err != nil || r.remaining() != 0 {
+		return itemContainerOwnership{}, false
+	}
+	return itemContainerOwnership{
+		ContainerID:    containerID,
+		UsageType:      usageType,
+		SlotAttributes: allAttributes,
+	}, true
+}
+
+func classifyItemContainerSlot(usageType uint8, attributes map[int]uint8, slotIndex int) string {
+	if usageType != itemContainerUsageStorage || slotIndex < 0 {
+		return "unknown"
+	}
+	attribute, ok := attributes[slotIndex]
+	if !ok {
+		return "unknown"
+	}
+	switch attribute {
+	case itemSlotAttributeUndefined, itemSlotAttributeCannotTransport:
+		return "storage_box"
+	case itemSlotAttributePublicOutput:
+		return "production_output"
+	case itemSlotAttributeFoodProvidable:
+		return "feed_box"
+	case itemSlotAttributeInput:
+		return "unknown"
+	default:
+		return "unknown"
+	}
+}
+
+func assignItemStackOwnership(w *World, owners map[string]itemContainerOwnership) {
+	if w.ItemInventoryStatus == "unavailable" {
+		return
+	}
+	partial := w.ItemInventoryStatus == "partial"
+	for i := range w.ItemStacks {
+		stack := &w.ItemStacks[i]
+		owner, ok := owners[strings.ToLower(stack.ContainerID)]
+		if !ok || strings.TrimSpace(stack.GuildID) == "" {
+			partial = true
+			continue
+		}
+		baseID, ok := uniqueBaseAtPosition(w.Bases, stack.GuildID, owner.Position)
+		containerType := classifyItemContainerSlot(owner.UsageType, owner.SlotAttributes, stack.SlotIndex)
+		if !ok || containerType == "unknown" {
+			partial = true
+			continue
+		}
+		stack.BaseID = baseID
+		stack.ContainerType = containerType
+	}
+	if partial {
+		w.ItemInventoryStatus = "partial"
+	} else {
+		w.ItemInventoryStatus = "available"
+	}
+}
+
+func uniqueBaseAtPosition(bases []BaseCamp, guildID string, position Vector) (string, bool) {
+	matched := ""
+	for _, base := range bases {
+		if base.Position == nil || !finiteBaseRange(base.AreaRange) ||
+			!strings.EqualFold(strings.TrimSpace(base.GuildID), strings.TrimSpace(guildID)) {
+			continue
+		}
+		dx := position.X - base.Position.X
+		dy := position.Y - base.Position.Y
+		if dx*dx+dy*dy > base.AreaRange*base.AreaRange {
+			continue
+		}
+		if matched != "" {
+			return "", false
+		}
+		matched = base.ID
+	}
+	return matched, matched != ""
 }
 
 // ParseLevelMeta parses a LevelMeta.sav file.
@@ -147,7 +478,7 @@ func baseFromEntry(e mapEntry, stats *ParseStats) BaseCamp {
 		// bytes. A pre-1.0 save that instead carries a plain vector property is
 		// still honored as a fallback.
 		if raw, ok := propertyBytes(v, "RawData"); ok {
-			name, loc, ok := decodeBaseRaw(raw, b.ID)
+			name, loc, areaRange, rawGuildID, ok := decodeBaseRaw(raw, b.ID)
 			if ok {
 				b.Name = normalizeBaseName(name)
 			}
@@ -155,6 +486,17 @@ func baseFromEntry(e mapEntry, stats *ParseStats) BaseCamp {
 				b.Position = loc
 			} else {
 				stats.recordSkip("worldSaveData.BaseCampSaveData.Value.RawData.transform", "tolerated")
+			}
+			if areaRange > 0 {
+				b.AreaRange = areaRange
+			}
+			if rawGuildID != "" {
+				if b.GuildID == "" {
+					b.GuildID = rawGuildID
+				} else if !strings.EqualFold(b.GuildID, rawGuildID) {
+					b.AreaRange = 0
+					stats.recordSkip("worldSaveData.BaseCampSaveData.Value.RawData.group_id_belong_to", "conflict")
+				}
 			}
 		}
 		if b.Position == nil {
@@ -171,7 +513,8 @@ func baseFromEntry(e mapEntry, stats *ParseStats) BaseCamp {
 	return b
 }
 
-// decodeBaseRaw decodes the name and world-space translation of a base camp
+// decodeBaseRaw decodes the name, world-space translation, area range and guild
+// identity of a base camp
 // from PalBaseCampSaveData.RawData. The proven retail 1.x prefix is:
 //
 //	id                 GUID (16 bytes) — must match the map key
@@ -191,35 +534,53 @@ func baseFromEntry(e mapEntry, stats *ParseStats) BaseCamp {
 // non-finite/implausibly large component. A GUID that does not match the map
 // key fails the whole decode. Verified against a live 1.0 world: all 20 bases
 // decoded to within <1 cm of the guild's in-game PalBox.
-func decodeBaseRaw(raw []byte, baseID string) (name string, loc *Vector, ok bool) {
+func decodeBaseRaw(raw []byte, baseID string) (
+	name string,
+	loc *Vector,
+	areaRange float64,
+	guildID string,
+	ok bool,
+) {
 	r := newReader(raw)
 	embedded, err := readGUID(r)
 	if err != nil || (baseID != "" && !strings.EqualFold(embedded, baseID)) {
-		return "", nil, false
+		return "", nil, 0, "", false
 	}
 	if name, err = r.fstring(); err != nil {
-		return "", nil, false
+		return "", nil, 0, "", false
 	}
 	// state byte, then the rotation quaternion (4 f64) we do not need.
 	if err = r.skip(1 + 4*8); err != nil {
-		return name, nil, true
+		return name, nil, 0, "", true
 	}
 	x, err := r.f64()
 	if err != nil {
-		return name, nil, true
+		return name, nil, 0, "", true
 	}
 	y, err := r.f64()
 	if err != nil {
-		return name, nil, true
+		return name, nil, 0, "", true
 	}
 	z, err := r.f64()
 	if err != nil {
-		return name, nil, true
+		return name, nil, 0, "", true
 	}
 	if !finiteBaseCoord(x) || !finiteBaseCoord(y) || !finiteBaseCoord(z) {
-		return name, nil, true
+		return name, nil, 0, "", true
 	}
-	return name, &Vector{X: x, Y: y, Z: z}, true
+	loc = &Vector{X: x, Y: y, Z: z}
+	if err = r.skip(3 * 8); err != nil {
+		return name, loc, 0, "", true
+	}
+	rawAreaRange, err := r.f32()
+	if err != nil || !finiteBaseRange(float64(rawAreaRange)) {
+		return name, loc, 0, "", true
+	}
+	decodedGuildID, err := readGUID(r)
+	if err != nil {
+		return name, loc, 0, "", true
+	}
+	return name, loc, float64(rawAreaRange), decodedGuildID, true
 }
 
 // baseNamePlaceholderPrefix is the engine-side default written into every base
@@ -247,6 +608,11 @@ func normalizeBaseName(name string) string {
 func finiteBaseCoord(v float64) bool {
 	const maxWorldCoord = 1e10
 	return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= -maxWorldCoord && v <= maxWorldCoord
+}
+
+func finiteBaseRange(v float64) bool {
+	const maxBaseRange = 1e7
+	return !math.IsNaN(v) && !math.IsInf(v, 0) && v > 0 && v <= maxBaseRange
 }
 
 // workerContainerID decodes PalBaseCampSaveData_WorkerDirector.RawData. The
@@ -313,8 +679,14 @@ func assignBaseGuilds(w *World) {
 	}
 	for i := range w.Bases {
 		key := strings.ToLower(w.Bases[i].ID)
-		if w.Bases[i].GuildID == "" && !ambiguous[key] {
-			w.Bases[i].GuildID = owners[key]
+		owner := owners[key]
+		if ambiguous[key] || (owner != "" && w.Bases[i].GuildID != "" && !strings.EqualFold(owner, w.Bases[i].GuildID)) {
+			w.Bases[i].GuildID = ""
+			w.Bases[i].AreaRange = 0
+			continue
+		}
+		if w.Bases[i].GuildID == "" {
+			w.Bases[i].GuildID = owner
 		}
 	}
 }

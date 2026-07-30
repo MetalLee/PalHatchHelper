@@ -85,5 +85,8 @@
         ]
       }
     }
-  ]
+  ],
+  "bases": [],
+  "item_stacks": [],
+  "item_inventory_status": "unavailable"
 }

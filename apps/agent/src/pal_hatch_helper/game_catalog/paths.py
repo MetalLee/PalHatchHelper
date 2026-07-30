@@ -53,6 +53,10 @@ class CatalogPaths:
 
 
 def fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        # Windows does not allow opening directories with os.open; atomic os.replace still
+        # provides the supported durability boundary for the file itself.
+        return
     descriptor = os.open(path, os.O_RDONLY)
     try:
         os.fsync(descriptor)

@@ -9,6 +9,8 @@ from pal_hatch_helper.generated import (
     BreedingDataDiffReport,
     CatalogActiveSkill,
     CatalogBreedingRecipe,
+    CatalogItem,
+    CatalogItemRecipe,
     CatalogLocalization,
     CatalogPal,
     CatalogPalActiveSkill,
@@ -167,6 +169,8 @@ class SupabaseCatalogGateway:
                 pal_active_skills=_models(payload, "pal_active_skills", CatalogPalActiveSkill),
                 partner_skills=_models(payload, "partner_skills", CatalogPartnerSkill),
                 breeding_recipes=_models(payload, "breeding_recipes", CatalogBreedingRecipe),
+                items=_models_optional(payload, "items", CatalogItem),
+                item_recipes=_models_optional(payload, "item_recipes", CatalogItemRecipe),
                 localizations=_models(payload, "localizations", CatalogLocalization),
             )
         except (KeyError, ValidationError, TypeError) as error:
@@ -187,6 +191,15 @@ class SupabaseCatalogGateway:
 
 def _models[T: BaseModel](payload: dict[str, JSONValue], key: str, model: type[T]) -> tuple[T, ...]:
     values = payload[key]
+    if not isinstance(values, list):
+        raise TypeError(key)
+    return tuple(model.model_validate(item) for item in values)
+
+
+def _models_optional[T: BaseModel](
+    payload: dict[str, JSONValue], key: str, model: type[T]
+) -> tuple[T, ...]:
+    values = payload.get(key, [])
     if not isinstance(values, list):
         raise TypeError(key)
     return tuple(model.model_validate(item) for item in values)

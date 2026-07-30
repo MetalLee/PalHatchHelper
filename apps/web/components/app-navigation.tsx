@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Dna,
   House,
+  PackageOpen,
   PawPrint,
   type LucideIcon,
 } from "lucide-react";
@@ -24,6 +25,7 @@ import type { AppLocale } from "@/i18n/routing";
 type NavigationLabelKey =
   | "home"
   | "inventory"
+  | "items"
   | "breeder"
   | "plans"
   | "dataStatus";
@@ -37,6 +39,7 @@ export interface NavigationItem {
 export const workspaceNavigationItems: readonly NavigationItem[] = [
   { href: "/overview", labelKey: "home", icon: House },
   { href: "/pals", labelKey: "inventory", icon: PawPrint },
+  { href: "/items", labelKey: "items", icon: PackageOpen },
   { href: "/breeder", labelKey: "breeder", icon: Dna },
   { href: "/plans", labelKey: "plans", icon: ClipboardList },
 ];

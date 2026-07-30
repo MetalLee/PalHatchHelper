@@ -1,12 +1,17 @@
 # PalBeacon PlM CanonicalSnapshot Parser
 
-`palworld-save-parser` 1.3.0 is a Linux x64 and Windows x64 decode-only parser
+`palworld-save-parser` 1.4.0 is a Linux x64 and Windows x64 decode-only parser
 for Palworld `Level.sav` and declared `Players/*.sav` files. It supports:
 
 - `PlM/0x31`, including Mermaid streams, through the vendored open-source
   palooz/ooz decoder;
 - `PlZ/0x31` with one zlib layer;
 - `PlZ/0x32` with two zlib layers.
+
+Version 1.4.0 adds fail-closed extraction of guild bases and physical item
+container slots. A stack is attributed only when its container module, guild,
+and one unique base radius agree; ambiguous or unsupported ownership remains
+explicitly partial.
 
 The palooz/ooz source is pinned to PalworldSaveTools commit
 `3395e393466fc1f384dee54dabb3e597e611435e`. The exact vendored files,

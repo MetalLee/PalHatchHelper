@@ -29,4 +29,8 @@ public interface IPartnerSkillReader : ICatalogReader;
 
 public interface IBreedingRecipeReader : ICatalogReader;
 
+public interface IItemReader : ICatalogReader;
+
+public interface IItemRecipeReader : ICatalogReader;
+
 public interface ILocalizationReader : ICatalogReader;

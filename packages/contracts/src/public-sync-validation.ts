@@ -3,6 +3,7 @@ import addFormats from "ajv-formats";
 
 import canonicalSchema from "../schema/canonical-snapshot.schema.json";
 import inventorySchema from "../schema/inventory-sync.schema.json";
+import itemInventorySchema from "../schema/item-inventory.schema.json";
 import syncSchema from "../schema/sync-api.schema.json";
 import type { CanonicalSnapshot } from "./generated/canonical-snapshot";
 import type { InventoryPublishPayload } from "./generated/inventory-sync";
@@ -20,6 +21,7 @@ export class PublicSyncContractError extends Error {
 const ajv = new Ajv2020({ strict: true, allErrors: true });
 addFormats(ajv);
 ajv.addSchema(canonicalSchema);
+ajv.addSchema(itemInventorySchema);
 ajv.addSchema(inventorySchema);
 ajv.addSchema(syncSchema);
 

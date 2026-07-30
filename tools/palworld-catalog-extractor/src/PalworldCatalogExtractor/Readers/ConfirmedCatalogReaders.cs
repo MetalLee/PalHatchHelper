@@ -21,6 +21,9 @@ internal static class ConfirmedCatalogReaders
   private const string MasterLevelTablePath = "Pal/Content/Pal/DataTable/Waza/DT_WazaMasterLevel";
   private const string PartnerParameterTablePath = "Pal/Content/Pal/DataTable/PassiveSkill/DT_PartnerSkillParameter";
   private const string UniqueBreedingTablePath = "Pal/Content/Pal/DataTable/Character/DT_PalCombiUnique";
+  private const string ItemTablePath = "Pal/Content/Pal/DataTable/Item/DT_ItemDataTable";
+  private const string ItemRecipeTablePath = "Pal/Content/Pal/DataTable/Item/DT_ItemRecipeDataTable";
+  private const string ItemRedirectTablePath = "Pal/Content/Pal/DataTable/Item/DT_PalStaticItemIDRedirectData";
   private const string BlueprintBasePath = "Pal/Content/Pal/Blueprint/Character/Monster/PalActorBP/";
 
   internal static ICatalogReader[] Create(ExtractionConfig config)
@@ -43,6 +46,8 @@ internal static class ConfirmedCatalogReaders
     var palActive = ReadPalActiveSkills(provider, pals.Facts, active.Facts);
     var partners = ReadPartnerSkills(provider, pals.Facts, localization);
     var breeding = ReadBreedingRecipes(provider, pals.Facts);
+    var items = ReadItems(provider, localization);
+    var itemRecipes = ReadItemRecipes(provider, items.Facts);
 
     return new Dictionary<CatalogCategory, ReaderResult>
     {
@@ -52,7 +57,9 @@ internal static class ConfirmedCatalogReaders
       [CatalogCategory.PalActiveSkills] = palActive,
       [CatalogCategory.PartnerSkills] = partners,
       [CatalogCategory.BreedingRecipes] = breeding,
-      [CatalogCategory.Localizations] = localization.Result,
+      [CatalogCategory.Items] = items.Result,
+      [CatalogCategory.ItemRecipes] = itemRecipes,
+      [CatalogCategory.Localizations] = localization.ToReaderResult(),
     };
   }
 
@@ -61,10 +68,13 @@ internal static class ConfirmedCatalogReaders
     var records = new List<JsonObject>();
     var evidence = new List<SourceEvidenceRecord>();
     var keysByLocale = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+    var textsByLocale = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
     foreach (var locale in locales.Order(StringComparer.Ordinal))
     {
       var keys = new HashSet<string>(StringComparer.Ordinal);
       keysByLocale.Add(locale, keys);
+      var texts = new Dictionary<string, string>(StringComparer.Ordinal);
+      textsByLocale.Add(locale, texts);
       foreach (var table in LocalizationTables(locale))
       {
         var data = provider.LoadPackageObject<UDataTable>(table.AssetPathWithoutExtension);
@@ -86,6 +96,7 @@ internal static class ConfirmedCatalogReaders
             ["text"] = text,
           };
           records.Add(record);
+          texts.Add(textKey, text);
           evidence.Add(new SourceEvidenceRecord(
               CatalogCategories.RecordKey(CatalogCategory.Localizations, record),
               $"{table.Namespace}:{row.Key.Text}",
@@ -95,8 +106,10 @@ internal static class ConfirmedCatalogReaders
     }
 
     return new LocalizationFacts(
-        Result(records, evidence),
+        records,
+        evidence,
         keysByLocale,
+        textsByLocale,
         locales.Order(StringComparer.Ordinal).ToArray());
   }
 
@@ -213,22 +226,76 @@ internal static class ConfirmedCatalogReaders
 
       var overrideDescription = Name(row.Value, "OverrideDescMsgID");
       var rawDescriptionKey = IsNone(overrideDescription) ? $"PASSIVE_{sourceName}" : overrideDescription;
-      var descriptionKey = localization.ResolveInEveryLocale(LocalizationKey("skill_desc", rawDescriptionKey));
-      JsonNode? normalizedDescription = descriptionKey is not null
-          ? JsonValue.Create(descriptionKey)
-          : null;
+      var descriptionTemplateKey = localization.ResolveInEveryLocale(LocalizationKey("skill_desc", rawDescriptionKey));
+      var targetElement = EnumTail(Name(row.Value, "TargetElementType"));
+      var normalizedTargetElement = IsNone(targetElement) ? null : StableIdV1.Normalize(targetElement);
+      var effects = new List<PassiveEffectFact>();
+      for (var slot = 1; slot <= 4; slot++)
+      {
+        var effectType = EnumTail(Name(row.Value, $"EffectType{slot}"));
+        if (StringComparer.OrdinalIgnoreCase.Equals(effectType, "no"))
+        {
+          continue;
+        }
+
+        effects.Add(new PassiveEffectFact(
+            slot,
+            EnumTail(Name(row.Value, $"TargetType{slot}")),
+            effectType,
+            Single(row.Value, $"EffectValue{slot}"),
+            normalizedTargetElement));
+      }
+
+      var stableId = StableIdV1.Normalize(sourceName);
+      var descriptionKey = LocalizationKey("passive_resolved", stableId);
+      foreach (var locale in localization.Locales)
+      {
+        var commonTexts = localization.NamespaceTexts(locale, "ui_common");
+        var description = descriptionTemplateKey is not null
+            ? PassiveDescriptionFormatter.FormatTemplate(
+                localization.Text(locale, descriptionTemplateKey),
+                effects,
+                commonTexts)
+            : PassiveDescriptionFormatter.BuildDefault(effects, commonTexts);
+        localization.AddDerived(
+            locale,
+            descriptionKey,
+            description,
+            $"passive:{sourceName}",
+            [
+              new SourceLocation(PassiveTablePath + ".uasset", sourceName, "EffectType1..4"),
+              new SourceLocation(PassiveTablePath + ".uasset", sourceName, "EffectValue1..4"),
+              new SourceLocation(PassiveTablePath + ".uasset", sourceName, "OverrideDescMsgID"),
+            ]);
+      }
+
       var rank = Integer(row.Value, "Rank");
       var record = EntityRecord(sourceName, new JsonObject
       {
-        ["passive_skill_id"] = StableIdV1.Normalize(sourceName),
+        ["passive_skill_id"] = stableId,
         ["name_key"] = nameKey,
-        ["description_key"] = normalizedDescription,
+        ["description_key"] = descriptionKey,
+        ["description_template_key"] = descriptionTemplateKey is null ? null : JsonValue.Create(descriptionTemplateKey),
+        ["effects"] = new JsonArray(effects.OrderBy(effect => effect.Slot).Select(effect =>
+            (JsonNode)new JsonObject
+            {
+              ["slot"] = effect.Slot,
+              ["target_type"] = StableIdV1.Normalize(effect.TargetType),
+              ["effect_type"] = StableIdV1.Normalize(effect.EffectType),
+              ["value"] = effect.Value,
+              ["target_element_type"] = effect.TargetElementType is null
+                  ? null
+                  : JsonValue.Create(effect.TargetElementType),
+            }).ToArray()),
         ["rank"] = rank,
         ["is_negative"] = rank < 0,
       });
       records.Add(record);
       evidence.Add(Evidence(CatalogCategory.PassiveSkills, record, sourceName, PassiveTablePath + ".uasset", sourceName,
-          "Category", "OverrideNameTextID", "OverrideDescMsgID", "Rank"));
+          "Category", "OverrideNameTextID", "OverrideDescMsgID", "Rank", "TargetElementType",
+          "TargetType1", "TargetType2", "TargetType3", "TargetType4",
+          "EffectType1", "EffectType2", "EffectType3", "EffectType4",
+          "EffectValue1", "EffectValue2", "EffectValue3", "EffectValue4"));
     }
 
     _ = StableIdV1.BuildMap(records.Select(record => record["metadata"]!["source_internal_name"]!.GetValue<string>()));
@@ -636,6 +703,290 @@ internal static class ConfirmedCatalogReaders
     return null;
   }
 
+  private static ItemFacts ReadItems(DefaultFileProvider provider, LocalizationFacts localization)
+  {
+    var table = provider.LoadPackageObject<UDataTable>(ItemTablePath);
+    var redirects = ReadItemRedirects(provider);
+    var records = new List<JsonObject>();
+    var evidence = new List<SourceEvidenceRecord>();
+    var excluded = new List<ExcludedRecord>();
+    var unresolved = new List<UnresolvedRecord>();
+    var facts = new Dictionary<string, ItemFact>(StringComparer.OrdinalIgnoreCase);
+    foreach (var row in table.RowMap.OrderBy(value => value.Key.Text, StringComparer.Ordinal))
+    {
+      var sourceName = row.Key.Text;
+      if (!Boolean(row.Value, "bLegalInGame"))
+      {
+        excluded.Add(new ExcludedRecord("items", sourceName, "ITEM_NOT_LEGAL_IN_GAME"));
+        continue;
+      }
+
+      var overrideName = Name(row.Value, "OverrideName");
+      var rawNameKey = IsNone(overrideName) ? $"ITEM_NAME_{sourceName}" : overrideName;
+      var nameKey = localization.ResolveInEveryLocale(LocalizationKey("item_name", rawNameKey));
+      if (nameKey is null)
+      {
+        unresolved.Add(new UnresolvedRecord("items", sourceName, "ITEM_NAME_LOCALIZATION_MISSING"));
+        continue;
+      }
+
+      var overrideDescription = Name(row.Value, "OverrideDescription");
+      var rawDescriptionKey = IsNone(overrideDescription) ? $"ITEM_DESC_{sourceName}" : overrideDescription;
+      var descriptionKey = localization.ResolveInEveryLocale(LocalizationKey("item_desc", rawDescriptionKey));
+      var maxStackCount = Integer(row.Value, "MaxStackCount");
+      if (maxStackCount <= 0)
+      {
+        unresolved.Add(new UnresolvedRecord("items", sourceName, "ITEM_MAX_STACK_INVALID"));
+        continue;
+      }
+
+      var typeA = StableIdV1.Normalize(EnumTail(Name(row.Value, "TypeA")));
+      var typeB = StableIdV1.Normalize(EnumTail(Name(row.Value, "TypeB")));
+      var enableHandcraft = Boolean(row.Value, "bEnableHandcraft");
+      var stableId = StableIdV1.Normalize(sourceName);
+      var legacyIds = redirects.ByDestination.TryGetValue(sourceName, out var destinationRedirects)
+          ? destinationRedirects.Select(value => StableIdV1.Normalize(value.SourceId)).Order(StringComparer.Ordinal).ToArray()
+          : [];
+      var record = EntityRecord(sourceName, new JsonObject
+      {
+        ["item_id"] = stableId,
+        ["name_key"] = nameKey,
+        ["description_key"] = descriptionKey is null ? null : JsonValue.Create(descriptionKey),
+        ["type_a"] = typeA,
+        ["type_b"] = typeB,
+        ["max_stack_count"] = maxStackCount,
+        ["enable_handcraft"] = enableHandcraft,
+        ["is_legal"] = true,
+        ["restore_health"] = Integer(row.Value, "RestoreHealth"),
+        ["restore_sanity"] = Integer(row.Value, "RestoreSanity"),
+        ["restore_satiety"] = Integer(row.Value, "RestoreSatiety"),
+        ["corruption_factor"] = Single(row.Value, "CorruptionFactor"),
+        ["legacy_item_ids"] = new JsonArray(legacyIds.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
+      });
+      records.Add(record);
+      var locations = new List<SourceLocation>
+      {
+        new(ItemTablePath + ".uasset", sourceName, "bLegalInGame"),
+        new(ItemTablePath + ".uasset", sourceName, "OverrideName"),
+        new(ItemTablePath + ".uasset", sourceName, "OverrideDescription"),
+        new(ItemTablePath + ".uasset", sourceName, "TypeA"),
+        new(ItemTablePath + ".uasset", sourceName, "TypeB"),
+        new(ItemTablePath + ".uasset", sourceName, "MaxStackCount"),
+        new(ItemTablePath + ".uasset", sourceName, "bEnableHandcraft"),
+        new(ItemTablePath + ".uasset", sourceName, "RestoreHealth"),
+        new(ItemTablePath + ".uasset", sourceName, "RestoreSanity"),
+        new(ItemTablePath + ".uasset", sourceName, "RestoreSatiety"),
+        new(ItemTablePath + ".uasset", sourceName, "CorruptionFactor"),
+      };
+      if (destinationRedirects is not null)
+      {
+        locations.AddRange(destinationRedirects.SelectMany(value => new[]
+        {
+          new SourceLocation(ItemRedirectTablePath + ".uasset", value.SourceRow, "SourceItemIds"),
+          new SourceLocation(ItemRedirectTablePath + ".uasset", value.SourceRow, "DestinationItemId.StaticId"),
+        }));
+      }
+      evidence.Add(new SourceEvidenceRecord(
+          CatalogCategories.RecordKey(CatalogCategory.Items, record),
+          sourceName,
+          locations));
+      facts.Add(sourceName, new ItemFact(sourceName, stableId, typeA, typeB, enableHandcraft));
+    }
+
+    _ = StableIdV1.BuildMap(facts.Keys.Concat(redirects.BySource.Keys));
+    foreach (var redirect in redirects.BySource.Values.OrderBy(value => value.SourceId, StringComparer.Ordinal))
+    {
+      if (!facts.TryGetValue(redirect.DestinationId, out var destination))
+      {
+        unresolved.Add(new UnresolvedRecord("items", redirect.SourceRow, "ITEM_REDIRECT_DESTINATION_MISSING"));
+        continue;
+      }
+      if (facts.TryGetValue(redirect.SourceId, out var existing)
+          && !StringComparer.Ordinal.Equals(existing.StableId, destination.StableId))
+      {
+        unresolved.Add(new UnresolvedRecord("items", redirect.SourceRow, "ITEM_REDIRECT_SOURCE_CONFLICT"));
+        continue;
+      }
+      facts[redirect.SourceId] = destination;
+    }
+    return new ItemFacts(facts, Result(records, evidence, excluded, unresolved));
+  }
+
+  private static ItemRedirects ReadItemRedirects(DefaultFileProvider provider)
+  {
+    var table = provider.LoadPackageObject<UDataTable>(ItemRedirectTablePath);
+    var bySource = new Dictionary<string, ItemRedirect>(StringComparer.OrdinalIgnoreCase);
+    var byDestination = new Dictionary<string, List<ItemRedirect>>(StringComparer.OrdinalIgnoreCase);
+    foreach (var row in table.RowMap.OrderBy(value => value.Key.Text, StringComparer.Ordinal))
+    {
+      var destination = Property(row.Value, "DestinationItemId").Tag!.GetValue<FStructFallback>()
+          ?? throw new ExtractorException(
+              ErrorCodes.UnresolvedGameFacts,
+              "An item redirect destination is null.");
+      var destinationId = Name(destination, "StaticId");
+      foreach (var sourceId in Names(row.Value, "SourceItemIds").Where(value => !IsNone(value)))
+      {
+        var redirect = new ItemRedirect(row.Key.Text, sourceId, destinationId);
+        if (!bySource.TryAdd(sourceId, redirect))
+        {
+          throw new ExtractorException(
+              ErrorCodes.UnresolvedGameFacts,
+              "A source item ID occurs in more than one redirect row.");
+        }
+        if (!byDestination.TryGetValue(destinationId, out var destinationValues))
+        {
+          destinationValues = [];
+          byDestination.Add(destinationId, destinationValues);
+        }
+        destinationValues.Add(redirect);
+      }
+    }
+    return new ItemRedirects(bySource, byDestination);
+  }
+
+  private static ReaderResult ReadItemRecipes(
+      DefaultFileProvider provider,
+      IReadOnlyDictionary<string, ItemFact> items)
+  {
+    var table = provider.LoadPackageObject<UDataTable>(ItemRecipeTablePath);
+    var records = new List<JsonObject>();
+    var evidence = new List<SourceEvidenceRecord>();
+    var excluded = new List<ExcludedRecord>();
+    var unresolved = new List<UnresolvedRecord>();
+    foreach (var row in table.RowMap.OrderBy(value => value.Key.Text, StringComparer.Ordinal))
+    {
+      var sourceName = row.Key.Text;
+      var productSource = Name(row.Value, "Product_Id");
+      if (IsNone(productSource) || !items.TryGetValue(productSource, out var product))
+      {
+        excluded.Add(new ExcludedRecord("item_recipes", sourceName, "RECIPE_PRODUCT_NOT_IN_LEGAL_CATALOG"));
+        continue;
+      }
+
+      var productCount = Integer(row.Value, "Product_Count");
+      var ingredients = new JsonArray();
+      var referencesAreValid = productCount > 0;
+      for (var slot = 1; slot <= 5; slot++)
+      {
+        var materialSource = Name(row.Value, $"Material{slot}_Id");
+        var materialCount = Integer(row.Value, $"Material{slot}_Count");
+        if (IsNone(materialSource) && materialCount == 0)
+        {
+          continue;
+        }
+
+        if (IsNone(materialSource)
+            || materialCount <= 0
+            || !items.TryGetValue(materialSource, out var material))
+        {
+          referencesAreValid = false;
+          break;
+        }
+
+        ingredients.Add(new JsonObject
+        {
+          ["slot"] = slot,
+          ["item_id"] = material.StableId,
+          ["count"] = materialCount,
+        });
+      }
+
+      if (!referencesAreValid || ingredients.Count == 0)
+      {
+        excluded.Add(new ExcludedRecord("item_recipes", sourceName, "RECIPE_MATERIALS_NOT_IN_LEGAL_CATALOG"));
+        continue;
+      }
+
+      var unlockSource = Name(row.Value, "UnlockItemID");
+      JsonNode? unlockItemId = null;
+      if (!IsNone(unlockSource))
+      {
+        if (!items.TryGetValue(unlockSource, out var unlockItem))
+        {
+          excluded.Add(new ExcludedRecord("item_recipes", sourceName, "RECIPE_UNLOCK_ITEM_NOT_IN_LEGAL_CATALOG"));
+          continue;
+        }
+
+        unlockItemId = JsonValue.Create(unlockItem.StableId);
+      }
+
+      var denyRecipeChain = new JsonArray();
+      var denyReferencesValid = true;
+      foreach (var deniedSource in Names(row.Value, "DenyRecipeChain"))
+      {
+        if (!items.TryGetValue(deniedSource, out var deniedItem))
+        {
+          denyReferencesValid = false;
+          break;
+        }
+
+        denyRecipeChain.Add(deniedItem.StableId);
+      }
+
+      if (!denyReferencesValid)
+      {
+        excluded.Add(new ExcludedRecord("item_recipes", sourceName, "RECIPE_DENY_CHAIN_ITEM_NOT_IN_LEGAL_CATALOG"));
+        continue;
+      }
+
+      var orderedDenyRecipeChain = new JsonArray(denyRecipeChain
+          .Select(value => value!.GetValue<string>())
+          .Distinct(StringComparer.Ordinal)
+          .Order(StringComparer.Ordinal)
+          .Select(value => (JsonNode?)JsonValue.Create(value))
+          .ToArray());
+      var energyType = EnumTail(Name(row.Value, "EnergyType"));
+      var isFood = product.TypeA.Contains("food", StringComparison.OrdinalIgnoreCase)
+          || product.TypeB.Contains("food", StringComparison.OrdinalIgnoreCase);
+      var record = EntityRecord(sourceName, new JsonObject
+      {
+        ["recipe_id"] = StableIdV1.Normalize(sourceName),
+        ["product_item_id"] = product.StableId,
+        ["product_count"] = productCount,
+        ["ingredients"] = ingredients,
+        ["craft_kind"] = isFood ? "cooking" : product.EnableHandcraft ? "handcraft" : "other",
+        ["work_amount"] = Single(row.Value, "WorkAmount"),
+        ["workable_attribute"] = Integer(row.Value, "WorkableAttribute"),
+        ["energy_type"] = IsNone(energyType) ? null : JsonValue.Create(StableIdV1.Normalize(energyType)),
+        ["energy_amount"] = Integer(row.Value, "EnergyAmount"),
+        ["unlock_item_id"] = unlockItemId,
+        ["deny_recipe_chain"] = orderedDenyRecipeChain,
+      });
+      records.Add(record);
+      evidence.Add(Evidence(
+          CatalogCategory.ItemRecipes,
+          record,
+          sourceName,
+          ItemRecipeTablePath + ".uasset",
+          sourceName,
+          "Product_Id",
+          "Product_Count",
+          "Material1_Id",
+          "Material1_Count",
+          "Material2_Id",
+          "Material2_Count",
+          "Material3_Id",
+          "Material3_Count",
+          "Material4_Id",
+          "Material4_Count",
+          "Material5_Id",
+          "Material5_Count",
+          "WorkAmount",
+          "WorkableAttribute",
+          "EnergyType",
+          "EnergyAmount",
+          "UnlockItemID",
+          "DenyRecipeChain"));
+    }
+
+    if (unresolved.Count > 0)
+    {
+      return Result(records, evidence, excluded, unresolved);
+    }
+
+    return Result(records, evidence, excluded);
+  }
+
   private static IEnumerable<LocalizationTable> LocalizationTables(string locale)
   {
     var root = locale switch
@@ -651,6 +1002,9 @@ internal static class ConfirmedCatalogReaders
       new LocalizationTable("skill_name", $"{root}/DT_SkillNameText_Common"),
       new LocalizationTable("skill_desc", $"{root}/DT_SkillDescText_Common"),
       new LocalizationTable("partner_append", $"{root}/DT_PartnerSkillAppendText"),
+      new LocalizationTable("item_name", $"{root}/DT_ItemNameText_Common"),
+      new LocalizationTable("item_desc", $"{root}/DT_ItemDescriptionText_Common"),
+      new LocalizationTable("ui_common", $"{root}/DT_UI_Common_Text_Common"),
     ];
   }
 
@@ -693,6 +1047,10 @@ internal static class ConfirmedCatalogReaders
   private static int Integer(FStructFallback row, string name) => Property(row, name).Tag!.GetValue<int>();
 
   private static float Single(FStructFallback row, string name) => Property(row, name).Tag!.GetValue<float>();
+
+  private static string[] Names(FStructFallback row, string name) =>
+      Property(row, name).Tag!.GetValue<List<FName>>()?.Select(value => value.Text).ToArray()
+      ?? throw new ExtractorException(ErrorCodes.UnresolvedGameFacts, $"Confirmed source name array is null: {name}");
 
   private static bool Boolean(FStructFallback row, string name) => Property(row, name).Tag!.GetValue<bool>();
 
@@ -748,10 +1106,14 @@ internal static class ConfirmedCatalogReaders
   private sealed record LocalizationTable(string Namespace, string AssetPathWithoutExtension);
 
   private sealed record LocalizationFacts(
-      ReaderResult Result,
+      List<JsonObject> Records,
+      List<SourceEvidenceRecord> EvidenceRecords,
       IReadOnlyDictionary<string, HashSet<string>> KeysByLocale,
+      IReadOnlyDictionary<string, Dictionary<string, string>> TextsByLocale,
       IReadOnlyList<string> Locales)
   {
+    public ReaderResult ToReaderResult() => Result(Records, EvidenceRecords);
+
     public string? ResolveInEveryLocale(string requestedKey)
     {
       var canonical = KeysByLocale[Locales[0]]
@@ -760,6 +1122,49 @@ internal static class ConfirmedCatalogReaders
           && Locales.All(locale => KeysByLocale[locale].Any(key => StringComparer.OrdinalIgnoreCase.Equals(key, canonical)))
           ? canonical
           : null;
+    }
+
+    public string Text(string locale, string textKey) =>
+        TextsByLocale[locale].TryGetValue(textKey, out var text)
+            ? text
+            : throw new ExtractorException(
+                ErrorCodes.UnresolvedGameFacts,
+                "A confirmed localization key is missing from one locale.");
+
+    public Dictionary<string, string> NamespaceTexts(string locale, string sourceNamespace)
+    {
+      var prefix = sourceNamespace + ".";
+      return TextsByLocale[locale]
+          .Where(pair => pair.Key.StartsWith(prefix, StringComparison.Ordinal))
+          .ToDictionary(pair => pair.Key[prefix.Length..], pair => pair.Value, StringComparer.Ordinal);
+    }
+
+    public void AddDerived(
+        string locale,
+        string textKey,
+        string text,
+        string sourceInternalName,
+        IReadOnlyList<SourceLocation> sources)
+    {
+      if (string.IsNullOrWhiteSpace(text) || !KeysByLocale[locale].Add(textKey))
+      {
+        throw new ExtractorException(
+            ErrorCodes.GameIdNormalizationCollision,
+            "A derived localization is empty or duplicates an existing key.");
+      }
+
+      TextsByLocale[locale].Add(textKey, text);
+      var record = new JsonObject
+      {
+        ["locale"] = locale,
+        ["text_key"] = textKey,
+        ["text"] = text,
+      };
+      Records.Add(record);
+      EvidenceRecords.Add(new SourceEvidenceRecord(
+          CatalogCategories.RecordKey(CatalogCategory.Localizations, record),
+          sourceInternalName,
+          sources));
     }
   }
 
@@ -787,6 +1192,21 @@ internal static class ConfirmedCatalogReaders
       bool IsExclusive);
 
   private sealed record ActiveFacts(IReadOnlyDictionary<string, ActiveFact> Facts, ReaderResult Result);
+
+  private sealed record ItemFact(
+      string SourceName,
+      string StableId,
+      string TypeA,
+      string TypeB,
+      bool EnableHandcraft);
+
+  private sealed record ItemFacts(IReadOnlyDictionary<string, ItemFact> Facts, ReaderResult Result);
+
+  private sealed record ItemRedirect(string SourceRow, string SourceId, string DestinationId);
+
+  private sealed record ItemRedirects(
+      IReadOnlyDictionary<string, ItemRedirect> BySource,
+      IReadOnlyDictionary<string, List<ItemRedirect>> ByDestination);
 
   private sealed record SpecialCombination(
       string SourceRow,

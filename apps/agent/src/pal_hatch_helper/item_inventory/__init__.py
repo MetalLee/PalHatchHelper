@@ -1,0 +1,1 @@
+"""Deterministic item inventory calculations."""

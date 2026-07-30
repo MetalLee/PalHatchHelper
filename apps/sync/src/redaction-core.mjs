@@ -6,6 +6,9 @@ export function redactUidCore(rawUid) {
 
 export function createInventoryPublishPayload(snapshot, metadata) {
   const guildIds = new Set(snapshot.guilds.map((guild) => guild.guild_uid));
+  const bases = new Map(
+    (snapshot.bases ?? []).map((base) => [base.base_id, base]),
+  );
   const players = new Map(
     snapshot.players.map((player) => [player.player_uid, player]),
   );
@@ -95,6 +98,38 @@ export function createInventoryPublishPayload(snapshot, metadata) {
         warning_codes: warningCodes,
       };
     }),
+    bases: (snapshot.bases ?? []).map((base) => ({
+      ...base,
+      base_id: redactUidCore(base.base_id),
+      guild_uid: base.guild_uid === null ? null : redactUidCore(base.guild_uid),
+    })),
+    item_stacks: (snapshot.item_stacks ?? []).map((stack, index) => {
+      const base =
+        stack.base_id === null ? undefined : bases.get(stack.base_id);
+      const baseResolved =
+        base !== undefined &&
+        stack.guild_uid !== null &&
+        base.guild_uid === stack.guild_uid &&
+        guildIds.has(stack.guild_uid);
+      let resolutionStatus = stack.resolution_status;
+      if (resolutionStatus === "resolved" && !baseResolved) {
+        resolutionStatus = "unresolved";
+        warnings.push({
+          code: "ITEM_STACK_BASE_UNRESOLVED",
+          path: `item_stacks[${index}].base_id`,
+          value: "",
+        });
+      }
+      return {
+        ...stack,
+        container_id: redactUidCore(stack.container_id),
+        base_id: stack.base_id === null ? null : redactUidCore(stack.base_id),
+        guild_uid:
+          stack.guild_uid === null ? null : redactUidCore(stack.guild_uid),
+        resolution_status: resolutionStatus,
+      };
+    }),
+    item_inventory_status: snapshot.item_inventory_status ?? "unavailable",
     warnings,
   };
 }

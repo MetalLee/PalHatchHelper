@@ -193,3 +193,35 @@ func TestStableIDCollisionFailsClosed(t *testing.T) {
 		t.Fatalf("expected collision failure, got %v", err)
 	}
 }
+
+func TestCanonicalItemStacksPreserveResolvedBaseOwnership(t *testing.T) {
+	world := &sav.World{
+		Bases: []sav.BaseCamp{{
+			ID: "base-1", GuildID: "guild-1", Name: "Materials",
+		}},
+		ItemStacks: []sav.ItemStack{{
+			ContainerID: "container-1", ItemID: "Wood", Quantity: 120,
+			ContainerType: "storage_box", BaseID: "base-1", SlotIndex: 3,
+		}},
+	}
+
+	snapshot, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Bases) != 1 || len(snapshot.ItemStacks) != 1 {
+		t.Fatalf("unexpected item inventory: %#v", snapshot)
+	}
+	stack := snapshot.ItemStacks[0]
+	if stack.ItemID != "wood" || stack.GuildUID == nil || *stack.GuildUID != "guild-1" {
+		t.Fatalf("stack did not preserve normalized item and guild facts: %#v", stack)
+	}
+	if stack.ResolutionStatus != "resolved" || stack.Quantity != 120 {
+		t.Fatalf("resolved stack facts changed: %#v", stack)
+	}
+}

@@ -52,6 +52,26 @@ describe("canonical snapshot contract", () => {
           location_access_scope: "guild",
         },
       ],
+      bases: [
+        {
+          base_id: "fixture-base-001",
+          guild_uid: "fixture-guild-001",
+          name: "Fixture Base",
+        },
+      ],
+      item_stacks: [
+        {
+          container_id: "fixture-container-001",
+          item_id: "Wood",
+          quantity: 120,
+          container_type: "storage_box",
+          base_id: "fixture-base-001",
+          guild_uid: "fixture-guild-001",
+          slot_index: 3,
+          resolution_status: "resolved",
+        },
+      ],
+      item_inventory_status: "available",
     };
 
     expect(validate(snapshot), JSON.stringify(validate.errors)).toBe(true);
@@ -66,6 +86,12 @@ describe("inventory synchronization contracts", () => {
         "utf8",
       ),
     ) as object & { title?: string };
+    const itemInventorySchema = JSON.parse(
+      readFileSync(
+        resolve(process.cwd(), "schema/item-inventory.schema.json"),
+        "utf8",
+      ),
+    ) as object;
     const databaseTypes = readFileSync(
       resolve(process.cwd(), "src/database.types.ts"),
       "utf8",
@@ -88,12 +114,16 @@ describe("inventory synchronization contracts", () => {
         guilds: [{ guild_uid: "fixture-guild-001", name: "Fixture Guild" }],
         players: [],
         pals: [],
+        bases: [],
+        item_stacks: [],
+        item_inventory_status: "available",
         warnings: [],
       },
     };
     const inventoryAjv = new Ajv2020({ allErrors: true, strict: true });
     addFormats(inventoryAjv);
     inventoryAjv.addSchema(schema);
+    inventoryAjv.addSchema(itemInventorySchema);
     const validateInventory = inventoryAjv.compile(inventorySchema);
 
     expect(inventorySchema.title).toBe("InventoryPublishRpcRequest");

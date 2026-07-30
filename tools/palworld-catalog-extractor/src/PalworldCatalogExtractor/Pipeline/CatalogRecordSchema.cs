@@ -15,6 +15,8 @@ internal static class CatalogRecordSchema
         [CatalogCategory.PalActiveSkills] = "CatalogPalActiveSkill",
         [CatalogCategory.PartnerSkills] = "CatalogPartnerSkill",
         [CatalogCategory.BreedingRecipes] = "CatalogBreedingRecipe",
+        [CatalogCategory.Items] = "CatalogItem",
+        [CatalogCategory.ItemRecipes] = "CatalogItemRecipe",
         [CatalogCategory.Localizations] = "CatalogLocalization",
       };
 
@@ -27,6 +29,8 @@ internal static class CatalogRecordSchema
         [CatalogCategory.PalActiveSkills] = ["pal_id", "active_skill_id"],
         [CatalogCategory.PartnerSkills] = ["partner_skill_id", "pal_id"],
         [CatalogCategory.BreedingRecipes] = ["parent_a_pal_id", "parent_b_pal_id", "child_pal_id"],
+        [CatalogCategory.Items] = ["item_id", "type_a", "type_b"],
+        [CatalogCategory.ItemRecipes] = ["recipe_id", "product_item_id"],
         [CatalogCategory.Localizations] = [],
       };
 
@@ -55,6 +59,25 @@ internal static class CatalogRecordSchema
       throw new ExtractorException(
           ErrorCodes.CatalogOrderInvalid,
           "Breeding recipe parents are not in canonical stable-ID order.");
+    }
+
+    if (category == CatalogCategory.Items && record["legacy_item_ids"] is JsonArray legacyItemIds)
+    {
+      ValidateSortedStableIdSet(legacyItemIds, "legacy_item_ids");
+    }
+
+    if (category == CatalogCategory.ItemRecipes)
+    {
+      foreach (var ingredient in record["ingredients"]!.AsArray().Select(value => value!.AsObject()))
+      {
+        var itemId = ingredient["item_id"]!.GetValue<string>();
+        if (!StringComparer.Ordinal.Equals(StableIdV1.Normalize(itemId), itemId))
+        {
+          throw Invalid("ingredients.item_id");
+        }
+      }
+
+      ValidateSortedStableIdSet(record["deny_recipe_chain"]!.AsArray(), "deny_recipe_chain");
     }
   }
 

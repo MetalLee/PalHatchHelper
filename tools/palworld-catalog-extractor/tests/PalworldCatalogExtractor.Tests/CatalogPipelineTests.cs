@@ -12,7 +12,7 @@ namespace PalHatchHelper.CatalogExtractor.Tests;
 public sealed class CatalogPipelineTests
 {
   [Fact]
-  public async Task SyntheticSevenReaderRunIsSortedAndContentReproducible()
+  public async Task SyntheticNineReaderRunIsSortedAndContentReproducible()
   {
     using var first = new TemporaryDirectory();
     using var second = new TemporaryDirectory();
@@ -25,7 +25,7 @@ public sealed class CatalogPipelineTests
 
     Assert.Equal(firstResult.ContentHash, secondResult.ContentHash);
     Assert.Equal(File.ReadAllBytes(Path.Combine(first.Path, "pals.jsonl")), File.ReadAllBytes(Path.Combine(second.Path, "pals.jsonl")));
-    Assert.Equal(7, firstResult.Counts.Count);
+    Assert.Equal(9, firstResult.Counts.Count);
     Assert.All(firstResult.Counts.Values, count => Assert.True(count > 0));
     CatalogVerifier.Verify(first.Path);
   }
@@ -318,6 +318,8 @@ internal static class SyntheticReaders
             Localization("active.fixture.name"),
             Localization("partner.fixture.name"),
             Localization("partner.fixture.description"),
+            Localization("item.fixture.name"),
+            Localization("item.fixture.description"),
         }.Where(record => mutation != "missing-localization" || record.Data["text_key"]!.GetValue<string>() != "partner.fixture.name").ToArray();
 
     return
@@ -375,6 +377,49 @@ internal static class SyntheticReaders
                     ["parent_b_gender"] = "any",
                     ["child_pal_id"] = "fixturepalb",
                     ["recipe_type"] = "normal",
+                }),
+            ]),
+            new FixtureReader(CatalogCategory.Items,
+            [
+                Record("item", "FixtureItem", new JsonObject
+                {
+                    ["item_id"] = "fixtureitem",
+                    ["name_key"] = "item.fixture.name",
+                    ["description_key"] = "item.fixture.description",
+                    ["type_a"] = "material",
+                    ["type_b"] = "material",
+                    ["max_stack_count"] = 9999,
+                    ["enable_handcraft"] = true,
+                    ["is_legal"] = true,
+                    ["restore_health"] = 0,
+                    ["restore_sanity"] = 0,
+                    ["restore_satiety"] = 0,
+                    ["corruption_factor"] = 0.0,
+                }),
+            ]),
+            new FixtureReader(CatalogCategory.ItemRecipes,
+            [
+                Record("item-recipe", "FixtureItemRecipe", new JsonObject
+                {
+                    ["recipe_id"] = "fixtureitemrecipe",
+                    ["product_item_id"] = "fixtureitem",
+                    ["product_count"] = 1,
+                    ["ingredients"] = new JsonArray
+                    {
+                      new JsonObject
+                      {
+                        ["slot"] = 1,
+                        ["item_id"] = "fixtureitem",
+                        ["count"] = 1,
+                      },
+                    },
+                    ["craft_kind"] = "handcraft",
+                    ["work_amount"] = 1.0,
+                    ["workable_attribute"] = 0,
+                    ["energy_type"] = null,
+                    ["energy_amount"] = 0,
+                    ["unlock_item_id"] = null,
+                    ["deny_recipe_chain"] = new JsonArray(),
                 }),
             ]),
             new FixtureReader(CatalogCategory.Localizations, localizations),

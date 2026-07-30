@@ -1,5 +1,10 @@
 export type { Database, Json } from "./database.types";
 export {
+  ItemInventoryContractError,
+  parseGuildItemInventoryResponse,
+  parseItemInventoryTrendResponse,
+} from "./item-inventory-validation";
+export {
   parseCanonicalSnapshot,
   parseInventoryPublishPayload,
   parseSyncHeartbeatRequest,
@@ -44,6 +49,19 @@ export {
   Phase8ContractError,
 } from "./phase8-validation";
 export type { BreedingJob } from "./generated/breeding-job";
+export type {
+  GuildItemInventoryItem,
+  GuildItemInventoryResponse,
+  ItemInventoryBaseTotal,
+  ItemInventoryTrendPoint,
+  ItemInventoryTrendResponse,
+  ItemRecipeCapacity,
+  ItemRecipeIngredientView,
+  ItemRecipeLimitingMaterial,
+  ItemRecipePlanStep,
+  ItemRecipeView,
+  PublishedItemRecipeCapacity,
+} from "./generated/item-inventory";
 export type {
   AIExplanation,
   AIExplanationRouteSummary,

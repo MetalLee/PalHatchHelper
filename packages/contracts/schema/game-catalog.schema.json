@@ -58,7 +58,9 @@
     {
       "if": {
         "required": ["schema_version"],
-        "properties": { "schema_version": { "const": "1.1.0" } }
+        "properties": {
+          "schema_version": { "enum": ["1.1.0", "2.0.0"] }
+        }
       },
       "then": {
         "required": ["source_provenance"],
@@ -68,6 +70,24 @@
             "const": "palhatch-full-catalog-extractor"
           },
           "source_provenance": { "$ref": "#/$defs/SourceProvenance" }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["schema_version"],
+        "properties": { "schema_version": { "const": "2.0.0" } }
+      },
+      "then": {
+        "properties": {
+          "counts": { "$ref": "#/$defs/CatalogCountsV2" },
+          "files": {
+            "type": "array",
+            "minItems": 9,
+            "maxItems": 9,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/CatalogFileChecksum" }
+          }
         }
       }
     }
@@ -119,6 +139,34 @@
         "pal_active_skills": { "type": "integer", "minimum": 0 },
         "partner_skills": { "type": "integer", "minimum": 0 },
         "breeding_recipes": { "type": "integer", "minimum": 0 },
+        "items": { "type": ["integer", "null"], "minimum": 0 },
+        "item_recipes": { "type": ["integer", "null"], "minimum": 0 },
+        "localizations": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "CatalogCountsV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pals",
+        "passive_skills",
+        "active_skills",
+        "pal_active_skills",
+        "partner_skills",
+        "breeding_recipes",
+        "items",
+        "item_recipes",
+        "localizations"
+      ],
+      "properties": {
+        "pals": { "type": "integer", "minimum": 0 },
+        "passive_skills": { "type": "integer", "minimum": 0 },
+        "active_skills": { "type": "integer", "minimum": 0 },
+        "pal_active_skills": { "type": "integer", "minimum": 0 },
+        "partner_skills": { "type": "integer", "minimum": 0 },
+        "breeding_recipes": { "type": "integer", "minimum": 0 },
+        "items": { "type": "integer", "minimum": 0 },
+        "item_recipes": { "type": "integer", "minimum": 0 },
         "localizations": { "type": "integer", "minimum": 0 }
       }
     },
@@ -136,6 +184,8 @@
             "pal-active-skills.jsonl",
             "partner-skills.jsonl",
             "breeding-recipes.jsonl",
+            "items.jsonl",
+            "item-recipes.jsonl",
             "localizations.jsonl"
           ]
         },
@@ -338,6 +388,21 @@
         "metadata": { "$ref": "#/$defs/Metadata" }
       }
     },
+    "CatalogPassiveEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot", "target_type", "effect_type", "value"],
+      "properties": {
+        "slot": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "target_type": { "$ref": "#/$defs/StableId" },
+        "effect_type": { "$ref": "#/$defs/StableId" },
+        "value": { "type": "number" },
+        "target_element_type": {
+          "anyOf": [{ "$ref": "#/$defs/StableId" }, { "type": "null" }],
+          "default": null
+        }
+      }
+    },
     "CatalogPassiveSkill": {
       "type": "object",
       "additionalProperties": false,
@@ -354,6 +419,16 @@
         "name_key": { "$ref": "#/$defs/TextKey" },
         "description_key": {
           "anyOf": [{ "$ref": "#/$defs/TextKey" }, { "type": "null" }]
+        },
+        "description_template_key": {
+          "anyOf": [{ "$ref": "#/$defs/TextKey" }, { "type": "null" }],
+          "default": null
+        },
+        "effects": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/CatalogPassiveEffect" },
+          "default": []
         },
         "rank": { "type": "integer" },
         "is_negative": { "type": "boolean" },
@@ -453,6 +528,106 @@
         },
         "child_pal_id": { "$ref": "#/$defs/StableId" },
         "recipe_type": { "type": "string", "enum": ["normal", "special"] },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_id",
+        "name_key",
+        "description_key",
+        "type_a",
+        "type_b",
+        "max_stack_count",
+        "enable_handcraft",
+        "is_legal",
+        "restore_health",
+        "restore_sanity",
+        "restore_satiety",
+        "corruption_factor",
+        "metadata"
+      ],
+      "properties": {
+        "item_id": { "$ref": "#/$defs/StableId" },
+        "name_key": { "$ref": "#/$defs/TextKey" },
+        "description_key": {
+          "anyOf": [{ "$ref": "#/$defs/TextKey" }, { "type": "null" }]
+        },
+        "type_a": { "$ref": "#/$defs/StableId" },
+        "type_b": { "$ref": "#/$defs/StableId" },
+        "max_stack_count": { "type": "integer", "minimum": 1 },
+        "enable_handcraft": { "type": "boolean" },
+        "is_legal": { "type": "boolean" },
+        "restore_health": { "type": "integer" },
+        "restore_sanity": { "type": "integer" },
+        "restore_satiety": { "type": "integer" },
+        "corruption_factor": { "type": "number", "minimum": 0 },
+        "legacy_item_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/StableId" },
+          "default": []
+        },
+        "metadata": { "$ref": "#/$defs/Metadata" }
+      }
+    },
+    "CatalogItemRecipeIngredient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot", "item_id", "count"],
+      "properties": {
+        "slot": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "item_id": { "$ref": "#/$defs/StableId" },
+        "count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "CatalogItemRecipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recipe_id",
+        "product_item_id",
+        "product_count",
+        "ingredients",
+        "craft_kind",
+        "work_amount",
+        "workable_attribute",
+        "energy_type",
+        "energy_amount",
+        "unlock_item_id",
+        "deny_recipe_chain",
+        "metadata"
+      ],
+      "properties": {
+        "recipe_id": { "$ref": "#/$defs/StableId" },
+        "product_item_id": { "$ref": "#/$defs/StableId" },
+        "product_count": { "type": "integer", "minimum": 1 },
+        "ingredients": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/CatalogItemRecipeIngredient" }
+        },
+        "craft_kind": {
+          "type": "string",
+          "enum": ["handcraft", "cooking", "other"]
+        },
+        "work_amount": { "type": "number", "minimum": 0 },
+        "workable_attribute": { "type": "integer", "minimum": 0 },
+        "energy_type": {
+          "anyOf": [{ "$ref": "#/$defs/StableId" }, { "type": "null" }]
+        },
+        "energy_amount": { "type": "integer", "minimum": 0 },
+        "unlock_item_id": {
+          "anyOf": [{ "$ref": "#/$defs/StableId" }, { "type": "null" }]
+        },
+        "deny_recipe_chain": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/StableId" }
+        },
         "metadata": { "$ref": "#/$defs/Metadata" }
       }
     },
