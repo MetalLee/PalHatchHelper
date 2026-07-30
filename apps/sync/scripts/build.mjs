@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import {
   chmod,
@@ -15,6 +14,8 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { build } from "esbuild";
+
+import { stageParserBinary } from "./parser-artifact.mjs";
 
 const execFileAsync = promisify(execFile);
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -145,29 +146,19 @@ await writeFile(
 );
 
 async function copyAndValidateTarget(target) {
-  const info = await lstat(target.binary);
-  if (!info.isFile() || info.isSymbolicLink())
-    throw new Error("PARSER_BINARY_INVALID");
   const manifest = JSON.parse(await readFile(target.manifest, "utf8"));
   validateManifest(manifest, target);
-  const actualHash = sha256(await readFile(target.binary));
-  if (actualHash !== manifest.sha256)
-    throw new Error("PARSER_BINARY_HASH_MISMATCH");
-  if (target.platform === "linux-x64") {
-    const reportedVersion = (
-      await execFileAsync(target.binary, ["--version"], { encoding: "utf8" })
-    ).stdout.trim();
-    if (reportedVersion !== manifest.version)
-      throw new Error("PARSER_VERSION_MISMATCH");
-  }
   const destination = join(outputRoot, "bin", target.platform);
   await mkdir(destination, { recursive: true });
   const binaryDestination = join(destination, target.binaryName);
-  await copyFile(target.binary, binaryDestination);
-  if (target.platform === "linux-x64") await chmod(binaryDestination, 0o755);
+  await stageParserBinary({
+    source: target.binary,
+    destination: binaryDestination,
+    platform: target.platform,
+    sha256: manifest.sha256,
+    version: manifest.version,
+  });
   await copyFile(target.manifest, join(destination, "parser-manifest.json"));
-  if (sha256(await readFile(binaryDestination)) !== manifest.sha256)
-    throw new Error("PARSER_BINARY_HASH_MISMATCH");
   return manifest;
 }
 
@@ -216,10 +207,6 @@ async function exists(path) {
       if (error?.code === "ENOENT") return false;
       throw error;
     });
-}
-
-function sha256(value) {
-  return createHash("sha256").update(value).digest("hex");
 }
 
 function parserSourceNotice(metadata) {
