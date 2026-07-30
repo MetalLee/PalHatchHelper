@@ -5,17 +5,24 @@
 PalBeacon 的《幻兽帕鲁》服务器存档同步工具。它会只读解析服务器存档，并将帕鲁库存同步到
 PalBeacon，用于生成公会配种路线。
 
-## 安装
+## 支持平台
 
-支持 Linux x64，需要 Node.js 22 或更高版本。
+- Linux x64
+- Windows x64
 
-```bash
+需要 Node.js 22 或更高版本。
+
+在 Linux shell 或 Windows PowerShell 中运行：
+
+```powershell
 npm install -g palbeacon-cli
+palbeacon init
+palbeacon run
 ```
 
 ## 使用
 
-先在 PalBeacon 账户页创建同步设备并复制配对码，然后运行：
+先在 PalBeacon 账户页创建同步设备并复制配对码。如果尚未执行上面的快速开始命令，运行：
 
 ```bash
 palbeacon init

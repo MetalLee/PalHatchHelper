@@ -257,6 +257,7 @@ export function SyncDeviceCard({
                     {device.name}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
+                    {platformLabel(device.platform, t)} ·{" "}
                     {device.app_version ?? t("versionUnknown")} ·{" "}
                     {device.last_snapshot_at
                       ? t("lastSnapshot", {
@@ -366,4 +367,13 @@ function relativeTime(value: string, locale: string): string {
   const minutes = Math.round(seconds / 60);
   if (Math.abs(minutes) < 60) return formatter.format(minutes, "minute");
   return formatter.format(Math.round(minutes / 60), "hour");
+}
+
+function platformLabel(
+  platform: string,
+  t: (key: "platformLinux" | "platformWindows" | "platformUnknown") => string,
+): string {
+  if (platform === "linux-x64") return t("platformLinux");
+  if (platform === "win32-x64") return t("platformWindows");
+  return t("platformUnknown");
 }

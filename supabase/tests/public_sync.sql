@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(34);
+select plan(37);
 
 delete from public.player_bindings
  where user_id = '00000000-0000-4000-8000-000000000005';
@@ -91,6 +91,42 @@ select is(
   ),
   '00000000-0000-4000-8000-000000000005|' || repeat('c', 64),
   'the device belongs to the code owner and stores only the token hash'
+);
+insert into public.sync_pairing_codes (
+  owner_user_id, code_hash, expires_at
+) values (
+  '00000000-0000-4000-8000-000000000005',
+  repeat('8', 64),
+  now() + interval '10 minutes'
+);
+select lives_ok(
+  $$
+    select public.consume_sync_pairing_code(
+      repeat('8', 64), 'Windows fixture', 'win32-x64', '0.2.0',
+      repeat('7', 64), 'pbs_windows1'
+    )
+  $$,
+  'a Windows x64 device can be created through the same pairing RPC'
+);
+select is(
+  (
+    select platform from public.sync_devices where token_hash = repeat('7', 64)
+  ),
+  'win32-x64',
+  'the Windows device retains its constrained platform value'
+);
+select throws_ok(
+  $$
+    insert into public.sync_devices (
+      owner_user_id, name, platform, token_hash, token_prefix
+    ) values (
+      '00000000-0000-4000-8000-000000000005',
+      'Unknown platform', 'windows-x64', repeat('6', 64), 'pbs_unknown1'
+    )
+  $$,
+  '23514',
+  null,
+  'the database constraint rejects unknown device platforms'
 );
 select throws_ok(
   $$
@@ -226,7 +262,7 @@ select set_config(
 set local role authenticated;
 select is(
   (select count(*)::integer from public.list_sync_devices()),
-  3,
+  4,
   'a device owner can list only their own paired devices'
 );
 select lives_ok(

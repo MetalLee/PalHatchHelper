@@ -1,5 +1,9 @@
 # Third-party notices
 
+These notices apply equally to the Linux x64 and Windows x64 Parser
+executables. Both platform artifacts are built from the same Parser source and
+the same pinned upstream commits.
+
 ## palooz/ooz decoder from PalworldSaveTools
 
 The decode-only C++ sources under `third_party/palooz` are vendored from

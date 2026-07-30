@@ -136,23 +136,17 @@ jobs:
       - run: uv run mypy src
       - run: uv run pytest
 
-  parser-sync-candidate:
-    name: Self-contained Parser and Sync package
+  parser-linux-x64:
+    name: Parser linux-x64
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
       PARSER_BUILD_IMAGE: golang@sha256:1ecb7edf62a0408027bd5729dfd6b1b8766e578e8df93995b225dfd0944eb651
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.4
-          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
       - name: Test and vet Parser
         run: |
           docker run --rm --platform linux/amd64 \
@@ -187,7 +181,115 @@ jobs:
           test "$(readelf -d "$RUNNER_TEMP/parser-first" | sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p')" = "libc.so.6"
           ! readelf -n "$RUNNER_TEMP/parser-first" | grep -q 'Build ID'
           ! strings "$RUNNER_TEMP/parser-first" | grep -Eq 'Ooz_Compress|CompressBlock'
-          sha256sum "$RUNNER_TEMP/parser-first" "$RUNNER_TEMP/parser-second"
+      - name: Parse the real PlM fixture
+        run: |
+          mkdir -p "$RUNNER_TEMP/linux-fixture/Players"
+          cp data/parser-fixtures/plm-minimal/Level.sav "$RUNNER_TEMP/linux-fixture/Level.sav"
+          cp data/parser-fixtures/plm-minimal/Level.sav "$RUNNER_TEMP/linux-fixture/Players/11111111111111111111111111111111.sav"
+          touch -d '2026-07-18T16:00:00Z' "$RUNNER_TEMP/linux-fixture/Level.sav" "$RUNNER_TEMP/linux-fixture/Players/11111111111111111111111111111111.sav"
+          PALHATCH_WORLD_UID=fixture-world-001 "$RUNNER_TEMP/parser-first" \
+            --snapshot "$RUNNER_TEMP/linux-fixture" \
+            --output "$RUNNER_TEMP/linux-canonical.json"
+          diff \
+            <(jq -S . data/parser-fixtures/plm-minimal/expected-canonical.json) \
+            <(jq -S . "$RUNNER_TEMP/linux-canonical.json")
+      - name: Create Linux artifact metadata
+        run: |
+          mkdir -p "$RUNNER_TEMP/parser-linux-x64"
+          cp "$RUNNER_TEMP/parser-first" "$RUNNER_TEMP/parser-linux-x64/palworld-save-parser"
+          node apps/sync/scripts/create-parser-manifest.mjs \
+            linux-x64 \
+            "$RUNNER_TEMP/parser-linux-x64/palworld-save-parser" \
+            "$RUNNER_TEMP/parser-linux-x64/parser-manifest.json"
+          sha256sum "$RUNNER_TEMP/parser-linux-x64/palworld-save-parser" \
+            > "$RUNNER_TEMP/parser-linux-x64/SHA256SUMS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parser-linux-x64
+          path: ${{ runner.temp }}/parser-linux-x64
+          if-no-files-found: error
+          retention-days: 14
+
+  parser-win32-x64:
+    name: Parser win32-x64
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the pinned MinGW-w64 environment
+        run: |
+          docker build \
+            -f parser/Dockerfile.windows-amd64 \
+            -t palbeacon-parser-windows-amd64 .
+      - name: Reproducibly cross-compile and inspect Parser
+        run: |
+          docker run --rm --platform linux/amd64 \
+            -v "$PWD:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace/parser \
+            palbeacon-parser-windows-amd64 \
+            ./scripts/build-windows-amd64.sh /runner-temp/parser-first.exe
+          docker run --rm --platform linux/amd64 \
+            -v "$PWD:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            -w /workspace/parser \
+            palbeacon-parser-windows-amd64 \
+            ./scripts/build-windows-amd64.sh /runner-temp/parser-second.exe
+          cmp "$RUNNER_TEMP/parser-first.exe" "$RUNNER_TEMP/parser-second.exe"
+          file "$RUNNER_TEMP/parser-first.exe" | grep -E 'PE32\+ executable.*x86-64'
+          docker run --rm \
+            -v "$RUNNER_TEMP:/runner-temp:ro" \
+            palbeacon-parser-windows-amd64 \
+            x86_64-w64-mingw32-objdump -p /runner-temp/parser-first.exe \
+            > "$RUNNER_TEMP/windows-objdump.txt"
+          ! grep -Eiq 'DLL Name: (libstdc\+\+-6|libgcc_s_seh-1|libwinpthread-1|winhttp|wininet)\.dll' \
+            "$RUNNER_TEMP/windows-objdump.txt"
+          ! strings "$RUNNER_TEMP/parser-first.exe" | grep -Eq 'Ooz_Compress|CompressBlock'
+      - name: Create Windows artifact metadata
+        run: |
+          mkdir -p "$RUNNER_TEMP/parser-win32-x64"
+          cp "$RUNNER_TEMP/parser-first.exe" "$RUNNER_TEMP/parser-win32-x64/palworld-save-parser.exe"
+          cp "$RUNNER_TEMP/windows-objdump.txt" "$RUNNER_TEMP/parser-win32-x64/PE-IMPORTS.txt"
+          node apps/sync/scripts/create-parser-manifest.mjs \
+            win32-x64 \
+            "$RUNNER_TEMP/parser-win32-x64/palworld-save-parser.exe" \
+            "$RUNNER_TEMP/parser-win32-x64/parser-manifest.json"
+          sha256sum "$RUNNER_TEMP/parser-win32-x64/palworld-save-parser.exe" \
+            > "$RUNNER_TEMP/parser-win32-x64/SHA256SUMS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parser-win32-x64
+          path: ${{ runner.temp }}/parser-win32-x64
+          if-no-files-found: error
+          retention-days: 14
+
+  package-palbeacon-cli:
+    name: Package palbeacon-cli
+    needs: [parser-linux-x64, parser-win32-x64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: parser-linux-x64
+          path: ${{ runner.temp }}/parser-linux-x64
+      - uses: actions/download-artifact@v4
+        with:
+          name: parser-win32-x64
+          path: ${{ runner.temp }}/parser-win32-x64
       - name: Test and build Sync CLI
         run: |
           pnpm --filter palbeacon-cli lint
@@ -195,24 +297,70 @@ jobs:
           pnpm --filter palbeacon-cli test
           pnpm --filter palbeacon-cli build
           pnpm check:parser-version
-      - name: Pack, install, and smoke-test candidate
+      - name: Build the one cross-platform npm candidate
         working-directory: apps/sync
+        env:
+          PALBEACON_PARSER_LINUX_X64: ${{ runner.temp }}/parser-linux-x64/palworld-save-parser
+          PALBEACON_PARSER_LINUX_X64_MANIFEST: ${{ runner.temp }}/parser-linux-x64/parser-manifest.json
+          PALBEACON_PARSER_WIN32_X64: ${{ runner.temp }}/parser-win32-x64/palworld-save-parser.exe
+          PALBEACON_PARSER_WIN32_X64_MANIFEST: ${{ runner.temp }}/parser-win32-x64/parser-manifest.json
         run: |
-          npm pack --dry-run --ignore-scripts
+          npm pack --dry-run
           tarball="$(npm pack --silent)"
-          node scripts/verify-package.mjs "$tarball" > "$RUNNER_TEMP/package-verification.json"
-          mkdir -p "$RUNNER_TEMP/palbeacon-candidate"
-          cp "$tarball" "$RUNNER_TEMP/palbeacon-candidate/"
-          cp ../../parser/palworld-save-parser "$RUNNER_TEMP/palbeacon-candidate/"
-          cp dist/bin/parser-manifest.json "$RUNNER_TEMP/palbeacon-candidate/"
-          cp "$RUNNER_TEMP/package-verification.json" "$RUNNER_TEMP/palbeacon-candidate/"
-          sha256sum "$tarball" ../../parser/palworld-save-parser > "$RUNNER_TEMP/palbeacon-candidate/SHA256SUMS"
+          test "$tarball" = "palbeacon-cli-0.2.0.tgz"
+          node scripts/verify-package.mjs "$tarball" --structure-only \
+            > "$RUNNER_TEMP/package-structure-verification.json"
+          mkdir -p "$RUNNER_TEMP/palbeacon-cli-candidate"
+          cp "$tarball" "$RUNNER_TEMP/palbeacon-cli-candidate/"
+          cp "$RUNNER_TEMP/package-structure-verification.json" \
+            "$RUNNER_TEMP/palbeacon-cli-candidate/"
+          sha256sum "$tarball" \
+            > "$RUNNER_TEMP/palbeacon-cli-candidate/SHA256SUMS"
       - uses: actions/upload-artifact@v4
         with:
-          name: palbeacon-cli-linux-x64-candidate
-          path: ${{ runner.temp }}/palbeacon-candidate
+          name: palbeacon-cli-candidate
+          path: ${{ runner.temp }}/palbeacon-cli-candidate
           if-no-files-found: error
           retention-days: 14
+
+  test-palbeacon-cli:
+    name: Test palbeacon-cli (${{ matrix.os }})
+    needs: package-palbeacon-cli
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter palbeacon-cli test
+      - uses: actions/download-artifact@v4
+        with:
+          name: palbeacon-cli-candidate
+          path: ${{ runner.temp }}/palbeacon-cli-candidate
+      - name: Install and test the Linux runtime
+        if: runner.os == 'Linux'
+        run: |
+          node apps/sync/scripts/verify-package.mjs \
+            "$RUNNER_TEMP/palbeacon-cli-candidate/palbeacon-cli-0.2.0.tgz" \
+            --runtime-only
+      - name: Install and test the Windows runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          node apps/sync/scripts/verify-package.mjs `
+            "$env:RUNNER_TEMP\palbeacon-cli-candidate\palbeacon-cli-0.2.0.tgz" `
+            --runtime-only
 
   repository:
     name: Structure, docs, and secrets

@@ -11,7 +11,7 @@ export interface SyncApiContractsContracts {
 export interface SyncPairRequest {
   code: string;
   device_name: string;
-  platform: "linux-x64";
+  platform: "linux-x64" | "win32-x64";
   app_version?: string | null;
 }
 export interface SyncPairResponse {

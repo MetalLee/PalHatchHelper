@@ -1,12 +1,10 @@
-import type { CliLocale } from "./locale.js";
+export type RuntimePlatform = "linux-x64" | "win32-x64";
 
-export function assertSupportedPlatform(
+export function runtimePlatform(
   platform: NodeJS.Platform = process.platform,
   architecture: string = process.arch,
-  locale: CliLocale = "en",
-): void {
-  if (platform !== "linux" || architecture !== "x64") {
-    void locale;
-    throw new Error("PLATFORM_UNSUPPORTED");
-  }
+): RuntimePlatform {
+  if (platform === "linux" && architecture === "x64") return "linux-x64";
+  if (platform === "win32" && architecture === "x64") return "win32-x64";
+  throw new Error("PLATFORM_UNSUPPORTED");
 }

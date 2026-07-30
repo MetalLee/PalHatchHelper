@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { isRecord, parseExactOptions } from "./json-tools.mjs";
 
-const EXPECTED_PARSER_VERSION = "1.2.0";
+const EXPECTED_PARSER_VERSION = "1.3.0";
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const REPORT_KEYS = new Set([
   "world_id",

@@ -4,7 +4,7 @@ const fakes = vi.hoisted(() => ({
   cleanup: vi.fn(async () => undefined),
   bundledParserManifest: vi.fn(async () => ({
     platform: "linux-x64" as const,
-    version: "1.2.0",
+    version: "1.3.0",
     sha256: "a".repeat(64),
   })),
   createSnapshot: vi.fn(),
@@ -107,7 +107,7 @@ describe("sync lifecycle", () => {
     expect(fakes.uploadSnapshot).toHaveBeenCalledWith(
       baseConfig.api_base_url,
       baseConfig.device_token,
-      expect.objectContaining({ parser_version: "1.2.0" }),
+      expect.objectContaining({ parser_version: "1.3.0" }),
     );
     expect(fakes.cleanup).toHaveBeenCalledOnce();
   });

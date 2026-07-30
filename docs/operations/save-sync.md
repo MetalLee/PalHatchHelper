@@ -19,7 +19,7 @@ docker compose config --format json
 
 ```dotenv
 PARSER_NAME=palhatch-plm-save-parser
-PARSER_VERSION=1.2.0
+PARSER_VERSION=1.3.0
 PARSER_COMMAND_JSON=["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]
 ```
 
@@ -28,9 +28,10 @@ PARSER_COMMAND_JSON=["/app/parser/palworld-save-parser","--snapshot","{snapshot_
 `palworld-save-tools 0.24.0` CLI 配成生产 Parser。每层解压后长度必须匹配容器声明，
 最终字节必须以 `GVAS` 开头。
 
-Parser 1.2.0 把 PalworldSaveTools commit
+Parser 1.3.0 把 PalworldSaveTools commit
 `3395e393466fc1f384dee54dabb3e597e611435e` 的最小 palooz/ooz decode-only
-C++ 源码通过 CGO 链接进单一 Linux x64 可执行文件。Parser bundle 只需要该可执行文件、许可证和
+C++ 源码通过 CGO 链接进自包含 Linux x64 与 Windows x64 可执行文件。Linux Agent bundle 继续只
+需要 Linux 可执行文件、许可证和
 第三方通知；不再需要外部解压文件、Python 或运行时下载。PalBeacon 不分发专有 Oodle 文件。
 上游来源、逐文件 SHA-256、唯一的 decode-only 预处理补丁和更新步骤固定在
 `parser/third_party/palooz/UPSTREAM.md`。组合 Parser 按 GPL-3.0-or-later 分发，原有 palhelm

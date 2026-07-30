@@ -8,7 +8,7 @@ const fakes = vi.hoisted(() => ({
   createSnapshot: vi.fn(),
   findWorldSave: vi.fn(async (value: string) => value),
   parseSnapshot: vi.fn(),
-  parserManifest: vi.fn(async () => ({ version: "1.2.0" })),
+  parserManifest: vi.fn(async () => ({ version: "1.3.0" })),
 }));
 
 vi.mock("../src/snapshot.js", () => ({
@@ -70,7 +70,7 @@ describe("offline save inspection", () => {
     );
     expect(JSON.parse(await readFile(payloadOutput, "utf8"))).toMatchObject({
       source_save_hash: "a".repeat(64),
-      parser_version: "1.2.0",
+      parser_version: "1.3.0",
       server: {
         world_uid:
           "pb1_a237c1853942de20b1e924d8db51bc916d8b0c837af5a36363934345a889ce9b",

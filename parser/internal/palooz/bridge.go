@@ -1,4 +1,4 @@
-//go:build linux && amd64 && cgo
+//go:build amd64 && cgo && (linux || windows)
 
 // Package palooz exposes the decode-only palooz/ooz core through a bounded C ABI.
 package palooz

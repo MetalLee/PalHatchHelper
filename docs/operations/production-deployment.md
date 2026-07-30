@@ -17,7 +17,7 @@
 
 将 [`infra/agent/.env.production.example`](../../infra/agent/.env.production.example) 复制到部署目录的 `.env.production`，通过受控渠道填值后执行 `chmod 0600`。不得在终端、日志、文档或 Git diff 打印值。部署工具只读取这一个文件。
 
-必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.2.0`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；`PARSER_REQUIRED_FILES_JSON` 需同时声明要同步的普通玩家存档与对应 `_dps.sav` 次元仓库存档。不得继续配置旧 `palworld-save-tools` CLI。
+必需配置包括 Supabase project ref/DB password/URL/anon/Service Role、Vercel project/org、正式 URL、Agent image repository/tag、Palworld 保存根、Parser bundle、世界 ID/UID 和 `BOOTSTRAP_ADMIN_EMAIL`。`PALWORLD_SAVE_ROOT`、`PALWORLD_COMPOSE_DIR`、`PARSER_BUNDLE_DIR` 在 Compose 中均为只读挂载。生产 Parser 身份固定为 `palhatch-plm-save-parser/1.3.0`，命令固定为 `["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]`；`PARSER_REQUIRED_FILES_JSON` 需同时声明要同步的普通玩家存档与对应 `_dps.sav` 次元仓库存档。不得继续配置旧 `palworld-save-tools` CLI。
 
 Parser bundle 现在只有自包含 Linux x64 可执行文件及许可证/来源材料，不需要 Python 或额外解压运行库，也不允许部署脚本联网获取依赖。PlM 解码来自固定 PalworldSaveTools commit 的开源 palooz/ooz decode-only 源码；PalBeacon 不分发专有 Oodle 文件。Parser 组合二进制以 GPL-3.0-or-later 分发，精确上游来源和 vendored 文件哈希见 `parser/third_party/palooz/UPSTREAM.md`。
 
@@ -124,9 +124,12 @@ non-GVAS、world UID mismatch 或截断错误都必须保留上一份有效库�
 
 确认 project/org link 与自定义域名后，检查环境变量名称但不打印值；运行 production build，再执行 `vercel --prod`。记录 deployment ID/URL，并确认自定义域名指向新 deployment。`/api/health` 显示 `VERCEL_GIT_COMMIT_SHA`；管理员和玩家数据响应必须是 `private, no-store`。
 
-部署公开 Sync 前，先独立构建并验证 `palbeacon-sync` npm tarball：包内只能包含 Linux x64 Parser、manifest、
-CLI 与文档，不得包含专有 Oodle 文件、Python runtime、真实存档或原生扩展。Parser SHA-256 必须与
-manifest 一致，tarball 必须含 GPL/Apache/MIT 全文、第三方通知和精确源码 commit；npm 发布是单独的人工批准步骤，Web 部署不会自动发布 npm、运行远程安装脚本或在用户机器编译 C++。
+部署公开 Sync 前，先独立构建并验证 `palbeacon-cli` npm tarball：同一个包必须同时包含 Linux x64
+与 Windows x64 Parser 及各自 manifest、CLI 与文档，不得包含专有 Oodle 文件、Python runtime、
+真实存档、MinGW DLL 或原生 Node 扩展。两个 Parser SHA-256 必须分别与 manifest 一致，版本、源码
+commit 与 upstream commit 必须相同；tarball 必须含 GPL/Apache/MIT 全文、第三方通知和精确源码
+commit。npm 发布是单独的人工批准步骤，Web 部署不会自动发布 npm、运行远程安装脚本或在用户机器
+编译 C++。
 
 ## 首个管理员
 

@@ -21,6 +21,7 @@ case "$output_path" in
   /*) ;;
   *) output_path="${invocation_directory}/${output_path}" ;;
 esac
+mkdir -p "$(dirname -- "$output_path")"
 cd "$parser_directory"
 CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
   go build -mod=vendor -trimpath -buildvcs=false \

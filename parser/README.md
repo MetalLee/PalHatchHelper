@@ -1,7 +1,7 @@
 # PalBeacon PlM CanonicalSnapshot Parser
 
-`palworld-save-parser` 1.2.0 is a Linux x86-64, decode-only parser for
-Palworld `Level.sav` and declared `Players/*.sav` files. It supports:
+`palworld-save-parser` 1.3.0 is a Linux x64 and Windows x64 decode-only parser
+for Palworld `Level.sav` and declared `Players/*.sav` files. It supports:
 
 - `PlM/0x31`, including Mermaid streams, through the vendored open-source
   palooz/ooz decoder;
@@ -13,10 +13,11 @@ The palooz/ooz source is pinned to PalworldSaveTools commit
 SHA-256 values, decode-only patch, and manual update procedure are in
 [`third_party/palooz/UPSTREAM.md`](third_party/palooz/UPSTREAM.md).
 
-The executable is self-contained apart from the normal Linux glibc runtime.
-It does not need Python, palsav, a proprietary Oodle library, a package
-installer, or a network download. PalBeacon does not distribute proprietary
-Oodle files.
+The Linux executable is self-contained apart from the normal Linux glibc
+runtime. The Windows executable statically links the MinGW GCC/C++ runtime and
+uses only Windows system DLLs. Neither executable needs Python, palsav, a
+proprietary Oodle library, a package installer, or a network download.
+PalBeacon does not distribute proprietary Oodle files.
 
 ## Read-only runtime
 
@@ -42,8 +43,8 @@ network-denied subprocess over a stable read-only copy.
 ## Build and test
 
 The version has one source: [`VERSION`](VERSION). The Go module and C++
-decoder inputs are vendored. Build in Linux amd64 with Go 1.26.5, GCC/G++,
-and CGO enabled:
+decoder inputs are vendored. Build Linux x64 in the pinned Go 1.26.5 container
+with GCC/G++ and CGO enabled:
 
 ```bash
 docker run --rm \
@@ -57,6 +58,25 @@ The script uses `-trimpath`, disables embedded VCS metadata with
 static `libstdc++`/`libgcc` linkage. The resulting executable should show only
 glibc and the Linux loader in `ldd`; it must never link a separate
 decompression runtime.
+
+Build Windows x64 from Linux in the repository's digest-pinned Go/Ubuntu
+container. It pins MinGW-w64 GCC/G++ 13.2.0, binutils
+2.41.90.20240122, and the MinGW-w64 11.0.1 headers:
+
+```bash
+docker build --network host \
+  -f parser/Dockerfile.windows-amd64 \
+  -t palbeacon-parser-windows-amd64 .
+docker run --rm \
+  -v "$PWD:/workspace" -w /workspace/parser \
+  palbeacon-parser-windows-amd64 \
+  ./scripts/build-windows-amd64.sh \
+  build/win32-x64/palworld-save-parser.exe
+```
+
+The Windows script also clears the Go build ID and PE linker timestamp, strips
+debug symbols, and statically links the GCC/C++ runtime. Run it twice and
+compare SHA-256 values before packaging.
 
 Run the complete Parser checks in the same environment:
 
@@ -73,9 +93,10 @@ compression tool.
 
 ## Licensing
 
-The combined Parser executable is distributed under GPL-3.0-or-later because
-it integrates the GPL palooz/ooz decoder. Parser code derived from palhelm
-retains its Apache-2.0 notices. This does not relicense the entire
-PalHatchHelper repository or the separate TypeScript Sync CLI. See
+Both platform Parser executables are built from the same source and
+distributed under GPL-3.0-or-later because they integrate the GPL palooz/ooz
+decoder. Parser code derived from palhelm retains its Apache-2.0 notices. This
+does not relicense the entire PalHatchHelper repository or the separate
+TypeScript Sync CLI. See
 [`LICENSE`](LICENSE), [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), and
 [`LICENSES/`](LICENSES/).

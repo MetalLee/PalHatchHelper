@@ -191,7 +191,7 @@ describe("localized public landing content", () => {
     });
     expect(values[1]).toMatchObject({
       operatingSystem:
-        "Web application: any modern browser; save sync CLI: Linux x64",
+        "Web application: any modern browser; save sync CLI: Linux x64 and Windows x64",
     });
     expect(values[1]).not.toHaveProperty("aggregateRating");
     expect(values[1]).not.toHaveProperty("offers");

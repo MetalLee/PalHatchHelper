@@ -189,9 +189,14 @@ const EN_MESSAGES: LocalizedMessages = {
       "An inspect output file already exists; no file was overwritten.",
     INSPECT_OUTPUT_PATH_INVALID: "The two inspect output paths must differ.",
     LOCALE_INVALID: "Unsupported locale. Use en, en-US, zh, or zh-CN.",
-    PLATFORM_UNSUPPORTED: "This release supports Linux x64 only.",
+    PLATFORM_UNSUPPORTED:
+      "This release supports Linux x64 and Windows x64 only.",
     API_RESPONSE_TOO_LARGE: "The PalBeacon response exceeded the safety limit.",
     SAVE_FILE_INVALID: "A save file is invalid or is a symbolic link.",
+    SAVE_DIRECTORY_TOO_BROAD:
+      "Choose the PalServer or SaveGames directory instead of a drive root.",
+    SNAPSHOT_CLEANUP_FAILED:
+      "The temporary save snapshot could not be removed safely.",
     PARSER_INPUT_INVALID: "The Parser input is invalid.",
     PARSER_OUTPUT_INVALID: "The Parser returned invalid output.",
     PARSER_OUTPUT_TOO_LARGE: "The Parser output exceeded the safety limit.",
@@ -269,9 +274,12 @@ const ZH_CN_MESSAGES: LocalizedMessages = {
     INSPECT_OUTPUT_EXISTS: "inspect 输出文件已存在，未覆盖任何文件。",
     INSPECT_OUTPUT_PATH_INVALID: "两个 inspect 输出路径必须不同。",
     LOCALE_INVALID: "不支持该语言。请使用 en、en-US、zh 或 zh-CN。",
-    PLATFORM_UNSUPPORTED: "当前版本仅支持 Linux x64。",
+    PLATFORM_UNSUPPORTED: "当前版本仅支持 Linux x64 和 Windows x64。",
     API_RESPONSE_TOO_LARGE: "PalBeacon 响应超过安全大小上限。",
     SAVE_FILE_INVALID: "存档文件无效或是符号链接。",
+    SAVE_DIRECTORY_TOO_BROAD:
+      "请指定 PalServer 或 SaveGames 目录，不要指定磁盘根目录。",
+    SNAPSHOT_CLEANUP_FAILED: "临时存档快照未能安全清理。",
     PARSER_INPUT_INVALID: "Parser 输入无效。",
     PARSER_OUTPUT_INVALID: "Parser 返回了无效输出。",
     PARSER_OUTPUT_TOO_LARGE: "Parser 输出超过安全大小上限。",

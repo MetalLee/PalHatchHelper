@@ -15,7 +15,10 @@
           "pattern": "^[A-Za-z2-9]{4}[- ]?[A-Za-z2-9]{4}$"
         },
         "device_name": { "type": "string", "minLength": 1, "maxLength": 80 },
-        "platform": { "type": "string", "const": "linux-x64" },
+        "platform": {
+          "type": "string",
+          "enum": ["linux-x64", "win32-x64"]
+        },
         "app_version": {
           "type": ["string", "null"],
           "minLength": 1,

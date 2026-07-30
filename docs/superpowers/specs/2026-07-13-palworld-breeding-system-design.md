@@ -1435,12 +1435,15 @@ palbeacon run
 账户页与所有未绑定引导中的 npm 包名固定为 `palbeacon-cli`，可执行 CLI 名固定为 `palbeacon`。
 三步卡片的命令块均放在对应说明文字上方，形成一致的“标题 → 命令 → 说明”阅读顺序。
 
-1. 第一版支持 Linux x64 和 Node.js 22 或更高版本。`init` 默认连接
+1. 第一版支持 Linux x64、Windows x64 和 Node.js 22 或更高版本。两个平台使用同一个
+   `palbeacon-cli` npm 包与 `palbeacon` 命令；CLI 从包内自动选择对应的自包含 Parser，
+   不在安装或运行时下载、编译 Parser，也不要求 Python、编译器或额外运行库。`init` 默认连接
    `https://www.palbeacon.app`，交互流程只询问一次性配对码与 Palworld 存档目录；
    `--url`、`--interval` 和 `--device-name` 仅作为高级覆盖参数。
-2. `init` 检查平台、定位唯一世界存档、完成设备配对并以当前 Linux 用户保存配置，
-   不执行首次同步、不启动常驻进程，也不安装系统服务。默认配置目录权限为 `0700`，
-   配置文件权限为 `0600`。
+2. `init` 检查平台、定位唯一世界存档、完成设备配对并以当前用户保存配置，不执行首次同步、
+   不启动常驻进程，也不安装系统服务。Linux 配置继续位于
+   `~/.config/palbeacon/config.json`，目录权限为 `0700`、文件权限为 `0600`；Windows 配置位于
+   `%APPDATA%\PalBeacon\config.json`，不依赖 POSIX mode、管理员权限、注册表或系统服务。
 3. 已有有效配置不得静默覆盖。交互终端必须明确说明会替换当前设备配置并取得确认；
    非交互调用必须显式传入 `--force`，否则返回稳定错误码。
 4. `run` 是前台持续运行命令。启动后立即执行一次同步，随后按默认 300 秒间隔检查；
@@ -1452,8 +1455,19 @@ palbeacon run
    专用用户、Service Role、迁移或发布流程。
 6. `inspect`、单次同步、systemd 模板、Save Worker 切换、迁移、验证与回滚工具继续保留为
    开发和受控运维能力，但不进入普通用户 README、默认帮助或账户页主流程。
-7. npm 包继续包含自包含 Parser、许可证、第三方通知和源码说明；不得在安装脚本中提权、
+7. npm 包同时包含 `dist/bin/linux-x64/palworld-save-parser` 与
+   `dist/bin/win32-x64/palworld-save-parser.exe`，以及各自的平台 manifest、SHA-256、许可证、
+   第三方通知和同一源码 commit 说明。运行时必须校验平台、普通文件、非符号链接、名称、版本和
+   SHA-256；Linux 还校验执行位。不得在安装脚本中提权、
    创建系统用户、写入 systemd、修改真实存档或控制 Palworld/mihomo。
+10. Parser 始终只接收复制到当前用户临时目录的稳定快照，绝不接收原始存档路径。快照哈希中的
+    逻辑相对路径固定使用 `/` 且按二进制字符串顺序排列，使同一输入在 Linux 与 Windows 得到同一
+    `source_save_hash`。Windows 路径发现支持盘符、空格与 Unicode，只在用户给定目录下按受控深度
+    搜索，跳过符号链接、junction 与不安全 reparse 路径；发现多个世界时不猜测默认世界。
+11. Linux Parser 超时继续终止独立进程组；Windows Parser 使用隐藏窗口的直接子进程并且不发送负
+    PID。两个 Parser 共享 decode-only palooz/ooz 源码、命令参数和 CanonicalSnapshot 语义，不联网、
+    不启动子进程、不编码或写回 SAV。Windows artifact 静态链接 MinGW GCC/C++ 运行库，npm 包不得
+    携带 MinGW DLL，也不得要求 Visual C++ Redistributable。
 8. npm README 默认使用英文，并在开头提供同包简体中文版跳转。CLI 的帮助、交互提示、状态、
    运行日志和错误信息支持英文与简体中文；默认依次根据 `LC_ALL`、`LC_MESSAGES`、`LANG` 和
    Node.js locale 判断系统语言，无法判断或不受支持时使用英文。用户可在命令前或后通过
@@ -1487,7 +1501,8 @@ palbeacon run
 2. 首页只说明当前已实现的存档同步设备、角色认领、权限内库存、公会共享、确定性多代路线、候选
    比较、路线收藏与数据状态；不得宣传执行进度、候选子代确认或其他已从第一版移除的计划执行能力。
 3. 普通同步流程固定为 `npm install -g palbeacon-cli`、`palbeacon init`、`palbeacon run`。当前 CLI
-   支持 Linux x64 与 Node.js 22+；多个世界必须由用户把路径缩小到目标世界目录，CLI 不替用户猜测。
+   支持 Linux x64、Windows x64 与 Node.js 22+；多个世界必须由用户把路径缩小到目标世界目录，CLI
+   不替用户猜测，也不让用户手工选择与实际系统不一致的平台。
 4. 正式 SEO host 固定为 `https://www.palbeacon.app`。两个首页使用 self-canonical、完整双向 hreflang、
    本地化 Open Graph/Twitter 图片和与可见 FAQ 一致的 WebSite、SoftwareApplication、FAQPage JSON-LD。
 5. sitemap 只列出 `/zh` 与 `/en`。登录、workspace、管理员与动态任务/计划页面通过 metadata 和
