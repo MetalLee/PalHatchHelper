@@ -26,7 +26,7 @@ const copy = vi.hoisted(() => ({
     LandingMetadata: {
       title: "PalBeacon | Palworld Save Sync, Inventory and Breeding Planner",
       description:
-        "Sync a Palworld server save with a read-only client, explore player and guild Pal inventories, and build multi-generation breeding plans around the Pals and passives you already own.",
+        "Sync your Palworld server save with a read-only client, explore player and guild Pal inventories, and build practical multi-generation breeding plans.",
       keywords: "Palworld save sync,Palworld inventory",
       ogLineOne: "Sync your save",
       ogLineTwo: "Build a breeding plan you can follow",
@@ -59,6 +59,8 @@ import { metadata as workspaceMetadata } from "../app/[locale]/(workspace)/layou
 import { metadata as adminMetadata } from "../app/[locale]/admin/layout";
 import { privatePageMetadata, siteVerificationMetadata } from "../config/seo";
 import { siteConfig } from "../config/site";
+import enMessages from "../messages/en.json";
+import zhMessages from "../messages/zh.json";
 
 describe("public search metadata", () => {
   it.each([
@@ -84,6 +86,60 @@ describe("public search metadata", () => {
       expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
     },
   );
+
+  it("keeps the English landing description within search snippet limits without changing other SEO metadata", async () => {
+    const [englishMetadata, chineseMetadata] = await Promise.all([
+      generateLandingMetadata({ params: Promise.resolve({ locale: "en" }) }),
+      generateLandingMetadata({ params: Promise.resolve({ locale: "zh" }) }),
+    ]);
+    const description = enMessages.LandingMetadata.description;
+    const canonical = "https://www.palbeacon.app/en";
+    const imageUrl = `${canonical}/opengraph-image`;
+
+    expect(copy.en.LandingMetadata.description).toBe(description);
+    expect(englishMetadata.description).toBe(description);
+    expect(description).not.toBe("");
+    expect(description.length).toBeGreaterThanOrEqual(120);
+    expect(description.length).toBeLessThanOrEqual(160);
+    expect(chineseMetadata.description).toBe(
+      zhMessages.LandingMetadata.description,
+    );
+    expect(zhMessages.LandingMetadata.description).toBe(
+      "使用只读工具同步《幻兽帕鲁》服务器存档，查看个人与公会帕鲁库存，并根据目标帕鲁和期望被动生成尽量利用现有库存的多代配种路线。",
+    );
+    expect(englishMetadata.alternates).toEqual({
+      canonical,
+      languages: {
+        "zh-CN": "https://www.palbeacon.app/zh",
+        en: canonical,
+        "x-default": "https://www.palbeacon.app/zh",
+      },
+    });
+    expect(englishMetadata.openGraph).toEqual({
+      title: copy.en.LandingMetadata.title,
+      description,
+      siteName: siteConfig.name,
+      type: "website",
+      url: canonical,
+      locale: "en_US",
+      alternateLocale: ["zh_CN"],
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: copy.en.LandingMetadata.title,
+        },
+      ],
+    });
+    expect(englishMetadata.twitter).toEqual({
+      card: "summary_large_image",
+      title: copy.en.LandingMetadata.title,
+      description,
+      images: [imageUrl],
+    });
+    expect(englishMetadata.robots).toEqual({ index: true, follow: true });
+  });
 
   it("centralizes the canonical host and omits empty verification tags", async () => {
     const metadata = await generateLayoutMetadata({
