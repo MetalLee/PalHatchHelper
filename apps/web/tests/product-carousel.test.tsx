@@ -127,4 +127,25 @@ describe("landing product carousel", () => {
     act(() => vi.advanceTimersByTime(12000));
     expect(activeSlide(container)).toContain("Lamball");
   });
+
+  it("keeps English route status, gender, passives and hint compact", () => {
+    mockReducedMotion(true);
+    const { container, getByRole } = render(<ProductCarousel locale="en" />);
+
+    fireEvent.click(
+      getByRole("button", { name: "Slide 2: Breeding route tree" }),
+    );
+
+    const statusRows = container.querySelectorAll("[data-route-status-row]");
+    expect(statusRows).toHaveLength(5);
+    for (const row of statusRows) {
+      expect(row.className).toContain("flex-nowrap");
+    }
+    expect(container.querySelector("[data-route-hint]")?.textContent).toBe(
+      "Combine passives across generations.",
+    );
+    expect(container.querySelector("[data-route-hint]")?.className).toContain(
+      "whitespace-nowrap",
+    );
+  });
 });

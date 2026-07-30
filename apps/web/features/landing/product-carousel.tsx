@@ -520,9 +520,11 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
         <CompactMetric value="4" label={t("carouselTargetPassives")} />
         <CompactMetric value="0" label={t("carouselMissing")} />
       </div>
-      <div className="flex items-center gap-2 rounded-2xl bg-primary px-3 py-3 text-xs font-bold text-primary-foreground shadow-sm">
+      <div className="flex min-w-0 items-center gap-2 rounded-2xl bg-primary px-3 py-3 text-xs font-bold text-primary-foreground shadow-sm">
         <GitBranch aria-hidden="true" className="size-4 shrink-0" />
-        <span className="[text-wrap:pretty]">{t("carouselRouteHint")}</span>
+        <span data-route-hint className="min-w-0 truncate whitespace-nowrap">
+          {t("carouselRouteHint")}
+        </span>
       </div>
     </div>
   );
@@ -692,10 +694,13 @@ function RoutePreviewCard({
           </h3>
         </div>
       </div>
-      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
+      <div
+        data-route-status-row
+        className="mt-1 flex min-w-0 flex-nowrap items-center gap-1"
+      >
         <span
           className={cn(
-            "truncate rounded-full border px-1.5 py-0.5 text-[0.5rem] font-bold min-[460px]:text-[0.62rem]",
+            "min-w-0 truncate rounded-full border px-1.5 py-0.5 text-[0.5rem] font-bold min-[460px]:text-[0.62rem]",
             tone === "target"
               ? "border-violet-300 bg-violet-600 text-white"
               : tone === "intermediate"
@@ -705,7 +710,7 @@ function RoutePreviewCard({
         >
           {status}
         </span>
-        <span className="inline-flex items-center gap-0.5 text-[0.55rem] font-semibold text-muted-foreground min-[460px]:text-[0.62rem]">
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-[0.55rem] font-semibold whitespace-nowrap text-muted-foreground min-[460px]:text-[0.62rem]">
           {gender === "male" ? (
             <Mars aria-hidden="true" className="size-3 text-sky-600" />
           ) : gender === "female" ? (

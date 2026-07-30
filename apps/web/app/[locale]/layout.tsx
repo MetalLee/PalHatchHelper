@@ -39,13 +39,6 @@ export async function generateMetadata({
     keywords: [brand.name, "Palworld", ...t("keywords").split(",")],
     applicationName: brand.name,
     manifest: "/manifest.webmanifest",
-    icons: {
-      icon: [
-        { url: "/favicon.ico", sizes: "any" },
-        { url: "/icon.png", type: "image/png", sizes: "512x512" },
-      ],
-      apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
-    },
     openGraph: { title, description, siteName: brand.name, type: "website" },
     twitter: { card: "summary", title, description },
     appleWebApp: { capable: true, title: brand.name },

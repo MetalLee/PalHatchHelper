@@ -100,6 +100,9 @@ describe("localized public landing content", () => {
     expect(container.textContent).toContain("脱敏数据");
     expect(container.textContent).toContain("不会上传完整存档");
     expect(container.textContent).toContain("规划多代路线");
+    expect(container.textContent).not.toContain(
+      "不必先找到一只已经集齐全部目标被动的亲本。",
+    );
     expect(container.textContent).toContain("收藏常用方案");
     expect(container.querySelector("[data-system-flow]")).not.toBeNull();
     expect(container.querySelectorAll("[data-system-node]")).toHaveLength(4);
@@ -111,13 +114,23 @@ describe("localized public landing content", () => {
         "Keep your Palworld Visible.",
       ),
     ).toBeTruthy();
+    expect(
+      within(container.querySelector("footer")!)
+        .getByRole("link", {
+          name: "联系方式：ghsy950525@gmail.com",
+        })
+        .getAttribute("href"),
+    ).toBe("mailto:ghsy950525@gmail.com");
     expect(container.textContent).not.toContain("产品界面示意");
     expect(container.textContent).not.toContain(
       "下面的答案与当前 palbeacon-cli 和网页实现保持一致",
     );
     expect(container.textContent).not.toContain("此公开页面不会生成真实配对码");
     expect(container.textContent).not.toContain("palbeacon-sync");
-    expect(container.querySelector('a[href="/en"]')).not.toBeNull();
+    const footer = container.querySelector("footer")!;
+    expect(footer.querySelector('a[href*="github.com"]')).toBeNull();
+    expect(footer.querySelector('a[href$="/login"]')).toBeNull();
+    expect(footer.querySelector("a[hreflang]")).toBeNull();
   });
 
   it("renders a fully localized English main story with the same structure", async () => {
@@ -146,7 +159,14 @@ describe("localized public landing content", () => {
     );
     expect(main.queryByText(/幻兽帕鲁|存档同步|帕鲁库存/)).toBeNull();
     expect(container.textContent).not.toContain("palbeacon-sync");
-    expect(container.querySelector('a[href="/zh"]')).not.toBeNull();
+    const footer = container.querySelector("footer")!;
+    expect(footer.querySelectorAll("a")).toHaveLength(1);
+    expect(footer.querySelector("a")?.textContent).toBe(
+      "Contact: ghsy950525@gmail.com",
+    );
+    expect(footer.querySelector("a")?.getAttribute("href")).toBe(
+      "mailto:ghsy950525@gmail.com",
+    );
   });
 
   it("publishes parseable WebSite, SoftwareApplication and visible FAQ data", async () => {

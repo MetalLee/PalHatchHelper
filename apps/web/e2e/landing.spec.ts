@@ -123,6 +123,50 @@ test("keeps the localized landing content readable on narrow screens", async ({
   }
 });
 
+test("keeps the English breeding preview on one compact visual rhythm", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 620, height: 1000 });
+  await page.goto("/en");
+  await page
+    .getByRole("button", { name: "Slide 2: Breeding route tree" })
+    .click();
+
+  const statusRows = page.locator("[data-route-status-row]");
+  await expect(statusRows).toHaveCount(5);
+  for (const row of await statusRows.all()) {
+    const children = row.locator(":scope > *");
+    const statusBox = await children.nth(0).boundingBox();
+    const genderBox = await children.nth(1).boundingBox();
+    expect(statusBox).not.toBeNull();
+    expect(genderBox).not.toBeNull();
+    const statusCenter = statusBox!.y + statusBox!.height / 2;
+    const genderCenter = genderBox!.y + genderBox!.height / 2;
+    expect(Math.abs(statusCenter - genderCenter)).toBeLessThanOrEqual(1);
+  }
+
+  for (const node of await page.locator("[data-route-node]").all()) {
+    const nodeBox = await node.boundingBox();
+    const badges = node.locator(".passive-badge");
+    for (const badge of await badges.all()) {
+      const badgeBox = await badge.boundingBox();
+      expect(badgeBox!.y + badgeBox!.height).toBeLessThanOrEqual(
+        nodeBox!.y + nodeBox!.height + 1,
+      );
+    }
+  }
+
+  const hint = page.locator("[data-route-hint]");
+  await expect(hint).toHaveText("Combine passives across generations.");
+  expect(
+    await hint.evaluate(
+      (element) =>
+        element.getBoundingClientRect().height <=
+        Number.parseFloat(getComputedStyle(element).lineHeight) + 1,
+    ),
+  ).toBe(true);
+});
+
 test("keeps locale negotiation at the root", async ({ request }) => {
   const english = await request.get("/", {
     headers: { "Accept-Language": "en-US" },

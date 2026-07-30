@@ -20,7 +20,6 @@ import { getTranslations } from "next-intl/server";
 
 import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
-import { siteConfig } from "@/config/site";
 import type { AppLocale } from "@/i18n/routing";
 
 import {
@@ -164,7 +163,6 @@ export async function LandingPage({
       locale,
       namespace: "Landing",
     })) as LandingTranslator);
-  const otherLocale = locale === "zh" ? "en" : "zh";
   const headerLabels: LandingHeaderLabels = {
     navLabel: t("navLabel"),
     mobileNavLabel: t("mobileNavLabel"),
@@ -334,7 +332,7 @@ export async function LandingPage({
             />
             <SystemFlow t={t} />
             <div className="mt-6 grid gap-4 lg:grid-cols-3">
-              {features.map(([Icon, title, body], index) => (
+              {features.map(([Icon, title, body]) => (
                 <article
                   key={title}
                   className="rounded-3xl border border-glass-border bg-white/82 p-6 shadow-soft"
@@ -348,11 +346,6 @@ export async function LandingPage({
                   <p className="mt-3 text-sm leading-7 text-muted-foreground [text-wrap:pretty]">
                     {body}
                   </p>
-                  {index === 1 ? (
-                    <p className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm font-semibold leading-7 text-emerald-950 [text-wrap:pretty]">
-                      {t("breedingCallout")}
-                    </p>
-                  ) : null}
                 </article>
               ))}
             </div>
@@ -434,24 +427,9 @@ export async function LandingPage({
           <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold">
             <a
               className="min-h-11 content-center hover:text-emerald-200"
-              href={siteConfig.repositoryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="mailto:ghsy950525@gmail.com"
             >
-              {t("footerGithub")}
-            </a>
-            <a
-              className="min-h-11 content-center hover:text-emerald-200"
-              href={`/${locale}/login`}
-            >
-              {t("footerConsole")}
-            </a>
-            <a
-              className="min-h-11 content-center hover:text-emerald-200"
-              href={`/${otherLocale}`}
-              hrefLang={otherLocale === "zh" ? "zh-CN" : "en"}
-            >
-              {t("footerLanguage")}
+              {t("footerDeveloper")}
             </a>
             <span className="min-h-11 content-center text-white/60">
               © {new Date().getUTCFullYear()}
