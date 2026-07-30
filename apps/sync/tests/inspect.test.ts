@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const fakes = vi.hoisted(() => ({
   cleanup: vi.fn(async () => undefined),
   createSnapshot: vi.fn(),
-  findWorldSave: vi.fn(async (value: string) => value),
+  findWorldSave: vi.fn(async () => "/fixture/64EAE19D36004D1FA0321A3703BD825F"),
   parseSnapshot: vi.fn(),
   parserManifest: vi.fn(async () => ({ version: "1.3.0" })),
 }));
@@ -64,6 +64,10 @@ describe("offline save inspection", () => {
     });
 
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(fakes.parseSnapshot).toHaveBeenCalledWith(
+      "/temporary/read-only-snapshot",
+      { worldUid: "64EAE19D36004D1FA0321A3703BD825F" },
+    );
     expect(fakes.cleanup).toHaveBeenCalledOnce();
     expect(JSON.parse(await readFile(canonicalOutput, "utf8"))).toEqual(
       canonical,

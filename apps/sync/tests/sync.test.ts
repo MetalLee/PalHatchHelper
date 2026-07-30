@@ -34,11 +34,12 @@ import type { SyncConfig } from "../src/config.js";
 import { syncOnce } from "../src/sync.js";
 
 const baseConfig: SyncConfig = {
-  config_version: 2,
+  config_version: 3,
   api_base_url: "https://www.palbeacon.app",
   device_id: "00000000-0000-4000-8000-000000000001",
   device_token: "pbs_secret",
-  save_dir: "/fixture/save",
+  save_dir: "/fixture/64EAE19D36004D1FA0321A3703BD825F",
+  world_uid: "64EAE19D36004D1FA0321A3703BD825F",
   interval_seconds: 300,
   device_name: "Fixture",
 };
@@ -62,6 +63,7 @@ describe("sync lifecycle", () => {
     expect(fakes.uploadSnapshot).not.toHaveBeenCalled();
     expect(fakes.parseSnapshot).toHaveBeenCalledWith(
       "/temporary/read-only-snapshot",
+      { worldUid: "64EAE19D36004D1FA0321A3703BD825F" },
     );
   });
 

@@ -16,7 +16,9 @@ export async function syncOnce(
       await updateState(config, snapshot.hash, "unchanged");
       return "unchanged";
     }
-    const artifacts = await buildUploadArtifacts(snapshot);
+    const artifacts = await buildUploadArtifacts(snapshot, {
+      worldUid: config.world_uid,
+    });
     await uploadSnapshot(
       config.api_base_url,
       config.device_token,

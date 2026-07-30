@@ -328,7 +328,7 @@ async function verifyRuntime(structure) {
       inspectPayload,
     ],
     installRoot,
-    { ...process.env, PALHATCH_WORLD_UID: "fixture-world-001" },
+    process.env,
   );
   const inspectedCanonical = JSON.parse(
     await readFile(inspectCanonical, "utf8"),
@@ -338,7 +338,7 @@ async function verifyRuntime(structure) {
     throw new Error("PACKAGED_INSPECT_CANONICAL_MISMATCH");
   if (
     inspectedPayload.server?.world_uid !==
-      "pb1_02dc68a40c54afcc8f35ce23928f5e47069c4116177ffccdd29388bd1bffca36" ||
+      `pb1_${sha256(`palbeacon:v1:${plm.worldUid}`)}` ||
     inspectedPayload.parser_version !== manifest.version
   ) {
     throw new Error("PACKAGED_INSPECT_PAYLOAD_INVALID");
@@ -357,7 +357,11 @@ async function verifyRuntime(structure) {
 }
 
 async function verifyFixture(parser, input, saveVersion, suffix) {
-  const snapshot = join(temporaryRoot, `snapshot ${suffix} 幻兽帕鲁`);
+  const worldUid =
+    suffix === "plm"
+      ? "64EAE19D36004D1FA0321A3703BD825F"
+      : "74EAE19D36004D1FA0321A3703BD825F";
+  const snapshot = join(temporaryRoot, worldUid);
   const players = join(snapshot, "Players");
   await mkdir(players, { recursive: true });
   const level = join(snapshot, "Level.sav");
@@ -375,7 +379,7 @@ async function verifyFixture(parser, input, saveVersion, suffix) {
   const playerHash = sha256(await readFile(player));
   const output = join(temporaryRoot, `canonical-${suffix}.json`);
   await execFileAsync(parser, ["--snapshot", snapshot, "--output", output], {
-    env: parserEnvironment(),
+    env: parserEnvironment(worldUid),
     encoding: "utf8",
     timeout: 15_000,
     windowsHide: true,
@@ -385,15 +389,24 @@ async function verifyFixture(parser, input, saveVersion, suffix) {
     await readFile(join(fixtureRoot, "expected-canonical.json"), "utf8"),
   );
   expected.server.save_version = saveVersion;
+  expected.server.world_uid = worldUid;
   if (!isDeepStrictEqual(actual, expected))
     throw new Error(`PACKAGED_PARSER_FIXTURE_MISMATCH:${suffix}`);
-  const fixture = { snapshot, level, player, levelHash, playerHash, expected };
+  const fixture = {
+    snapshot,
+    level,
+    player,
+    levelHash,
+    playerHash,
+    expected,
+    worldUid,
+  };
   await assertUnmodified(fixture);
   return fixture;
 }
 
-function parserEnvironment() {
-  const environment = { PALHATCH_WORLD_UID: "fixture-world-001" };
+function parserEnvironment(worldUid) {
+  const environment = { PALHATCH_WORLD_UID: worldUid };
   if (process.platform === "win32") {
     for (const key of ["SystemRoot", "WINDIR", "TEMP", "TMP"]) {
       if (process.env[key] !== undefined) environment[key] = process.env[key];

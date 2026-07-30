@@ -307,7 +307,7 @@ jobs:
         run: |
           npm pack --dry-run
           tarball="$(npm pack --silent)"
-          test "$tarball" = "palbeacon-cli-0.2.0.tgz"
+          test "$tarball" = "palbeacon-cli-0.2.1.tgz"
           node scripts/verify-package.mjs "$tarball" --structure-only \
             > "$RUNNER_TEMP/package-structure-verification.json"
           mkdir -p "$RUNNER_TEMP/palbeacon-cli-candidate"
@@ -352,14 +352,14 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           node apps/sync/scripts/verify-package.mjs \
-            "$RUNNER_TEMP/palbeacon-cli-candidate/palbeacon-cli-0.2.0.tgz" \
+            "$RUNNER_TEMP/palbeacon-cli-candidate/palbeacon-cli-0.2.1.tgz" \
             --runtime-only
       - name: Install and test the Windows runtime
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           node apps/sync/scripts/verify-package.mjs `
-            "$env:RUNNER_TEMP\palbeacon-cli-candidate\palbeacon-cli-0.2.0.tgz" `
+            "$env:RUNNER_TEMP\palbeacon-cli-candidate\palbeacon-cli-0.2.1.tgz" `
             --runtime-only
 
   repository:

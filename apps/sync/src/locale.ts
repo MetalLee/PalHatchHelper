@@ -167,6 +167,12 @@ const EN_MESSAGES: LocalizedMessages = {
     SAVE_DIRECTORY_INVALID:
       "The save directory does not exist, is not a directory, or is a symbolic link.",
     WORLD_SAVE_NOT_FOUND: "No Level.sav was found in the specified directory.",
+    WORLD_SAVE_ID_INVALID:
+      "The selected world directory name is not a valid 32-character Palworld world ID. Run palbeacon init and select the directory that directly contains Level.sav.",
+    WORLD_UID_MISSING:
+      "The world ID could not be read from the save. Run palbeacon init again with the directory that directly contains Level.sav.",
+    WORLD_UID_MISMATCH:
+      "The configured world ID does not match the selected save directory. Run palbeacon init again and select the correct world.",
     MULTIPLE_WORLD_SAVES_FOUND:
       "Multiple world saves were found. Point --save-dir to one world directory.",
     SAVE_SOURCE_UNSTABLE:
@@ -257,6 +263,12 @@ const ZH_CN_MESSAGES: LocalizedMessages = {
     SYNC_ONCE_REQUIRED: "请使用 palbeacon sync --once。",
     SAVE_DIRECTORY_INVALID: "存档目录不存在、不是目录或是符号链接。",
     WORLD_SAVE_NOT_FOUND: "没有在指定目录中找到 Level.sav。",
+    WORLD_SAVE_ID_INVALID:
+      "所选世界目录名不是有效的 32 位 Palworld 世界 ID。请重新执行 palbeacon init，并选择直接包含 Level.sav 的目录。",
+    WORLD_UID_MISSING:
+      "无法从存档取得世界 ID。请重新执行 palbeacon init，并选择直接包含 Level.sav 的目录。",
+    WORLD_UID_MISMATCH:
+      "配置中的世界 ID 与所选存档目录不一致。请重新执行 palbeacon init 并选择正确世界。",
     MULTIPLE_WORLD_SAVES_FOUND:
       "发现多个世界存档，请将 --save-dir 指向唯一世界目录。",
     SAVE_SOURCE_UNSTABLE: "存档正在写入，本轮已安全跳过。",

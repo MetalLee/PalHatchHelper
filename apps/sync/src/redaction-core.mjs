@@ -5,7 +5,8 @@ export function redactUidCore(rawUid) {
 }
 
 export function createInventoryPublishPayload(snapshot, metadata) {
-  const guildIds = new Set(snapshot.guilds.map((guild) => guild.guild_uid));
+  const guilds = snapshot.guilds.filter(isNamedGuild);
+  const guildIds = new Set(guilds.map((guild) => guild.guild_uid));
   const players = new Map(
     snapshot.players.map((player) => [player.player_uid, player]),
   );
@@ -22,7 +23,7 @@ export function createInventoryPublishPayload(snapshot, metadata) {
       ...snapshot.server,
       world_uid: redactUidCore(snapshot.server.world_uid),
     },
-    guilds: snapshot.guilds.map((guild) => ({
+    guilds: guilds.map((guild) => ({
       ...guild,
       guild_uid: redactUidCore(guild.guild_uid),
     })),
@@ -30,7 +31,9 @@ export function createInventoryPublishPayload(snapshot, metadata) {
       ...player,
       player_uid: redactUidCore(player.player_uid),
       guild_uid:
-        player.guild_uid === null ? null : redactUidCore(player.guild_uid),
+        player.guild_uid !== null && guildIds.has(player.guild_uid)
+          ? redactUidCore(player.guild_uid)
+          : null,
     })),
     pals: snapshot.pals.map((pal, index) => {
       const owner =
@@ -79,7 +82,10 @@ export function createInventoryPublishPayload(snapshot, metadata) {
           pal.owner_player_uid === null
             ? null
             : redactUidCore(pal.owner_player_uid),
-        guild_uid: pal.guild_uid === null ? null : redactUidCore(pal.guild_uid),
+        guild_uid:
+          pal.guild_uid !== null && guildIds.has(pal.guild_uid)
+            ? redactUidCore(pal.guild_uid)
+            : null,
         location_id:
           pal.location_id === null ? null : redactUidCore(pal.location_id),
         metadata: null,
@@ -97,4 +103,9 @@ export function createInventoryPublishPayload(snapshot, metadata) {
     }),
     warnings,
   };
+}
+
+function isNamedGuild(guild) {
+  const name = guild.name.trim();
+  return name.length > 0 && name.toLowerCase() !== "unknown guild";
 }

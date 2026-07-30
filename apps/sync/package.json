@@ -1,6 +1,6 @@
 {
   "name": "palbeacon-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Read-only Palworld inventory synchronization client for PalBeacon",
   "type": "module",
   "private": false,
