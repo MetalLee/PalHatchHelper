@@ -1545,3 +1545,44 @@ palbeacon run
 16. Footer 不再重复提供 GitHub、登录/控制台和语言切换入口，只保留品牌信息、开发者邮件与版权。
     英文路线轮播中的状态与性别必须保持同一行，状态可在空间不足时省略，但性别和被动不得被挤出
     卡片；路线提示使用可在轮播宽度内单行展示的精简文案。
+
+## 27. P0 搜索入口与首页产品定位
+
+本节覆盖第 26 节第 7、16 项中关于首页 H1、CTA 数量与 Footer 链接的旧约束，其余公开首页边界继续有效。
+
+1. `/zh` 与 `/en` 的唯一 H1 分别固定为“幻兽帕鲁服务器控制台”和
+   `Palworld Server Console`；`Keep your world visible.` 作为 H1 上方品牌短句保留。首屏副标题先说明
+   只读存档同步、个人与公会库存及多代配种协作，不查询 Session 或私有数据。
+2. 新增四组可静态生成、无需登录、正文存在于服务端 HTML 的双语公开页：
+   `/palworld-save-sync`、`/save-breeding-planner`、`/passive-breeding-route` 和
+   `/guild-pal-inventory`。页面复用公开 Header、语言切换、Breadcrumb、FAQ、CTA、相关链接和 Footer，
+   不继承 workspace noindex metadata。
+3. 存档同步页只描述当前 `palbeacon-cli` 事实：Linux x64、Windows x64、Node.js 22+，以及
+   `npm install -g palbeacon-cli`、`palbeacon init`、`palbeacon run`。源存档只读检查，稳定后复制到
+   当前用户临时目录解析；不修改存档、不执行服务器控制、不上传完整存档，只上传库存与配种所需的
+   脱敏投影。多世界时要求用户把路径缩小到含 `Level.sav` 与 `Players/` 的目标世界目录。
+4. 配种与公会页面只说明当前已实现的真实库存、允许共享的公会候选、确定性合法路线、路线比较和
+   只读收藏。不得宣称审批、聊天、自动借用、人工进度或候选子代识别；新同步只更新当前库存，玩家
+   可据此重新计算，不改写已收藏路线。
+5. 十个公开 URL 使用唯一标题与描述、self-canonical、`zh-CN`/`en`/`x-default` hreflang、正确的
+   Open Graph locale、可索引 robots 和安全 JSON-LD。新内容页至少输出 `WebPage`、
+   `BreadcrumbList`、与可见内容一致的 `FAQPage`。
+6. sitemap 恰好列出两个首页和八个新语言页面，每项只引用对应的中英文 alternate，不写构建时间。
+   首页内容卡、正文相关链接与 Footer 形成同语言的可抓取链接图；语言切换保持当前 slug。
+7. 公开请求在 middleware 中不得为判断登录态访问 Supabase；登录页与 workspace/admin 的鉴权、
+   `X-Robots-Tag`、noindex 和私有缓存策略保持不变。
+8. 所有公开页必须包含独立玩家工具免责声明，不使用官方角色素材，不新增 SEO 第三方依赖，也不
+   修改数据库、同步协议、CLI 命令、认证流程或配种算法。
+
+## 28. 登录页公开首页返回入口
+
+1. 登录页桌面端左侧品牌说明区增加本地化的“了解 PalBeacon”入口；英文使用
+   `Explore PalBeacon`。入口使用语义化链接和现有按钮视觉，保持清晰焦点与至少 44 像素点击高度。
+2. 入口通过 locale-aware 导航返回当前语言的公开首页，不查询 Session、不改变登录表单、Steam
+   登录、`next` 返回地址、私有 noindex 或鉴权行为。
+
+## 29. 首页 Hero CTA 收口
+
+本节覆盖第 27 节中首页第三个存档同步 CTA 的旧要求。首页 Hero 只保留“开始使用”和“打开控制台”
+两个按钮；删除“了解存档同步 / Learn about save sync”。存档同步公开页仍通过首页四张内容卡、
+Footer 和正文内部链接提供可抓取入口。

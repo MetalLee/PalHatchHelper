@@ -19,6 +19,10 @@ function landingCopy(locale: AppLocale): (key: string) => string {
   return getCopy(locale, "Landing") as unknown as (key: string) => string;
 }
 
+function publicCopy(locale: AppLocale): (key: string) => string {
+  return getCopy(locale, "PublicContent") as unknown as (key: string) => string;
+}
+
 describe("localized public landing content", () => {
   it("reveals a glass header on scroll and reuses icon-only shared controls", async () => {
     Object.defineProperty(window, "scrollY", {
@@ -27,7 +31,11 @@ describe("localized public landing content", () => {
       writable: true,
     });
     const { container } = render(
-      await LandingPage({ locale: "zh", translate: landingCopy("zh") }),
+      await LandingPage({
+        locale: "zh",
+        translate: landingCopy("zh"),
+        publicTranslate: publicCopy("zh"),
+      }),
     );
 
     const header = container.querySelector<HTMLElement>(
@@ -76,18 +84,27 @@ describe("localized public landing content", () => {
 
   it("renders the complete Chinese product and sync story in initial HTML", async () => {
     const { container } = render(
-      await LandingPage({ locale: "zh", translate: landingCopy("zh") }),
+      await LandingPage({
+        locale: "zh",
+        translate: landingCopy("zh"),
+        publicTranslate: publicCopy("zh"),
+      }),
     );
 
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
-      "Keep your Palworld visible",
+      "幻兽帕鲁服务器控制台",
     );
-    expect(container.textContent).toContain("服务器存档同步到清晰的控制台");
+    expect(container.textContent).toContain("Keep your world visible.");
+    expect(screen.getByText("Keep your world visible.").tagName).not.toBe("H1");
+    expect(container.textContent).toContain("控制台");
+    expect(container.textContent).toContain("存档");
+    expect(container.textContent).toContain("公会");
     const hero = container.querySelector("main section");
     expect(hero).not.toBeNull();
     expect(hero!.querySelector('a[href*="github.com"]')).toBeNull();
     expect(hero!.querySelectorAll("a")).toHaveLength(2);
+    expect(hero!.textContent).not.toContain("了解存档同步");
     expect(container.querySelectorAll("[data-carousel-slide]")).toHaveLength(3);
     expect(container.textContent).toContain("公会库存");
     expect(container.textContent).toContain("配种路线树");
@@ -127,6 +144,17 @@ describe("localized public landing content", () => {
     );
     expect(container.textContent).not.toContain("此公开页面不会生成真实配对码");
     expect(container.textContent).not.toContain("palbeacon-sync");
+    for (const slug of [
+      "palworld-save-sync",
+      "save-breeding-planner",
+      "passive-breeding-route",
+      "guild-pal-inventory",
+    ]) {
+      expect(container.querySelector(`a[href$="/${slug}"]`)).not.toBeNull();
+      expect(
+        container.querySelector(`footer a[href$="/${slug}"]`),
+      ).not.toBeNull();
+    }
     const footer = container.querySelector("footer")!;
     expect(footer.querySelector('a[href*="github.com"]')).toBeNull();
     expect(footer.querySelector('a[href$="/login"]')).toBeNull();
@@ -135,15 +163,22 @@ describe("localized public landing content", () => {
 
   it("renders a fully localized English main story with the same structure", async () => {
     const { container } = render(
-      await LandingPage({ locale: "en", translate: landingCopy("en") }),
+      await LandingPage({
+        locale: "en",
+        translate: landingCopy("en"),
+        publicTranslate: publicCopy("en"),
+      }),
     );
     const main = within(container.querySelector("main")!);
 
     expect(main.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(main.getByRole("heading", { level: 1 }).textContent).toBe(
-      "Keep your Palworld visible",
+      "Palworld Server Console",
     );
-    expect(container.textContent).toContain("one clear server console");
+    expect(container.textContent).toContain("Keep your world visible.");
+    expect(container.textContent).toContain("console");
+    expect(container.textContent).toContain("save");
+    expect(container.textContent).toContain("guild");
     expect(container.querySelectorAll("[data-carousel-slide]")).toHaveLength(3);
     expect(container.textContent).toContain("Guild inventory");
     expect(container.textContent).toContain("Breeding route tree");
@@ -160,18 +195,25 @@ describe("localized public landing content", () => {
     expect(main.queryByText(/幻兽帕鲁|存档同步|帕鲁库存/)).toBeNull();
     expect(container.textContent).not.toContain("palbeacon-sync");
     const footer = container.querySelector("footer")!;
-    expect(footer.querySelectorAll("a")).toHaveLength(1);
-    expect(footer.querySelector("a")?.textContent).toBe(
-      "Contact: ghsy950525@gmail.com",
-    );
-    expect(footer.querySelector("a")?.getAttribute("href")).toBe(
-      "mailto:ghsy950525@gmail.com",
-    );
+    expect(footer.querySelectorAll("a")).toHaveLength(5);
+    expect(
+      footer.querySelector('a[href="mailto:ghsy950525@gmail.com"]')
+        ?.textContent,
+    ).toBe("Contact: ghsy950525@gmail.com");
+    expect(
+      footer
+        .querySelector('a[href="mailto:ghsy950525@gmail.com"]')
+        ?.getAttribute("href"),
+    ).toBe("mailto:ghsy950525@gmail.com");
   });
 
   it("publishes parseable WebSite, SoftwareApplication and visible FAQ data", async () => {
     const { container } = render(
-      await LandingPage({ locale: "en", translate: landingCopy("en") }),
+      await LandingPage({
+        locale: "en",
+        translate: landingCopy("en"),
+        publicTranslate: publicCopy("en"),
+      }),
     );
     const values = [
       ...container.querySelectorAll('script[type="application/ld+json"]'),

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { authState } = vi.hoisted(() => ({
-  authState: { authenticated: true },
+  authState: { authenticated: true, getUserCalls: 0 },
 }));
 
 vi.mock("@supabase/ssr", () => ({
@@ -23,6 +23,7 @@ vi.mock("@supabase/ssr", () => ({
   ) => ({
     auth: {
       getUser: async () => {
+        authState.getUserCalls += 1;
         options.cookies.setAll([
           { name: "sb-session", value: "refreshed", options: { path: "/" } },
         ]);
@@ -48,6 +49,7 @@ import { middleware, withPrivateCacheHeaders } from "../middleware";
 describe("protected response caching", () => {
   beforeEach(() => {
     authState.authenticated = true;
+    authState.getUserCalls = 0;
   });
 
   it("marks authentication redirects private and non-cacheable", () => {
@@ -145,5 +147,28 @@ describe("protected response caching", () => {
     expect(response.headers.get("cache-control")).toBe(
       "private, no-store, max-age=0",
     );
+  });
+
+  it("serves every indexable public route without querying the user session", async () => {
+    const slugs = [
+      "",
+      "/palworld-save-sync",
+      "/save-breeding-planner",
+      "/passive-breeding-route",
+      "/guild-pal-inventory",
+    ];
+
+    for (const locale of ["zh", "en"] as const) {
+      for (const slug of slugs) {
+        const response = await middleware(
+          new NextRequest(`https://example.invalid/${locale}${slug}`),
+        );
+        expect(response.headers.get("x-robots-tag")).toBeNull();
+        expect(response.headers.get("cache-control")).not.toBe(
+          "private, no-store, max-age=0",
+        );
+      }
+    }
+    expect(authState.getUserCalls).toBe(0);
   });
 });

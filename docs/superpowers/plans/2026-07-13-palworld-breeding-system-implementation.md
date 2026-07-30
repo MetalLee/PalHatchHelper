@@ -1238,6 +1238,44 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 4. 最小修改 Landing 组件、英中翻译和相关测试；完成 Web format、lint、strict typecheck、受影响
    单元测试、production build 与 `git diff --check` 后单独提交。
 
+## 2026-07-30 跨阶段修订：P0 SEO 首页定位与四个公开搜索入口
+
+1. 锁定最新 `main`、现有首页 H1、sitemap 数量及 Sync CLI 的平台、命令、世界发现、只读快照和
+   脱敏上传事实；公开文案遇到需求与实现冲突时以实际实现和正式规格为准并明确限制。
+2. 先增加失败测试，覆盖首页双语 H1/副标题/三 CTA/四入口、八个公开路由、唯一 H1、CLI 命令、
+   同语言内部链接、十组 metadata、十项 sitemap、JSON-LD、语言切换和公开 middleware 不查 Session。
+3. 提取最小共享公开 Header/Footer、Breadcrumb、内容布局、FAQ、CTA、metadata 与结构化数据；
+   四类页面保持 Server Component 和静态生成，正文不查询 Supabase 或用户数据。
+4. 首页使用短产品 H1，并把品牌句降为 eyebrow；新增四张 locale-aware 内容卡和第三个存档同步 CTA，
+   保留现有轮播及登录/控制台目标。
+5. 更新 sitemap 为十个公开 URL，保留 robots 与全部私有 noindex/鉴权边界。公开 middleware 仅对已知
+   公开路由直接继续，不改变登录、workspace 或 admin 的 Session 刷新和跳转逻辑。
+6. 局部测试通过后，对最终状态执行 Web format、lint、typecheck、完整单元测试、相关 Playwright、
+   production build、十个 URL 的本地生产服务 curl/HTML/JSON-LD 检查与 `git diff --check`。
+
+### 回滚与生产约束
+
+- 本修订只修改公开 Web 展示、消息、SEO 配置、测试与文档，不修改数据库、Sync 协议、CLI、认证
+  流程、配种关系、算法、真实存档、`/opt/palworld`、容器或公网端口。
+- 不执行 Vercel/Supabase/Agent 生产部署、远程推送、Search Console 或 Bing 提交；这些动作仍需
+  独立人工授权和平台凭据。
+
+## 2026-07-30 跨阶段修订：登录页返回公开首页入口
+
+1. 先增加登录页失败测试，锁定桌面左侧品牌区存在本地化“了解 PalBeacon”链接并以根路径交给
+   locale-aware 导航生成当前语言首页地址。
+2. 复用现有 Button、翻译消息和 next-intl Link 增加入口，保持 44 像素点击区、键盘焦点和登录页
+   响应式布局；不复制路由前缀、不使用 JavaScript `onClick`。
+3. 运行登录页局部测试、Web lint/typecheck/test/build 与 `git diff --check`；不修改认证、Session、
+   `next` 参数、数据库、Sync 协议、配种算法或生产环境。
+
+## 2026-07-30 跨阶段修订：Landing Hero CTA 收口
+
+1. 更新失败测试，将 Hero 的真实链接数量从三个锁定为两个，并拒绝继续显示“了解存档同步”。
+2. 删除第三个 locale-aware CTA 及其英中文案；保留“开始使用”“打开控制台”和首页内容卡、Footer
+   中的存档同步入口，不改变公开路由、metadata、sitemap 或认证流程。
+3. 与登录页入口改动合并执行 Web 最终验证和 `git diff --check`。
+
 ## Phase 8：管理员功能、部署和端到端验收
 
 ### 阶段目标

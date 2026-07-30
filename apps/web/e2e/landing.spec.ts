@@ -9,10 +9,13 @@ test("serves localized public landing pages and search assets", async ({
     expect(response?.status()).toBe(200);
     await expect(page).toHaveURL(new RegExp(`/${locale}$`));
     await expect(page.locator("h1")).toHaveCount(1);
-    await expect(page.locator("h1")).toHaveText("Keep your Palworld visible");
+    await expect(page.locator("h1")).toHaveText(
+      locale === "zh" ? "幻兽帕鲁服务器控制台" : "Palworld Server Console",
+    );
+    await expect(page.getByText("Keep your world visible.")).toBeVisible();
     await expect(
       page.locator("main > section").first().locator("a"),
-    ).toHaveCount(2);
+    ).toHaveCount(3);
     await expect(
       page.locator("main > section").first().locator('a[href*="github.com"]'),
     ).toHaveCount(0);
@@ -98,6 +101,7 @@ test("serves localized public landing pages and search assets", async ({
   const sitemapBody = await sitemapResponse.text();
   expect(sitemapBody).toContain("https://www.palbeacon.app/zh");
   expect(sitemapBody).toContain("https://www.palbeacon.app/en");
+  expect(sitemapBody.match(/<loc>/g)).toHaveLength(10);
   expect(sitemapBody).not.toContain("/overview");
 
   for (const locale of ["zh", "en"] as const) {
@@ -120,6 +124,80 @@ test("keeps the localized landing content readable on narrow screens", async ({
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+  }
+});
+
+test("navigates every public guide, preserves its slug across languages, and exposes the existing CTA flow", async ({
+  page,
+}) => {
+  const guides = [
+    [
+      "palworld-save-sync",
+      "帕鲁服务器存档同步",
+      "Palworld Server Save Sync",
+      "/en/login",
+    ],
+    [
+      "save-breeding-planner",
+      "基于存档的配种规划",
+      "Save-Based Breeding Planner",
+      "/en/breeder",
+    ],
+    [
+      "passive-breeding-route",
+      "帕鲁被动继承路线",
+      "Passive Breeding Routes",
+      "/en/breeder",
+    ],
+    [
+      "guild-pal-inventory",
+      "公会帕鲁库存协作",
+      "Guild Pal Inventory",
+      "/en/login",
+    ],
+  ] as const;
+
+  for (const [slug, chineseTitle, englishTitle, ctaHref] of guides) {
+    await page.goto("/zh");
+    const card = page.locator(`#explore a[href="/zh/${slug}"]`);
+    await expect(card).toBeVisible();
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/zh/${slug}$`));
+    await expect(page.locator("h1")).toHaveCount(1);
+    await expect(page.locator("h1")).toHaveText(chineseTitle);
+    await expect(
+      page.getByRole("navigation", { name: "面包屑导航" }),
+    ).toBeVisible();
+    await expect(page.locator(`footer a[href="/zh/${slug}"]`)).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+
+    await page
+      .locator("[data-landing-header]")
+      .getByRole("button", { name: "当前语言：中文" })
+      .first()
+      .click();
+    await page.getByRole("menuitemradio", { name: "English" }).click();
+    await expect(page).toHaveURL(new RegExp(`/en/${slug}$`));
+    await expect(page.locator("h1")).toHaveText(englishTitle);
+    await expect(
+      page.locator(`main a[href="${ctaHref}"]`).first(),
+    ).toBeVisible();
+    await expect(
+      page.locator('script[type="application/ld+json"]'),
+    ).toHaveCount(3);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `https://www.palbeacon.app/en/${slug}`,
+    );
+    for (const language of ["zh-CN", "en", "x-default"] as const) {
+      await expect(
+        page.locator(`link[rel="alternate"][hreflang="${language}"]`),
+      ).toHaveCount(1);
+    }
   }
 });
 

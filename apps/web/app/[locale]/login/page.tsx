@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -8,9 +8,11 @@ import { BrandWordmark } from "@/components/brand/brand-wordmark";
 import { GitHubLink } from "@/components/github-link";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { Button } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { isAppLocale } from "@/i18n/routing";
 import { privatePageMetadata } from "@/config/seo";
+import { Link } from "@/i18n/navigation";
 
 import { LoginForm } from "./login-form";
 import { isPasswordLoginEnabled } from "@/features/auth/password-login";
@@ -72,6 +74,19 @@ export default async function LoginPage({
           <div className="mt-8 inline-flex items-center gap-2 rounded-full bg-white/64 px-4 py-2 text-sm font-semibold text-primary shadow-sm">
             <ShieldCheck aria-hidden="true" className="size-4" />
             {brandCopy("secureWorld")}
+          </div>
+          <div>
+            <Button
+              asChild
+              className="mt-5 rounded-xl border-primary/20 bg-white/58 px-5 text-primary shadow-sm hover:bg-white/82"
+              size="lg"
+              variant="outline"
+            >
+              <Link href="/">
+                <ArrowLeft aria-hidden="true" className="size-4" />
+                {login("learnAbout")}
+              </Link>
+            </Button>
           </div>
         </section>
 

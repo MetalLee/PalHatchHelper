@@ -16,6 +16,14 @@ const protectedPrefixes = [
   "/admin",
 ];
 
+const publicPaths = new Set([
+  "/",
+  "/palworld-save-sync",
+  "/save-breeding-planner",
+  "/passive-breeding-route",
+  "/guild-pal-inventory",
+]);
+
 export function withPrivateCacheHeaders(response: NextResponse): NextResponse {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Vary", "Cookie");
@@ -51,6 +59,8 @@ export async function middleware(request: NextRequest) {
       ? withPrivateCacheHeaders(response)
       : response;
   }
+
+  if (publicPaths.has(normalizedPathname)) return handleI18nRouting(request);
 
   let authResponse = NextResponse.next({
     request: { headers: new Headers(request.headers) },

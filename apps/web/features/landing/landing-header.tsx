@@ -60,10 +60,19 @@ export type LandingHeaderLabels = Readonly<{
 export function LandingHeader({
   locale,
   labels,
-}: Readonly<{ locale: AppLocale; labels: LandingHeaderLabels }>) {
+  sectionHrefPrefix = "",
+}: Readonly<{
+  locale: AppLocale;
+  labels: LandingHeaderLabels;
+  sectionHrefPrefix?: string;
+}>) {
   return (
     <AppLocaleProvider locale={locale}>
-      <LandingHeaderContent locale={locale} labels={labels} />
+      <LandingHeaderContent
+        locale={locale}
+        labels={labels}
+        sectionHrefPrefix={sectionHrefPrefix}
+      />
     </AppLocaleProvider>
   );
 }
@@ -71,7 +80,12 @@ export function LandingHeader({
 function LandingHeaderContent({
   locale,
   labels,
-}: Readonly<{ locale: AppLocale; labels: LandingHeaderLabels }>) {
+  sectionHrefPrefix,
+}: Readonly<{
+  locale: AppLocale;
+  labels: LandingHeaderLabels;
+  sectionHrefPrefix: string;
+}>) {
   const [scrollTop, setScrollTop] = useState(0);
   const rawProgress = Math.min(scrollTop / GLASS_FULL_PX, 1);
   const progress = smoothstep(rawProgress);
@@ -79,10 +93,10 @@ function LandingHeaderContent({
   const blur = progress * 22;
   const saturation = 100 + progress * 18;
   const links = [
-    ["#workflow", labels.navWorkflow],
-    ["#features", labels.navFeatures],
-    ["#safety", labels.navSafety],
-    ["#faq", labels.navFaq],
+    [`${sectionHrefPrefix}#workflow`, labels.navWorkflow],
+    [`${sectionHrefPrefix}#features`, labels.navFeatures],
+    [`${sectionHrefPrefix}#safety`, labels.navSafety],
+    [`${sectionHrefPrefix}#faq`, labels.navFaq],
   ] as const;
 
   useEffect(() => {

@@ -15,12 +15,17 @@ import {
   SquareTerminal,
   type LucideIcon,
 } from "lucide-react";
-import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 
 import { Button } from "@/components/ui/button";
-import { brand } from "@/config/brand";
+import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
+
+import { PublicFooter } from "../public-content/public-footer";
+import {
+  publicPageProfiles,
+  publicPageSlugs,
+} from "../public-content/page-config";
 
 import {
   buildLandingStructuredData,
@@ -153,15 +158,23 @@ function SystemFlow({ t }: Readonly<{ t: LandingTranslator }>) {
 export async function LandingPage({
   locale,
   translate,
+  publicTranslate,
 }: Readonly<{
   locale: AppLocale;
   translate?: LandingTranslator;
+  publicTranslate?: LandingTranslator;
 }>) {
   const t =
     translate ??
     ((await getTranslations({
       locale,
       namespace: "Landing",
+    })) as LandingTranslator);
+  const publicT =
+    publicTranslate ??
+    ((await getTranslations({
+      locale,
+      namespace: "PublicContent",
     })) as LandingTranslator);
   const headerLabels: LandingHeaderLabels = {
     navLabel: t("navLabel"),
@@ -240,7 +253,10 @@ export async function LandingPage({
           />
           <div className="mx-auto grid min-h-dvh w-full max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[0.86fr_1.14fr] lg:px-8 lg:py-24">
             <div className="max-w-2xl">
-              <h1 className="text-4xl font-bold tracking-[-0.045em] text-foreground text-balance sm:text-5xl lg:text-6xl lg:leading-[1.08]">
+              <p className="text-xs font-bold tracking-[0.18em] text-primary uppercase">
+                {t("heroEyebrow")}
+              </p>
+              <h1 className="mt-3 text-4xl font-bold tracking-[-0.045em] text-foreground text-balance sm:text-5xl lg:text-6xl lg:leading-[1.08]">
                 {t("heroTitle")}
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground [text-wrap:pretty] sm:text-lg sm:leading-8">
@@ -252,10 +268,10 @@ export async function LandingPage({
                   size="lg"
                   className="rounded-xl shadow-[0_14px_34px_rgb(40_122_84_/_0.22)]"
                 >
-                  <a href={`/${locale}/login`}>
+                  <Link href="/login" locale={locale}>
                     {t("heroPrimary")}
                     <ArrowRight aria-hidden="true" className="size-4" />
-                  </a>
+                  </Link>
                 </Button>
                 <Button
                   asChild
@@ -263,11 +279,54 @@ export async function LandingPage({
                   variant="outline"
                   className="rounded-xl bg-white/72"
                 >
-                  <a href={`/${locale}/overview`}>{t("heroConsole")}</a>
+                  <Link href="/overview" locale={locale}>
+                    {t("heroConsole")}
+                  </Link>
                 </Button>
               </div>
             </div>
             <ProductCarousel locale={locale} />
+          </div>
+        </section>
+
+        <section id="explore" className="border-b border-white/70 bg-white/40">
+          <div className={sectionClassName}>
+            <SectionHeading
+              eyebrow={publicT("exploreEyebrow")}
+              title={publicT("exploreTitle")}
+              description={publicT("exploreDescription")}
+            />
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {publicPageSlugs.map((slug) => {
+                const profile = publicPageProfiles[slug];
+                const Icon = profile.Icon;
+                return (
+                  <Link
+                    key={slug}
+                    href={`/${slug}`}
+                    locale={locale}
+                    className="group flex min-h-56 flex-col rounded-3xl border border-glass-border bg-white/84 p-5 shadow-soft transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none motion-reduce:transition-none"
+                  >
+                    <span className="grid size-11 place-items-center rounded-2xl bg-primary/10 text-primary">
+                      <Icon aria-hidden="true" className="size-5" />
+                    </span>
+                    <h2 className="mt-5 text-lg font-bold text-foreground text-balance">
+                      {publicT(`${profile.messageKey}CardTitle`)}
+                    </h2>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground [text-wrap:pretty]">
+                      {publicT(`${profile.messageKey}CardDescription`)}
+                    </p>
+                    <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-primary">
+                      {publicT("relatedRead")}
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="size-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none"
+                      />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -405,38 +464,18 @@ export async function LandingPage({
         </section>
       </main>
 
-      <footer className="border-t border-border/70 bg-foreground px-4 py-10 text-white sm:px-6 lg:px-8">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <Image
-                src={brand.logoPath}
-                alt={brand.name}
-                width={42}
-                height={42}
-              />
-              <span className="text-xl font-bold">PalBeacon</span>
-            </div>
-            <p className="mt-3 font-semibold text-emerald-200">
-              {t("footerTagline")}
-            </p>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">
-              {t("footerDisclaimer")}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold">
-            <a
-              className="min-h-11 content-center hover:text-emerald-200"
-              href="mailto:ghsy950525@gmail.com"
-            >
-              {t("footerDeveloper")}
-            </a>
-            <span className="min-h-11 content-center text-white/60">
-              © {new Date().getUTCFullYear()}
-            </span>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter
+        locale={locale}
+        tagline={t("footerTagline")}
+        developer={t("footerDeveloper")}
+        disclaimer={t("footerDisclaimer")}
+        exploreTitle={publicT("footerExplore")}
+        navigationLabel={publicT("footerNavigationLabel")}
+        links={publicPageSlugs.map((slug) => ({
+          slug,
+          label: publicT(`${publicPageProfiles[slug].messageKey}CardTitle`),
+        }))}
+      />
       <LandingStructuredData values={structuredData} />
     </div>
   );

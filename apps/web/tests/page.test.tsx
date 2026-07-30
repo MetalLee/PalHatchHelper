@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "../app/[locale]/login/login-form";
@@ -15,6 +16,7 @@ const loginMessages = vi.hoisted(() => ({
   Login: {
     welcome: "欢迎回来",
     subtitle: "登录你的 PalBeacon 账号",
+    learnAbout: "了解 PalBeacon",
   },
 }));
 
@@ -25,6 +27,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/i18n/navigation", () => ({
+  Link: ({ href, ...props }: ComponentProps<"a">) => (
+    <a href={href} {...props} />
+  ),
   usePathname: () => "/login",
   useRouter: () => ({ replace: vi.fn() }),
 }));
@@ -69,6 +74,9 @@ describe("login page", () => {
     expect(brandPanel?.className).not.toContain("backdrop-blur");
     expect(brandPanel?.textContent).toContain("让每一次培育，都有清晰方向");
     expect(brandPanel?.textContent).toContain("安全连接你的帕鲁世界");
+    expect(
+      screen.getByRole("link", { name: "了解 PalBeacon" }).getAttribute("href"),
+    ).toBe("/");
     expect(screen.getByText("忘记密码？").getAttribute("aria-disabled")).toBe(
       "true",
     );
