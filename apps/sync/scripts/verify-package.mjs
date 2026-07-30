@@ -202,9 +202,15 @@ async function verifyRuntime(structure) {
     "utf8",
   );
   await execFileAsync(
-    "npm",
+    process.platform === "win32" ? "npm.cmd" : "npm",
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
-    { cwd: installRoot, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
+    {
+      cwd: installRoot,
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+      windowsHide: true,
+      ...(process.platform === "win32" ? { shell: true } : {}),
+    },
   );
   const installedPackage = join(installRoot, "node_modules", "palbeacon-cli");
   const installedParser = join(
