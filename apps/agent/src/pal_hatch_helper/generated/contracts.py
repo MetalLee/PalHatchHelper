@@ -907,7 +907,7 @@ class SyncPairRequest(BaseModel):
 
     code: Annotated[str, Field(pattern="^[A-Za-z2-9]{4}[- ]?[A-Za-z2-9]{4}$")]
     device_name: Annotated[str, Field(min_length=1), Field(max_length=80)]
-    platform: Literal["linux-x64"]
+    platform: Literal["linux-x64", "win32-x64"]
     app_version: Annotated[str, Field(min_length=1), Field(max_length=40)] | None = None
 
 

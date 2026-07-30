@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CanonicalSnapshot } from "@palhatch/contracts";
 
 import { toInventoryPublishPayload } from "../src/redaction.js";
-import { assertCutoverReport } from "../../../scripts/operations/verify-public-sync-cutover.mjs";
+import { assertCutoverReport } from "../../../scripts/operations/public-sync-cutover.mjs";
 import { removeTestDirectory } from "./support.js";
 
 const repositoryRoot = join(
@@ -120,7 +120,7 @@ describe("cutover comparison tools", () => {
     const payload = toInventoryPublishPayload(canonical, {
       sourceHash: "a".repeat(64),
       sourceModifiedAt: "2026-07-29T00:00:00.000Z",
-      parserVersion: "1.2.0",
+      parserVersion: "1.3.0",
     });
     await writeJson(canonicalPath, canonical);
     await writeJson(actualPath, payload);
@@ -165,7 +165,7 @@ describe("cutover comparison tools", () => {
       duplicate_player_count: 0,
       latest_snapshot_id: "40000000-0000-4000-8000-000000000099",
       latest_parser_name: "palhatch-plm-save-parser",
-      latest_parser_version: "1.2.0",
+      latest_parser_version: "1.3.0",
       latest_pal_count: 1,
       latest_unresolved_count: 0,
       unresolved_count_increased: false,
@@ -180,7 +180,7 @@ describe("cutover comparison tools", () => {
       ok: true,
       world_id: expected.worldId,
       device_id: expected.deviceId,
-      parser_version: "1.2.0",
+      parser_version: "1.3.0",
     });
     expect(() =>
       assertCutoverReport({ ...report, duplicate_player_count: 1 }, expected),

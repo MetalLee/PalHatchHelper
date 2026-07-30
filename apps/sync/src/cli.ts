@@ -26,7 +26,7 @@ import {
   resolveLocale,
   type CliLocale,
 } from "./locale.js";
-import { assertSupportedPlatform } from "./platform.js";
+import { runtimePlatform, type RuntimePlatform } from "./platform.js";
 import { syncOnce } from "./sync.js";
 import { VERSION } from "./version.js";
 
@@ -34,7 +34,7 @@ export const DEFAULT_API_BASE_URL = "https://www.palbeacon.app";
 
 export interface InitRuntime {
   isInteractive: boolean;
-  assertSupportedPlatform: () => void;
+  runtimePlatform: () => RuntimePlatform;
   question: (prompt: string) => Promise<string>;
   loadConfig: () => Promise<SyncConfig>;
   findWorldSave: typeof findWorldSave;
@@ -104,8 +104,7 @@ async function main(arguments_: string[], locale: CliLocale): Promise<void> {
         parseArguments(commandArguments),
         {
           isInteractive: stdin.isTTY,
-          assertSupportedPlatform: () =>
-            assertSupportedPlatform(undefined, undefined, locale),
+          runtimePlatform,
           question: (prompt) => terminal.question(prompt),
           loadConfig,
           findWorldSave,
@@ -121,14 +120,14 @@ async function main(arguments_: string[], locale: CliLocale): Promise<void> {
     }
   } else if (command === "run") {
     if (commandArguments.length > 0) throw new Error("ARGUMENTS_INVALID");
-    assertSupportedPlatform(undefined, undefined, locale);
+    runtimePlatform();
     await runContinuously(defaultRunRuntime(), locale);
   } else if (command === "sync") {
     if (commandArguments.length !== 1 || commandArguments[0] !== "--once")
       throw new Error("SYNC_ONCE_REQUIRED");
     await runSingleSync(locale);
   } else if (command === "inspect") {
-    assertSupportedPlatform(undefined, undefined, locale);
+    runtimePlatform();
     const outputs = parseInspectArguments(commandArguments);
     await inspectSave(outputs);
     console.log(messages(locale).inspectComplete(outputs.canonicalOutput));
@@ -149,7 +148,7 @@ export async function initialize(
   locale: CliLocale = "en",
 ): Promise<void> {
   const text = messages(locale);
-  runtime.assertSupportedPlatform();
+  const platform = runtime.runtimePlatform();
   const hasExistingConfig =
     options.get("force") === "true"
       ? false
@@ -196,7 +195,7 @@ export async function initialize(
   const paired = await runtime.pairDevice(baseUrl, {
     code,
     device_name: deviceName,
-    platform: "linux-x64",
+    platform,
     app_version: VERSION,
   });
   runtime.log(text.paired);
@@ -216,7 +215,7 @@ export async function initialize(
 }
 
 async function runSingleSync(locale: CliLocale): Promise<void> {
-  assertSupportedPlatform(undefined, undefined, locale);
+  runtimePlatform();
   const result = await syncOnce(await loadConfig());
   console.log(syncResultMessage(result, locale));
 }

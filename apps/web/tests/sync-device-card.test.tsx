@@ -54,7 +54,7 @@ describe("SyncDeviceCard installation guidance", () => {
     expect(screen.queryByText(/--url|--sync-now|palbeacon-sync/)).toBeNull();
     const installCommand = screen.getByText("npm install -g palbeacon-cli");
     const installDescription = screen.getByText(
-      "在运行 Palworld 服务器的 Linux x64 主机上安装。",
+      "支持 Linux x64 和 Windows x64，请在运行 Palworld 服务器的主机上安装。",
     );
     expect(
       installCommand.compareDocumentPosition(installDescription) &
@@ -107,8 +107,45 @@ describe("SyncDeviceCard installation guidance", () => {
         "The tool syncs immediately, then checks for save changes every 5 minutes.",
       ),
     ).toBeTruthy();
+    expect(screen.getByText(/Supports Linux x64 and Windows x64/)).toBeTruthy();
+  });
+
+  it("shows a localized label for each device's reported platform", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        response({
+          devices: [
+            device("linux-x64", "Linux server"),
+            device("win32-x64", "Windows server"),
+          ],
+        }),
+      ),
+    );
+    render(
+      <AppLocaleProvider locale="en">
+        <SyncDeviceCard hasBinding />
+      </AppLocaleProvider>,
+    );
+    expect(await screen.findByText(/^Linux x64 ·/)).toBeTruthy();
+    expect(await screen.findByText(/^Windows x64 ·/)).toBeTruthy();
   });
 });
+
+function device(platform: string, name: string) {
+  return {
+    id: `${platform}-fixture`,
+    name,
+    platform,
+    token_prefix: "pbs_fixture1",
+    app_version: "0.2.0",
+    world_id: null,
+    last_seen_at: null,
+    last_snapshot_at: null,
+    revoked_at: null,
+    created_at: "2026-07-30T00:00:00.000Z",
+  };
+}
 
 function response(value: unknown): Response {
   return new Response(JSON.stringify(value), {

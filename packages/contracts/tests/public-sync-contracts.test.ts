@@ -33,14 +33,25 @@ describe("public Sync shared contracts", () => {
   });
 
   it("validates pair and heartbeat requests without accepting authority fields", () => {
-    expect(
-      parseSyncPairRequest({
-        code: "ABCD-EFGH",
-        device_name: "我的帕鲁服务器",
-        platform: "linux-x64",
-        app_version: "0.1.0",
-      }),
-    ).toMatchObject({ platform: "linux-x64" });
+    for (const platform of ["linux-x64", "win32-x64"]) {
+      expect(
+        parseSyncPairRequest({
+          code: "ABCD-EFGH",
+          device_name: "我的帕鲁服务器",
+          platform,
+          app_version: "0.2.0",
+        }),
+      ).toMatchObject({ platform });
+    }
+    for (const platform of ["windows-x64", "win32-arm64", "unknown"]) {
+      expect(() =>
+        parseSyncPairRequest({
+          code: "ABCD-EFGH",
+          device_name: "server",
+          platform,
+        }),
+      ).toThrowError(/SYNC_REQUEST_INVALID/);
+    }
     expect(() =>
       parseSyncPairRequest({
         code: "ABCD-EFGH",

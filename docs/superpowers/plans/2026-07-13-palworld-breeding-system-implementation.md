@@ -1298,8 +1298,22 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
 
 ## 跨阶段变更规则
 
-1. 正式规格优先于本计划；规格变更必须先更新规格评审状态，再更新本计划和相关 ADR。
-2. 已应用迁移不可原地修改，必须追加迁移。
-3. 契约源变化后必须重新生成两端模型并通过漂移检查。
-4. 所有外部系统通过 Adapter 隔离；测试默认使用本地 fake、fixture 或本地 Supabase。
-5. 任一阶段只有在 lint、format、typecheck、test、build 与安全检查提供真实执行结果后才能声明完成。
+### 公共 Sync Windows x64 扩展交付顺序
+
+1. 先把运行平台收敛为共享的 `linux-x64 | win32-x64` 模型，并用失败测试覆盖平台、Parser 选择、
+   Windows 路径、临时快照、配置与跨平台哈希；不改变 Sync 鉴权、脱敏或算法边界。
+2. 使用同一 Parser 源码与固定 Go/MinGW 容器分别重复构建 Linux ELF 和 Windows PE，验证 fixture、
+   可复现 SHA-256 与动态依赖后再生成独立 manifest。
+3. 从 Sync Schema 生成 TypeScript/Python 模型，追加 forward-only 数据库约束迁移与 pgTAP；不得修改
+   已应用 migration 或放宽为任意平台字符串。
+4. 仅在两个 artifact 的版本、源码 commit 与 upstream commit 一致时组装唯一
+   `palbeacon-cli-0.2.0.tgz`，先做平台无关结构检查，再由 Ubuntu/Windows matrix 安装同一 tgz 并
+   解析相同 fixture。
+5. 最后更新 Web 双语平台说明、普通 README、许可证/源码通知与运维文档。回滚只撤销未发布 npm
+   candidate 和 Web/代码变更；不应用生产 migration、不操作 Palworld，也不停止既有同步服务。
+
+6. 正式规格优先于本计划；规格变更必须先更新规格评审状态，再更新本计划和相关 ADR。
+7. 已应用迁移不可原地修改，必须追加迁移。
+8. 契约源变化后必须重新生成两端模型并通过漂移检查。
+9. 所有外部系统通过 Adapter 隔离；测试默认使用本地 fake、fixture 或本地 Supabase。
+10. 任一阶段只有在 lint、format、typecheck、test、build 与安全检查提供真实执行结果后才能声明完成。

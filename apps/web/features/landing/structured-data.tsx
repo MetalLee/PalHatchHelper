@@ -43,7 +43,7 @@ export function buildLandingStructuredData({
       name: siteConfig.name,
       applicationCategory: "UtilitiesApplication",
       operatingSystem:
-        "Web application: any modern browser; save sync CLI: Linux x64",
+        "Web application: any modern browser; save sync CLI: Linux x64 and Windows x64",
       description: softwareDescription,
       url,
       inLanguage,

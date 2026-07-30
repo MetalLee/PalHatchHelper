@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  configDirectory,
+  deleteConfig,
   formatStatus,
   loadConfig,
   saveConfig,
@@ -15,6 +17,33 @@ const roots: string[] = [];
 afterEach(async () => Promise.all(roots.splice(0).map(removeTestDirectory)));
 
 describe("configuration security", () => {
+  it("keeps the Linux path and uses APPDATA with a safe Windows fallback", () => {
+    expect(
+      configDirectory({
+        platform: "linux",
+        architecture: "x64",
+        environment: {},
+        homeDirectory: "/home/fixture",
+      }),
+    ).toBe("/home/fixture/.config/palbeacon");
+    expect(
+      configDirectory({
+        platform: "win32",
+        architecture: "x64",
+        environment: { APPDATA: "C:\\Users\\Ada\\AppData\\Roaming" },
+        homeDirectory: "C:\\Users\\Ada",
+      }),
+    ).toBe("C:\\Users\\Ada\\AppData\\Roaming\\PalBeacon");
+    expect(
+      configDirectory({
+        platform: "win32",
+        architecture: "x64",
+        environment: {},
+        homeDirectory: "C:\\Users\\Ada",
+      }),
+    ).toBe("C:\\Users\\Ada\\AppData\\Roaming\\PalBeacon");
+  });
+
   it("writes config.json with mode 0600 and never renders the token in status", async () => {
     const root = await mkdtemp(join(tmpdir(), "palbeacon-sync-config-"));
     roots.push(root);
@@ -29,8 +58,10 @@ describe("configuration security", () => {
     };
     const path = await saveConfig(config, root);
 
-    expect((await stat(root)).mode & 0o777).toBe(0o700);
-    expect((await stat(path)).mode & 0o777).toBe(0o600);
+    if (process.platform !== "win32") {
+      expect((await stat(root)).mode & 0o777).toBe(0o700);
+      expect((await stat(path)).mode & 0o777).toBe(0o600);
+    }
     expect(JSON.parse(await readFile(path, "utf8"))).toMatchObject(config);
     expect(formatStatus(config)).not.toContain(config.device_token);
     expect(formatStatus(config)).toContain("https://www.palbeacon.app");
@@ -82,5 +113,35 @@ describe("configuration security", () => {
     ) as Record<string, unknown>;
     expect(persisted).not.toHaveProperty(legacyPathField);
     expect(persisted).not.toHaveProperty(legacyHashField);
+  });
+
+  it("saves, overwrites, reads and deletes a Windows-style configuration", async () => {
+    const root = await mkdtemp(join(tmpdir(), "palbeacon-win-config-"));
+    roots.push(root);
+    const first: SyncConfig = {
+      config_version: 2,
+      api_base_url: "https://www.palbeacon.app",
+      device_id: "00000000-0000-4000-8000-000000000001",
+      device_token: "pbs_first-secret-token",
+      save_dir: "C:\\PalServer\\Pal\\Saved\\SaveGames\\0\\ABC",
+      interval_seconds: 300,
+      device_name: "Windows fixture",
+    };
+    await saveConfig(first, root, "win32-x64");
+    await saveConfig(
+      { ...first, device_token: "pbs_replaced-secret-token" },
+      root,
+      "win32-x64",
+    );
+    expect(await loadConfig(root)).toMatchObject({
+      device_token: "pbs_replaced-secret-token",
+    });
+    expect(formatStatus(await loadConfig(root))).not.toContain(
+      "pbs_replaced-secret-token",
+    );
+    await deleteConfig(root);
+    await expect(loadConfig(root)).rejects.toThrowError(
+      /SYNC_CONFIG_NOT_FOUND/,
+    );
   });
 });

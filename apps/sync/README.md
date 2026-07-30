@@ -5,18 +5,25 @@
 Read-only Palworld server save synchronization for PalBeacon. It uploads Pal
 inventory for collaborative breeding plans without modifying your save.
 
-## Install
+## Supported platforms
 
-Linux x64 and Node.js 22 or later are required.
+- Linux x64
+- Windows x64
 
-```bash
+Node.js 22 or later is required.
+
+In a Linux shell or Windows PowerShell:
+
+```powershell
 npm install -g palbeacon-cli
+palbeacon init
+palbeacon run
 ```
 
 ## Use
 
-Create a sync device in your PalBeacon account and copy its pairing code. Then
-run:
+Create a sync device in your PalBeacon account and copy its pairing code. If
+you did not use the quick-start sequence above, run:
 
 ```bash
 palbeacon init

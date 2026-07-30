@@ -72,7 +72,7 @@ describe("upload redaction", () => {
     const payload = toInventoryPublishPayload(canonical, {
       sourceHash: "a".repeat(64),
       sourceModifiedAt: "2026-07-29T00:00:00.000Z",
-      parserVersion: "1.2.0",
+      parserVersion: "1.3.0",
     });
     const serialized = JSON.stringify(payload);
     for (const raw of [

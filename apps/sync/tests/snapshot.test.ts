@@ -19,6 +19,32 @@ const roots: string[] = [];
 afterEach(async () => Promise.all(roots.splice(0).map(removeTestDirectory)));
 
 describe("read-only save snapshots", () => {
+  it.each(["server with spaces", "幻兽帕鲁服务器"])(
+    "uses the same POSIX logical paths and hash under %s",
+    async (segment) => {
+      const parent = await mkdtemp(join(tmpdir(), "palbeacon-sync-path-"));
+      roots.push(parent);
+      const root = join(parent, segment);
+      await mkdir(join(root, "Players"), { recursive: true });
+      await writeFile(join(root, "Level.sav"), "level-fixture");
+      await writeFile(join(root, "Players", "player.sav"), "player-fixture");
+
+      const snapshot = await createReadOnlySnapshot(root, {
+        delayMilliseconds: 0,
+      });
+      try {
+        expect(snapshot.hash).toBe(
+          "c7c68938565e0ac2c20f46a57e6d92dedf712528a0de04f331c89c4b6b9c3607",
+        );
+        expect(await readFile(join(root, "Level.sav"), "utf8")).toBe(
+          "level-fixture",
+        );
+      } finally {
+        await snapshot.cleanup();
+      }
+    },
+  );
+
   it("copies stable saves without changing source bytes or permissions", async () => {
     const root = await mkdtemp(join(tmpdir(), "palbeacon-sync-save-"));
     roots.push(root);
@@ -27,7 +53,8 @@ describe("read-only save snapshots", () => {
     await writeFile(join(root, "Players", "player.sav"), "player-fixture");
     const sourceTime = new Date("2026-07-18T16:00:00.000Z");
     await utimes(join(root, "Level.sav"), sourceTime, sourceTime);
-    await chmod(join(root, "Level.sav"), 0o640);
+    if (process.platform !== "win32")
+      await chmod(join(root, "Level.sav"), 0o640);
     const before = await stat(join(root, "Level.sav"));
 
     const snapshot = await createReadOnlySnapshot(root, {
@@ -43,12 +70,14 @@ describe("read-only save snapshots", () => {
       expect(await readFile(join(root, "Level.sav"), "utf8")).toBe(
         "level-fixture",
       );
-      expect((await stat(join(root, "Level.sav"))).mode & 0o777).toBe(
-        before.mode & 0o777,
-      );
-      expect((await stat(join(snapshot.path, "Level.sav"))).mode & 0o777).toBe(
-        0o444,
-      );
+      if (process.platform !== "win32") {
+        expect((await stat(join(root, "Level.sav"))).mode & 0o777).toBe(
+          before.mode & 0o777,
+        );
+        expect(
+          (await stat(join(snapshot.path, "Level.sav"))).mode & 0o777,
+        ).toBe(0o444);
+      }
       expect(
         (await stat(join(snapshot.path, "Level.sav"))).mtime.toISOString(),
       ).toBe(sourceTime.toISOString());

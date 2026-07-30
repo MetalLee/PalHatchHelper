@@ -1,8 +1,12 @@
 import { createHash } from "node:crypto";
-import { spawn } from "node:child_process";
+import {
+  spawn,
+  type ChildProcess,
+  type SpawnOptions,
+} from "node:child_process";
 import { lstat, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -10,18 +14,22 @@ import {
   type CanonicalSnapshot,
 } from "@palhatch/contracts";
 
+import { runtimePlatform, type RuntimePlatform } from "./platform.js";
+
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 const MAX_ERROR_BYTES = 32 * 1024;
 
 interface ParserOptions {
   binary?: string;
+  binaryArguments?: string[];
+  platform?: RuntimePlatform;
   timeoutMilliseconds?: number;
 }
 
 export interface ParserManifest {
   schema_version: 1;
-  binary_name: "palworld-save-parser";
-  platform: "linux-x64";
+  binary_name: "palworld-save-parser" | "palworld-save-parser.exe";
+  platform: RuntimePlatform;
   version: string;
   sha256: string;
   license: "GPL-3.0-or-later";
@@ -37,12 +45,20 @@ export async function parseSnapshot(
   snapshotPath: string,
   options: ParserOptions = {},
 ): Promise<CanonicalSnapshot> {
+  const platform = options.platform ?? runtimePlatform();
   const snapshotInfo = await lstat(snapshotPath);
   if (!snapshotInfo.isDirectory() || snapshotInfo.isSymbolicLink())
     throw new Error("PARSER_INPUT_INVALID");
   const overriddenBinary = options.binary ?? process.env.PALBEACON_PARSER_BIN;
-  const binary = overriddenBinary ?? bundledParserPath();
-  if (overriddenBinary === undefined) await verifyBundledParser(binary);
+  const binary =
+    overriddenBinary ??
+    join(bundledParserDirectory(platform), parserBinaryName(platform));
+  if (overriddenBinary === undefined) {
+    const manifest = await bundledParserManifest(platform);
+    await verifyParserBinary(binary, manifest, platform);
+  } else {
+    await verifyParserFile(binary, platform);
+  }
   const outputDirectory = await mkdtemp(
     join(tmpdir(), "palbeacon-sync-parser-"),
   );
@@ -50,9 +66,11 @@ export async function parseSnapshot(
   try {
     await executeParser(
       binary,
+      options.binaryArguments ?? [],
       snapshotPath,
       outputPath,
       options.timeoutMilliseconds ?? 180_000,
+      platform,
     );
     const outputInfo = await lstat(outputPath);
     if (!outputInfo.isFile() || outputInfo.isSymbolicLink())
@@ -63,28 +81,43 @@ export async function parseSnapshot(
       JSON.parse(await readFile(outputPath, "utf8")),
     );
   } finally {
-    await rm(outputDirectory, { recursive: true, force: true });
+    await rm(outputDirectory, {
+      recursive: true,
+      force: true,
+      maxRetries: 3,
+      retryDelay: 100,
+    });
   }
 }
 
-export async function bundledParserManifest(): Promise<ParserManifest> {
-  const value: unknown = JSON.parse(
-    await readFile(
-      join(
-        dirname(fileURLToPath(import.meta.url)),
-        "bin",
-        "parser-manifest.json",
+export async function bundledParserManifest(
+  platform: RuntimePlatform = runtimePlatform(),
+): Promise<ParserManifest> {
+  let value: unknown;
+  try {
+    value = JSON.parse(
+      await readFile(
+        join(bundledParserDirectory(platform), "parser-manifest.json"),
+        "utf8",
       ),
-      "utf8",
-    ),
-  );
+    );
+  } catch {
+    throw new Error("PARSER_MANIFEST_INVALID");
+  }
+  return validateParserManifest(value, platform);
+}
+
+export function validateParserManifest(
+  value: unknown,
+  platform: RuntimePlatform,
+): ParserManifest {
   if (typeof value !== "object" || value === null)
     throw new Error("PARSER_MANIFEST_INVALID");
   const manifest = value as Record<string, unknown>;
   if (
     manifest.schema_version !== 1 ||
-    manifest.binary_name !== "palworld-save-parser" ||
-    manifest.platform !== "linux-x64" ||
+    manifest.binary_name !== parserBinaryName(platform) ||
+    manifest.platform !== platform ||
     typeof manifest.version !== "string" ||
     !/^\d+\.\d+\.\d+$/.test(manifest.version) ||
     typeof manifest.sha256 !== "string" ||
@@ -106,65 +139,52 @@ export async function bundledParserManifest(): Promise<ParserManifest> {
   return manifest as unknown as ParserManifest;
 }
 
-function bundledParserPath(): string {
-  return join(
-    dirname(fileURLToPath(import.meta.url)),
-    "bin",
-    "palworld-save-parser",
-  );
+export function bundledParserDirectory(platform: RuntimePlatform): string {
+  return join(dirname(fileURLToPath(import.meta.url)), "bin", platform);
 }
 
-async function executeParser(
+export function parserBinaryName(
+  platform: RuntimePlatform,
+): ParserManifest["binary_name"] {
+  return platform === "win32-x64"
+    ? "palworld-save-parser.exe"
+    : "palworld-save-parser";
+}
+
+export function parserSpawnOptions(platform: RuntimePlatform): SpawnOptions {
+  return {
+    detached: platform === "linux-x64",
+    windowsHide: platform === "win32-x64",
+    stdio: ["ignore", "ignore", "pipe"],
+    env: parserEnvironment(platform),
+  };
+}
+
+export function terminateParser(
+  child: ChildProcess,
+  platform: RuntimePlatform = runtimePlatform(),
+): void {
+  if (platform === "win32-x64") {
+    child.kill();
+    return;
+  }
+  if (child.pid === undefined) return;
+  try {
+    process.kill(-child.pid, "SIGKILL");
+  } catch {
+    child.kill("SIGKILL");
+  }
+}
+
+export async function verifyParserBinary(
   binary: string,
-  snapshotPath: string,
-  outputPath: string,
-  timeoutMilliseconds: number,
+  manifest: ParserManifest,
+  platform: RuntimePlatform,
 ): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(
-      binary,
-      ["--snapshot", snapshotPath, "--output", outputPath],
-      {
-        detached: true,
-        stdio: ["ignore", "ignore", "pipe"],
-        env: parserEnvironment(),
-      },
-    );
-    let errorOutput = "";
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk: string) => {
-      if (errorOutput.length < MAX_ERROR_BYTES)
-        errorOutput += chunk.slice(0, MAX_ERROR_BYTES - errorOutput.length);
-    });
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      if (child.pid !== undefined) {
-        try {
-          process.kill(-child.pid, "SIGKILL");
-        } catch {
-          child.kill("SIGKILL");
-        }
-      }
-    }, timeoutMilliseconds);
-    child.once("error", (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.once("close", (code) => {
-      clearTimeout(timer);
-      if (timedOut) reject(new Error("PARSER_TIMEOUT"));
-      else if (code !== 0) reject(new Error(parserErrorCode(errorOutput)));
-      else resolve();
-    });
-  });
-}
-
-async function verifyBundledParser(binary: string): Promise<void> {
-  const binaryInfo = await lstat(binary);
-  if (!binaryInfo.isFile() || binaryInfo.isSymbolicLink())
+  validateParserManifest(manifest, platform);
+  if (basename(binary) !== manifest.binary_name)
     throw new Error("PARSER_BINARY_INVALID");
-  const manifest = await bundledParserManifest();
+  await verifyParserFile(binary, platform);
   const actual = createHash("sha256")
     .update(await readFile(binary))
     .digest("hex");
@@ -172,9 +192,74 @@ async function verifyBundledParser(binary: string): Promise<void> {
     throw new Error("PARSER_BINARY_HASH_MISMATCH");
 }
 
-function parserEnvironment(): NodeJS.ProcessEnv {
+async function executeParser(
+  binary: string,
+  binaryArguments: string[],
+  snapshotPath: string,
+  outputPath: string,
+  timeoutMilliseconds: number,
+  platform: RuntimePlatform,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(
+      binary,
+      [...binaryArguments, "--snapshot", snapshotPath, "--output", outputPath],
+      parserSpawnOptions(platform),
+    );
+    let errorOutput = "";
+    child.stderr?.setEncoding("utf8");
+    child.stderr?.on("data", (chunk: string) => {
+      if (errorOutput.length < MAX_ERROR_BYTES)
+        errorOutput += chunk.slice(0, MAX_ERROR_BYTES - errorOutput.length);
+    });
+    let timedOut = false;
+    let settled = false;
+    const finish = (error?: Error): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error === undefined) resolve();
+      else reject(error);
+    };
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        terminateParser(child, platform);
+      } catch {
+        finish(new Error("PARSER_TIMEOUT"));
+      }
+    }, timeoutMilliseconds);
+    child.once("error", (error) =>
+      finish(timedOut ? new Error("PARSER_TIMEOUT") : error),
+    );
+    child.once("close", (code) => {
+      if (timedOut) finish(new Error("PARSER_TIMEOUT"));
+      else if (code !== 0) finish(new Error(parserErrorCode(errorOutput)));
+      else finish();
+    });
+  });
+}
+
+async function verifyParserFile(
+  binary: string,
+  platform: RuntimePlatform,
+): Promise<void> {
+  const binaryInfo = await lstat(binary).catch(() => undefined);
+  if (
+    !binaryInfo?.isFile() ||
+    binaryInfo.isSymbolicLink() ||
+    (platform === "linux-x64" && (binaryInfo.mode & 0o111) === 0)
+  ) {
+    throw new Error("PARSER_BINARY_INVALID");
+  }
+}
+
+function parserEnvironment(platform: RuntimePlatform): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = {};
-  for (const key of ["PALHATCH_WORLD_UID", "PALHATCH_SAV_MAX_BYTES"]) {
+  const keys = ["PALHATCH_WORLD_UID", "PALHATCH_SAV_MAX_BYTES"];
+  if (platform === "win32-x64")
+    keys.push("SystemRoot", "WINDIR", "TEMP", "TMP");
+  for (const key of keys) {
     const value = process.env[key];
     if (value !== undefined) environment[key] = value;
   }

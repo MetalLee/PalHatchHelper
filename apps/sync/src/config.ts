@@ -7,9 +7,10 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, posix, win32 } from "node:path";
 
 import { messages, type CliLocale } from "./locale.js";
+import { runtimePlatform, type RuntimePlatform } from "./platform.js";
 
 const LEGACY_RUNTIME_PATH_FIELD = ["oodle", "lib"].join("_");
 const LEGACY_RUNTIME_HASH_FIELD = ["oodle", "sha256"].join("_");
@@ -30,10 +31,27 @@ export interface SyncConfig {
   };
 }
 
-export function configDirectory(): string {
-  const xdg = process.env.XDG_CONFIG_HOME;
-  return join(
-    xdg && xdg.length > 0 ? xdg : join(homedir(), ".config"),
+interface ConfigDirectoryOptions {
+  platform?: NodeJS.Platform;
+  architecture?: string;
+  environment?: NodeJS.ProcessEnv;
+  homeDirectory?: string;
+}
+
+export function configDirectory(options: ConfigDirectoryOptions = {}): string {
+  const platform = runtimePlatform(
+    options.platform ?? process.platform,
+    options.architecture ?? process.arch,
+  );
+  const environment = options.environment ?? process.env;
+  const home = options.homeDirectory ?? homedir();
+  if (platform === "win32-x64") {
+    const base = environment.APPDATA ?? win32.join(home, "AppData", "Roaming");
+    return win32.join(base, "PalBeacon");
+  }
+  const xdg = environment.XDG_CONFIG_HOME;
+  return posix.join(
+    xdg && xdg.length > 0 ? xdg : posix.join(home, ".config"),
     "palbeacon",
   );
 }
@@ -45,19 +63,24 @@ export function configPath(directory = configDirectory()): string {
 export async function saveConfig(
   config: SyncConfig,
   directory = configDirectory(),
+  platform: RuntimePlatform = runtimePlatform(),
 ): Promise<string> {
   const path = configPath(directory);
   const temporaryPath = `${path}.${process.pid}.tmp`;
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  await chmod(dirname(path), 0o700);
-  await writeFile(temporaryPath, `${JSON.stringify(config, null, 2)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-    flag: "wx",
-  });
-  await rename(temporaryPath, path);
-  await chmod(path, 0o600);
-  return path;
+  if (platform === "linux-x64") await chmod(dirname(path), 0o700);
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(config, null, 2)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+    });
+    await renameWithRetry(temporaryPath, path);
+    if (platform === "linux-x64") await chmod(path, 0o600);
+    return path;
+  } finally {
+    await rm(temporaryPath, { force: true }).catch(() => undefined);
+  }
 }
 
 export async function loadConfig(
@@ -93,7 +116,9 @@ export async function loadConfig(
 export async function deleteConfig(
   directory = configDirectory(),
 ): Promise<void> {
-  await rm(configPath(directory), { force: true });
+  await retryWindowsFileOperation(() =>
+    rm(configPath(directory), { force: true }),
+  );
 }
 
 export function formatStatus(
@@ -174,4 +199,36 @@ function normalizeState(value: unknown): SyncConfig["state"] | undefined {
       ? { last_sync_at: state.last_sync_at }
       : {}),
   };
+}
+
+async function renameWithRetry(
+  source: string,
+  destination: string,
+): Promise<void> {
+  await retryWindowsFileOperation(() => rename(source, destination));
+}
+
+async function retryWindowsFileOperation(
+  operation: () => Promise<void>,
+): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await operation();
+      return;
+    } catch (error) {
+      if (attempt >= 3 || !isRetryableWindowsFileError(error)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+    }
+  }
+}
+
+function isRetryableWindowsFileError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "EPERM" ||
+      error.code === "EBUSY" ||
+      error.code === "EACCES")
+  );
 }

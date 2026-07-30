@@ -17,6 +17,7 @@ import {
 import type { SyncConfig } from "../src/config.js";
 import { DeviceAuthorizationError } from "../src/api.js";
 import { extractLocaleOption, resolveLocale } from "../src/locale.js";
+import type { RuntimePlatform } from "../src/platform.js";
 
 const config: SyncConfig = {
   config_version: 2,
@@ -231,6 +232,29 @@ describe("command-line interface", () => {
     );
   });
 
+  it.each(["linux-x64", "win32-x64"] as const)(
+    "reports the actual %s platform while pairing",
+    async (platform) => {
+      const pairDevice = vi.fn(async () => ({
+        api_base_url: DEFAULT_API_BASE_URL,
+        device_id: config.device_id,
+        device_token: config.device_token,
+      }));
+      await initialize(
+        parseArguments(["--code", "ABCD-EFGH", "--save-dir", "/fixture/world"]),
+        initRuntime({
+          isInteractive: false,
+          runtimePlatform: () => platform,
+          pairDevice,
+        }),
+      );
+      expect(pairDevice).toHaveBeenCalledWith(
+        DEFAULT_API_BASE_URL,
+        expect.objectContaining({ platform }),
+      );
+    },
+  );
+
   it("never silently overwrites a valid configuration", async () => {
     const pairDevice = vi.fn();
     const saveConfig = vi.fn();
@@ -392,7 +416,7 @@ describe("command-line interface", () => {
 function initRuntime(overrides: Partial<InitRuntime> = {}): InitRuntime {
   return {
     isInteractive: true,
-    assertSupportedPlatform: vi.fn(),
+    runtimePlatform: () => "linux-x64" as RuntimePlatform,
     question: async () => "",
     loadConfig: async () => {
       throw Object.assign(new Error("missing"), { code: "ENOENT" });

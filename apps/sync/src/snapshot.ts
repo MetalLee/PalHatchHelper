@@ -13,7 +13,9 @@ import {
   utimes,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, posix } from "node:path";
+
+import { runtimePlatform, type RuntimePlatform } from "./platform.js";
 
 export interface ReadOnlySnapshot {
   path: string;
@@ -28,7 +30,7 @@ interface SnapshotOptions {
 }
 
 interface SourceFile {
-  relative: string;
+  logicalPath: string;
   absolute: string;
 }
 
@@ -54,55 +56,68 @@ export async function createReadOnlySnapshot(
   let complete = false;
   try {
     const stableMetadata = new Map(
-      second.map((entry) => [entry.relative, entry]),
+      second.map((entry) => [entry.logicalPath, entry]),
     );
     for (const file of files) {
-      const destination = join(temporaryRoot, file.relative);
+      const destination = physicalPath(temporaryRoot, file.logicalPath);
       await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
       await copyFile(file.absolute, destination, constants.COPYFILE_FICLONE);
-      const modified = new Date(stableMetadata.get(file.relative)!.mtimeMs);
+      const modified = new Date(stableMetadata.get(file.logicalPath)!.mtimeMs);
       await utimes(destination, modified, modified);
-      await chmod(destination, 0o444);
+      await makeSnapshotReadOnly(destination);
     }
     const third = await statFiles(files, maximumBytes);
     if (!sameStats(second, third)) throw new Error("SAVE_SOURCE_UNSTABLE");
     const hash = await hashFiles(
       temporaryRoot,
-      files.map((file) => file.relative),
+      files.map((file) => file.logicalPath),
     );
     const latestMilliseconds = Math.max(
       ...second.map((entry) => entry.mtimeMs),
     );
-    await chmod(join(temporaryRoot, "Players"), 0o555).catch(() => undefined);
-    await chmod(temporaryRoot, 0o555);
+    await makeSnapshotReadOnly(join(temporaryRoot, "Players"), true).catch(
+      () => undefined,
+    );
+    await makeSnapshotReadOnly(temporaryRoot, true);
     complete = true;
     return {
       path: temporaryRoot,
       hash,
       sourceModifiedAt: new Date(latestMilliseconds).toISOString(),
       cleanup: async () => {
-        await makeDirectoryTreeRemovable(temporaryRoot);
-        await rm(temporaryRoot, { recursive: true, force: true });
+        await makeSnapshotRemovable(temporaryRoot);
+        await removeSnapshotTree(temporaryRoot);
       },
     };
   } finally {
     if (!complete) {
-      await makeDirectoryTreeRemovable(temporaryRoot);
-      await rm(temporaryRoot, { recursive: true, force: true });
+      await makeSnapshotRemovable(temporaryRoot);
+      await removeSnapshotTree(temporaryRoot);
     }
   }
 }
 
-async function makeDirectoryTreeRemovable(root: string): Promise<void> {
+export async function makeSnapshotReadOnly(
+  path: string,
+  directory = false,
+  platform: RuntimePlatform = runtimePlatform(),
+): Promise<void> {
+  if (platform === "linux-x64") await chmod(path, directory ? 0o555 : 0o444);
+}
+
+export async function makeSnapshotRemovable(
+  root: string,
+  platform: RuntimePlatform = runtimePlatform(),
+): Promise<void> {
   const info = await lstat(root).catch(() => undefined);
   if (!info?.isDirectory() || info.isSymbolicLink()) return;
 
-  await chmod(root, 0o700);
+  if (platform === "linux-x64") await chmod(root, 0o700);
   const entries = await readdir(root, { withFileTypes: true });
   await Promise.all(
     entries
       .filter((entry) => entry.isDirectory() && !entry.isSymbolicLink())
-      .map((entry) => makeDirectoryTreeRemovable(join(root, entry.name))),
+      .map((entry) => makeSnapshotRemovable(join(root, entry.name), platform)),
   );
 }
 
@@ -115,7 +130,7 @@ async function sourceFiles(
     throw new Error("SAVE_DIRECTORY_INVALID");
   const level = join(sourceDirectory, "Level.sav");
   await assertRegularFile(level, maximumBytes);
-  const files: SourceFile[] = [{ relative: "Level.sav", absolute: level }];
+  const files: SourceFile[] = [{ logicalPath: "Level.sav", absolute: level }];
   const playersDirectory = join(sourceDirectory, "Players");
   const playersInfo = await lstat(playersDirectory).catch(() => undefined);
   if (playersInfo?.isDirectory() && !playersInfo.isSymbolicLink()) {
@@ -124,11 +139,14 @@ async function sourceFiles(
       if (!entry.isFile() || !entry.name.endsWith(".sav")) continue;
       const absolute = join(playersDirectory, entry.name);
       await assertRegularFile(absolute, maximumBytes);
-      files.push({ relative: join("Players", basename(entry.name)), absolute });
+      files.push({
+        logicalPath: posix.join("Players", basename(entry.name)),
+        absolute,
+      });
     }
   }
   return files.sort((left, right) =>
-    left.relative.localeCompare(right.relative),
+    compareStrings(left.logicalPath, right.logicalPath),
   );
 }
 
@@ -150,7 +168,7 @@ async function statFiles(files: SourceFile[], maximumBytes: number) {
         throw new Error("SAVE_FILE_INVALID");
       if (info.size > maximumBytes) throw new Error("SAVE_FILE_TOO_LARGE");
       return {
-        relative: file.relative,
+        logicalPath: file.logicalPath,
         size: info.size,
         mtimeMs: info.mtimeMs,
         ino: info.ino,
@@ -188,13 +206,36 @@ async function hashFiles(
 ): Promise<string> {
   const hash = createHash("sha256");
   hash.update(SNAPSHOT_HASH_DOMAIN);
-  for (const relativePath of relativePaths) {
-    hash.update(relativePath);
+  for (const logicalPath of relativePaths) {
+    hash.update(logicalPath);
     hash.update("\0");
-    hash.update(await readFile(join(root, relativePath)));
+    hash.update(await readFile(physicalPath(root, logicalPath)));
     hash.update("\0");
   }
   return hash.digest("hex");
+}
+
+function physicalPath(root: string, logicalPath: string): string {
+  return join(root, ...logicalPath.split("/"));
+}
+
+function compareStrings(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
+async function removeSnapshotTree(root: string): Promise<void> {
+  try {
+    await rm(root, {
+      recursive: true,
+      force: true,
+      maxRetries: 3,
+      retryDelay: 100,
+    });
+  } catch {
+    throw new Error("SNAPSHOT_CLEANUP_FAILED");
+  }
 }
 
 async function delay(milliseconds: number): Promise<void> {

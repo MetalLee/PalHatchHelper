@@ -1,80 +1,89 @@
-import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import {
   chmod,
   copyFile,
+  lstat,
   mkdir,
   readFile,
   rm,
-  lstat,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { build } from "esbuild";
 
+import { stageParserBinary } from "./parser-artifact.mjs";
+
 const execFileAsync = promisify(execFile);
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = join(packageRoot, "..", "..");
 const outputRoot = join(packageRoot, "dist");
 const parserRoot = join(repositoryRoot, "parser");
-const parserSource = join(parserRoot, "palworld-save-parser");
 const releaseBuild = process.argv.includes("--release");
-const parserVersion = (await readFile(join(parserRoot, "VERSION"), "utf8"))
+const expectedParserVersion = (
+  await readFile(join(parserRoot, "VERSION"), "utf8")
+)
   .trim()
   .replace(/\r/g, "");
-if (!/^\d+\.\d+\.\d+$/.test(parserVersion))
+if (!/^\d+\.\d+\.\d+$/.test(expectedParserVersion))
   throw new Error("PARSER_VERSION_INVALID");
-
-const parserInfo = await lstat(parserSource);
-if (
-  !parserInfo.isFile() ||
-  parserInfo.isSymbolicLink() ||
-  (parserInfo.mode & 0o111) === 0
-)
-  throw new Error("PARSER_BINARY_INVALID");
-const { stdout: reportedVersion } = await execFileAsync(
-  parserSource,
-  ["--version"],
-  { encoding: "utf8" },
-);
-if (reportedVersion.trim() !== parserVersion)
-  throw new Error("PARSER_VERSION_MISMATCH");
-
-const parserHash = sha256(await readFile(parserSource));
-const { stdout: sourceCommitOutput } = await execFileAsync(
-  "git",
-  ["rev-parse", "HEAD"],
-  { cwd: repositoryRoot, encoding: "utf8" },
-);
-const sourceCommit = sourceCommitOutput.trim();
-if (!/^[0-9a-f]{40}$/.test(sourceCommit))
+const expectedSourceCommit = (
+  await execFileAsync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  })
+).stdout.trim();
+if (!/^[0-9a-f]{40}$/.test(expectedSourceCommit))
   throw new Error("PARSER_SOURCE_COMMIT_INVALID");
-const { stdout: parserStatusOutput } = await execFileAsync(
-  "git",
-  ["status", "--porcelain=v1", "--untracked-files=all", "--", "parser"],
-  { cwd: repositoryRoot, encoding: "utf8" },
-);
-const sourceTreeClean =
-  parserStatusOutput.split("\n").filter(Boolean).length === 0;
-if (releaseBuild && !sourceTreeClean)
+const parserStatus = (
+  await execFileAsync(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all", "--", "parser"],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  )
+).stdout;
+if (releaseBuild && parserStatus.split("\n").some(Boolean))
   throw new Error("PARSER_SOURCE_TREE_DIRTY");
-
 const upstreamNotice = await readFile(
   join(parserRoot, "third_party", "palooz", "UPSTREAM.md"),
   "utf8",
 );
-const upstreamCommit = /Pinned commit: `([0-9a-f]{40})`/.exec(
+const expectedUpstreamCommit = /Pinned commit: `([0-9a-f]{40})`/.exec(
   upstreamNotice,
 )?.[1];
-if (upstreamCommit === undefined)
+if (expectedUpstreamCommit === undefined)
   throw new Error("PALOOZ_UPSTREAM_COMMIT_INVALID");
+const targets = [
+  {
+    platform: "linux-x64",
+    binaryName: "palworld-save-parser",
+    binary: resolve(
+      process.env.PALBEACON_PARSER_LINUX_X64 ??
+        join(parserRoot, "build", "linux-x64", "palworld-save-parser"),
+    ),
+    manifest: resolve(
+      process.env.PALBEACON_PARSER_LINUX_X64_MANIFEST ??
+        join(parserRoot, "build", "linux-x64", "parser-manifest.json"),
+    ),
+  },
+  {
+    platform: "win32-x64",
+    binaryName: "palworld-save-parser.exe",
+    binary: resolve(
+      process.env.PALBEACON_PARSER_WIN32_X64 ??
+        join(parserRoot, "build", "win32-x64", "palworld-save-parser.exe"),
+    ),
+    manifest: resolve(
+      process.env.PALBEACON_PARSER_WIN32_X64_MANIFEST ??
+        join(parserRoot, "build", "win32-x64", "parser-manifest.json"),
+    ),
+  },
+];
 
 await rm(outputRoot, { recursive: true, force: true });
-await mkdir(join(outputRoot, "bin"), { recursive: true });
 await mkdir(join(outputRoot, "LICENSES"), { recursive: true });
 await build({
   entryPoints: [join(packageRoot, "src", "cli.ts")],
@@ -84,35 +93,21 @@ await build({
   target: "node22",
   format: "esm",
   banner: { js: "#!/usr/bin/env node" },
-  sourcemap: true,
 });
-
-const parserOutput = join(outputRoot, "bin", "palworld-save-parser");
-await copyFile(parserSource, parserOutput);
-await chmod(parserOutput, 0o755);
 await chmod(join(outputRoot, "cli.js"), 0o755);
-if (sha256(await readFile(parserOutput)) !== parserHash)
-  throw new Error("PARSER_BINARY_HASH_MISMATCH");
 
-const manifest = {
-  schema_version: 1,
-  binary_name: "palworld-save-parser",
-  platform: "linux-x64",
-  version: parserVersion,
-  sha256: parserHash,
-  license: "GPL-3.0-or-later",
-  source_repository: "https://github.com/MetalLee/PalHatchHelper",
-  source_commit: sourceCommit,
-  source_subdirectory: "parser",
-  source_tree_clean: sourceTreeClean,
-  upstream_repository: "https://github.com/deafdudecomputers/PalworldSaveTools",
-  upstream_commit: upstreamCommit,
-};
-await writeFile(
-  join(outputRoot, "bin", "parser-manifest.json"),
-  `${JSON.stringify(manifest, null, 2)}\n`,
-  "utf8",
+const artifactPresence = await Promise.all(
+  targets.flatMap((target) => [exists(target.binary), exists(target.manifest)]),
 );
+const artifactsComplete = artifactPresence.every(Boolean);
+if (releaseBuild && !artifactsComplete)
+  throw new Error("PARSER_ARTIFACT_SET_INCOMPLETE");
+
+let manifests = [];
+if (artifactsComplete) {
+  manifests = await Promise.all(targets.map(copyAndValidateTarget));
+  assertSharedMetadata(manifests);
+}
 
 await Promise.all([
   copyFile(
@@ -146,36 +141,103 @@ await Promise.all([
 ]);
 await writeFile(
   join(outputRoot, "PARSER_SOURCE.md"),
-  parserSourceNotice(manifest),
+  parserSourceNotice(manifests),
   "utf8",
 );
 
-function sha256(value) {
-  return createHash("sha256").update(value).digest("hex");
+async function copyAndValidateTarget(target) {
+  const manifest = JSON.parse(await readFile(target.manifest, "utf8"));
+  validateManifest(manifest, target);
+  const destination = join(outputRoot, "bin", target.platform);
+  await mkdir(destination, { recursive: true });
+  const binaryDestination = join(destination, target.binaryName);
+  await stageParserBinary({
+    source: target.binary,
+    destination: binaryDestination,
+    platform: target.platform,
+    sha256: manifest.sha256,
+    version: manifest.version,
+  });
+  await copyFile(target.manifest, join(destination, "parser-manifest.json"));
+  return manifest;
+}
+
+function validateManifest(manifest, target) {
+  if (
+    manifest.schema_version !== 1 ||
+    manifest.binary_name !== target.binaryName ||
+    manifest.platform !== target.platform ||
+    manifest.version !== expectedParserVersion ||
+    !/^[0-9a-f]{64}$/.test(manifest.sha256) ||
+    manifest.license !== "GPL-3.0-or-later" ||
+    manifest.source_repository !==
+      "https://github.com/MetalLee/PalHatchHelper" ||
+    manifest.source_commit !== expectedSourceCommit ||
+    manifest.source_subdirectory !== "parser" ||
+    manifest.source_tree_clean !== true ||
+    manifest.upstream_repository !==
+      "https://github.com/deafdudecomputers/PalworldSaveTools" ||
+    manifest.upstream_commit !== expectedUpstreamCommit
+  ) {
+    throw new Error("PARSER_MANIFEST_INVALID");
+  }
+}
+
+function assertSharedMetadata(values) {
+  const [first, second] = values;
+  for (const field of [
+    "version",
+    "source_repository",
+    "source_commit",
+    "source_subdirectory",
+    "source_tree_clean",
+    "upstream_repository",
+    "upstream_commit",
+    "license",
+  ]) {
+    if (first?.[field] !== second?.[field])
+      throw new Error(`PARSER_METADATA_MISMATCH:${field}`);
+  }
+}
+
+async function exists(path) {
+  return lstat(path)
+    .then(() => true)
+    .catch((error) => {
+      if (error?.code === "ENOENT") return false;
+      throw error;
+    });
 }
 
 function parserSourceNotice(metadata) {
-  return `# Source for the bundled Parser
+  if (metadata.length !== 2)
+    return "# Source for the bundled Parser\n\nRelease artifacts were not assembled by this development build.\n";
+  const linux = metadata.find((value) => value.platform === "linux-x64");
+  const windows = metadata.find((value) => value.platform === "win32-x64");
+  return `# Source for the bundled Parsers
 
-This npm package contains the separate \`palworld-save-parser\` executable
-version \`${metadata.version}\` for Linux x64. Its SHA-256 is
-\`${metadata.sha256}\` and it is distributed under GPL-3.0-or-later.
+This npm package contains separate Linux x64 and Windows x64
+\`palworld-save-parser\` executables built from the same source commit and
+distributed under GPL-3.0-or-later.
+
+- Linux x64 version \`${linux.version}\`: \`${linux.sha256}\`
+- Windows x64 version \`${windows.version}\`: \`${windows.sha256}\`
 
 The corresponding source is the \`parser/\` directory at commit
-\`${metadata.source_commit}\` in:
+\`${linux.source_commit}\` in:
 
-<${metadata.source_repository}>
+<${linux.source_repository}>
 
 The embedded palooz/ooz decoder is pinned to PalworldSaveTools commit
-\`${metadata.upstream_commit}\`. Its provenance, vendored-file hashes, local
+\`${linux.upstream_commit}\`. Its provenance, vendored-file hashes, local
 decode-only patch, and update procedure are recorded in
 \`parser/third_party/palooz/UPSTREAM.md\` at the source commit above.
 
-Build the executable with \`parser/scripts/build-linux-amd64.sh\` in the
-documented Go 1.26.5 Linux environment. The TypeScript CLI and Parser are
-separate programs; they communicate only through a child process and JSON
-files.
+Build the executables with \`parser/scripts/build-linux-amd64.sh\` and
+\`parser/scripts/build-windows-amd64.sh\` in their documented fixed Go 1.26.5
+environments. The TypeScript CLI and Parsers are separate programs; they
+communicate only through a child process and JSON files.
 
-Source tree clean when packaged: \`${String(metadata.source_tree_clean)}\`.
+Source tree clean when packaged: \`${String(linux.source_tree_clean)}\`.
 `;
 }

@@ -1,0 +1,17 @@
+FROM golang@sha256:1ecb7edf62a0408027bd5729dfd6b1b8766e578e8df93995b225dfd0944eb651 AS go
+
+FROM ubuntu@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90
+
+COPY --from=go /usr/local/go /usr/local/go
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://sg.archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources \
+    && apt-get -o Acquire::ForceIPv4=true update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --yes \
+      binutils-mingw-w64-x86-64=2.41.90.20240122-1ubuntu1+11.4 \
+      gcc-mingw-w64-x86-64-posix=13.2.0-6ubuntu1+26.1 \
+      g++-mingw-w64-x86-64-posix=13.2.0-6ubuntu1+26.1 \
+      mingw-w64-x86-64-dev=11.0.1-3build1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace/parser
