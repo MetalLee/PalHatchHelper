@@ -218,7 +218,7 @@ function InventorySlide({ locale }: Readonly<{ locale: AppLocale }>) {
   const pals = [
     {
       id: "sheepball",
-      name: t("carouselPalOne"),
+      name: t("carouselPalLamball"),
       owner: t("carouselOwnerYou"),
       location: t("carouselLocationBox"),
       passive: {
@@ -229,7 +229,7 @@ function InventorySlide({ locale }: Readonly<{ locale: AppLocale }>) {
     },
     {
       id: "naughtycat",
-      name: t("carouselPalTwo"),
+      name: t("carouselPalGrintale"),
       owner: t("carouselOwnerGuild"),
       location: t("carouselLocationBase"),
       passive: {
@@ -240,7 +240,7 @@ function InventorySlide({ locale }: Readonly<{ locale: AppLocale }>) {
     },
     {
       id: "chickenpal",
-      name: t("carouselPalThree"),
+      name: t("carouselPalChikipi"),
       owner: t("carouselOwnerGuild"),
       location: t("carouselLocationBox"),
       passive: {
@@ -251,7 +251,7 @@ function InventorySlide({ locale }: Readonly<{ locale: AppLocale }>) {
     },
     {
       id: "cutefox",
-      name: t("carouselPalFour"),
+      name: t("carouselPalVixy"),
       owner: t("carouselOwnerYou"),
       location: t("carouselLocationBase"),
       passive: {
@@ -282,6 +282,7 @@ function InventorySlide({ locale }: Readonly<{ locale: AppLocale }>) {
           <article
             key={pal.id}
             data-inventory-card
+            data-pal-id={pal.id}
             className="min-w-0 overflow-hidden rounded-2xl border border-glass-border bg-white/92 shadow-soft"
           >
             <div className="flex min-w-0 items-center gap-2 p-2 sm:gap-3 sm:p-3">
@@ -367,6 +368,8 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
         data-route-layout="generations"
         data-route-generations="2"
         data-route-passive-count="4"
+        data-route-recipe-one="carbunclo+sheepball->bastet"
+        data-route-recipe-two="bastet+naughtycat->jellyfishghost"
         className="overflow-hidden rounded-2xl border border-border/70 bg-white/88 p-2 shadow-sm sm:p-3"
       >
         <div className="grid grid-cols-3 gap-[6.5%] px-[1%] pb-2 text-center text-[0.64rem] font-bold tracking-[0.08em] text-muted-foreground min-[460px]:text-xs">
@@ -437,11 +440,11 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
 
           <div className="absolute left-0 top-0 z-10 w-[29%]">
             <RoutePreviewCard
-              palId="sheepball"
-              role={t("carouselMotherRole")}
-              name={t("carouselTreeParentAName")}
+              palId="carbunclo"
+              role={t("carouselFatherRole")}
+              name={t("carouselPalLifmunk")}
               status={t("carouselInventoryReady")}
-              gender="female"
+              gender="male"
               detail={t("carouselRouteOwner")}
               location={t("carouselRouteLocation")}
               passives={[passives.artisan, passives.serious]}
@@ -451,11 +454,11 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
           </div>
           <div className="absolute bottom-0 left-0 z-10 w-[29%]">
             <RoutePreviewCard
-              palId="naughtycat"
-              role={t("carouselFatherRole")}
-              name={t("carouselTreeParentBName")}
+              palId="sheepball"
+              role={t("carouselMotherRole")}
+              name={t("carouselPalLamball")}
               status={t("carouselInventoryReady")}
-              gender="male"
+              gender="female"
               detail={t("carouselOwnerGuild")}
               location={t("carouselRouteLocation")}
               passives={[passives.lucky, passives.nimble]}
@@ -465,9 +468,9 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
           </div>
           <div className="absolute left-[35.5%] top-0 z-10 w-[29%]">
             <RoutePreviewCard
-              palId="carbunclo"
+              palId="bastet"
               role={t("carouselIntermediateRole")}
-              name={t("carouselTreeIntermediateName")}
+              name={t("carouselPalMau")}
               status={t("carouselIntermediateStatus")}
               gender="female"
               detail={t("carouselRouteProduced")}
@@ -479,9 +482,9 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
           </div>
           <div className="absolute bottom-0 left-[35.5%] z-10 w-[29%]">
             <RoutePreviewCard
-              palId="cutefox"
+              palId="naughtycat"
               role={t("carouselFatherRole")}
-              name={t("carouselTreeParentCName")}
+              name={t("carouselPalGrintale")}
               status={t("carouselInventoryReady")}
               gender="male"
               detail={t("carouselRouteOwner")}
@@ -496,9 +499,9 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
             className="absolute right-0 top-0 z-10 w-[29%]"
           >
             <RoutePreviewCard
-              palId="cutebutterfly"
+              palId="jellyfishghost"
               role={t("carouselFinalRole")}
-              name={t("carouselTreeTargetName")}
+              name={t("carouselPalJellroy")}
               status={t("carouselTargetStatus")}
               gender="pending"
               detail={t("carouselRouteFinal")}
@@ -536,8 +539,8 @@ function PlansSlide({ locale }: Readonly<{ locale: AppLocale }>) {
   const plans = [
     {
       id: "route-a",
-      palId: "carbunclo",
-      title: t("carouselPlanTargetOne"),
+      palId: "bastet",
+      title: t("carouselPalMau"),
       status: t("carouselPlanReady"),
       saved: t("carouselPlanSaved"),
       statusClass: "bg-emerald-100 text-emerald-800",
@@ -553,8 +556,8 @@ function PlansSlide({ locale }: Readonly<{ locale: AppLocale }>) {
     },
     {
       id: "route-b",
-      palId: "cutebutterfly",
-      title: t("carouselPlanTargetTwo"),
+      palId: "jellyfishghost",
+      title: t("carouselPalJellroy"),
       status: t("carouselPlanNeedsInventory"),
       saved: t("carouselPlanSavedEarlier"),
       statusClass: "bg-amber-100 text-amber-900",
@@ -575,6 +578,7 @@ function PlansSlide({ locale }: Readonly<{ locale: AppLocale }>) {
         <article
           key={plan.id}
           data-plan-card
+          data-pal-id={plan.palId}
           className="overflow-hidden rounded-2xl border border-glass-border bg-white/92 shadow-soft"
         >
           <div className="flex min-w-0 items-center gap-3 p-3">
@@ -671,6 +675,7 @@ function RoutePreviewCard({
   return (
     <article
       data-route-node
+      data-pal-id={palId}
       className={cn(
         "min-w-0 overflow-hidden rounded-xl border bg-gradient-to-br p-1.5 shadow-sm min-[460px]:rounded-2xl min-[460px]:p-2",
         heightClass,

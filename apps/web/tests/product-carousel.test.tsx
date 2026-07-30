@@ -29,6 +29,85 @@ afterEach(() => {
 });
 
 describe("landing product carousel", () => {
+  it("uses the catalog-localized name that matches every Pal portrait", () => {
+    mockReducedMotion(true);
+    const expectedByLocale = {
+      en: {
+        sheepball: "Lamball",
+        naughtycat: "Grintale",
+        chickenpal: "Chikipi",
+        cutefox: "Vixy",
+        carbunclo: "Lifmunk",
+        bastet: "Mau",
+        jellyfishghost: "Jellroy",
+      },
+      zh: {
+        sheepball: "棉悠悠",
+        naughtycat: "笑魇猫",
+        chickenpal: "皮皮鸡",
+        cutefox: "玉藻狐",
+        carbunclo: "翠叶鼠",
+        bastet: "喵丝特",
+        jellyfishghost: "海月灵",
+      },
+    } as const;
+
+    for (const locale of ["en", "zh"] as const) {
+      const { container, unmount } = render(
+        <ProductCarousel locale={locale} />,
+      );
+      const cards = container.querySelectorAll(
+        "[data-inventory-card], [data-route-node], [data-plan-card]",
+      );
+
+      for (const card of cards) {
+        const palId = card.getAttribute("data-pal-id");
+        expect(palId).not.toBeNull();
+        expect(card.textContent).toContain(
+          expectedByLocale[locale][
+            palId as keyof (typeof expectedByLocale)[typeof locale]
+          ],
+        );
+      }
+
+      expect(container.textContent).not.toMatch(
+        locale === "en"
+          ? /Parent [ABC]|Intermediate parent|Target Pal(?: [AB])?/
+          : /亲本 [ABC]|中间亲本|目标帕鲁(?: [AB])?/,
+      );
+      unmount();
+    }
+  });
+
+  it("keeps the fixed route on two verified catalog recipes", () => {
+    mockReducedMotion(true);
+    const { container } = render(<ProductCarousel locale="zh" />);
+    const routeTree = container.querySelector("[data-route-tree]");
+
+    expect(routeTree?.getAttribute("data-route-recipe-one")).toBe(
+      "carbunclo+sheepball->bastet",
+    );
+    expect(routeTree?.getAttribute("data-route-recipe-two")).toBe(
+      "bastet+naughtycat->jellyfishghost",
+    );
+    expect(
+      Array.from(routeTree?.querySelectorAll("[data-route-node]") ?? []).map(
+        (node) => node.getAttribute("data-pal-id"),
+      ),
+    ).toEqual([
+      "carbunclo",
+      "sheepball",
+      "bastet",
+      "naughtycat",
+      "jellyfishghost",
+    ]);
+    expect(routeTree?.textContent).toContain("翠叶鼠");
+    expect(routeTree?.textContent).toContain("棉悠悠");
+    expect(routeTree?.textContent).toContain("喵丝特");
+    expect(routeTree?.textContent).toContain("笑魇猫");
+    expect(routeTree?.textContent).toContain("海月灵");
+  });
+
   it("cycles through the three workspace views and supports manual controls", () => {
     vi.useFakeTimers();
     mockReducedMotion(false);
@@ -69,7 +148,7 @@ describe("landing product carousel", () => {
     expect(activeSlide(container)).toContain("棉悠悠");
 
     act(() => vi.advanceTimersByTime(6000));
-    expect(activeSlide(container)).toContain("目标帕鲁");
+    expect(activeSlide(container)).toContain("海月灵");
     expect(
       container
         .querySelector("[data-route-tree]")
@@ -113,7 +192,7 @@ describe("landing product carousel", () => {
 
     fireEvent.click(getByRole("button", { name: "暂停自动播放" }));
     act(() => vi.advanceTimersByTime(12000));
-    expect(activeSlide(container)).toContain("目标帕鲁");
+    expect(activeSlide(container)).toContain("海月灵");
 
     fireEvent.click(getByRole("button", { name: "下一张" }));
     expect(activeSlide(container)).toContain("刚刚收藏");

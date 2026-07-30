@@ -80,7 +80,7 @@ test("serves localized public landing pages and search assets", async ({
   await page.getByRole("button", { name: "第 2 张：配种路线树" }).click();
   await expect(
     page.locator('[data-carousel-slide][data-active="true"]'),
-  ).toContainText("目标帕鲁");
+  ).toContainText("海月灵");
   await expect(page.locator("[data-route-tree]")).toBeVisible();
   await page.getByRole("button", { name: "下一张" }).click();
   await expect(
