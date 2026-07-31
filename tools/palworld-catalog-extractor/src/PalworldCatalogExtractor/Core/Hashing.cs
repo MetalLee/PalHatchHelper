@@ -14,7 +14,7 @@ public static class Hashing
     return Convert.ToHexStringLower(SHA256.HashData(stream));
   }
 
-  public static string ComputeContentHash(IEnumerable<CatalogFileHash> files)
+  public static string ComputeContentHash(string schemaVersion, IEnumerable<CatalogFileHash> files)
   {
     var values = new JsonArray();
     foreach (var file in files.OrderBy(value => value.FileName, StringComparer.Ordinal))
@@ -30,7 +30,7 @@ public static class Hashing
     return Sha256(DeterministicJson.Serialize(new JsonObject
     {
       ["files"] = values,
-      ["schema_version"] = "1.1.0",
+      ["schema_version"] = schemaVersion,
     }));
   }
 }

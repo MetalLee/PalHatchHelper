@@ -63,7 +63,7 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
       fileHashes.Add(new CatalogFileHash(definition.FileName, Hashing.Sha256File(path), records.Length));
     }
 
-    var contentHash = Hashing.ComputeContentHash(fileHashes);
+    var contentHash = Hashing.ComputeContentHash(CatalogCategories.SchemaVersion, fileHashes);
     var packageHash = SourcePackageManifestBuilder.ComputePackageHash(request.SourcePackageManifest);
     if (!string.Equals(packageHash, request.SourceProvenance.SourcePackageManifestSha256, StringComparison.Ordinal))
     {
@@ -141,7 +141,7 @@ public sealed class CatalogExtractionPipeline(IEnumerable<ICatalogReader> reader
       ["game_version"] = request.GameVersion,
       ["locales"] = new JsonArray(request.Locales.Order(StringComparer.Ordinal).Select(value => (JsonNode?)JsonValue.Create(value)).ToArray()),
       ["package_hash"] = packageHash,
-      ["schema_version"] = "2.0.0",
+      ["schema_version"] = CatalogCategories.SchemaVersion,
       ["source_provenance"] = request.SourceProvenance.ToJson(),
     };
     DeterministicJson.WriteFile(Path.Combine(request.OutputPath, "manifest.json"), manifest);
