@@ -80,7 +80,7 @@ public static class CatalogVerifier
       hashes.Add(new CatalogFileHash(definition.FileName, Hashing.Sha256File(path), parsed.Length));
     }
 
-    var contentHash = Hashing.ComputeContentHash(hashes);
+    var contentHash = Hashing.ComputeContentHash(CatalogCategories.SchemaVersion, hashes);
     var packageHash = SourcePackageManifestBuilder.ComputePackageHash(sourceManifest);
     ValidateManifest(manifest, records, hashes, contentHash, packageHash);
     ValidateRelationships(records);
@@ -172,7 +172,7 @@ public static class CatalogVerifier
       string contentHash,
       string packageHash)
   {
-    if (manifest["schema_version"]?.GetValue<string>() != "2.0.0")
+    if (manifest["schema_version"]?.GetValue<string>() != CatalogCategories.SchemaVersion)
     {
       throw new ExtractorException(
           ErrorCodes.CatalogSchemaInvalid,
@@ -474,7 +474,7 @@ public static class CatalogVerifier
       ["content_hash"] = contentHash,
       ["counts"] = counts,
       ["errors"] = new JsonArray(),
-      ["schema_version"] = "2.0.0",
+      ["schema_version"] = CatalogCategories.SchemaVersion,
       ["valid"] = true,
       ["warnings"] = new JsonArray(),
     };

@@ -12,6 +12,22 @@ namespace PalHatchHelper.CatalogExtractor.Tests;
 public sealed class CatalogPipelineTests
 {
   [Fact]
+  public void ContentHashIncludesTheCatalogSchemaVersion()
+  {
+    CatalogFileHash[] files =
+    [
+        new("items.jsonl", new string('a', 64), 1),
+    ];
+
+    Assert.Equal(
+        "ace38fae0c70c845c4400d9d7b29c4841a6777378de60114e9d3f27187c0f62b",
+        Hashing.ComputeContentHash(CatalogCategories.SchemaVersion, files));
+    Assert.NotEqual(
+        Hashing.ComputeContentHash("1.1.0", files),
+        Hashing.ComputeContentHash(CatalogCategories.SchemaVersion, files));
+  }
+
+  [Fact]
   public void SharedSchemaAcceptsFiniteSinglePrecisionNumbers()
   {
     SharedCatalogSchemaValidator.ValidateDefinition(

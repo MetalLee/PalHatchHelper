@@ -24,6 +24,8 @@ public sealed record CatalogCategoryDefinition(
 
 public static class CatalogCategories
 {
+  public const string SchemaVersion = "2.0.0";
+
   public static readonly IReadOnlyList<CatalogCategoryDefinition> All =
   [
       new(CatalogCategory.Pals, "pals", "pals.jsonl", ["pal_id"]),

@@ -1,5 +1,67 @@
 # PalHatchHelper v1 生产发布记录
 
+## 2026-07-31 Catalog 2.0 目录更新
+
+- Git SHA：`6d9c5cba9ae8b731a417cb4b87e154cb19d38879`
+- Supabase migrations：`20260730010000_support_windows_sync_devices.sql`、
+  `20260731010000_catalog_v2_entity_types.sql`、
+  `20260731011000_catalog_v2_item_projection.sql`、
+  `20260731020000_item_inventory_history.sql`
+- Agent 镜像：
+  `ghcr.io/metallee/palhatch-agent:6d9c5cba9ae8@sha256:44acb5cfae462fcee52f4792dfa84fa0ec3ad9f3217dbdebedeedf151e9743fb`
+- Vercel deployment：`dpl_791t2CEQnEsJZScW3s117bZxbAHv`
+- Vercel deployment URL：`https://pal-hatch-helper-38bfurvdg-devil-s-claw.vercel.app`
+- 生产域名：`https://www.palbeacon.app`
+- 生产 deployment record：`1e141522-351f-48fb-abbe-1dd634273fe4`
+
+活动目录版本：
+
+- version：`f13af131-539f-4635-8c5f-fb24a79b993c`
+- content hash：`80edbc5491cbc96ac8f697f99dc8bc8028a7a98f76e450d783fdca08e56524b7`
+- package hash：`0f23bb1ffc629ea3a91ba83c706280a230a3933ed328e62ff3dd654c16b3d1d2`
+- Build：`24466863`
+- 游戏版本：`v1.0.2.101103`
+- Schema：`2.0.0`
+
+| 实体              |  数量 |
+| ----------------- | ----: |
+| pals              |   288 |
+| passive_skills    |   115 |
+| active_skills     |   227 |
+| pal_active_skills |  2200 |
+| partner_skills    |   287 |
+| breeding_recipes  | 41617 |
+| items             |  1891 |
+| item_recipes      |  1264 |
+| localizations     | 27762 |
+
+上传归档的 SHA-256 为
+`72f342d5abc51179869b6c9a4f790342f540a172fa1dd8093fedc83aa0bf6755`。原始归档完整保留；
+入库前发现提取器以旧 `1.1.0` schema 计算了 Catalog 2.0 的 content hash，因此只重新计算
+`manifest.json`、`validation-report.json` 和 `extraction-summary.json` 中的派生 hash 字段，
+九个 JSONL 及其 checksums 未改动。生产校验报告为零错误、零警告，九类投影计数与 manifest
+完全一致；新旧 `breeding-recipes.jsonl` 的 SHA-256 都是
+`fe174cc6c3c106fbca966de66995b157c3541f4f7e46092f0da084901762ab04`。
+
+Agent 的 `api`、`job-worker` 和 `command-worker` 已切换到新不可变镜像，并通过非 root、能力删除、
+禁止提权、资源限制、回环端口、只读存档挂载、连续健康和日志秘密检查。按本次发布约定，
+`save-worker` 故意保持停止，未重建、未启动、未测试，后续由 `palbeacon-cli` 替代存档同步。
+Web 的 Git 自动生产部署已指向相同 Git SHA，健康接口、公开页面、私有页面跳转与私有缓存头烟测通过。
+
+本次备份与安全边界：
+
+- 生产备份：`/data/projects/PalHatchHelper/data/backups/20260731T041034Z/`，权限 `0700`
+- 上一目录版本：`b5feaeb9-5480-4ba5-b30d-a4c65531787e`
+- `/opt/palworld/docker-compose.yml` SHA-256：
+  `b19bc318e63c2c844b183d15ede232ae61d0d3adc56e012b3b5b37ff6c5a83ff`
+- 目标 appmanifest SHA-256：
+  `f1c8d57e77c68cd45ea9e8362444fb2e277d98da0c8006e9acca28d0962f3b69`
+
+部署前后 81 个源存档文件的组合 SHA-256 保持
+`709601a5833876ab25afd8910fadfb581b21b9156a683febeff6755f16364acc`。Palworld 和 mihomo
+容器身份不变且重启计数均为 0；未修改 `/opt/palworld`、未操作真实存档、未停止或重启这两个容器，
+也未开放新的公网 Agent 端口。
+
 ## 2026-07-27 路线去重与计划收藏更新
 
 - Git SHA：`c67b511bbcb49a0f58a712ca4b60f39d8fde1d3e`
