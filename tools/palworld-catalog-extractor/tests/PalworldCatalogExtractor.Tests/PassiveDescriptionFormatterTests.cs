@@ -26,6 +26,17 @@ public sealed class PassiveDescriptionFormatterTests
   }
 
   [Fact]
+  public void StatusUpPresentationTagsResolveDeterministically()
+  {
+    var text = PassiveDescriptionFormatter.FormatTemplate(
+        "Defense +{EffectValue4}%\r\n<Status_Up>Immune</> to Explosion Damage",
+        [Effect(4, "Defense", 15)],
+        CommonTexts);
+
+    Assert.Equal("Defense +15%\nImmune to Explosion Damage", text);
+  }
+
+  [Fact]
   public void MissingTemplateValueFailsClosed()
   {
     var error = Assert.Throws<ExtractorException>(() => PassiveDescriptionFormatter.FormatTemplate(

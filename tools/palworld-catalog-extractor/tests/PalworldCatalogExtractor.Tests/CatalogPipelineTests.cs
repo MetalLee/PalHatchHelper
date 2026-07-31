@@ -12,6 +12,21 @@ namespace PalHatchHelper.CatalogExtractor.Tests;
 public sealed class CatalogPipelineTests
 {
   [Fact]
+  public void SharedSchemaAcceptsFiniteSinglePrecisionNumbers()
+  {
+    SharedCatalogSchemaValidator.ValidateDefinition(
+        new JsonObject
+        {
+          ["slot"] = 1,
+          ["target_type"] = "pal",
+          ["effect_type"] = "defense",
+          ["value"] = 12.5f,
+          ["target_element_type"] = null,
+        },
+        "CatalogPassiveEffect");
+  }
+
+  [Fact]
   public async Task SyntheticNineReaderRunIsSortedAndContentReproducible()
   {
     using var first = new TemporaryDirectory();

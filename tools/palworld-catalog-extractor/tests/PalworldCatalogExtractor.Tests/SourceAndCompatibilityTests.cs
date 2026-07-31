@@ -8,6 +8,17 @@ namespace PalHatchHelper.CatalogExtractor.Tests;
 public sealed class SourceAndCompatibilityTests
 {
   [Fact]
+  public void DirtyWorkingTreeCannotClaimTheHeadCommit()
+  {
+    var commit = new string('a', 40);
+
+    Assert.Equal(commit, ExtractorBuildIdentity.ResolveRepositoryIdentity(commit, 0, string.Empty, 0));
+    Assert.Equal(
+        "uncommitted-extractor-build",
+        ExtractorBuildIdentity.ResolveRepositoryIdentity(commit, 0, " M confirmed-reader.cs", 0));
+  }
+
+  [Fact]
   public void SourcePackageManifestHashUsesCanonicalSortedRelativePaths()
   {
     var first = SourcePackageManifestBuilder.FromEntries(

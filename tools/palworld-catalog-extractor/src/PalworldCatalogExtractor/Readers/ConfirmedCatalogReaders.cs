@@ -782,15 +782,15 @@ internal static class ConfirmedCatalogReaders
       {
         locations.AddRange(destinationRedirects.SelectMany(value => new[]
         {
-          new SourceLocation(ItemRedirectTablePath + ".uasset", value.SourceRow, "SourceItemIds"),
-          new SourceLocation(ItemRedirectTablePath + ".uasset", value.SourceRow, "DestinationItemId.StaticId"),
+          new SourceLocation(ItemRedirectTablePath + ".uasset", value.SourceRow, "SourceItemIds[].Key"),
+          new SourceLocation(ItemRedirectTablePath + ".uasset", value.SourceRow, "DestinationItemId.Key"),
         }));
       }
       evidence.Add(new SourceEvidenceRecord(
           CatalogCategories.RecordKey(CatalogCategory.Items, record),
           sourceName,
           locations));
-      facts.Add(sourceName, new ItemFact(sourceName, stableId, typeA, typeB, enableHandcraft));
+      facts.Add(sourceName, new ItemFact(sourceName, stableId, typeA, typeB));
     }
 
     _ = StableIdV1.BuildMap(facts.Keys.Concat(redirects.BySource.Keys));
@@ -823,8 +823,8 @@ internal static class ConfirmedCatalogReaders
           ?? throw new ExtractorException(
               ErrorCodes.UnresolvedGameFacts,
               "An item redirect destination is null.");
-      var destinationId = Name(destination, "StaticId");
-      foreach (var sourceId in Names(row.Value, "SourceItemIds").Where(value => !IsNone(value)))
+      var destinationId = ItemRedirectDestinationId(NameProperties(destination));
+      foreach (var sourceId in ItemRedirectSourceIds(row.Value).Where(value => !IsNone(value)))
       {
         var redirect = new ItemRedirect(row.Key.Text, sourceId, destinationId);
         if (!bySource.TryAdd(sourceId, redirect))
@@ -936,15 +936,14 @@ internal static class ConfirmedCatalogReaders
           .Select(value => (JsonNode?)JsonValue.Create(value))
           .ToArray());
       var energyType = EnumTail(Name(row.Value, "EnergyType"));
-      var isFood = product.TypeA.Contains("food", StringComparison.OrdinalIgnoreCase)
-          || product.TypeB.Contains("food", StringComparison.OrdinalIgnoreCase);
+      var craftKind = ItemRecipeCraftKind(product.TypeA, product.TypeB);
       var record = EntityRecord(sourceName, new JsonObject
       {
         ["recipe_id"] = StableIdV1.Normalize(sourceName),
         ["product_item_id"] = product.StableId,
         ["product_count"] = productCount,
         ["ingredients"] = ingredients,
-        ["craft_kind"] = isFood ? "cooking" : product.EnableHandcraft ? "handcraft" : "other",
+        ["craft_kind"] = craftKind,
         ["work_amount"] = Single(row.Value, "WorkAmount"),
         ["workable_attribute"] = Integer(row.Value, "WorkableAttribute"),
         ["energy_type"] = IsNone(energyType) ? null : JsonValue.Create(StableIdV1.Normalize(energyType)),
@@ -953,7 +952,7 @@ internal static class ConfirmedCatalogReaders
         ["deny_recipe_chain"] = orderedDenyRecipeChain,
       });
       records.Add(record);
-      evidence.Add(Evidence(
+      var recipeEvidence = Evidence(
           CatalogCategory.ItemRecipes,
           record,
           sourceName,
@@ -976,7 +975,16 @@ internal static class ConfirmedCatalogReaders
           "EnergyType",
           "EnergyAmount",
           "UnlockItemID",
-          "DenyRecipeChain"));
+          "DenyRecipeChain");
+      evidence.Add(recipeEvidence with
+      {
+        Sources =
+        [
+          .. recipeEvidence.Sources,
+          new SourceLocation(ItemTablePath + ".uasset", product.SourceName, "TypeA"),
+          new SourceLocation(ItemTablePath + ".uasset", product.SourceName, "TypeB"),
+        ],
+      });
     }
 
     if (unresolved.Count > 0)
@@ -1067,6 +1075,46 @@ internal static class ConfirmedCatalogReaders
     "Male" => "male",
     _ => throw new ExtractorException(ErrorCodes.UnresolvedGameFacts, "Unknown breeding gender enum value."),
   };
+
+  internal static string ItemRedirectDestinationId(IReadOnlyDictionary<string, string> properties)
+  {
+    if (!properties.TryGetValue("Key", out var value) || IsNone(value))
+    {
+      throw new ExtractorException(
+          ErrorCodes.UnresolvedGameFacts,
+          "An item redirect destination has no confirmed Key property.");
+    }
+
+    return value;
+  }
+
+  internal static string ItemRecipeCraftKind(string typeA, string typeB) =>
+      typeA.Contains("food", StringComparison.OrdinalIgnoreCase)
+          || typeB.Contains("food", StringComparison.OrdinalIgnoreCase)
+          ? "cooking"
+          : "handcraft";
+
+  private static string[] ItemRedirectSourceIds(FStructFallback row)
+  {
+    var array = Property(row, "SourceItemIds").Tag!.GenericValue as UScriptArray
+        ?? throw new ExtractorException(
+            ErrorCodes.UnresolvedGameFacts,
+            "An item redirect source list is not a confirmed struct array.");
+    return array.Properties.Select(item => item.GetValue<FStructFallback>() is { } value
+            ? ItemRedirectDestinationId(NameProperties(value))
+            : throw new ExtractorException(
+                ErrorCodes.UnresolvedGameFacts,
+                "An item redirect source contains a null struct."))
+        .ToArray();
+  }
+
+  private static Dictionary<string, string> NameProperties(FStructFallback value) =>
+      value.Properties
+          .Where(property => property.PropertyType.Text == "NameProperty")
+          .ToDictionary(
+              property => property.Name.Text,
+              property => property.Tag!.GetValue<FName>().Text,
+              StringComparer.Ordinal);
 
   internal static string LocalizationKey(string sourceNamespace, string rawKey)
   {
@@ -1197,8 +1245,7 @@ internal static class ConfirmedCatalogReaders
       string SourceName,
       string StableId,
       string TypeA,
-      string TypeB,
-      bool EnableHandcraft);
+      string TypeB);
 
   private sealed record ItemFacts(IReadOnlyDictionary<string, ItemFact> Facts, ReaderResult Result);
 

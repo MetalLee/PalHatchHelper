@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using PalHatchHelper.CatalogExtractor.Contracts;
+using PalHatchHelper.CatalogExtractor.Core;
 using PalHatchHelper.CatalogExtractor.Readers;
 
 namespace PalHatchHelper.CatalogExtractor.Tests;
@@ -24,6 +25,32 @@ public sealed class ConfirmedReaderNormalizationTests
     Assert.Matches("^[A-Za-z0-9][A-Za-z0-9._-]*$", first);
     Assert.Equal(first, ConfirmedCatalogReaders.LocalizationKey("skill_name", "PASSIVE_CraftSpeed*3"));
     Assert.NotEqual(first, second);
+  }
+
+  [Fact]
+  public void CurrentItemRedirectDestinationUsesKeyProperty()
+  {
+    Assert.Equal(
+        "Accessory_AquaResist_1",
+        ConfirmedCatalogReaders.ItemRedirectDestinationId(
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["Key"] = "Accessory_AquaResist_1" }));
+
+    var error = Assert.Throws<ExtractorException>(() =>
+        ConfirmedCatalogReaders.ItemRedirectDestinationId(
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["StaticId"] = "legacy" }));
+    Assert.Equal(ErrorCodes.UnresolvedGameFacts, error.Code);
+  }
+
+  [Theory]
+  [InlineData("material", "materialore", "handcraft")]
+  [InlineData("weapon", "weaponhandgun", "handcraft")]
+  [InlineData("food", "fooddishmeat", "cooking")]
+  public void ConfirmedItemRecipeTableMapsCraftKinds(
+      string typeA,
+      string typeB,
+      string expected)
+  {
+    Assert.Equal(expected, ConfirmedCatalogReaders.ItemRecipeCraftKind(typeA, typeB));
   }
 
   [Fact]
