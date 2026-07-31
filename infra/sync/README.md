@@ -34,15 +34,15 @@ sudo setfacl -R -d -m u:palbeacon-sync:r-X __PALWORLD_SAVE_DIRECTORY__
 
 ## 3. 安装精确版本
 
-只有 `palbeacon-cli@0.2.2` 已按发布手册人工发布并完成 tgz 校验后，才安装精确
+只有 `palbeacon-cli@0.2.3` 已按发布手册人工发布并完成 tgz 校验后，才安装精确
 版本；不要使用 `latest`：
 
 ```bash
-sudo npm install --global --ignore-scripts=false palbeacon-cli@0.2.2
+sudo npm install --global --ignore-scripts=false palbeacon-cli@0.2.3
 /usr/local/bin/palbeacon --version
 ```
 
-版本输出必须为 `0.2.2`。生产安装不从本地重新打包另一个 tarball。
+版本输出必须为 `0.2.3`。生产安装不从本地重新打包另一个 tarball。
 
 ## 4. 以服务用户初始化
 
