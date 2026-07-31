@@ -124,19 +124,25 @@ func itemStacksFromEntry(e mapEntry, stats *ParseStats) ([]ItemStack, bool) {
 		stats.recordSkip("worldSaveData.ItemContainerSaveData", "invalid-container")
 		return nil, false
 	}
-	slots, ok := propertyProperties(value, "Slots")
-	if !ok {
+	slotsProperty := value["Slots"]
+	if slotsProperty == nil {
 		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "missing")
 		return nil, false
 	}
-	property := slots["Slots"]
-	if property == nil {
-		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots", "missing")
-		return nil, false
-	}
-	values, ok := property.Value.([]any)
+	values, ok := slotsProperty.Value.([]any)
 	if !ok {
-		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots", "invalid-array")
+		// Older decoded fixtures represented the ArrayProperty metadata as a
+		// nested struct. Keep accepting that shape while preferring the direct
+		// []any emitted by current retail saves.
+		slots, nested := asProperties(slotsProperty.Value)
+		if !nested || slots["Slots"] == nil {
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-array")
+			return nil, false
+		}
+		values, ok = slots["Slots"].Value.([]any)
+	}
+	if !ok {
+		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-array")
 		return nil, false
 	}
 	result := make([]ItemStack, 0, len(values))
@@ -151,18 +157,18 @@ func itemStacksFromEntry(e mapEntry, stats *ParseStats) ([]ItemStack, bool) {
 		}
 		raw, ok := propertyBytes(slot, "RawData")
 		if !ok {
-			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData", "missing")
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots[].RawData", "missing")
 			complete = false
 			continue
 		}
 		decoded, ok := decodeItemSlotRaw(raw)
 		if !ok {
-			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData", "invalid-item-stack")
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots[].RawData", "invalid-item-stack")
 			complete = false
 			continue
 		}
 		if _, duplicate := seenSlots[decoded.SlotIndex]; duplicate {
-			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData", "duplicate-slot")
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots[].RawData", "duplicate-slot")
 			complete = false
 			continue
 		}
@@ -396,8 +402,9 @@ func decodeMapObjectModelRaw(raw []byte) (string, string, Vector, bool) {
 	if _, err = readGUID(r); err != nil {
 		return "", "", Vector{}, false
 	}
-	valid, err := r.u32()
-	if err != nil || valid > 1 {
+	// The field is serialized as an opaque uint32 token rather than a boolean;
+	// current retail saves legitimately use values outside 0 and 1.
+	if _, err = r.u32(); err != nil {
 		return "", "", Vector{}, false
 	}
 	return baseID, guildID, position, true
@@ -520,6 +527,9 @@ func classifyItemContainerSlot(
 	}
 	attribute, ok := attributes[slotIndex]
 	if !ok {
+		if len(mapObjectID) > 0 {
+			return confirmedPhysicalContainerType(mapObjectID[0])
+		}
 		return "unknown"
 	}
 	switch attribute {
@@ -534,6 +544,26 @@ func classifyItemContainerSlot(
 		return "feed_box"
 	case itemSlotAttributeInput:
 		return "unknown"
+	default:
+		return "unknown"
+	}
+}
+
+// confirmedPhysicalContainerType handles retail storage modules that omit a
+// per-slot attribute for their default slots. Only stable map-object IDs
+// observed for specification-allowed physical containers are accepted; every
+// unrecognized or production-input object remains unresolved.
+func confirmedPhysicalContainerType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "itemchest", "itemchest_02", "itemchest_03", "itemchest_04",
+		"barrel_wood", "shelf01_wall_iron", "shelf02_stone", "shelf03_stone":
+		return "storage_box"
+	case "coolerbox", "refrigerator":
+		return "refrigerator"
+	case "coolerpalfoodbox":
+		return "feed_box"
+	case "fishingpond2":
+		return "production_output"
 	default:
 		return "unknown"
 	}

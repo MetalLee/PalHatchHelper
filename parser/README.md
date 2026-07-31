@@ -1,6 +1,6 @@
 # PalBeacon PlM CanonicalSnapshot Parser
 
-`palworld-save-parser` 1.4.1 is a Linux x64 and Windows x64 decode-only parser
+`palworld-save-parser` 1.4.2 is a Linux x64 and Windows x64 decode-only parser
 for Palworld `Level.sav` and declared `Players/*.sav` files. It supports:
 
 - `PlM/0x31`, including Mermaid streams, through the vendored open-source
@@ -8,9 +8,9 @@ for Palworld `Level.sav` and declared `Players/*.sav` files. It supports:
 - `PlZ/0x31` with one zlib layer;
 - `PlZ/0x32` with two zlib layers.
 
-Version 1.4.1 reads the retail nested
-`ItemContainerSaveData.Value.Slots.Slots.RawData` layout and joins each
-container to the explicit base and guild IDs in `MapObjectSaveData.Model.RawData`.
+Version 1.4.2 reads the retail direct
+`ItemContainerSaveData.Value.Slots[].RawData` layout (while tolerating the
+legacy decoded wrapper) and joins each container to the explicit base and guild IDs in `MapObjectSaveData.Model.RawData`.
 The map position is only a consistency check, never ownership evidence.
 Personal inventory, unfinished structures, input slots and explicitly unowned
 containers are excluded; structural drift remains explicitly partial.

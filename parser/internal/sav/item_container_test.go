@@ -36,6 +36,28 @@ func TestItemContainerSlotsPreservePhysicalContainerAndCounts(t *testing.T) {
 	}
 }
 
+func TestItemContainerSlotsDecodeDirectRetailArray(t *testing.T) {
+	const containerID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+	entry := mapEntry{
+		Key: propertyMap{"ID": testStructProperty(containerID)},
+		Value: structData{Value: propertyMap{
+			"Slots": {Value: []any{
+				propertyMap{"RawData": {Value: testItemSlotRaw(t, 4, 120, "Wood")}},
+				propertyMap{"RawData": {Value: testItemSlotRaw(t, 7, 0, "None")}},
+			}},
+		}},
+	}
+	stats := newStats()
+	items, complete := itemStacksFromEntry(entry, &stats)
+	if !complete || len(items) != 1 {
+		t.Fatalf("direct retail slot array was not decoded: complete=%v items=%#v skips=%#v", complete, items, stats.SkippedDetails)
+	}
+	if items[0].ContainerID != containerID || items[0].ItemID != "Wood" ||
+		items[0].Quantity != 120 || items[0].SlotIndex != 4 {
+		t.Fatalf("item stack facts changed: %#v", items[0])
+	}
+}
+
 func TestItemContainerStructuralDriftIsPartial(t *testing.T) {
 	entry := mapEntry{
 		Key: propertyMap{"ID": testStructProperty("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")},
@@ -149,6 +171,19 @@ func TestItemContainerOwnershipsFromMapObjectModule(t *testing.T) {
 	}
 	if stats.DecodeFailures["item_container_ownership"] != 0 {
 		t.Fatalf("valid ownership recorded a failure: %#v", stats.DecodeFailures)
+	}
+}
+
+func TestDecodeMapObjectModelRawAcceptsOpaqueStageValidity(t *testing.T) {
+	raw := testMapModelRaw(t, 0xaa, 0xbb, Vector{X: 10, Y: 20, Z: 30})
+	binary.LittleEndian.PutUint32(raw[len(raw)-4:], 502388096)
+
+	baseID, guildID, position, ok := decodeMapObjectModelRaw(raw)
+	if !ok {
+		t.Fatal("opaque stage validity token rejected")
+	}
+	if baseID == "" || guildID == "" || position != (Vector{X: 10, Y: 20, Z: 30}) {
+		t.Fatalf("map model facts changed: base=%q guild=%q position=%#v", baseID, guildID, position)
 	}
 }
 
@@ -283,6 +318,43 @@ func TestClassifyItemContainerSlotsFailsClosed(t *testing.T) {
 		"Refrigerator",
 	); actual != "refrigerator" {
 		t.Fatalf("refrigerated storage was classified as %q", actual)
+	}
+}
+
+func TestClassifyItemContainerDefaultsFromConfirmedPhysicalMapObject(t *testing.T) {
+	tests := []struct {
+		mapObjectID string
+		expected    string
+	}{
+		{mapObjectID: "ItemChest_03", expected: "storage_box"},
+		{mapObjectID: "Barrel_Wood", expected: "storage_box"},
+		{mapObjectID: "Shelf02_Stone", expected: "storage_box"},
+		{mapObjectID: "CoolerBox", expected: "refrigerator"},
+		{mapObjectID: "Refrigerator", expected: "refrigerator"},
+		{mapObjectID: "CoolerPalFoodBox", expected: "feed_box"},
+		{mapObjectID: "FishingPond2", expected: "production_output"},
+	}
+	for _, test := range tests {
+		t.Run(test.mapObjectID, func(t *testing.T) {
+			actual := classifyItemContainerSlot(
+				itemContainerUsageStorage,
+				map[int]uint8{},
+				4,
+				test.mapObjectID,
+			)
+			if actual != test.expected {
+				t.Fatalf("classification = %q; want %q", actual, test.expected)
+			}
+		})
+	}
+
+	if actual := classifyItemContainerSlot(
+		itemContainerUsageStorage,
+		map[int]uint8{},
+		4,
+		"UnknownContainer",
+	); actual != "unknown" {
+		t.Fatalf("unknown map object was guessed as %q", actual)
 	}
 }
 

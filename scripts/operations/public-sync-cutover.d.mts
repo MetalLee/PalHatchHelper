@@ -11,7 +11,7 @@ export interface SafeCutoverSummary {
   ok: true;
   world_id: string;
   device_id: string;
-  parser_version: "1.4.1";
+  parser_version: "1.4.2";
   guild_count: number;
   player_count: number;
   pal_count: number;
