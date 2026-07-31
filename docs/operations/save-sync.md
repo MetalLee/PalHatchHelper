@@ -19,7 +19,7 @@ docker compose config --format json
 
 ```dotenv
 PARSER_NAME=palhatch-plm-save-parser
-PARSER_VERSION=1.4.2
+PARSER_VERSION=1.4.3
 PARSER_COMMAND_JSON=["/app/parser/palworld-save-parser","--snapshot","{snapshot_path}","--output","{output_path}"]
 ```
 
@@ -28,7 +28,7 @@ PARSER_COMMAND_JSON=["/app/parser/palworld-save-parser","--snapshot","{snapshot_
 `palworld-save-tools 0.24.0` CLI 配成生产 Parser。每层解压后长度必须匹配容器声明，
 最终字节必须以 `GVAS` 开头。
 
-Parser 1.4.2 把 PalworldSaveTools commit
+Parser 1.4.3 把 PalworldSaveTools commit
 `3395e393466fc1f384dee54dabb3e597e611435e` 的最小 palooz/ooz decode-only
 C++ 源码通过 CGO 链接进自包含 Linux x64 与 Windows x64 可执行文件。Linux Agent bundle 继续只
 需要 Linux 可执行文件、许可证和

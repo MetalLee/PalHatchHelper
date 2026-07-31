@@ -635,6 +635,16 @@ async def run_save_worker(
             started_at = time.monotonic()
             try:
                 result = await service.sync_once()
+                try:
+                    await service.sample_latest_inventory()
+                except StructuredError as error:
+                    logger.warning(
+                        "item_inventory_sample_failed",
+                        extra={
+                            "event": "item_inventory_sample_failed",
+                            "error_code": error.code.value,
+                        },
+                    )
                 await _record_worker_heartbeat(
                     database,
                     settings,
@@ -738,36 +748,6 @@ async def _build_inventory_sync_service(
         )
     repository = SupabaseInventoryRepository(database)
     catalog = await repository.catalog_ids(settings.palworld_world_id)
-    from pal_hatch_helper.item_inventory.recipe_capacity import (
-        IngredientFact,
-        RecipeCapacityCalculator,
-        RecipeFact,
-    )
-
-    recipe_calculator = (
-        RecipeCapacityCalculator(
-            [
-                RecipeFact(
-                    recipe_id=recipe.recipe_id,
-                    product_item_id=recipe.product_item_id,
-                    product_count=recipe.product_count,
-                    ingredients=tuple(
-                        IngredientFact(
-                            slot=ingredient.slot,
-                            item_id=ingredient.item_id,
-                            count=ingredient.count,
-                        )
-                        for ingredient in recipe.ingredients
-                    ),
-                    craft_kind=recipe.craft_kind,
-                    deny_recipe_chain=tuple(recipe.deny_recipe_chain),
-                )
-                for recipe in catalog.item_recipes
-            ]
-        )
-        if catalog.item_recipes
-        else None
-    )
     runtime = runtime_settings or _default_runtime_settings()
     parser = SubprocessParserAdapter(
         name=settings.parser_name,
@@ -796,8 +776,6 @@ async def _build_inventory_sync_service(
             known_passive_skill_ids=catalog.passive_skill_ids,
         ),
         repository=repository,
-        recipe_calculator=recipe_calculator,
-        item_aliases=catalog.item_aliases,
         registry=SnapshotRegistry(
             settings.palhatch_data_dir / "snapshots",
             successful_count=runtime.snapshot_retention_count,

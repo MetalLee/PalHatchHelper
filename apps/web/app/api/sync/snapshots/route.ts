@@ -49,6 +49,15 @@ export async function POST(request: NextRequest) {
       p_snapshot: payload as unknown as Json,
     });
     if (error) throw error;
+    const { error: cleanupError } = await admin.rpc(
+      "cleanup_expired_inventory_snapshot_payloads",
+      { p_batch_size: 25 },
+    );
+    if (cleanupError) {
+      console.warn("inventory_retention_cleanup_failed", {
+        code: cleanupError.code,
+      });
+    }
     return NextResponse.json(
       { ok: true, ...(data as { world_id: string; snapshot_id: string }) },
       { status: 201, headers: syncPrivateHeaders },

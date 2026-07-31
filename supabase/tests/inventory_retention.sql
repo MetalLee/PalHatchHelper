@@ -104,8 +104,8 @@ insert into public.inventory_snapshots (
   '1.0.0',
   'published',
   '2026-07-13T08:30:00Z',
-  statement_timestamp() - interval '23 hours 59 minutes',
-  statement_timestamp() - interval '23 hours 59 minutes'
+  statement_timestamp() - interval '29 minutes',
+  statement_timestamp() - interval '29 minutes'
 );
 insert into public.pal_snapshot_items (
   snapshot_id,
@@ -178,7 +178,7 @@ select ok(
     from public.pal_snapshot_items
     where snapshot_id = '40000000-0000-4000-8000-000000000002'
   ),
-  'latest inventory payload remains available even when older than 24 hours'
+  'latest inventory payload remains available even when older than 30 minutes'
 );
 select ok(
   exists (
@@ -186,7 +186,7 @@ select ok(
     from public.pal_snapshot_items
     where snapshot_id = '40000000-0000-4000-8000-0000000000e2'
   ),
-  'a superseded payload younger than 24 hours is not cleaned early'
+  'a superseded payload younger than 30 minutes is not cleaned early'
 );
 select ok(
   exists (

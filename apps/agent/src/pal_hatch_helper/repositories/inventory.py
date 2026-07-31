@@ -73,6 +73,8 @@ class InventoryRepository(Protocol):
 
     async def cleanup_expired_payloads(self) -> InventoryCleanupResult: ...
 
+    async def sample_latest_inventory(self, world_id: UUID) -> None: ...
+
 
 class SupabaseInventoryRepository:
     def __init__(self, database: DatabaseClient) -> None:
@@ -195,6 +197,14 @@ class SupabaseInventoryRepository:
             )
         except (KeyError, ValueError) as error:
             raise _invalid_response() from error
+
+    async def sample_latest_inventory(self, world_id: UUID) -> None:
+        payload = await self._database.rpc(
+            "sample_latest_item_inventory",
+            {"p_world_id": str(world_id), "p_sampled_at": None},
+        )
+        if payload is not None:
+            raise _invalid_response()
 
     async def catalog_ids(self, world_id: UUID) -> InventoryCatalogIds:
         payload = await self._database.rpc(

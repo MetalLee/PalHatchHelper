@@ -79,7 +79,7 @@ export interface CanonicalItemStack {
   container_id: string;
   item_id: string;
   quantity: number;
-  container_type: "storage_box" | "refrigerator" | "feed_box" | "production_output" | "unknown";
+  container_type: "storage_box" | "refrigerator" | "feed_box" | "production_output" | "guild_chest" | "unknown";
   base_id: string | null;
   guild_uid: string | null;
   slot_index: number;

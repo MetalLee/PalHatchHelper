@@ -7,11 +7,6 @@ from uuid import UUID
 import pytest
 
 from pal_hatch_helper.generated import CanonicalSnapshot
-from pal_hatch_helper.item_inventory.recipe_capacity import (
-    IngredientFact,
-    RecipeCapacityCalculator,
-    RecipeFact,
-)
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.validator import CanonicalSnapshotValidator
 from pal_hatch_helper.parsers.adapter import CompatibilityResult, ParserResult
@@ -107,6 +102,8 @@ class StubDatabase:
                 "deleted_failure_count": 1,
                 "deleted_detection_run_count": 3,
             }
+        if function_name == "sample_latest_item_inventory":
+            return None
         raise AssertionError(function_name)
 
     async def close(self) -> None:
@@ -179,6 +176,11 @@ def test_repository_writes_only_normalized_payload_via_atomic_rpc() -> None:
             "cleanup_expired_inventory_snapshot_payloads",
             {"p_batch_size": 25},
         )
+        await repository.sample_latest_inventory(WORLD_ID)
+        assert database.calls[-1] == (
+            "sample_latest_item_inventory",
+            {"p_world_id": str(WORLD_ID), "p_sampled_at": None},
+        )
 
     import asyncio
 
@@ -217,6 +219,7 @@ class FakeInventoryRepository:
         self.publish_requests: list[InventoryPublishRequest] = []
         self.failure_requests: list[InventoryFailureRequest] = []
         self.cleanup_calls = 0
+        self.sample_calls = 0
 
     async def latest(self, world_id: UUID) -> LatestInventorySnapshot | None:
         return self.latest_value
@@ -237,6 +240,10 @@ class FakeInventoryRepository:
             deleted_failure_count=0,
             deleted_detection_run_count=0,
         )
+
+    async def sample_latest_inventory(self, world_id: UUID) -> None:
+        assert world_id == WORLD_ID
+        self.sample_calls += 1
 
 
 def test_inventory_sync_exposes_bounded_database_retention_cleanup(tmp_path: Path) -> None:
@@ -263,7 +270,6 @@ def _service(
     tmp_path: Path,
     parser: FakeParser,
     repository: FakeInventoryRepository,
-    recipe_calculator: RecipeCapacityCalculator | None = None,
 ) -> InventorySyncService:
     return InventorySyncService(
         world_id=WORLD_ID,
@@ -280,7 +286,6 @@ def _service(
             known_passive_skill_ids={"artisan"},
         ),
         repository=repository,
-        recipe_calculator=recipe_calculator,
     )
 
 
@@ -334,7 +339,7 @@ def test_successful_canonical_snapshot_is_published_once(tmp_path: Path) -> None
     asyncio.run(scenario())
 
 
-def test_successful_item_snapshot_publishes_deterministic_recipe_capacity(
+def test_successful_item_snapshot_defers_recipe_capacity_until_the_web_request(
     tmp_path: Path,
 ) -> None:
     async def scenario() -> None:
@@ -355,31 +360,12 @@ def test_successful_item_snapshot_publishes_deterministic_recipe_capacity(
             }
         ]
         payload["item_inventory_status"] = "available"
-        calculator = RecipeCapacityCalculator(
-            [
-                RecipeFact(
-                    recipe_id="recipe.nail",
-                    product_item_id="nail",
-                    product_count=5,
-                    ingredients=(IngredientFact(slot=1, item_id="ingot", count=2),),
-                    craft_kind="handcraft",
-                    deny_recipe_chain=(),
-                )
-            ]
-        )
         repository = FakeInventoryRepository()
 
-        await _service(
-            tmp_path,
-            FakeParser(payload),
-            repository,
-            recipe_calculator=calculator,
-        ).sync_once()
+        await _service(tmp_path, FakeParser(payload), repository).sync_once()
 
         capacities = repository.publish_requests[0].item_recipe_capacities
-        assert len(capacities) == 1
-        assert capacities[0].item_id == "nail"
-        assert capacities[0].craftable_additional == 15
+        assert capacities == ()
 
     import asyncio
 

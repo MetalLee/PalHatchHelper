@@ -234,6 +234,66 @@ func TestAssignItemStackOwnershipUsesExplicitMapObjectBase(t *testing.T) {
 	}
 }
 
+func TestGuildItemContainerOwnershipUsesGuildExtraStorageGUID(t *testing.T) {
+	const guildID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	const containerID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+	var raw bytes.Buffer
+	writeRepeatedTestGUID(t, &raw, 0xcc)
+	raw.Write([]byte{1, 2, 3, 4}) // trailing version bytes are opaque
+	root := propertyMap{
+		"GuildExtraSaveDataMap": {Value: []mapEntry{{
+			Key: guildID,
+			Value: structData{Value: propertyMap{
+				"GuildItemStorage": testStructProperty(propertyMap{
+					"RawData": {Value: raw.Bytes()},
+				}),
+			}},
+		}}},
+	}
+	world := &World{
+		ItemInventoryStatus: "available",
+		Guilds:              []Guild{{ID: guildID}},
+		ItemStacks: []ItemStack{{
+			ContainerID:   containerID,
+			ItemID:        "Wood",
+			Quantity:      10,
+			ContainerType: "unknown",
+			SlotIndex:     0,
+		}},
+	}
+	stats := newStats()
+	owners := guildItemContainerOwnershipsFromRoot(root, world.Guilds, &stats)
+	assignGuildItemStackOwnership(world, owners)
+	assignItemStackOwnership(world, nil)
+
+	if len(world.ItemStacks) != 1 || world.ItemStacks[0].ContainerType != "guild_chest" ||
+		world.ItemStacks[0].GuildID != guildID || world.ItemStacks[0].BaseID != "" {
+		t.Fatalf("guild chest ownership was not preserved: %#v", world.ItemStacks)
+	}
+	if world.ItemInventoryStatus != "available" {
+		t.Fatalf("guild chest was treated as unresolved: %q", world.ItemInventoryStatus)
+	}
+}
+
+func TestGuildItemContainerOwnershipConflictFailsClosed(t *testing.T) {
+	const containerID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+	key := guidIdentityKey(containerID)
+	baseOwners := map[string]itemContainerOwnership{
+		key: {ContainerID: containerID, BaseID: "base-1", GuildID: "guild-1"},
+	}
+	guildOwners := map[string]string{key: "guild-1"}
+	stats := newStats()
+
+	rejectConflictingItemContainerOwnerships(baseOwners, guildOwners, &stats)
+
+	if len(baseOwners) != 0 || len(guildOwners) != 0 {
+		t.Fatalf("conflicting ownership evidence was retained: %#v %#v", baseOwners, guildOwners)
+	}
+	if stats.DecodeFailures["item_container_ownership"] != 1 {
+		t.Fatalf("ownership conflict was not diagnosed: %#v", stats.DecodeFailures)
+	}
+}
+
 func TestExcludePlayerItemContainersRemovesBackpacksBeforeOwnership(t *testing.T) {
 	world := &World{
 		ItemInventoryStatus: "available",

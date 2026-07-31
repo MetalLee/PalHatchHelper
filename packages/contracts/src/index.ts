@@ -52,7 +52,10 @@ export type { BreedingJob } from "./generated/breeding-job";
 export type {
   GuildItemInventoryItem,
   GuildItemInventoryResponse,
+  ItemCapacityIngredient,
+  ItemCapacityRecipe,
   ItemInventoryBaseTotal,
+  ItemInventoryQuantity,
   ItemInventoryTrendPoint,
   ItemInventoryTrendResponse,
   ItemRecipeCapacity,

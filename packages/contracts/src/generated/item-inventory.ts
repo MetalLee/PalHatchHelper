@@ -8,6 +8,9 @@ export interface ItemInventoryContractsContracts {
   ItemRecipeLimitingMaterial: ItemRecipeLimitingMaterial;
   ItemRecipeCapacity: ItemRecipeCapacity;
   PublishedItemRecipeCapacity: PublishedItemRecipeCapacity;
+  ItemInventoryQuantity: ItemInventoryQuantity;
+  ItemCapacityIngredient: ItemCapacityIngredient;
+  ItemCapacityRecipe: ItemCapacityRecipe;
   GuildItemInventoryItem: GuildItemInventoryItem;
   GuildItemInventoryResponse: GuildItemInventoryResponse;
   ItemInventoryTrendPoint: ItemInventoryTrendPoint;
@@ -75,20 +78,77 @@ export interface PublishedItemRecipeCapacity {
   recipe_plan: ItemRecipePlanStep[];
   limiting_materials: ItemRecipeLimitingMaterial[];
 }
+export interface ItemInventoryQuantity {
+  item_id: string;
+  quantity: number;
+}
+export interface ItemCapacityIngredient {
+  slot: number;
+  item_id: string;
+  count: number;
+}
+export interface ItemCapacityRecipe {
+  recipe_id: string;
+  product_item_id: string;
+  product_count: number;
+  craft_kind: "handcraft" | "cooking";
+  deny_recipe_chain: string[];
+  /**
+   * @minItems 1
+   * @maxItems 5
+   */
+  ingredients:
+    | [ItemCapacityIngredient]
+    | [ItemCapacityIngredient, ItemCapacityIngredient]
+    | [ItemCapacityIngredient, ItemCapacityIngredient, ItemCapacityIngredient]
+    | [ItemCapacityIngredient, ItemCapacityIngredient, ItemCapacityIngredient, ItemCapacityIngredient]
+    | [
+        ItemCapacityIngredient,
+        ItemCapacityIngredient,
+        ItemCapacityIngredient,
+        ItemCapacityIngredient,
+        ItemCapacityIngredient
+      ];
+}
 export interface GuildItemInventoryItem {
   item_id: string;
   name: string;
   type_a: string;
   type_b: string;
   quantity: number;
+  guild_chest_quantity: number;
   bases: ItemInventoryBaseTotal[];
   recipes: ItemRecipeView[];
   capacity: ItemRecipeCapacity | null;
+  /**
+   * @minItems 13
+   * @maxItems 13
+   */
+  trend_1h: [
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null,
+    number | null
+  ];
 }
 export interface GuildItemInventoryResponse {
   status: "available" | "partial" | "unavailable";
   snapshot_id: string | null;
   captured_at: string | null;
+  game_data_version_id: string | null;
+  trend_from_at: string | null;
+  trend_interval_seconds: 300;
+  inventory_quantities: ItemInventoryQuantity[];
+  capacity_recipes: ItemCapacityRecipe[];
   items: GuildItemInventoryItem[];
 }
 export interface ItemInventoryTrendPoint {

@@ -1,5 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
+- 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=not_started
 - 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
 - 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 文档状态：已完成设计评审；2026-07-30 Landing 轮播真实名称与配方修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
@@ -76,7 +77,7 @@
 | 前后端部署 | Vercel 前端 + Supabase 控制面 + 服务器私有 Agent |
 | 服务器通信 | Agent 主动轮询 Supabase，不接受公网入站任务 |
 | 存档同步 | 每 5 分钟检查，稳定后复制副本并解析 |
-| 数据库库存保留 | 已被更新快照取代的标准化库存明细最多保留 24 小时；每个世界的最新有效库存始终保留 |
+| 数据库库存保留 | 已被更新快照取代的标准化库存明细最多保留 30 分钟；每个世界的最新有效库存始终保留 |
 | 解析器 | ParserAdapter + 受控独立子进程 |
 | 后端技术栈 | Python 3.12 + FastAPI + Pydantic |
 | 用户绑定 | 第一版由管理员手动绑定 |
@@ -498,16 +499,18 @@ Save Worker 每五分钟执行一次检查：
 
 - 最近 3 份成功原始快照。
 - 最近 1 份失败快照或失败快照最多保留 24 小时。
-- Supabase 中已被更新快照取代的 `pal_snapshot_items` 从数据库写入时间起最多保留 24 小时。
+- Supabase 中已被更新快照取代的 `pal_snapshot_items` 从数据库写入时间起最多保留 30 分钟。
 - 每个世界的 `latest_snapshot_id` 及其明细始终保留；存档长期不变化时不得清空当前库存。
 - 成功快照清理明细后保留带 `payload_purged_at` 的小型审计存根；失败或拒绝快照元数据
   在 24 小时后删除。
 - 任务、路线、我的计划收藏、玩家、公会和共享偏好不随快照级联删除。
-- 24 小时以数据库 `created_at` 计算，清理必须按小批次执行并与同一世界的发布、任务创建互斥。
+- 30 分钟以数据库 `created_at` 计算，清理必须按小批次执行并与同一世界的发布、任务创建互斥。
 - 完整存档不上传 Supabase。
 
-Save Worker 每轮检查后调用受 Service Role 保护的清理 RPC。RPC 不接受客户端提供的保留时长，
-永不删除最新有效库存，只允许更新 `payload_purged_at`、删除对应明细及过期失败记录。
+Save Worker 每轮检查后调用受 Service Role 保护的统一清理 RPC；公共 Sync 在快照上传或五分钟
+`unchanged` 心跳后也调用同一受控、小批量清理入口。RPC 不接受客户端提供的保留时长，永不删除
+最新有效帕鲁或物品库存，只允许更新 `payload_purged_at`、删除对应明细及过期失败记录。清理失败
+只记录告警，不回滚已经成功发布的快照或心跳。
 相同内容哈希在旧载荷已清理后再次出现时创建新的快照发生记录，不复用已清理的存根。
 
 ## 9. ParserAdapter 与标准化
@@ -1339,7 +1342,7 @@ save-worker
 15. 任务重复领取与锁超时测试。
 16. AI 三级降级测试。
 17. 我的计划保存/移除幂等、跨用户隔离、物化路线只读和过期库存不被重新加载测试。
-18. 24 小时边界、最新快照保护、分批清理、相同哈希重新发布和并发发布互斥测试。
+18. 30 分钟边界、最新快照保护、分批清理、相同哈希重新发布和并发发布互斥测试。
 19. 2048 个以上库存实例、重复个体状态压缩、语义路线去重和默认硬预算不超限压力测试。
 20. Boss 前缀库存 ID 标准化、`IsBoss`/前缀头目标志合并、公会所有基地帕鲁解析、列表展示和配种可用性测试。
 21. 基地 UID/工作槽位、普通终端页槽、次元帕鲁仓库页槽、私人/公会/未知访问范围、
@@ -1395,7 +1398,7 @@ Server Component/Vitest、metadata、sitemap、robots、middleware 和生产构�
 17. 手机端可以完成登录、创建任务、查看结果、保存和查看“我的计划”。
 19. 服务器不新增公网业务端口。
 20. 新系统异常不会自动修改或重启帕鲁服务器。
-21. 已被取代的数据库库存明细在写入 24 小时后可被分批清理，最新有效库存始终可用。
+21. 已被取代的数据库库存明细在写入 30 分钟后可被分批清理，最新有效库存始终可用。
 22. 快照明细清理后，已物化路线和“我的计划”收藏仍可读取。
 23. 新快照保留头目标志；基地工作帕鲁可定位到基地与工作位，普通终端和次元帕鲁仓库可在
     数据可证明时定位到页格；未知次元仓库共享状态不会误进入公会库存。
@@ -1425,7 +1428,7 @@ Server Component/Vitest、metadata、sitemap、robots、middleware 和生产构�
 2. Supabase 是身份、数据库和任务控制面，不保存完整原始存档。
 3. 配种算法由版本化规则和确定性搜索保证正确性。
 4. AI 是可降级的解释层，不是事实来源。
-5. 库存、统一游戏数据、算法和评分均版本化；库存载荷在 24 小时内支持精确计算，
+5. 库存、统一游戏数据、算法和评分均版本化；被取代的库存载荷在 30 分钟内支持精确计算，
    过期后保留不可变的物化结果和版本审计而不保留全量库存。
 6. 公会协作以默认共享为基础，但玩家保留主动关闭权限。
 7. 第一版围绕“配种器”闭环，不提前建设通用监控平台。
@@ -1650,28 +1653,36 @@ Footer 和正文内部链接提供可抓取入口。
 1. Parser 始终从只读稳定副本解析基地、公会、物品容器和槽位；不得把真实存档路径交给 Parser，
    不得修改、修复或写回存档。CanonicalSnapshot 新版本增加 `bases` 与 `item_stacks`，堆栈至少包含
    容器稳定 ID、物品 ID、数量、容器类型、可选基地 ID、公会 ID和解析状态。
-2. 公会库存只统计能够确定归属该公会基地的物理容器：箱子、冰箱、饲料箱和已完成生产输出。
-   成员个人背包、世界掉落物、进行中的制作预留和无法归属基地的容器不进入公会或分基地总量。
-   同一容器必须按稳定 ID 去重；无法归属的数据进入 `unresolved` 计数，绝不猜测基地。
+2. 公会库存统计能够确定归属该公会基地的物理容器：箱子、冰箱、饲料箱和已完成生产输出；同时
+   统计能够由 `GuildExtraSaveDataMap` 中公会键与 `GuildItemStorage` 容器 GUID 直接证明归属的
+   公会箱。公会箱计入公会总量但没有基地 ID，不进入任何分基地总量。成员个人背包、世界掉落物、
+   进行中的制作预留和无法证明公会或基地归属的容器不进入公会总量。同一容器必须按稳定 ID 去重；
+   基地与公会箱证据冲突时进入 `unresolved`，绝不猜测归属。
 3. 物品库存使用独立的 `item_inventory_snapshots` 和最新有效指针，并固定源存档哈希、捕获时间、
    `game_data_version_id`、解析器版本与质量状态。物品解析失败保留上一份有效物品快照，不阻断现有
    帕鲁库存发布；所有时间使用 UTC 和带时区 ISO 8601。
 4. 浏览器和普通 RPC 只读取按世界、公会、基地、物品聚合的数据，不返回原始容器 ID。授权用户只能
    查看自身公会聚合，管理员保持受审计访问；Service Role 写入和现有 RLS 边界不放宽。
-5. 被更新的堆栈级明细最多保留 24 小时；小时聚合保留 90 天；日聚合保留 1 年。最新有效快照始终
-   保留。趋势查询返回总库存、各基地库存、相邻采样增减量、采样区间和数据新鲜度。
+5. 被更新的堆栈级明细、公会/基地聚合和已废弃的快照产量载荷最多保留 30 分钟；小时聚合保留
+   90 天；日聚合保留 1 年。最新有效快照始终保留。五分钟公会总库存采样独立保留 2 小时，每次
+   新快照发布或同步客户端确认存档未变化时记录；同步缺失不得伪造成库存不变。物品总览一次返回
+   最近一小时含首尾的 13 个五分钟点，所有行共享时间轴并使用可空数量表达采样缺口；既有趋势
+   查询继续返回总库存、各基地库存、相邻采样增减量、采样区间和数据新鲜度。
 
 ### 31.4 确定性递归产量
 
-1. 产量查询以单个目标物品独立计算，使用当前有效物品快照的虚拟副本，不修改库存。返回
-   `on_hand`、`craftable_additional`、`obtainable_total`、确定性 `recipe_plan` 和
-   `limiting_materials`。
+1. 产量不在存档发布或数据库入库时计算、持久化。物品页请求时可用一个批量请求提交当前页面至多
+   300 个目标物品；BFF 通过一次受权限保护的上下文查询固定当前有效物品快照和游戏目录版本，
+   再在应用侧对每个目标独立计算。每个目标使用库存虚拟副本，不修改库存，返回 `on_hand`、
+   `craftable_additional`、`obtainable_total`、确定性 `recipe_plan` 和 `limiting_materials`。
 2. 第一版只以物料为硬约束，不因科技等级、工作台、帕鲁工作适应性、时间或电力降低数量；这些条件
    可以作为说明展示。替代配方分别返回，并以稳定配方 ID 和稳定排序标记最大方案。
 3. 计算必须正确处理批量产出、已有中间产物抵扣、共享原料消费、替代配方、`DenyRecipeChain`、
    不可制作叶子和循环检测。共享库存使用单一消费账本，不得按节点独立缓存后重复使用同一原料。
 4. 算法通过目标数量可行性检查和有界确定性搜索计算最大新增数量；超出复杂度限制时返回稳定错误码，
-   不调用 AI，不给出未经验证的近似数量。所有结果固定物品快照与游戏目录版本以支持审计。
+   不调用 AI，不给出未经验证的近似数量。递归搜索不得在 PostgreSQL 中执行，也不得为每个页面行
+   发起独立 RPC；静态配方图可按不可变目录版本在 BFF 缓存。所有结果固定物品快照与游戏目录版本
+   以支持审计，页面快照已变化时返回稳定 stale 错误而不是混用新旧数据。
 
 ### 31.5 发布、兼容与验收
 
@@ -1680,7 +1691,7 @@ Footer 和正文内部链接提供可抓取入口。
 2. 动态物品快照独立于静态 Catalog 发布。Catalog 2.0 可在没有生产物品快照时先验证和发布；功能
    开关关闭或物品快照缺失时，现有配种与帕鲁库存行为保持不变。
 3. 验收至少覆盖：被动模板与缺省说明、三 locale、确定性哈希、物品重定向、配方引用闭合、Schema
-   1.1.0/2.0.0 兼容、容器去重、基地归属、RLS、24 小时/90 天/1 年清理边界、趋势分桶、共享原料、
-   替代配方、批量产出、禁止递归和配方环。
+   1.1.0/2.0.0 兼容、容器去重、基地与公会箱归属、RLS、30 分钟/2 小时/90 天/1 年清理边界、
+   五分钟采样及缺口、整页单请求与无 N+1、共享原料、替代配方、批量产出、禁止递归和配方环。
 4. 真实验收只使用原始存档的只读复制件和受控本地 Supabase。不得部署生产、修改 `/opt/palworld`、
    开放新公网端口、控制 Palworld/mihomo 容器或推送远程仓库，除非另行取得阶段批准。

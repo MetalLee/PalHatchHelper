@@ -4,16 +4,11 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from pal_hatch_helper.generated import CanonicalSnapshot, PublishedItemRecipeCapacity
-from pal_hatch_helper.item_inventory.recipe_capacity import (
-    RecipeCapacityCalculator,
-    capacities_for_snapshot,
-)
+from pal_hatch_helper.generated import CanonicalSnapshot
 from pal_hatch_helper.models.errors import ErrorCode, StructuredError
 from pal_hatch_helper.normalization.stable_id import normalize_parser_snapshot_payload
 from pal_hatch_helper.normalization.validator import (
     CanonicalSnapshotValidator,
-    ValidatedSnapshot,
 )
 from pal_hatch_helper.parsers.adapter import ParserAdapter
 from pal_hatch_helper.repositories.inventory import (
@@ -50,8 +45,6 @@ class InventorySyncService:
         repository: InventoryRepository,
         drop_guard: InventoryDropGuard | None = None,
         registry: SnapshotRegistry | None = None,
-        recipe_calculator: RecipeCapacityCalculator | None = None,
-        item_aliases: dict[str, str] | None = None,
     ) -> None:
         self._world_id = world_id
         self._source_root = source_root
@@ -62,11 +55,12 @@ class InventorySyncService:
         self._repository = repository
         self._drop_guard = drop_guard or InventoryDropGuard()
         self._registry = registry or SnapshotRegistry(copier.snapshot_root)
-        self._recipe_calculator = recipe_calculator
-        self._item_aliases = dict(item_aliases or {})
 
     async def cleanup_expired_payloads(self) -> InventoryCleanupResult:
         return await self._repository.cleanup_expired_payloads()
+
+    async def sample_latest_inventory(self) -> None:
+        await self._repository.sample_latest_inventory(self._world_id)
 
     async def sync_once(self) -> InventorySyncResult:
         latest = await self._repository.latest(self._world_id)
@@ -119,7 +113,6 @@ class InventorySyncService:
                     parser_name=self._parser.name,
                     parser_version=self._parser.version,
                     snapshot=validated,
-                    item_recipe_capacities=self._recipe_capacities(validated),
                 )
             )
         except StructuredError as error:
@@ -193,7 +186,6 @@ class InventorySyncService:
                 parser_name=self._parser.name,
                 parser_version=self._parser.version,
                 snapshot=validated,
-                item_recipe_capacities=self._recipe_capacities(validated),
             )
         )
         self._registry.record(
@@ -216,21 +208,6 @@ class InventorySyncService:
             output_path = Path(output_dir) / "canonical.json"
             parser_result = self._parser.parse(snapshot_path, output_path)
             return normalize_parser_snapshot_payload(parser_result.payload)
-
-    def _recipe_capacities(
-        self, snapshot: ValidatedSnapshot
-    ) -> tuple[PublishedItemRecipeCapacity, ...]:
-        if self._recipe_calculator is None:
-            return ()
-        canonical = snapshot.canonical
-        if canonical.item_inventory_status == "unavailable":
-            return ()
-        return capacities_for_snapshot(
-            self._recipe_calculator,
-            canonical.bases,
-            canonical.item_stacks,
-            item_aliases=self._item_aliases,
-        )
 
 
 def _failure_status(code: ErrorCode) -> Literal["failed", "rejected"]:

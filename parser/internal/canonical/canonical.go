@@ -180,9 +180,9 @@ func Build(
 			continue
 		}
 		result.Bases = append(result.Bases, Base{
-			BaseID: base.ID,
+			BaseID:   base.ID,
 			GuildUID: optionalString(base.GuildID),
-			Name: optionalString(base.Name),
+			Name:     optionalString(base.Name),
 		})
 	}
 	palIDs := newStableIDMap()
@@ -329,6 +329,14 @@ func Build(
 					resolution = "resolved"
 				}
 			}
+		} else if containerType == "guild_chest" {
+			guildID := strings.TrimSpace(source.GuildID)
+			if _, ok := guildNames[guildID]; ok {
+				guildUID = optionalString(guildID)
+				if itemID != "unknown" {
+					resolution = "resolved"
+				}
+			}
 		}
 		result.ItemStacks = append(result.ItemStacks, ItemStack{
 			ContainerID: containerID, ItemID: itemID, Quantity: source.Quantity,
@@ -352,7 +360,7 @@ func Build(
 
 func normalizedContainerType(value string) string {
 	switch value {
-	case "storage_box", "refrigerator", "feed_box", "production_output":
+	case "storage_box", "refrigerator", "feed_box", "production_output", "guild_chest":
 		return value
 	default:
 		return "unknown"

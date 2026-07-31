@@ -876,6 +876,7 @@ class CanonicalItemStack(BaseModel):
         "refrigerator",
         "feed_box",
         "production_output",
+        "guild_chest",
         "unknown",
     ]
     base_id: Annotated[str, Field(min_length=1), Field(max_length=160)] | None
@@ -993,6 +994,35 @@ class PublishedItemRecipeCapacity(BaseModel):
     limiting_materials: list[ItemRecipeLimitingMaterial]
 
 
+class ItemInventoryQuantity(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    quantity: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+
+
+class ItemCapacityIngredient(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slot: Annotated[int, Field(ge=1), Field(le=5)]
+    item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    count: Annotated[int, Field(ge=1), Field(le=2147483647)]
+
+
+class ItemCapacityRecipe(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recipe_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    product_item_id: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    product_count: Annotated[int, Field(ge=1), Field(le=2147483647)]
+    craft_kind: Literal["handcraft", "cooking"]
+    deny_recipe_chain: Annotated[
+        list[Annotated[str, Field(min_length=1), Field(max_length=120)]],
+        AfterValidator(_ensure_unique),
+    ]
+    ingredients: Annotated[list[ItemCapacityIngredient], Field(min_length=1), Field(max_length=5)]
+
+
 class GuildItemInventoryItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1001,9 +1031,15 @@ class GuildItemInventoryItem(BaseModel):
     type_a: Annotated[str, Field(min_length=1), Field(max_length=120)]
     type_b: Annotated[str, Field(min_length=1), Field(max_length=120)]
     quantity: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
+    guild_chest_quantity: Annotated[int, Field(ge=0), Field(le=9007199254740991)]
     bases: list[ItemInventoryBaseTotal]
     recipes: list[ItemRecipeView]
     capacity: ItemRecipeCapacity | None
+    trend_1h: Annotated[
+        list[Annotated[int, Field(ge=0), Field(le=9007199254740991)] | None],
+        Field(min_length=13),
+        Field(max_length=13),
+    ]
 
 
 class GuildItemInventoryResponse(BaseModel):
@@ -1012,6 +1048,11 @@ class GuildItemInventoryResponse(BaseModel):
     status: Literal["available", "partial", "unavailable"]
     snapshot_id: UUID | None
     captured_at: AwareDatetime | None
+    game_data_version_id: UUID | None
+    trend_from_at: AwareDatetime | None
+    trend_interval_seconds: Literal[300]
+    inventory_quantities: list[ItemInventoryQuantity]
+    capacity_recipes: list[ItemCapacityRecipe]
     items: list[GuildItemInventoryItem]
 
 

@@ -30,15 +30,22 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
-    const { data: deviceId, error } = await createAdminSupabaseClient().rpc(
-      "heartbeat_sync_device",
-      {
-        p_token_hash: hashSyncSecret(token),
-        p_app_version: (body.app_version ?? null) as string,
-        p_status: body.status ?? "ok",
-      },
-    );
+    const admin = createAdminSupabaseClient();
+    const { data: deviceId, error } = await admin.rpc("heartbeat_sync_device", {
+      p_token_hash: hashSyncSecret(token),
+      p_app_version: (body.app_version ?? null) as string,
+      p_status: body.status ?? "ok",
+    });
     if (error) throw error;
+    const { error: cleanupError } = await admin.rpc(
+      "cleanup_expired_inventory_snapshot_payloads",
+      { p_batch_size: 25 },
+    );
+    if (cleanupError) {
+      console.warn("inventory_retention_cleanup_failed", {
+        code: cleanupError.code,
+      });
+    }
     return NextResponse.json(
       { ok: true, device_id: deviceId },
       { headers: syncPrivateHeaders },

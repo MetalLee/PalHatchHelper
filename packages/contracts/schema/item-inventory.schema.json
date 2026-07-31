@@ -194,6 +194,66 @@
         }
       }
     },
+    "ItemInventoryQuantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_id", "quantity"],
+      "properties": {
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "quantity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "ItemCapacityIngredient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot", "item_id", "count"],
+      "properties": {
+        "slot": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "count": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+      }
+    },
+    "ItemCapacityRecipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recipe_id",
+        "product_item_id",
+        "product_count",
+        "craft_kind",
+        "deny_recipe_chain",
+        "ingredients"
+      ],
+      "properties": {
+        "recipe_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "product_item_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "product_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "craft_kind": { "type": "string", "enum": ["handcraft", "cooking"] },
+        "deny_recipe_chain": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+        },
+        "ingredients": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/ItemCapacityIngredient" }
+        }
+      }
+    },
     "GuildItemInventoryItem": {
       "type": "object",
       "additionalProperties": false,
@@ -203,9 +263,11 @@
         "type_a",
         "type_b",
         "quantity",
+        "guild_chest_quantity",
         "bases",
         "recipes",
-        "capacity"
+        "capacity",
+        "trend_1h"
       ],
       "properties": {
         "item_id": { "type": "string", "minLength": 1, "maxLength": 120 },
@@ -213,6 +275,11 @@
         "type_a": { "type": "string", "minLength": 1, "maxLength": 120 },
         "type_b": { "type": "string", "minLength": 1, "maxLength": 120 },
         "quantity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "guild_chest_quantity": {
           "type": "integer",
           "minimum": 0,
           "maximum": 9007199254740991
@@ -230,13 +297,33 @@
             { "$ref": "#/$defs/ItemRecipeCapacity" },
             { "type": "null" }
           ]
+        },
+        "trend_1h": {
+          "type": "array",
+          "minItems": 13,
+          "maxItems": 13,
+          "items": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
         }
       }
     },
     "GuildItemInventoryResponse": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "snapshot_id", "captured_at", "items"],
+      "required": [
+        "status",
+        "snapshot_id",
+        "captured_at",
+        "game_data_version_id",
+        "trend_from_at",
+        "trend_interval_seconds",
+        "inventory_quantities",
+        "capacity_recipes",
+        "items"
+      ],
       "properties": {
         "status": {
           "type": "string",
@@ -244,6 +331,23 @@
         },
         "snapshot_id": { "type": ["string", "null"], "format": "uuid" },
         "captured_at": { "type": ["string", "null"], "format": "date-time" },
+        "game_data_version_id": {
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "trend_from_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "trend_interval_seconds": { "type": "integer", "const": 300 },
+        "inventory_quantities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemInventoryQuantity" }
+        },
+        "capacity_recipes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ItemCapacityRecipe" }
+        },
         "items": {
           "type": "array",
           "items": { "$ref": "#/$defs/GuildItemInventoryItem" }
