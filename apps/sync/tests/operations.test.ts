@@ -194,6 +194,18 @@ describe("cutover comparison tools", () => {
   });
 });
 
+describe("CI package candidate", () => {
+  it("derives the tarball name from package metadata", async () => {
+    const workflow = await readFile(
+      join(repositoryRoot, ".github/workflows/ci.yml"),
+      "utf8",
+    );
+
+    expect(workflow).not.toMatch(/palbeacon-cli-\d+\.\d+\.\d+\.tgz/);
+    expect(workflow).toContain("p.name + '-' + p.version + '.tgz'");
+  });
+});
+
 function run(script: string, arguments_: string[]) {
   return spawnSync(
     process.execPath,
