@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { requireUserContext } from "@/features/auth/server";
 import { InventoryTrendChart } from "@/features/items/inventory-trend-chart";
+import { ItemInventorySparkline } from "@/features/items/item-inventory-sparkline";
 import {
   getGuildItemInventory,
   getGuildItemInventoryTrend,
@@ -248,6 +249,7 @@ export default async function ItemsPage({
                 <TableRow>
                   <TableHead>{t("item")}</TableHead>
                   <TableHead className="text-right">{t("quantity")}</TableHead>
+                  <TableHead>{t("trend1h")}</TableHead>
                   <TableHead>{t("byBase")}</TableHead>
                   <TableHead className="text-right">{t("craftable")}</TableHead>
                   <TableHead>{t("recipe")}</TableHead>
@@ -275,6 +277,12 @@ export default async function ItemsPage({
                       {item.quantity.toLocaleString(catalogLocale)}
                     </TableCell>
                     <TableCell>
+                      <ItemInventorySparkline
+                        label={t("trend1hAria", { item: item.name })}
+                        points={item.trend_1h}
+                      />
+                    </TableCell>
+                    <TableCell>
                       <div className="flex max-w-md flex-wrap gap-1.5">
                         {item.bases.map((base) => (
                           <span
@@ -285,6 +293,14 @@ export default async function ItemsPage({
                             {base.quantity.toLocaleString(catalogLocale)}
                           </span>
                         ))}
+                        {item.guild_chest_quantity > 0 ? (
+                          <span className="inline-flex rounded-full bg-sky/14 px-2 py-0.5 text-xs font-medium text-foreground">
+                            {t("guildChest")}:{" "}
+                            {item.guild_chest_quantity.toLocaleString(
+                              catalogLocale,
+                            )}
+                          </span>
+                        ) : null}
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">

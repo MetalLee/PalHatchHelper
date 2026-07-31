@@ -225,3 +225,29 @@ func TestCanonicalItemStacksPreserveResolvedBaseOwnership(t *testing.T) {
 		t.Fatalf("resolved stack facts changed: %#v", stack)
 	}
 }
+
+func TestCanonicalItemStacksPreserveResolvedGuildChestOwnership(t *testing.T) {
+	world := &sav.World{
+		Guilds: []sav.Guild{{ID: "guild-1", Name: "Builders"}},
+		ItemStacks: []sav.ItemStack{{
+			ContainerID: "container-1", ItemID: "Wood", Quantity: 25,
+			ContainerType: "guild_chest", GuildID: "guild-1", SlotIndex: 1,
+		}},
+	}
+
+	snapshot, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stack := snapshot.ItemStacks[0]
+	if stack.ContainerType != "guild_chest" || stack.BaseID != nil ||
+		stack.GuildUID == nil || *stack.GuildUID != "guild-1" ||
+		stack.ResolutionStatus != "resolved" {
+		t.Fatalf("guild chest ownership changed: %#v", stack)
+	}
+}

@@ -24,6 +24,11 @@ export {
   normalizePalworldStableId,
   PalworldStableIdError,
 } from "./stable-id";
+export {
+  ItemCapacityCalculator,
+  type ItemCapacityIngredient,
+  type ItemCapacityRecipe,
+} from "./item-capacity";
 export type {
   CatalogBrowserPal,
   CatalogQueryResult,

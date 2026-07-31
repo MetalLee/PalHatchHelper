@@ -165,7 +165,7 @@ describe("cutover comparison tools", () => {
       duplicate_player_count: 0,
       latest_snapshot_id: "40000000-0000-4000-8000-000000000099",
       latest_parser_name: "palhatch-plm-save-parser",
-      latest_parser_version: "1.4.2",
+      latest_parser_version: "1.4.3",
       latest_pal_count: 1,
       latest_unresolved_count: 0,
       unresolved_count_increased: false,
@@ -180,7 +180,7 @@ describe("cutover comparison tools", () => {
       ok: true,
       world_id: expected.worldId,
       device_id: expected.deviceId,
-      parser_version: "1.4.2",
+      parser_version: "1.4.3",
     });
     expect(() =>
       assertCutoverReport({ ...report, duplicate_player_count: 1 }, expected),

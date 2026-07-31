@@ -2032,6 +2032,84 @@ export type Database = {
           },
         ];
       };
+      item_inventory_five_minute_samples: {
+        Row: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          snapshot_id: string;
+          sampled_at: string;
+        };
+        Insert: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          snapshot_id: string;
+          sampled_at: string;
+        };
+        Update: {
+          world_id?: string;
+          guild_id?: string;
+          bucket_at?: string;
+          snapshot_id?: string;
+          sampled_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_five_minute_samples_guild_fkey";
+            columns: ["guild_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "guilds";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_five_minute_samples_snapshot_fkey";
+            columns: ["snapshot_id", "world_id"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_snapshots";
+            referencedColumns: ["id", "world_id"];
+          },
+          {
+            foreignKeyName: "item_inventory_five_minute_samples_world_id_fkey";
+            columns: ["world_id"];
+            isOneToOne: false;
+            referencedRelation: "worlds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      item_inventory_five_minute_totals: {
+        Row: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          item_id: string;
+          quantity: number;
+        };
+        Insert: {
+          world_id: string;
+          guild_id: string;
+          bucket_at: string;
+          item_id: string;
+          quantity: number;
+        };
+        Update: {
+          world_id?: string;
+          guild_id?: string;
+          bucket_at?: string;
+          item_id?: string;
+          quantity?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_inventory_five_minute_totals_sample_fkey";
+            columns: ["world_id", "guild_id", "bucket_at"];
+            isOneToOne: false;
+            referencedRelation: "item_inventory_five_minute_samples";
+            referencedColumns: ["world_id", "guild_id", "bucket_at"];
+          },
+        ];
+      };
       item_inventory_hourly_rollups: {
         Row: {
           world_id: string;
@@ -2165,6 +2243,7 @@ export type Database = {
           resolved_stack_count: number;
           unresolved_stack_count: number;
           created_at: string;
+          payload_purged_at: string | null;
         };
         Insert: {
           id?: string;
@@ -2179,6 +2258,7 @@ export type Database = {
           resolved_stack_count: number;
           unresolved_stack_count: number;
           created_at?: string;
+          payload_purged_at?: string | null;
         };
         Update: {
           id?: string;
@@ -2193,6 +2273,7 @@ export type Database = {
           resolved_stack_count?: number;
           unresolved_stack_count?: number;
           created_at?: string;
+          payload_purged_at?: string | null;
         };
         Relationships: [
           {
@@ -3138,6 +3219,12 @@ export type Database = {
         };
         Returns: string;
       };
+      cleanup_expired_inventory_snapshot_payloads: {
+        Args: {
+          p_batch_size?: number;
+        };
+        Returns: Json;
+      };
       complete_breeding_job: {
         Args: {
           p_job_id: string;
@@ -3667,6 +3754,13 @@ export type Database = {
           p_idempotency_key: string;
         };
         Returns: Json;
+      };
+      sample_latest_item_inventory: {
+        Args: {
+          p_world_id: string;
+          p_sampled_at?: string | null;
+        };
+        Returns: undefined;
       };
       save_breeding_plan: {
         Args: {

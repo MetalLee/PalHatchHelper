@@ -20,11 +20,28 @@ const validateInventory = ajv.compile({
 });
 
 describe("item inventory contracts", () => {
-  it("accepts aggregate inventory, base totals, recipes and computed capacity", () => {
+  it("accepts request-time capacity context, guild chest totals and a 13-point trend", () => {
     const response = {
       status: "partial",
       snapshot_id: "40000000-0000-4000-8000-000000000004",
       captured_at: "2026-07-31T03:00:00Z",
+      game_data_version_id: "50000000-0000-4000-8000-000000000005",
+      trend_from_at: "2026-07-31T02:00:00Z",
+      trend_interval_seconds: 300,
+      inventory_quantities: [
+        { item_id: "ingot", quantity: 7 },
+        { item_id: "nail", quantity: 4 },
+      ],
+      capacity_recipes: [
+        {
+          recipe_id: "recipe.nail",
+          product_item_id: "nail",
+          product_count: 5,
+          craft_kind: "handcraft",
+          deny_recipe_chain: [],
+          ingredients: [{ slot: 1, item_id: "ingot", count: 2 }],
+        },
+      ],
       items: [
         {
           item_id: "nail",
@@ -32,6 +49,7 @@ describe("item inventory contracts", () => {
           type_a: "material",
           type_b: "material",
           quantity: 4,
+          guild_chest_quantity: 1,
           bases: [{ base_id: "base-1", name: "Ore Base", quantity: 4 }],
           recipes: [
             {
@@ -59,6 +77,7 @@ describe("item inventory contracts", () => {
             ],
             limiting_materials: [{ item_id: "ingot", missing: 1 }],
           },
+          trend_1h: [4, 4, null, null, 4, 4, 4, 5, 5, 5, 4, 4, 4],
         },
       ],
     };
@@ -84,6 +103,11 @@ describe("item inventory contracts", () => {
         status: "unavailable",
         snapshot_id: null,
         captured_at: null,
+        game_data_version_id: null,
+        trend_from_at: null,
+        trend_interval_seconds: 300,
+        inventory_quantities: [],
+        capacity_recipes: [],
         items: [],
       }),
       JSON.stringify(validateInventory.errors),

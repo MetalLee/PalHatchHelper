@@ -46,7 +46,11 @@ func ParseLevel(path string, opts Options) (*World, error) {
 	}
 	if root, ok := propertyProperties(g.Properties, "worldSaveData"); ok {
 		excludePlayerItemContainers(w)
-		assignItemStackOwnership(w, itemContainerOwnershipsFromRoot(root, &w.Stats))
+		baseOwners := itemContainerOwnershipsFromRoot(root, &w.Stats)
+		guildOwners := guildItemContainerOwnershipsFromRoot(root, w.Guilds, &w.Stats)
+		rejectConflictingItemContainerOwnerships(baseOwners, guildOwners, &w.Stats)
+		assignGuildItemStackOwnership(w, guildOwners)
+		assignItemStackOwnership(w, baseOwners)
 	}
 	return w, nil
 }
@@ -252,6 +256,93 @@ type itemContainerOwnership struct {
 	Position       Vector
 	UsageType      uint8
 	SlotAttributes map[int]uint8
+}
+
+// guildItemContainerOwnershipsFromRoot reads the one authoritative guild chest
+// relationship: GuildExtraSaveDataMap[guild].GuildItemStorage.RawData starts
+// with the ItemContainerSaveData GUID. Trailing version bytes are opaque.
+func guildItemContainerOwnershipsFromRoot(
+	root propertyMap,
+	guilds []Guild,
+	stats *ParseStats,
+) map[string]string {
+	property := root["GuildExtraSaveDataMap"]
+	if property == nil {
+		return nil
+	}
+	entries, ok := property.Value.([]mapEntry)
+	if !ok {
+		stats.DecodeFailures["guild_item_storage"]++
+		return nil
+	}
+	knownGuilds := make(map[string]string, len(guilds))
+	for _, guild := range guilds {
+		if key := guidIdentityKey(guild.ID); key != "" && !zeroGUID(guild.ID) {
+			knownGuilds[key] = guild.ID
+		}
+	}
+	owners := make(map[string]string)
+	ambiguous := make(map[string]bool)
+	for _, entry := range entries {
+		guildID := itemContainerIDFromMapKey(entry.Key)
+		guildID = knownGuilds[guidIdentityKey(guildID)]
+		value, valueOK := asProperties(entry.Value)
+		storage, storageOK := propertyProperties(value, "GuildItemStorage")
+		raw, rawOK := propertyBytes(storage, "RawData")
+		containerID, decoded := decodeGuildItemStorageRaw(raw)
+		if !valueOK || !storageOK || !rawOK || !decoded || guildID == "" {
+			stats.DecodeFailures["guild_item_storage"]++
+			continue
+		}
+		key := guidIdentityKey(containerID)
+		if _, duplicate := owners[key]; duplicate {
+			delete(owners, key)
+			ambiguous[key] = true
+			stats.DecodeFailures["guild_item_storage"]++
+			continue
+		}
+		if !ambiguous[key] {
+			owners[key] = guildID
+		}
+	}
+	return owners
+}
+
+func decodeGuildItemStorageRaw(raw []byte) (string, bool) {
+	containerID, err := readGUID(newReader(raw))
+	if err != nil || zeroGUID(containerID) {
+		return "", false
+	}
+	return containerID, true
+}
+
+func assignGuildItemStackOwnership(w *World, owners map[string]string) {
+	if w.ItemInventoryStatus == "unavailable" {
+		return
+	}
+	for index := range w.ItemStacks {
+		guildID := owners[guidIdentityKey(w.ItemStacks[index].ContainerID)]
+		if guildID == "" {
+			continue
+		}
+		w.ItemStacks[index].BaseID = ""
+		w.ItemStacks[index].GuildID = guildID
+		w.ItemStacks[index].ContainerType = "guild_chest"
+	}
+}
+
+func rejectConflictingItemContainerOwnerships(
+	baseOwners map[string]itemContainerOwnership,
+	guildOwners map[string]string,
+	stats *ParseStats,
+) {
+	for key := range guildOwners {
+		if _, conflict := baseOwners[key]; conflict {
+			delete(guildOwners, key)
+			delete(baseOwners, key)
+			stats.DecodeFailures["item_container_ownership"]++
+		}
+	}
 }
 
 // itemContainerOwnershipsFromRoot joins only the structural MapObject module
@@ -586,6 +677,10 @@ func assignItemStackOwnership(w *World, owners map[string]itemContainerOwnership
 	resolvedOrUnresolved := make([]ItemStack, 0, len(w.ItemStacks))
 	for i := range w.ItemStacks {
 		stack := w.ItemStacks[i]
+		if stack.ContainerType == "guild_chest" && stack.GuildID != "" && stack.BaseID == "" {
+			resolvedOrUnresolved = append(resolvedOrUnresolved, stack)
+			continue
+		}
 		owner, ok := owners[guidIdentityKey(stack.ContainerID)]
 		if !ok {
 			partial = true

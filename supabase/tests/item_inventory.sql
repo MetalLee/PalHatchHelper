@@ -1,7 +1,7 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(19);
+select plan(24);
 
 select has_table('public', 'item_inventory_snapshots', 'item snapshots are stored independently');
 select has_table('public', 'item_inventory_bases', 'snapshot base ownership is retained');
@@ -11,10 +11,16 @@ select has_table('public', 'item_inventory_base_totals', 'base item totals exist
 select has_table('public', 'item_inventory_recipe_capacities', 'deterministic recipe capacities exist');
 select has_table('public', 'item_inventory_hourly_rollups', 'hourly item rollups exist');
 select has_table('public', 'item_inventory_daily_rollups', 'daily item rollups exist');
+select has_table('public', 'item_inventory_five_minute_samples', 'five-minute sample markers exist');
+select has_table('public', 'item_inventory_five_minute_totals', 'five-minute aggregate totals exist');
 
 select has_column(
   'public', 'worlds', 'latest_item_inventory_snapshot_id',
   'worlds retain a separate latest valid item snapshot pointer'
+);
+select has_column(
+  'public', 'item_inventory_snapshots', 'payload_purged_at',
+  'item payload expiry is recorded without deleting the audit header'
 );
 
 select has_function(
@@ -47,6 +53,19 @@ select table_privs_are(
 select ok(
   has_function_privilege('authenticated', 'public.get_guild_item_inventory(text)', 'execute'),
   'authenticated users may read their guild aggregate inventory'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.item_inventory_five_minute_samples', 'select')
+  and not has_table_privilege('authenticated', 'public.item_inventory_five_minute_totals', 'select'),
+  'five-minute samples are exposed only through the aggregate RPC'
+);
+select ok(
+  has_function_privilege(
+    'service_role', 'public.sample_latest_item_inventory(uuid, timestamp with time zone)', 'execute'
+  ) and not has_function_privilege(
+    'authenticated', 'public.sample_latest_item_inventory(uuid, timestamp with time zone)', 'execute'
+  ),
+  'only service role may trigger a five-minute sample'
 );
 select ok(
   has_function_privilege(

@@ -151,6 +151,39 @@ describe("upload redaction", () => {
     expect(serialized).toContain("stone");
   });
 
+  it("preserves a proven guild chest without inventing base ownership", () => {
+    const payload = toInventoryPublishPayload(
+      {
+        ...canonical,
+        item_stacks: [
+          {
+            container_id: "raw-guild-container",
+            item_id: "wood",
+            quantity: 25,
+            container_type: "guild_chest",
+            base_id: null,
+            guild_uid: "raw-guild-uid",
+            slot_index: 0,
+            resolution_status: "resolved",
+          },
+        ],
+        item_inventory_status: "available",
+      },
+      {
+        sourceHash: "c".repeat(64),
+        sourceModifiedAt: "2026-07-29T00:00:00.000Z",
+        parserVersion: "1.4.3",
+      },
+    );
+
+    expect(payload.item_stacks?.[0]).toMatchObject({
+      container_type: "guild_chest",
+      base_id: null,
+      resolution_status: "resolved",
+    });
+    expect(JSON.stringify(payload)).not.toContain("raw-guild-container");
+  });
+
   it("excludes unknown-name guilds and prevents their inventory from being shared", () => {
     const unknownGuildSnapshot: CanonicalSnapshot = {
       ...canonical,

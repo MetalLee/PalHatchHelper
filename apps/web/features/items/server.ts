@@ -9,6 +9,7 @@ import {
 import { unstable_noStore as noStore } from "next/cache";
 
 import { databaseFailureCode, Phase5DataError } from "@/features/phase5-errors";
+import { calculateGuildItemCapacities } from "@/features/items/capacity";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 interface DynamicRpcResult {
@@ -36,7 +37,7 @@ export async function getGuildItemInventory(
   ).rpc("get_guild_item_inventory", { p_locale: locale });
   if (error !== null) throw new Phase5DataError(databaseFailureCode(error));
   try {
-    return parseGuildItemInventoryResponse(data);
+    return calculateGuildItemCapacities(parseGuildItemInventoryResponse(data));
   } catch {
     throw new Phase5DataError("DATA_UNAVAILABLE");
   }

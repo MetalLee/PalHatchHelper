@@ -117,8 +117,17 @@ export function createInventoryPublishPayload(snapshot, metadata) {
         stack.guild_uid !== null &&
         base.guild_uid === stack.guild_uid &&
         guildIds.has(stack.guild_uid);
+      const guildChestResolved =
+        stack.container_type === "guild_chest" &&
+        stack.base_id === null &&
+        stack.guild_uid !== null &&
+        guildIds.has(stack.guild_uid);
       let resolutionStatus = stack.resolution_status;
-      if (resolutionStatus === "resolved" && !baseResolved) {
+      if (
+        resolutionStatus === "resolved" &&
+        !baseResolved &&
+        !guildChestResolved
+      ) {
         resolutionStatus = "unresolved";
         warnings.push({
           code: "ITEM_STACK_BASE_UNRESOLVED",
