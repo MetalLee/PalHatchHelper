@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/infra/agent/docker-compose.production.yml"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/infra/agent/.env.production}"
 PROJECT_NAME="palhatchhelper-agent"
-SERVICES=(api job-worker save-worker command-worker)
+SERVICES=(api job-worker command-worker)
 DRY_RUN=false
 
 if [[ "${1:-}" == "--dry-run" ]]; then DRY_RUN=true; shift; fi
@@ -39,7 +39,7 @@ fi
 
 compose=(docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 if $DRY_RUN; then
-  echo "DRY_RUN: validate immutable image, Compose, loopback health port, disk, deploy four Agent services, then verify"
+  echo "DRY_RUN: validate immutable image, Compose, loopback health port, disk, deploy API and active workers without save-worker, then verify"
   exit 0
 fi
 
@@ -69,7 +69,7 @@ rollback_on_error() {
     AGENT_IMAGE="$previous_image" "${compose[@]}" up -d --no-deps "${SERVICES[@]}" >/dev/null \
       || rollback_failed=true
   else
-    "${compose[@]}" down --remove-orphans >/dev/null || rollback_failed=true
+    "${compose[@]}" rm --stop --force "${SERVICES[@]}" >/dev/null || rollback_failed=true
   fi
   if $rollback_failed; then
     echo "AGENT_DEPLOY_FAILED_ROLLBACK_FAILED" >&2

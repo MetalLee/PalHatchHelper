@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/infra/agent/docker-compose.production.yml"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/infra/agent/.env.production}"
 PROJECT_NAME="palhatchhelper-agent"
-SERVICES=(api job-worker save-worker command-worker)
+SERVICES=(api job-worker command-worker)
 DRY_RUN=false
 
 if [[ "${1:-}" == "--dry-run" ]]; then DRY_RUN=true; shift; fi
@@ -24,7 +24,7 @@ previous_image="$(<"$state_file")"
 if [[ "$previous_image" == *latest* || ! "$previous_image" =~ ^[^[:space:]@]+:[^[:space:]@]+@sha256:[0-9a-f]{64}$ ]]; then
   echo "PREVIOUS_AGENT_IMAGE_INVALID" >&2; exit 68
 fi
-if $DRY_RUN; then echo "DRY_RUN: switch only four PalHatchHelper Agent services to the recorded previous immutable image"; exit 0; fi
+if $DRY_RUN; then echo "DRY_RUN: switch API and active workers to the recorded previous immutable image without touching save-worker"; exit 0; fi
 compose=(docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 AGENT_IMAGE="$previous_image" "${compose[@]}" config --quiet
 AGENT_IMAGE="$previous_image" "${compose[@]}" up -d --no-deps "${SERVICES[@]}" >/dev/null
