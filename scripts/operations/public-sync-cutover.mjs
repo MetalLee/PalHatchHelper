@@ -1,4 +1,4 @@
-const EXPECTED_PARSER_VERSION = "1.4.0";
+const EXPECTED_PARSER_VERSION = "1.4.1";
 const REPORT_KEYS = new Set([
   "world_id",
   "world_id_preserved",

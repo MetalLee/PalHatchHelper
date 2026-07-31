@@ -117,6 +117,38 @@ describe("configuration security", () => {
     expect(persisted).not.toHaveProperty(legacyHashField);
   });
 
+  it("retains the Parser version used for the last successful sync", async () => {
+    const root = await mkdtemp(join(tmpdir(), "palbeacon-sync-config-state-"));
+    roots.push(root);
+    await writeFile(
+      join(root, "config.json"),
+      `${JSON.stringify({
+        config_version: 3,
+        api_base_url: "https://www.palbeacon.app",
+        device_id: "00000000-0000-4000-8000-000000000001",
+        device_token: "pbs_keep-this-token",
+        save_dir: "/fixture/64EAE19D36004D1FA0321A3703BD825F",
+        world_uid: "64EAE19D36004D1FA0321A3703BD825F",
+        interval_seconds: 300,
+        device_name: "Fixture server",
+        state: {
+          last_save_hash: "a".repeat(64),
+          last_parser_version: "1.3.0",
+          last_result: "uploaded",
+        },
+      })}\n`,
+      "utf8",
+    );
+
+    expect(await loadConfig(root)).toMatchObject({
+      state: {
+        last_save_hash: "a".repeat(64),
+        last_parser_version: "1.3.0",
+        last_result: "uploaded",
+      },
+    });
+  });
+
   it("saves, overwrites, reads and deletes a Windows-style configuration", async () => {
     const root = await mkdtemp(join(tmpdir(), "palbeacon-win-config-"));
     roots.push(root);

@@ -44,6 +44,10 @@ func ParseLevel(path string, opts Options) (*World, error) {
 	if err := loadPlayerDirectory(w, path, opts); err != nil {
 		return nil, err
 	}
+	if root, ok := propertyProperties(g.Properties, "worldSaveData"); ok {
+		excludePlayerItemContainers(w)
+		assignItemStackOwnership(w, itemContainerOwnershipsFromRoot(root, &w.Stats))
+	}
 	return w, nil
 }
 
@@ -110,7 +114,6 @@ func extractWorldSaveData(w *World, props propertyMap) {
 		}
 	}
 	assignBaseGuilds(w)
-	assignItemStackOwnership(w, itemContainerOwnershipsFromRoot(root, &w.Stats))
 	assignBaseWorkers(w)
 }
 
@@ -121,61 +124,97 @@ func itemStacksFromEntry(e mapEntry, stats *ParseStats) ([]ItemStack, bool) {
 		stats.recordSkip("worldSaveData.ItemContainerSaveData", "invalid-container")
 		return nil, false
 	}
-	guildID := ""
-	if belong, exists := propertyProperties(value, "BelongInfo"); exists {
-		guildID = strings.TrimSpace(firstString(belong, "GroupID", "GroupId", "GuildID", "GuildId"))
-	}
-	property := value["Slots"]
-	if property == nil {
-		property = value["SlotArray"]
-	}
-	if property == nil {
+	slots, ok := propertyProperties(value, "Slots")
+	if !ok {
 		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "missing")
+		return nil, false
+	}
+	property := slots["Slots"]
+	if property == nil {
+		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots", "missing")
 		return nil, false
 	}
 	values, ok := property.Value.([]any)
 	if !ok {
-		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-array")
+		stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots", "invalid-array")
 		return nil, false
 	}
 	result := make([]ItemStack, 0, len(values))
 	complete := true
-	for index, value := range values {
+	seenSlots := make(map[int]struct{}, len(values))
+	for _, value := range values {
 		slot, ok := asProperties(value)
 		if !ok {
 			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-slot")
 			complete = false
 			continue
 		}
-		itemProperties, ok := propertyProperties(slot, "ItemId")
+		raw, ok := propertyBytes(slot, "RawData")
 		if !ok {
-			itemProperties, ok = propertyProperties(slot, "ItemID")
-		}
-		if !ok {
-			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.ItemId", "missing")
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData", "missing")
 			complete = false
 			continue
 		}
-		itemID := firstString(itemProperties, "StaticId", "StaticID")
-		quantity, quantityOK := propertyInt(slot, "StackCount")
-		if itemID == "" || !quantityOK || quantity < 0 || quantity > math.MaxInt32 {
-			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots", "invalid-item-stack")
+		decoded, ok := decodeItemSlotRaw(raw)
+		if !ok {
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData", "invalid-item-stack")
 			complete = false
 			continue
 		}
-		if itemID == "None" || quantity == 0 {
+		if _, duplicate := seenSlots[decoded.SlotIndex]; duplicate {
+			stats.recordSkip("worldSaveData.ItemContainerSaveData.Value.Slots.Slots.RawData", "duplicate-slot")
+			complete = false
+			continue
+		}
+		seenSlots[decoded.SlotIndex] = struct{}{}
+		if decoded.ItemID == "None" || decoded.Quantity == 0 {
 			continue
 		}
 		result = append(result, ItemStack{
 			ContainerID:   containerID,
-			GuildID:       guildID,
-			ItemID:        itemID,
-			Quantity:      int(quantity),
+			ItemID:        decoded.ItemID,
+			Quantity:      decoded.Quantity,
 			ContainerType: "unknown",
-			SlotIndex:     index,
+			SlotIndex:     decoded.SlotIndex,
 		})
 	}
 	return result, complete
+}
+
+type decodedItemSlot struct {
+	SlotIndex int
+	Quantity  int
+	ItemID    string
+}
+
+// decodeItemSlotRaw decodes the proven retail ItemContainer slot prefix. The
+// dynamic item GUIDs and any version-specific trailing bytes are deliberately
+// ignored after their boundaries have been verified.
+func decodeItemSlotRaw(raw []byte) (decodedItemSlot, bool) {
+	r := newReader(raw)
+	slotIndex, err := r.i32()
+	if err != nil || slotIndex < 0 || slotIndex > 100000 {
+		return decodedItemSlot{}, false
+	}
+	quantity, err := r.i32()
+	if err != nil || quantity < 0 {
+		return decodedItemSlot{}, false
+	}
+	itemID, err := r.fstring()
+	if err != nil || strings.TrimSpace(itemID) == "" {
+		return decodedItemSlot{}, false
+	}
+	if _, err = readGUID(r); err != nil {
+		return decodedItemSlot{}, false
+	}
+	if _, err = readGUID(r); err != nil {
+		return decodedItemSlot{}, false
+	}
+	return decodedItemSlot{
+		SlotIndex: int(slotIndex),
+		Quantity:  int(quantity),
+		ItemID:    strings.TrimSpace(itemID),
+	}, true
 }
 
 func itemContainerIDFromMapKey(value any) string {
@@ -201,15 +240,18 @@ const (
 
 type itemContainerOwnership struct {
 	ContainerID    string
+	BaseID         string
+	GuildID        string
+	MapObjectID    string
 	Position       Vector
 	UsageType      uint8
 	SlotAttributes map[int]uint8
 }
 
 // itemContainerOwnershipsFromRoot joins only the structural MapObject module
-// that explicitly targets an ItemContainerSaveData GUID. A map object's
-// position is later checked against a same-guild base radius; neither proximity
-// nor the module alone is sufficient evidence of base ownership.
+// that explicitly targets an ItemContainerSaveData GUID. Base and guild
+// ownership come from Model.RawData; position is only a consistency check and
+// is never used to infer a nearby base.
 func itemContainerOwnershipsFromRoot(root propertyMap, stats *ParseStats) map[string]itemContainerOwnership {
 	property := root["MapObjectSaveData"]
 	if property == nil {
@@ -226,8 +268,26 @@ func itemContainerOwnershipsFromRoot(root propertyMap, stats *ParseStats) map[st
 		if !ok {
 			continue
 		}
-		position, ok := firstVector(object, "WorldLocation", "Location")
-		if !ok || !finiteBaseCoord(position.X) || !finiteBaseCoord(position.Y) || !finiteBaseCoord(position.Z) {
+		model, ok := propertyProperties(object, "Model")
+		if !ok {
+			continue
+		}
+		modelRaw, ok := propertyBytes(model, "RawData")
+		if !ok {
+			stats.DecodeFailures["item_container_ownership"]++
+			continue
+		}
+		baseID, guildID, position, ok := decodeMapObjectModelRaw(modelRaw)
+		if !ok {
+			stats.DecodeFailures["item_container_ownership"]++
+			continue
+		}
+		buildProcess, ok := propertyProperties(model, "BuildProcess")
+		if !ok {
+			continue
+		}
+		buildRaw, ok := propertyBytes(buildProcess, "RawData")
+		if !ok || !decodeCompletedBuildProcessRaw(buildRaw) {
 			continue
 		}
 		concreteModel, ok := propertyProperties(object, "ConcreteModel")
@@ -258,7 +318,10 @@ func itemContainerOwnershipsFromRoot(root propertyMap, stats *ParseStats) map[st
 				continue
 			}
 			decoded.Position = position
-			key := strings.ToLower(decoded.ContainerID)
+			decoded.BaseID = baseID
+			decoded.GuildID = guildID
+			decoded.MapObjectID = strings.TrimSpace(firstString(object, "MapObjectId", "MapObjectID"))
+			key := guidIdentityKey(decoded.ContainerID)
 			if _, exists := owners[key]; exists {
 				delete(owners, key)
 				ambiguous[key] = true
@@ -270,6 +333,93 @@ func itemContainerOwnershipsFromRoot(root propertyMap, stats *ParseStats) map[st
 		}
 	}
 	return owners
+}
+
+func decodeMapObjectModelRaw(raw []byte) (string, string, Vector, bool) {
+	r := newReader(raw)
+	instanceID, err := readGUID(r)
+	if err != nil || zeroGUID(instanceID) {
+		return "", "", Vector{}, false
+	}
+	concreteID, err := readGUID(r)
+	if err != nil || zeroGUID(concreteID) {
+		return "", "", Vector{}, false
+	}
+	baseID, err := readGUID(r)
+	if err != nil {
+		return "", "", Vector{}, false
+	}
+	guildID, err := readGUID(r)
+	if err != nil {
+		return "", "", Vector{}, false
+	}
+	if _, err = r.i32(); err != nil {
+		return "", "", Vector{}, false
+	}
+	if _, err = r.i32(); err != nil {
+		return "", "", Vector{}, false
+	}
+	for range 4 {
+		value, readErr := r.f64()
+		if readErr != nil || !finiteBaseCoord(value) {
+			return "", "", Vector{}, false
+		}
+	}
+	position := Vector{}
+	if position.X, err = r.f64(); err != nil || !finiteBaseCoord(position.X) {
+		return "", "", Vector{}, false
+	}
+	if position.Y, err = r.f64(); err != nil || !finiteBaseCoord(position.Y) {
+		return "", "", Vector{}, false
+	}
+	if position.Z, err = r.f64(); err != nil || !finiteBaseCoord(position.Z) {
+		return "", "", Vector{}, false
+	}
+	for range 3 {
+		value, readErr := r.f64()
+		if readErr != nil || !finiteBaseCoord(value) {
+			return "", "", Vector{}, false
+		}
+	}
+	for range 4 {
+		if _, err = readGUID(r); err != nil {
+			return "", "", Vector{}, false
+		}
+	}
+	if _, err = r.u8(); err != nil {
+		return "", "", Vector{}, false
+	}
+	damage, err := r.f32()
+	if err != nil || math.IsNaN(float64(damage)) || math.IsInf(float64(damage), 0) {
+		return "", "", Vector{}, false
+	}
+	if _, err = readGUID(r); err != nil {
+		return "", "", Vector{}, false
+	}
+	valid, err := r.u32()
+	if err != nil || valid > 1 {
+		return "", "", Vector{}, false
+	}
+	return baseID, guildID, position, true
+}
+
+func decodeCompletedBuildProcessRaw(raw []byte) bool {
+	r := newReader(raw)
+	state, err := r.u8()
+	if err != nil {
+		return false
+	}
+	if _, err = readGUID(r); err != nil {
+		return false
+	}
+	if err = r.skip(4); err != nil {
+		return false
+	}
+	return state == 1
+}
+
+func zeroGUID(value string) bool {
+	return guidIdentityKey(value) == strings.Repeat("0", 32)
 }
 
 func isItemContainerModuleKey(value any) bool {
@@ -346,7 +496,10 @@ func decodeItemContainerModuleRaw(raw []byte) (itemContainerOwnership, bool) {
 		return itemContainerOwnership{}, false
 	}
 	usageType, err := r.u8()
-	if err != nil || r.remaining() != 0 {
+	if err != nil {
+		return itemContainerOwnership{}, false
+	}
+	if err = r.skip(4); err != nil || r.remaining() != 0 {
 		return itemContainerOwnership{}, false
 	}
 	return itemContainerOwnership{
@@ -356,7 +509,12 @@ func decodeItemContainerModuleRaw(raw []byte) (itemContainerOwnership, bool) {
 	}, true
 }
 
-func classifyItemContainerSlot(usageType uint8, attributes map[int]uint8, slotIndex int) string {
+func classifyItemContainerSlot(
+	usageType uint8,
+	attributes map[int]uint8,
+	slotIndex int,
+	mapObjectID ...string,
+) string {
 	if usageType != itemContainerUsageStorage || slotIndex < 0 {
 		return "unknown"
 	}
@@ -366,6 +524,9 @@ func classifyItemContainerSlot(usageType uint8, attributes map[int]uint8, slotIn
 	}
 	switch attribute {
 	case itemSlotAttributeUndefined, itemSlotAttributeCannotTransport:
+		if len(mapObjectID) > 0 && isRefrigeratedMapObject(mapObjectID[0]) {
+			return "refrigerator"
+		}
 		return "storage_box"
 	case itemSlotAttributePublicOutput:
 		return "production_output"
@@ -378,27 +539,54 @@ func classifyItemContainerSlot(usageType uint8, attributes map[int]uint8, slotIn
 	}
 }
 
+func isRefrigeratedMapObject(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "coolerbox", "refrigerator":
+		return true
+	default:
+		return false
+	}
+}
+
 func assignItemStackOwnership(w *World, owners map[string]itemContainerOwnership) {
 	if w.ItemInventoryStatus == "unavailable" {
 		return
 	}
 	partial := w.ItemInventoryStatus == "partial"
+	resolvedOrUnresolved := make([]ItemStack, 0, len(w.ItemStacks))
 	for i := range w.ItemStacks {
-		stack := &w.ItemStacks[i]
-		owner, ok := owners[strings.ToLower(stack.ContainerID)]
-		if !ok || strings.TrimSpace(stack.GuildID) == "" {
+		stack := w.ItemStacks[i]
+		owner, ok := owners[guidIdentityKey(stack.ContainerID)]
+		if !ok {
 			partial = true
+			resolvedOrUnresolved = append(resolvedOrUnresolved, stack)
 			continue
 		}
-		baseID, ok := uniqueBaseAtPosition(w.Bases, stack.GuildID, owner.Position)
-		containerType := classifyItemContainerSlot(owner.UsageType, owner.SlotAttributes, stack.SlotIndex)
+		if zeroGUID(owner.BaseID) && zeroGUID(owner.GuildID) {
+			continue
+		}
+		attribute, hasAttribute := owner.SlotAttributes[stack.SlotIndex]
+		if hasAttribute && attribute == itemSlotAttributeInput {
+			continue
+		}
+		baseID, guildID, ok := confirmedDirectBaseOwnership(w.Bases, owner)
+		containerType := classifyItemContainerSlot(
+			owner.UsageType,
+			owner.SlotAttributes,
+			stack.SlotIndex,
+			owner.MapObjectID,
+		)
 		if !ok || containerType == "unknown" {
 			partial = true
+			resolvedOrUnresolved = append(resolvedOrUnresolved, stack)
 			continue
 		}
 		stack.BaseID = baseID
+		stack.GuildID = guildID
 		stack.ContainerType = containerType
+		resolvedOrUnresolved = append(resolvedOrUnresolved, stack)
 	}
+	w.ItemStacks = resolvedOrUnresolved
 	if partial {
 		w.ItemInventoryStatus = "partial"
 	} else {
@@ -406,24 +594,30 @@ func assignItemStackOwnership(w *World, owners map[string]itemContainerOwnership
 	}
 }
 
-func uniqueBaseAtPosition(bases []BaseCamp, guildID string, position Vector) (string, bool) {
-	matched := ""
-	for _, base := range bases {
-		if base.Position == nil || !finiteBaseRange(base.AreaRange) ||
-			!strings.EqualFold(strings.TrimSpace(base.GuildID), strings.TrimSpace(guildID)) {
-			continue
-		}
-		dx := position.X - base.Position.X
-		dy := position.Y - base.Position.Y
-		if dx*dx+dy*dy > base.AreaRange*base.AreaRange {
-			continue
-		}
-		if matched != "" {
-			return "", false
-		}
-		matched = base.ID
+func confirmedDirectBaseOwnership(
+	bases []BaseCamp,
+	owner itemContainerOwnership,
+) (string, string, bool) {
+	if zeroGUID(owner.BaseID) || zeroGUID(owner.GuildID) {
+		return "", "", false
 	}
-	return matched, matched != ""
+	for _, base := range bases {
+		if guidIdentityKey(base.ID) != guidIdentityKey(owner.BaseID) {
+			continue
+		}
+		if base.GuildID == "" || guidIdentityKey(base.GuildID) != guidIdentityKey(owner.GuildID) {
+			return "", "", false
+		}
+		if base.Position != nil && finiteBaseRange(base.AreaRange) {
+			dx := owner.Position.X - base.Position.X
+			dy := owner.Position.Y - base.Position.Y
+			if dx*dx+dy*dy > base.AreaRange*base.AreaRange {
+				return "", "", false
+			}
+		}
+		return base.ID, base.GuildID, true
+	}
+	return "", "", false
 }
 
 // ParseLevelMeta parses a LevelMeta.sav file.
@@ -773,6 +967,7 @@ func loadPlayerDirectory(w *World, levelPath string, opts Options) error {
 		// fields empty, matching how the rest of this loader degrades.
 		p.OtomoContainerID = containerGUID(data, "OtomoCharacterContainerId")
 		p.PalStorageContainerID = containerGUID(data, "PalStorageContainerId")
+		p.ItemContainerIDs = playerItemContainerIDs(data)
 		mergePlayer(w, p)
 	}
 	return nil
@@ -832,6 +1027,9 @@ func mergePlayer(w *World, p Player) {
 			if p.PalStorageContainerID != "" {
 				w.Players[i].PalStorageContainerID = p.PalStorageContainerID
 			}
+			if len(p.ItemContainerIDs) > 0 {
+				w.Players[i].ItemContainerIDs = append([]string(nil), p.ItemContainerIDs...)
+			}
 			if p.CaptureTotal != nil {
 				w.Players[i].CaptureTotal = p.CaptureTotal
 			}
@@ -853,6 +1051,55 @@ func mergePlayer(w *World, p Player) {
 		}
 	}
 	w.Players = append(w.Players, p)
+}
+
+func playerItemContainerIDs(data propertyMap) []string {
+	inventory, ok := propertyProperties(data, "InventoryInfo")
+	if !ok {
+		return nil
+	}
+	names := []string{
+		"CommonContainerId",
+		"DropSlotContainerId",
+		"EssentialContainerId",
+		"WeaponLoadOutContainerId",
+		"PlayerEquipArmorContainerId",
+		"FoodEquipContainerId",
+	}
+	seen := make(map[string]struct{}, len(names))
+	result := make([]string, 0, len(names))
+	for _, name := range names {
+		containerID := strings.TrimSpace(containerGUID(inventory, name))
+		key := guidIdentityKey(containerID)
+		if containerID == "" || zeroGUID(containerID) {
+			continue
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, containerID)
+	}
+	return result
+}
+
+func excludePlayerItemContainers(w *World) {
+	excluded := make(map[string]struct{})
+	for _, player := range w.Players {
+		for _, containerID := range player.ItemContainerIDs {
+			excluded[guidIdentityKey(containerID)] = struct{}{}
+		}
+	}
+	if len(excluded) == 0 {
+		return
+	}
+	filtered := w.ItemStacks[:0]
+	for _, stack := range w.ItemStacks {
+		if _, personal := excluded[guidIdentityKey(stack.ContainerID)]; !personal {
+			filtered = append(filtered, stack)
+		}
+	}
+	w.ItemStacks = filtered
 }
 
 func guidIdentityKey(value string) string {

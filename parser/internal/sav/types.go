@@ -17,7 +17,7 @@ type World struct {
 	Bases               []BaseCamp  `json:"bases"`
 	ItemStacks          []ItemStack `json:"itemStacks"`
 	ItemInventoryStatus string      `json:"itemInventoryStatus"`
-	Stats               ParseStats `json:"stats"`
+	Stats               ParseStats  `json:"stats"`
 }
 
 // WorldMeta contains the stable metadata fields found in LevelMeta.sav.
@@ -55,6 +55,10 @@ type Player struct {
 	// API.
 	OtomoContainerID      string `json:"otomoContainerId,omitempty"`
 	PalStorageContainerID string `json:"palStorageContainerId,omitempty"`
+	// ItemContainerIDs are the player's backpack, key-item, equipment, food and
+	// drop-slot containers. They are retained only long enough to exclude
+	// personal inventory from guild/base item totals.
+	ItemContainerIDs []string `json:"-"`
 	// CaptureTotal is RecordData.TribeCaptureCount: the game's lifetime Pal
 	// capture counter for this character. UniquePalsCaptured counts positive
 	// entries in RecordData.PalCaptureCount; PaldeckUnlocked counts true entries

@@ -307,7 +307,8 @@ jobs:
         run: |
           npm pack --dry-run
           tarball="$(npm pack --silent)"
-          test "$tarball" = "palbeacon-cli-0.2.1.tgz"
+          expected_tarball="$(node -p "const p = require('./package.json'); p.name + '-' + p.version + '.tgz'")"
+          test "$tarball" = "$expected_tarball"
           node scripts/verify-package.mjs "$tarball" --structure-only \
             > "$RUNNER_TEMP/package-structure-verification.json"
           mkdir -p "$RUNNER_TEMP/palbeacon-cli-candidate"
@@ -351,15 +352,17 @@ jobs:
       - name: Install and test the Linux runtime
         if: runner.os == 'Linux'
         run: |
+          tarball="$(node -p "const p = require('./apps/sync/package.json'); p.name + '-' + p.version + '.tgz'")"
           node apps/sync/scripts/verify-package.mjs \
-            "$RUNNER_TEMP/palbeacon-cli-candidate/palbeacon-cli-0.2.1.tgz" \
+            "$RUNNER_TEMP/palbeacon-cli-candidate/$tarball" \
             --runtime-only
       - name: Install and test the Windows runtime
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $tarball = node -p "const p = require('./apps/sync/package.json'); p.name + '-' + p.version + '.tgz'"
           node apps/sync/scripts/verify-package.mjs `
-            "$env:RUNNER_TEMP\palbeacon-cli-candidate\palbeacon-cli-0.2.1.tgz" `
+            "$env:RUNNER_TEMP\palbeacon-cli-candidate\$tarball" `
             --runtime-only
 
   repository:

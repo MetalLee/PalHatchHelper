@@ -3,7 +3,11 @@ import type {
   InventoryPublishPayload,
 } from "@palhatch/contracts";
 
-import { bundledParserManifest, parseSnapshot } from "./parser.js";
+import {
+  bundledParserManifest,
+  parseSnapshot,
+  type ParserManifest,
+} from "./parser.js";
 import { toInventoryPublishPayload } from "./redaction.js";
 import type { ReadOnlySnapshot } from "./snapshot.js";
 
@@ -14,6 +18,7 @@ export interface UploadArtifacts {
 
 export interface UploadArtifactOptions {
   worldUid: string;
+  parserManifest?: ParserManifest;
 }
 
 export async function buildUploadArtifacts(
@@ -23,7 +28,8 @@ export async function buildUploadArtifacts(
   const canonical = await parseSnapshot(snapshot.path, {
     worldUid: options.worldUid,
   });
-  const parserManifest = await bundledParserManifest();
+  const parserManifest =
+    options.parserManifest ?? (await bundledParserManifest());
   return {
     canonical,
     payload: toInventoryPublishPayload(canonical, {
