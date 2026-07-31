@@ -1,6 +1,6 @@
 # PalHatch Helper 分阶段实施计划
 
-- 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=not_started
+- 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=completed
 - 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
 - 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 日期：2026-07-13

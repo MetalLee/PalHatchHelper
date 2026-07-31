@@ -23,7 +23,9 @@ docker compose \
   ps
 ```
 
-确认 API 为 healthy，三个 Worker 为 running，只有 `127.0.0.1:18765` 对外映射。检查容器用户、只读根文件系统、能力、禁止提权、资源限制、日志轮转以及 `/palworld-save` 的 `RW=false`。
+确认 API 为 healthy，`job-worker` 与 `command-worker` 为 running，`save-worker` 保持停止，只有
+`127.0.0.1:18765` 对外映射。检查运行中容器的用户、只读根文件系统、能力、禁止提权、资源限制、
+日志轮转以及 Command Worker 的 `/palworld-save` 为 `RW=false`。
 
 ## 发布顺序
 
@@ -46,7 +48,8 @@ ENV_FILE="$PWD/.env.production" infra/agent/scripts/deploy-production.sh --dry-r
 ENV_FILE="$PWD/.env.production" infra/agent/scripts/deploy-production.sh
 ```
 
-部署脚本只允许重建 `api`、`job-worker`、`save-worker` 和 `command-worker`。失败时脚本自动使用记录的 previous immutable image 回滚。
+部署脚本只允许重建 `api`、`job-worker` 和 `command-worker`。`save-worker` 不参与部署、验证或回滚，
+后续存档同步由 `palbeacon-cli` 接管。失败时脚本自动使用记录的 previous immutable image 回滚这三个服务。
 
 ## 失败处置
 
@@ -66,16 +69,16 @@ ENV_FILE="$PWD/.env.production" infra/agent/scripts/deploy-production.sh
 - 首次或手动同步必须走 `sync_save_once` 命令队列。
 - 数量异常下降时保留待审核快照；Parser 失败时继续使用上一有效库存。
 - Agent 原始快照清理仅作用于 Agent 自有目录，并遵循运行设置保留数量。
-- Supabase 标准化库存明细由 Service Role 清理 RPC 按 24 小时、小批次策略处理；
-  最新有效库存、业务历史和共享偏好不得删除。清理积压或失败时先停止新增同步并检查
-  RPC 结果与 autovacuum，不直接执行高锁表维护。
+- Supabase 标准化帕鲁与物品库存明细由 Service Role 清理 RPC 按 30 分钟、小批次策略处理；
+  最新有效库存、业务历史和共享偏好不得删除。五分钟公会采样独立保留 2 小时。清理积压或失败时
+  先停止新增同步并检查 RPC 结果与 autovacuum，不直接执行高锁表维护。
 - 目录 validate、stage、finalize、publish 和 rollback 必须使用现有 Catalog 流程，禁止直接 SQL 绕过。
 
 ## 秘密与日志
 
 - `.env.production` 权限必须是 `0600`，不得提交 Git。
 - 运维输出不得打印环境值、JWT、Service Role、数据库密码或 AI 密钥。
-- 发布后扫描四个 Agent 容器日志，确认生产秘密值未出现。
+- 发布后扫描三个运行中的 Agent 容器日志，确认生产秘密值未出现。
 - 管理员页面只允许显示 `configured`、`not_configured` 和 `last_checked_at`。
 - Vercel 服务端配置 `SUPABASE_SERVICE_ROLE_KEY` 与可选的 `STEAM_WEB_API_KEY`，二者均不得使用
   `NEXT_PUBLIC_` 前缀；不得记录 magic-link token hash 或 Sync 设备 token。

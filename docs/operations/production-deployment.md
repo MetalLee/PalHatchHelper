@@ -109,9 +109,15 @@ ENV_FILE=/data/projects/PalHatchHelper/.env.production \
   infra/agent/scripts/deploy-production.sh
 ```
 
-部署脚本只对 `api job-worker save-worker command-worker` 执行 `up -d --no-deps`。失败时使用 Agent 数据目录记录的 previous immutable image 自动切回并再次只操作四个 PalHatchHelper 服务。
+当前生产同步由 `palbeacon-cli` 接管，因此部署脚本只对 `api job-worker command-worker`
+执行 `up -d --no-deps`。`save-worker` 不参与部署、验证或回滚，也不会被脚本启动。失败时使用
+Agent 数据目录记录的 previous immutable image 自动切回，并仍只操作这三个 PalHatchHelper 服务。
 
-[`verify-production.sh`](../../infra/agent/scripts/verify-production.sh) 检查四容器运行、UID 10001、cap drop、禁止提权、非 host network、资源/PID 限额、源存档只读挂载、API loopback PortBinding、健康响应和日志秘密泄漏。首次同步仍遵循只读复制、异常下降待审核、Parser 失败保留上一有效库存。
+[`verify-production.sh`](../../infra/agent/scripts/verify-production.sh) 检查 API、Job Worker 与 Command
+Worker 运行、UID 10001、cap drop、禁止提权、非 host network、资源/PID 限额、Command Worker
+源存档只读挂载、API loopback PortBinding、健康响应和日志秘密泄漏。它不要求或检查
+`save-worker`。首次同步由 `palbeacon-cli` 完成，并继续遵循只读复制、异常下降待审核、Parser
+失败保留上一有效库存。
 
 首次同步前先用 Agent 创建的脱敏/只读快照执行容器内 smoke；输入只读挂载，输出只写 Agent
 runtime tmpfs，容器禁网并以 UID 10001 运行。确认输出小于 64 MiB、通过

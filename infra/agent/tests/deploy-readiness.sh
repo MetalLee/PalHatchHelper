@@ -40,6 +40,11 @@ MOCK
 cat >"$MOCK_BIN/docker" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
+for argument in "$@"; do
+  if [[ "$argument" == "save-worker" ]]; then
+    touch "$MOCK_STATE/save-worker-touched"
+  fi
+done
 if [[ "${1:-}" == "pull" ]]; then exit 0; fi
 if [[ "${1:-}" == "image" && "${2:-}" == "inspect" ]]; then
   printf '%s\n' '["test.invalid/agent:test@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]'
@@ -79,7 +84,7 @@ fi
 if [[ "${1:-}" == "compose" ]]; then
   command_name=""
   for argument in "$@"; do
-    case "$argument" in config|ps|logs|up|down) command_name="$argument"; break ;; esac
+    case "$argument" in config|ps|logs|up|rm) command_name="$argument"; break ;; esac
   done
   case "$command_name" in
     config) exit 0 ;;
@@ -91,7 +96,7 @@ if [[ "${1:-}" == "compose" ]]; then
       ;;
     logs) exit 0 ;;
     up) touch "$MOCK_STATE/deployed" ;;
-    down)
+    rm)
       rm -f -- "$MOCK_STATE/deployed"
       touch "$MOCK_STATE/rolled-back"
       ;;
@@ -132,6 +137,7 @@ MOCK_REPO_ROOT="$REPO_ROOT" MOCK_STATE="$MOCK_STATE" MOCK_CURL_FAILURES=2 \
   PATH="$MOCK_BIN:$PATH" ENV_FILE="$ENV_FILE" \
   "$REPO_ROOT/infra/agent/scripts/verify-production.sh" >/dev/null
 test "$(cat "$MOCK_STATE/curl-count")" = 10
+test ! -e "$MOCK_STATE/save-worker-touched"
 
 rm -f -- "$MOCK_STATE/curl-count"
 set +e
@@ -157,5 +163,6 @@ test -f "$MOCK_STATE/rolled-back"
 test ! -f "$MOCK_STATE/deployed"
 grep -Fq AGENT_HEALTH_NOT_READY <<<"$deploy_output"
 grep -Fq AGENT_DEPLOY_FAILED_ROLLBACK_FINISHED <<<"$deploy_output"
+test ! -e "$MOCK_STATE/save-worker-touched"
 
 echo "Production deployment readiness and first-deploy rollback regression passed."

@@ -1,5 +1,32 @@
 # PalHatchHelper v1 生产发布记录
 
+## 2026-08-01 物品库存同步优化部署
+
+- Git SHA：`4219d1f576bd98e7e9d5a876798f99a4f3d04026`
+- Supabase migration：`20260801010000_optimize_item_inventory_sync.sql`
+- Agent 镜像：
+  `ghcr.io/metallee/palhatch-agent:4219d1f576bd@sha256:86b35976da7088583e17e0e55dff42ac248aee0b9c708134d9799a29898b3859`
+- Vercel deployment：`dpl_4u3UPDWpJk4sU4D5iSJhAbW9awV4`
+- Vercel deployment URL：`https://pal-hatch-helper-ky0ank4ma-devil-s-claw.vercel.app`
+- 生产域名：`https://www.palbeacon.app`
+- 生产 deployment record：`3914bd53-d6ff-414c-8b70-8598d771b82d`
+- 生产备份：`/data/projects/PalHatchHelper/data/backups/20260731T173006Z/`，权限 `0700`
+
+数据库只应用了上述 forward-only migration；应用后远端 migration list 与仓库一致，后续 dry-run
+显示数据库已是最新。Service Role 可读取新的五分钟采样表，anon 被拒绝，物品库存 RPC 进入预期
+鉴权路径。Web 已由 Git 自动生产部署到同一 SHA，本次窗口确认健康接口版本、私有路由跳转和未授权
+Sync 上传拒绝均正常。
+
+Agent 的 `api`、`job-worker` 和 `command-worker` 已切换到新不可变镜像，并通过 UID/GID 10001、
+能力删除、禁止提权、资源/PID 限制、回环端口、只读挂载、连续健康和日志秘密检查。按本次发布约定，
+`save-worker` 不参与部署、验证或回滚，部署前后均保持停止；后续存档同步使用已经安装但尚未初始化或
+启动 systemd 服务的 `palbeacon-cli@0.2.3`。
+
+部署前后 `/opt/palworld/docker-compose.yml` SHA-256 均为
+`b19bc318e63c2c844b183d15ede232ae61d0d3adc56e012b3b5b37ff6c5a83ff`，appmanifest SHA-256 均为
+`f1c8d57e77c68cd45ea9e8362444fb2e277d98da0c8006e9acca28d0962f3b69`。Palworld 与 mihomo 容器 ID
+保持不变且重启计数均为 0；没有修改 `/opt/palworld`、控制两个现有容器或开放新的公网端口。
+
 ## 2026-07-31 Catalog 2.0 目录更新
 
 - Git SHA：`6d9c5cba9ae8b731a417cb4b87e154cb19d38879`

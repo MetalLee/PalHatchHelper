@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/infra/agent/docker-compose.production.yml"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/infra/agent/.env.production}"
 PROJECT_NAME="palhatchhelper-agent"
-SERVICES=(api job-worker save-worker command-worker)
+SERVICES=(api job-worker command-worker)
 DRY_RUN=false
 
 if [[ "${1:-}" == "--dry-run" ]]; then DRY_RUN=true; shift; fi
@@ -17,7 +17,7 @@ set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
-if $DRY_RUN; then echo "DRY_RUN: inspect four Agent containers, hardening, RO save mounts, loopback binding, health and redacted logs"; exit 0; fi
+if $DRY_RUN; then echo "DRY_RUN: inspect API and active worker containers without save-worker, hardening, RO command-worker save mount, loopback binding, health and redacted logs"; exit 0; fi
 
 compose=(docker compose --project-name "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 "${compose[@]}" config --quiet
@@ -41,7 +41,7 @@ done
 api_id="$("${compose[@]}" ps -q api)"
 ports="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$api_id")"
 [[ "$ports" == *'127.0.0.1'* && "$ports" != *'0.0.0.0'* ]] || { echo "AGENT_HEALTH_BINDING_INVALID" >&2; exit 73; }
-for service in save-worker command-worker; do
+for service in command-worker; do
   container_id="$("${compose[@]}" ps -q "$service")"
   docker inspect --format '{{range .Mounts}}{{if eq .Destination "/palworld-save"}}{{.RW}}{{end}}{{end}}' "$container_id" | grep -Fxq 'false' || { echo "PALWORLD_SAVE_MOUNT_NOT_READ_ONLY:$service" >&2; exit 73; }
 done
