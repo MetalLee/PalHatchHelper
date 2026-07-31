@@ -28,6 +28,7 @@ export interface SyncConfig {
   app_version?: string;
   state?: {
     last_save_hash?: string;
+    last_parser_version?: string;
     last_result?: string;
     last_sync_at?: string;
   };
@@ -198,13 +199,21 @@ function normalizeState(value: unknown): SyncConfig["state"] | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "object" || value === null) return undefined;
   const state = value as Record<string, unknown>;
-  for (const key of ["last_save_hash", "last_result", "last_sync_at"]) {
+  for (const key of [
+    "last_save_hash",
+    "last_parser_version",
+    "last_result",
+    "last_sync_at",
+  ]) {
     if (state[key] !== undefined && typeof state[key] !== "string")
       return undefined;
   }
   return {
     ...(typeof state.last_save_hash === "string"
       ? { last_save_hash: state.last_save_hash }
+      : {}),
+    ...(typeof state.last_parser_version === "string"
+      ? { last_parser_version: state.last_parser_version }
       : {}),
     ...(typeof state.last_result === "string"
       ? { last_result: state.last_result }

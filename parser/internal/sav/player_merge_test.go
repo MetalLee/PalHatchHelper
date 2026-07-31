@@ -13,6 +13,7 @@ func TestMergePlayerMatchesCompactAndHyphenatedUIDs(t *testing.T) {
 		UID:                   "3D7D02DB000000000000000000000000",
 		OtomoContainerID:      "fixture-party-container",
 		PalStorageContainerID: "fixture-storage-container",
+		ItemContainerIDs:      []string{"fixture-item-container"},
 	})
 
 	if len(world.Players) != 1 {
@@ -24,6 +25,10 @@ func TestMergePlayerMatchesCompactAndHyphenatedUIDs(t *testing.T) {
 	}
 	if player.PalStorageContainerID != "fixture-storage-container" {
 		t.Fatalf("storage container was not merged: %#v", player)
+	}
+	if len(player.ItemContainerIDs) != 1 ||
+		player.ItemContainerIDs[0] != "fixture-item-container" {
+		t.Fatalf("item containers were not merged: %#v", player)
 	}
 }
 

@@ -77,12 +77,49 @@ describe("sync lifecycle", () => {
     });
 
     await expect(
-      syncOnce({ ...baseConfig, state: { last_save_hash: hash } }),
+      syncOnce({
+        ...baseConfig,
+        state: { last_save_hash: hash, last_parser_version: "1.3.0" },
+      }),
     ).resolves.toBe("unchanged");
     expect(fakes.sendHeartbeat).toHaveBeenCalledOnce();
     expect(fakes.parseSnapshot).not.toHaveBeenCalled();
     expect(fakes.uploadSnapshot).not.toHaveBeenCalled();
     expect(fakes.cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("reparses an unchanged save when the bundled Parser version changed", async () => {
+    const hash = "e".repeat(64);
+    fakes.createSnapshot.mockResolvedValue({
+      path: "/temporary/read-only-snapshot",
+      hash,
+      sourceModifiedAt: "2026-07-29T00:00:00.000Z",
+      cleanup: fakes.cleanup,
+    });
+    fakes.parseSnapshot.mockResolvedValue({
+      server: {
+        world_uid: "fixture-world",
+        save_version: "PlM/0x31",
+        captured_at: "2026-07-29T00:00:00.000Z",
+      },
+      guilds: [],
+      players: [],
+      pals: [],
+    });
+
+    const config: SyncConfig = {
+      ...baseConfig,
+      state: { last_save_hash: hash, last_parser_version: "1.2.0" },
+    };
+    await expect(syncOnce(config)).resolves.toBe("uploaded");
+
+    expect(fakes.parseSnapshot).toHaveBeenCalledOnce();
+    expect(fakes.uploadSnapshot).toHaveBeenCalledOnce();
+    expect(config.state).toMatchObject({
+      last_save_hash: hash,
+      last_parser_version: "1.3.0",
+      last_result: "uploaded",
+    });
   });
 
   it("publishes the Parser version from its verified bundle manifest", async () => {
