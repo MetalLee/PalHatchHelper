@@ -300,6 +300,18 @@ internal static class SharedCatalogSchemaValidator
       return double.IsFinite(result);
     }
 
+    if (scalar.TryGetValue<float>(out var single))
+    {
+      result = single;
+      return float.IsFinite(single);
+    }
+
+    if (scalar.TryGetValue<decimal>(out var decimalValue))
+    {
+      result = (double)decimalValue;
+      return true;
+    }
+
     if (TryInteger(scalar, out var integer))
     {
       result = integer;

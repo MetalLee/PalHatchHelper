@@ -44,7 +44,7 @@ internal static class PassiveDescriptionFormatter
         TimeSpan.FromSeconds(1));
     result = Regex.Replace(
         result,
-        @"</>|<Num(?:Blue|Red)(?:_[0-9]+)?>",
+        @"</>|<(?:Num(?:Blue|Red)(?:_[0-9]+)?|Status_Up)>",
         string.Empty,
         RegexOptions.CultureInvariant,
         TimeSpan.FromSeconds(1));
