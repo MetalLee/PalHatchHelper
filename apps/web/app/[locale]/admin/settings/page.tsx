@@ -43,8 +43,9 @@ export default async function AdminSettingsPage({
         <p className="text-sm text-muted-foreground">
           {t("createdBy", {
             creator: version.created_by_display,
-            date: formatTime(version.created_at),
+            date: "",
           })}
+          {formatTime(version.created_at)}
         </p>
         <SettingsForm version={version} />
       </section>

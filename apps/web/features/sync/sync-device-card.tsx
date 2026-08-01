@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import {
   Collapsible,
   CollapsibleContent,
@@ -195,10 +196,13 @@ export function SyncDeviceCard({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {t("expires", {
-                    date: new Date(pairing.expires_at).toLocaleTimeString(
-                      locale,
-                    ),
+                    date: "",
                   })}
+                  <VisitorDateTime
+                    value={pairing.expires_at}
+                    locale={locale}
+                    options={{ timeStyle: "medium" }}
+                  />
                 </p>
               </div>
             )}

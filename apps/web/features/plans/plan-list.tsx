@@ -5,6 +5,7 @@ import { ChevronRight, GitBranch, Sparkles } from "lucide-react";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import { StatusChip } from "@/components/status/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -88,8 +89,13 @@ function PlanCard({ plan }: Readonly<{ plan: PlanSummary }>) {
               </StatusChip>
               <span className="text-xs text-muted-foreground">
                 {t("savedAt", {
-                  date: formatDateTime(plan.saved_at, catalogLocaleFor(locale)),
+                  date: "",
                 })}
+                <VisitorDateTime
+                  value={plan.saved_at}
+                  locale={catalogLocaleFor(locale)}
+                  options={{ dateStyle: "short", timeStyle: "short" }}
+                />
               </span>
             </div>
             <h2 className="mt-2 truncate text-lg font-bold text-foreground">
@@ -170,11 +176,4 @@ function Metric({ label, value }: Readonly<{ label: string; value: string }>) {
       <dd className="mt-1 font-bold text-foreground">{value}</dd>
     </div>
   );
-}
-
-function formatDateTime(value: string, locale: "zh-CN" | "en-US"): string {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
 }

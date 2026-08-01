@@ -25,7 +25,13 @@ function periodChange(item: GuildItemInventoryItem): number {
 }
 
 function formatPeriodChange(change: number, locale: string): string {
-  return `${change >= 0 ? "+" : ""}${change.toLocaleString(locale)}`;
+  return `${change > 0 ? "+" : ""}${change.toLocaleString(locale)}`;
+}
+
+function periodChangeTone(change: number): string {
+  if (change > 0) return "text-primary";
+  if (change < 0) return "text-destructive";
+  return "text-foreground";
 }
 
 function ItemIcon({
@@ -159,7 +165,9 @@ export function ItemInventoryList({
                     <p className="text-[11px] text-muted-foreground sm:hidden">
                       {t("periodChange")}
                     </p>
-                    <p className="text-lg font-bold tabular-nums text-foreground">
+                    <p
+                      className={`text-lg font-bold tabular-nums ${periodChangeTone(change)}`}
+                    >
                       {formatPeriodChange(change, catalogLocale)}
                     </p>
                   </div>

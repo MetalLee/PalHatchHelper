@@ -1,6 +1,7 @@
 "use client";
 
 import type { InventoryDataStatus } from "@palhatch/contracts";
+import type { ReactNode } from "react";
 import {
   AlertTriangle,
   Braces,
@@ -16,30 +17,18 @@ import {
 } from "lucide-react";
 
 import { PageHero } from "@/components/layout/page-hero";
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import { GlassPanel } from "@/components/surfaces/glass-panel";
 import { StatusChip } from "@/components/status/status-chip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppLocale, useCopy } from "@/i18n/client";
-import { catalogLocaleFor, type AppLocale } from "@/i18n/routing";
+import { catalogLocaleFor } from "@/i18n/routing";
 
 import {
   dataStatusPresentation,
   gameDataStatusPresentation,
 } from "./presentation";
-
-export function formatDataStatusTime(
-  value: string | null,
-  locale: AppLocale,
-  empty: string,
-): string {
-  if (value === null) return empty;
-  return new Intl.DateTimeFormat(catalogLocaleFor(locale), {
-    dateStyle: "medium",
-    timeStyle: "medium",
-    timeZone: "Asia/Shanghai",
-  }).format(new Date(value));
-}
 
 function SafeCode({ children }: Readonly<{ children: string }>) {
   return (
@@ -60,8 +49,8 @@ function StatusCard({
   tone,
 }: Readonly<{
   label: string;
-  value: string;
-  detail: string;
+  value: ReactNode;
+  detail: ReactNode;
   icon: typeof RefreshCw;
   tone: "good" | "warning" | "danger" | "neutral";
 }>) {
@@ -103,7 +92,15 @@ export function DataStatusDashboard({
   const locale = useAppLocale();
   const t = useCopy("DataStatus");
   const formatTime = (value: string | null) =>
-    formatDataStatusTime(value, locale, t("none"));
+    value === null ? (
+      t("none")
+    ) : (
+      <VisitorDateTime
+        value={value}
+        locale={catalogLocaleFor(locale)}
+        options={{ dateStyle: "medium", timeStyle: "medium" }}
+      />
+    );
   const inventory = dataStatusPresentation(data.state, t);
   const gameData = gameDataStatusPresentation(data.game_data_state, t);
   const parserValue =
@@ -162,7 +159,12 @@ export function DataStatusDashboard({
         <StatusCard
           label={t("latestUpdate")}
           value={formatTime(data.captured_at)}
-          detail={t("lastAttempt", { date: formatTime(data.last_attempt_at) })}
+          detail={
+            <>
+              {t("lastAttempt", { date: "" })}
+              {formatTime(data.last_attempt_at)}
+            </>
+          }
           icon={Clock3}
           tone={data.state === "stale" ? "warning" : "neutral"}
         />

@@ -4,6 +4,7 @@ import type { InventoryDataStatus, PlanSummary } from "@palhatch/contracts";
 import { ArrowRight, Dna, PawPrint } from "lucide-react";
 
 import { PageHero } from "@/components/layout/page-hero";
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PageError } from "@/components/states/page-error";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
@@ -12,6 +13,7 @@ import { StatusChip } from "@/components/status/status-chip";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppLocale, useCopy } from "@/i18n/client";
 import { Link } from "@/i18n/navigation";
+import { catalogLocaleFor } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { userFacingCatalogName } from "@/lib/user-facing-name";
 
@@ -26,18 +28,6 @@ const outlineLinkClass =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-white/72 px-4 text-sm font-semibold text-foreground no-underline shadow-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40";
 const ghostLinkClass =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-primary no-underline transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40";
-
-function formatDateTime(
-  value: string | null,
-  locale: "zh" | "en",
-  emptyValue: string,
-): string {
-  if (value === null) return emptyValue;
-  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
   const locale = useAppLocale();
@@ -70,8 +60,13 @@ function PlanRow({ plan }: Readonly<{ plan: PlanSummary }>) {
           {t("planMeta", {
             generations: plan.generation_count,
             steps: plan.step_count,
-            date: formatDateTime(plan.saved_at, locale, t("noSuccessfulSync")),
+            date: "",
           })}
+          <VisitorDateTime
+            value={plan.saved_at}
+            locale={catalogLocaleFor(locale)}
+            options={{ dateStyle: "short", timeStyle: "short" }}
+          />
         </span>
       </span>
       <ArrowRight
@@ -206,10 +201,14 @@ export function OverviewDashboard({
             <div className="rounded-xl bg-white/72 p-3">
               <dt className="text-muted-foreground">{t("latestSync")}</dt>
               <dd className="mt-1 font-semibold text-foreground">
-                {formatDateTime(
-                  dataStatus.captured_at,
-                  locale,
-                  t("noSuccessfulSync"),
+                {dataStatus.captured_at === null ? (
+                  t("noSuccessfulSync")
+                ) : (
+                  <VisitorDateTime
+                    value={dataStatus.captured_at}
+                    locale={catalogLocaleFor(locale)}
+                    options={{ dateStyle: "short", timeStyle: "short" }}
+                  />
                 )}
               </dd>
             </div>

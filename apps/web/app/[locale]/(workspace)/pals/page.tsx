@@ -2,6 +2,7 @@ import { Boxes, Clock3, PawPrint, RefreshCw, Users } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { MetricCard } from "@/components/dashboard/metric-card";
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import { PageHero } from "@/components/layout/page-hero";
 import { ErrorState } from "@/components/page-state";
 import { PageError } from "@/components/states/page-error";
@@ -19,7 +20,7 @@ import {
   Phase5DataError,
 } from "@/features/pals/server";
 import { Link } from "@/i18n/navigation";
-import { catalogLocaleFor, type AppLocale } from "@/i18n/routing";
+import { catalogLocaleFor } from "@/i18n/routing";
 import { requireAppLocale } from "@/i18n/server-locale";
 
 export const dynamic = "force-dynamic";
@@ -35,18 +36,6 @@ function toUrlSearchParams(values: Awaited<SearchParams>): URLSearchParams {
     }
   }
   return params;
-}
-
-function formatDateTime(
-  value: string | null,
-  locale: AppLocale,
-  empty: string,
-): string {
-  if (value === null) return empty;
-  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
 
 async function InventoryContextError({
@@ -143,11 +132,16 @@ export default async function PalsPage({
 
   const passiveRanks = passiveRanksFromPage(page);
 
-  const synchronizedAt = formatDateTime(
-    summary.data_status.captured_at,
-    locale,
-    t("noSync"),
-  );
+  const synchronizedAt =
+    summary.data_status.captured_at === null ? (
+      t("noSync")
+    ) : (
+      <VisitorDateTime
+        value={summary.data_status.captured_at}
+        locale={catalogLocale}
+        options={{ dateStyle: "short", timeStyle: "short" }}
+      />
+    );
 
   return (
     <div className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8">

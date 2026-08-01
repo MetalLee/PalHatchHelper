@@ -15,6 +15,23 @@ const WIDTH = 224;
 const HEIGHT = 36;
 const PADDING = 4;
 
+function backfillLeadingSamples(
+  points: readonly (number | null)[],
+  currentQuantity?: number,
+): Array<number | null> {
+  const firstObservedIndex = points.findIndex((value) => value !== null);
+  if (firstObservedIndex === -1) {
+    return currentQuantity === undefined
+      ? [...points]
+      : points.map(() => currentQuantity);
+  }
+
+  const earliestQuantity = points[firstObservedIndex]!;
+  return points.map((value, index) =>
+    index < firstObservedIndex ? earliestQuantity : value,
+  );
+}
+
 export function ItemInventorySparkline({
   label,
   points,
@@ -22,34 +39,23 @@ export function ItemInventorySparkline({
   className,
 }: ItemInventorySparklineProps) {
   const gradientId = useId().replaceAll(":", "");
-  const observedPointCount = points.filter(
-    (value): value is number => value !== null,
-  ).length;
-  const displayPoints =
-    currentQuantity !== undefined && observedPointCount <= 1
-      ? points.map(() => currentQuantity)
-      : points;
+  const displayPoints = backfillLeadingSamples(points, currentQuantity);
   const values = displayPoints.filter(
     (value): value is number => value !== null,
   );
-  const minimum = values.length === 0 ? 0 : Math.min(...values);
   const maximum = values.length === 0 ? 0 : Math.max(...values);
-  const span = Math.max(maximum - minimum, 1);
+  const span = Math.max(maximum, 1);
   const denominator = Math.max(displayPoints.length - 1, 1);
-  const segments: string[][] = [];
-  let current: string[] = [];
+  const coordinates: string[] = [];
   displayPoints.forEach((value, index) => {
-    if (value === null) {
-      if (current.length > 0) segments.push(current);
-      current = [];
-      return;
-    }
+    if (value === null) return;
     const x = PADDING + (index / denominator) * (WIDTH - PADDING * 2);
-    const normalized = maximum === minimum ? 0.5 : (value - minimum) / span;
+    const normalized = value / span;
     const y = HEIGHT - PADDING - normalized * (HEIGHT - PADDING * 2);
-    current.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+    coordinates.push(`${x.toFixed(2)},${y.toFixed(2)}`);
   });
-  if (current.length > 0) segments.push(current);
+  const firstX = coordinates[0]?.split(",")[0] ?? String(PADDING);
+  const lastX = coordinates.at(-1)?.split(",")[0] ?? String(WIDTH - PADDING);
 
   return (
     <div
@@ -92,22 +98,15 @@ export function ItemInventorySparkline({
           className="stroke-border"
           strokeWidth="1"
         />
-        {segments.map((segment, index) => {
-          const first = segment[0]?.split(",")[0] ?? String(PADDING);
-          const last = segment.at(-1)?.split(",")[0] ?? String(WIDTH - PADDING);
-          return (
-            <path
-              key={`area-${index}-${segment[0] ?? "empty"}`}
-              d={`M ${segment.join(" L ")} L ${last},${HEIGHT - PADDING} L ${first},${HEIGHT - PADDING} Z`}
-              fill={`url(#${gradientId})`}
-            />
-          );
-        })}
-        {segments.map((segment, index) => (
+        {coordinates.length > 0 ? (
+          <path
+            d={`M ${coordinates.join(" L ")} L ${lastX},${HEIGHT - PADDING} L ${firstX},${HEIGHT - PADDING} Z`}
+            fill={`url(#${gradientId})`}
+          />
+        ) : null}
+        {coordinates.length > 0 ? (
           <polyline
-            // Each null sample intentionally starts a new segment so downtime is visible.
-            key={`${index}-${segment[0] ?? "empty"}`}
-            points={segment.join(" ")}
+            points={coordinates.join(" ")}
             fill="none"
             className="stroke-primary"
             strokeLinecap="round"
@@ -115,11 +114,11 @@ export function ItemInventorySparkline({
             strokeWidth="2"
             vectorEffect="non-scaling-stroke"
           />
-        ))}
-        {segments.at(-1)?.at(-1) ? (
+        ) : null}
+        {coordinates.at(-1) ? (
           <circle
-            cx={segments.at(-1)!.at(-1)!.split(",")[0]}
-            cy={segments.at(-1)!.at(-1)!.split(",")[1]}
+            cx={coordinates.at(-1)!.split(",")[0]}
+            cy={coordinates.at(-1)!.split(",")[1]}
             r="2.25"
             className="fill-primary stroke-background"
             strokeWidth="1.25"

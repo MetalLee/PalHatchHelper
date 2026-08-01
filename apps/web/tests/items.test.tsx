@@ -52,6 +52,52 @@ function inventoryItem(
 }
 
 describe("item inventory", () => {
+  it("uses themed positive and destructive colors for period changes", () => {
+    const increased = inventoryItem("item-increased", "增加物品", 12);
+    increased.trend_1h = [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      8,
+      12,
+    ];
+    const decreased = inventoryItem("item-decreased", "减少物品", 7);
+    decreased.trend_1h = [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      10,
+      7,
+    ];
+
+    render(
+      <ItemInventoryList
+        items={[increased, decreased]}
+        baseLabels={{ "raw-base-guid": "基地A" }}
+        catalogLocale="zh-CN"
+      />,
+    );
+
+    expect(screen.getByText("+4").className).toContain("text-primary");
+    expect(screen.getByText("-3").className).toContain("text-destructive");
+  });
+
   it("defaults to 50 rows and sorts the current guild total descending", () => {
     const query = parseItemInventoryQuery(new URLSearchParams());
     const prepared = prepareItemInventoryPage(

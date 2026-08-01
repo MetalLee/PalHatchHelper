@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import { StatusChip, type StatusTone } from "@/components/status/status-chip";
 import { Link } from "@/i18n/navigation";
 import { catalogLocaleFor, type AppLocale } from "@/i18n/routing";
@@ -183,11 +184,13 @@ export function formatAdminTime(
   value: string | null,
   locale: AppLocale,
   empty: string,
-): string {
+): ReactNode {
   if (value === null) return empty;
-  return new Intl.DateTimeFormat(catalogLocaleFor(locale), {
-    dateStyle: "medium",
-    timeStyle: "medium",
-    timeZone: "Asia/Shanghai",
-  }).format(new Date(value));
+  return (
+    <VisitorDateTime
+      value={value}
+      locale={catalogLocaleFor(locale)}
+      options={{ dateStyle: "medium", timeStyle: "medium" }}
+    />
+  );
 }

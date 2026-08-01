@@ -2,6 +2,7 @@ import { Boxes, Clock3, Factory, MapPinned } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { MetricCard } from "@/components/dashboard/metric-card";
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import { PageHero } from "@/components/layout/page-hero";
 import { ErrorState } from "@/components/page-state";
 import { ForestScenery } from "@/components/surfaces/forest-scenery";
@@ -80,12 +81,15 @@ export default async function ItemsPage({
     0,
   );
   const capturedAt =
-    inventory.captured_at === null
-      ? t("notAvailable")
-      : new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
-          dateStyle: "short",
-          timeStyle: "short",
-        }).format(new Date(inventory.captured_at));
+    inventory.captured_at === null ? (
+      t("notAvailable")
+    ) : (
+      <VisitorDateTime
+        value={inventory.captured_at}
+        locale={catalogLocale}
+        options={{ dateStyle: "short", timeStyle: "short" }}
+      />
+    );
 
   return (
     <div className="grid min-w-0 gap-6 overflow-x-clip pb-4 sm:gap-8">

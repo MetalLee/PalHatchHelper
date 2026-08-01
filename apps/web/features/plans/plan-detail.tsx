@@ -12,6 +12,7 @@ import { useMemo, useState } from "react";
 
 import { PalPortrait } from "@/components/pals/pal-portrait";
 import { PassiveBadge } from "@/components/pals/passive-badge";
+import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
 import { StatusChip } from "@/components/status/status-chip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -125,11 +126,13 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {t("savedAt", {
-                date: formatDateTime(
-                  reference.saved_at,
-                  catalogLocaleFor(locale),
-                ),
+                date: "",
               })}
+              <VisitorDateTime
+                value={reference.saved_at}
+                locale={catalogLocaleFor(locale)}
+                options={{ dateStyle: "medium", timeStyle: "short" }}
+              />
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -251,11 +254,4 @@ export function PlanDetail({ detail }: Readonly<{ detail: SavedPlanDetail }>) {
       </section>
     </div>
   );
-}
-
-function formatDateTime(value: string, locale: "zh-CN" | "en-US"): string {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
