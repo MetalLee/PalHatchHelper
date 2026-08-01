@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ItemInventorySparkline } from "@/features/items/item-inventory-sparkline";
@@ -78,5 +78,30 @@ describe("ItemInventorySparkline", () => {
     const firstY = Number(coordinates[0]?.split(",")[1]);
     const lastY = Number(coordinates.at(-1)?.split(",")[1]);
     expect(Math.abs(firstY - lastY)).toBeLessThan(0.1);
+  });
+
+  it("shows the exact guild total when hovering a sampling period", () => {
+    render(
+      <ItemInventorySparkline
+        label="Lettuce inventory over the last hour"
+        points={[
+          100_000, 100_000, 100_000, 100_000, 100_000, 100_000, 100_000,
+          100_000, 100_000, 100_000, 100_000, 100_000, 100_300,
+        ]}
+        locale="en-US"
+      />,
+    );
+
+    const chart = screen.getByRole("img", {
+      name: "Lettuce inventory over the last hour",
+    });
+    const finalPeriod = chart.querySelector('[data-chart-point="12"]');
+    expect(finalPeriod).not.toBeNull();
+
+    fireEvent.mouseEnter(finalPeriod!);
+    expect(screen.getByRole("tooltip").textContent).toContain("100,300");
+
+    fireEvent.mouseLeave(finalPeriod!);
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 });

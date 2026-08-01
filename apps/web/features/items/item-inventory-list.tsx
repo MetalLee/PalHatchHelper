@@ -185,6 +185,7 @@ export function ItemInventoryList({
                     label={t("trend1hAria", { item: item.name })}
                     points={item.trend_1h}
                     currentQuantity={item.quantity}
+                    locale={catalogLocale}
                     className="sm:col-span-4 xl:col-auto"
                   />
                   <div className="hidden xl:block">
