@@ -234,6 +234,100 @@ func TestAssignItemStackOwnershipUsesExplicitMapObjectBase(t *testing.T) {
 	}
 }
 
+func TestAssignItemStackOwnershipIncludesColdFeedBoxInput(t *testing.T) {
+	world := &World{
+		ItemInventoryStatus: "available",
+		Bases:               []BaseCamp{{ID: "base-1", GuildID: "guild-1"}},
+		ItemStacks: []ItemStack{{
+			ContainerID: "feed-container", ItemID: "Minestrone", Quantity: 6776,
+			ContainerType: "unknown", SlotIndex: 0,
+		}},
+	}
+	owners := map[string]itemContainerOwnership{
+		guidIdentityKey("feed-container"): {
+			ContainerID: "feed-container", BaseID: "base-1", GuildID: "guild-1",
+			MapObjectID:    "CoolerPalFoodBox",
+			UsageType:      0,
+			SlotAttributes: map[int]uint8{0: itemSlotAttributeInput},
+		},
+	}
+
+	assignItemStackOwnership(world, owners)
+
+	if len(world.ItemStacks) != 1 {
+		t.Fatalf("cold feed box input was excluded: %#v", world.ItemStacks)
+	}
+	stack := world.ItemStacks[0]
+	if stack.BaseID != "base-1" || stack.GuildID != "guild-1" ||
+		stack.ContainerType != "feed_box" || stack.Quantity != 6776 {
+		t.Fatalf("cold feed box input was not resolved: %#v", stack)
+	}
+	if world.ItemInventoryStatus != "available" {
+		t.Fatalf("status = %q; want available", world.ItemInventoryStatus)
+	}
+}
+
+func TestAssignItemStackOwnershipStillExcludesProductionInput(t *testing.T) {
+	world := &World{
+		ItemInventoryStatus: "available",
+		Bases:               []BaseCamp{{ID: "base-1", GuildID: "guild-1"}},
+		ItemStacks: []ItemStack{{
+			ContainerID: "medicine-container", ItemID: "Herbs", Quantity: 57,
+			ContainerType: "unknown", SlotIndex: 0,
+		}},
+	}
+	owners := map[string]itemContainerOwnership{
+		guidIdentityKey("medicine-container"): {
+			ContainerID: "medicine-container", BaseID: "base-1", GuildID: "guild-1",
+			MapObjectID:    "PalMedicineBox",
+			UsageType:      itemContainerUsageStorage,
+			SlotAttributes: map[int]uint8{0: itemSlotAttributeInput},
+		},
+	}
+
+	assignItemStackOwnership(world, owners)
+
+	if len(world.ItemStacks) != 0 {
+		t.Fatalf("production input leaked into guild inventory: %#v", world.ItemStacks)
+	}
+	if world.ItemInventoryStatus != "available" {
+		t.Fatalf("status = %q; want available", world.ItemInventoryStatus)
+	}
+}
+
+func TestAssignItemStackOwnershipIncludesPublicOutputWithoutStorageUsage(t *testing.T) {
+	world := &World{
+		ItemInventoryStatus: "available",
+		Bases:               []BaseCamp{{ID: "base-1", GuildID: "guild-1"}},
+		ItemStacks: []ItemStack{{
+			ContainerID: "output-container", ItemID: "Chromium", Quantity: 142,
+			ContainerType: "unknown", SlotIndex: 0,
+		}},
+	}
+	owners := map[string]itemContainerOwnership{
+		guidIdentityKey("output-container"): {
+			ContainerID: "output-container", BaseID: "base-1", GuildID: "guild-1",
+			MapObjectID:    "AncientMultiProduct",
+			UsageType:      0,
+			SlotAttributes: map[int]uint8{0: itemSlotAttributePublicOutput},
+		},
+	}
+
+	assignItemStackOwnership(world, owners)
+
+	if len(world.ItemStacks) != 1 {
+		t.Fatalf("completed public output was excluded: %#v", world.ItemStacks)
+	}
+	stack := world.ItemStacks[0]
+	if stack.BaseID != "base-1" || stack.GuildID != "guild-1" ||
+		stack.ContainerType != "production_output" || stack.Quantity != 142 {
+		t.Fatalf("completed public output was not resolved: %#v", stack)
+	}
+	if world.ItemInventoryStatus != "available" {
+		t.Fatalf("status = %q; want available", world.ItemInventoryStatus)
+	}
+}
+
 func TestGuildItemContainerOwnershipUsesGuildExtraStorageGUID(t *testing.T) {
 	const guildID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 	const containerID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
