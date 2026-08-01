@@ -613,10 +613,22 @@ func classifyItemContainerSlot(
 	slotIndex int,
 	mapObjectID ...string,
 ) string {
-	if usageType != itemContainerUsageStorage || slotIndex < 0 {
+	if slotIndex < 0 {
 		return "unknown"
 	}
 	attribute, ok := attributes[slotIndex]
+	if ok && attribute == itemSlotAttributePublicOutput {
+		return "production_output"
+	}
+	if ok && attribute == itemSlotAttributeInput {
+		if len(mapObjectID) > 0 && isConfirmedFeedBoxMapObject(mapObjectID[0]) {
+			return "feed_box"
+		}
+		return "unknown"
+	}
+	if usageType != itemContainerUsageStorage {
+		return "unknown"
+	}
 	if !ok {
 		if len(mapObjectID) > 0 {
 			return confirmedPhysicalContainerType(mapObjectID[0])
@@ -629,12 +641,8 @@ func classifyItemContainerSlot(
 			return "refrigerator"
 		}
 		return "storage_box"
-	case itemSlotAttributePublicOutput:
-		return "production_output"
 	case itemSlotAttributeFoodProvidable:
 		return "feed_box"
-	case itemSlotAttributeInput:
-		return "unknown"
 	default:
 		return "unknown"
 	}
@@ -669,6 +677,10 @@ func isRefrigeratedMapObject(value string) bool {
 	}
 }
 
+func isConfirmedFeedBoxMapObject(value string) bool {
+	return confirmedPhysicalContainerType(value) == "feed_box"
+}
+
 func assignItemStackOwnership(w *World, owners map[string]itemContainerOwnership) {
 	if w.ItemInventoryStatus == "unavailable" {
 		return
@@ -691,7 +703,8 @@ func assignItemStackOwnership(w *World, owners map[string]itemContainerOwnership
 			continue
 		}
 		attribute, hasAttribute := owner.SlotAttributes[stack.SlotIndex]
-		if hasAttribute && attribute == itemSlotAttributeInput {
+		if hasAttribute && attribute == itemSlotAttributeInput &&
+			!isConfirmedFeedBoxMapObject(owner.MapObjectID) {
 			continue
 		}
 		baseID, guildID, ok := confirmedDirectBaseOwnership(w.Bases, owner)
