@@ -191,6 +191,7 @@ export interface InventoryDataStatus {
   source_modified_at: string | null;
   parser_name: string | null;
   parser_version: string | null;
+  last_heartbeat_at: string | null;
   last_attempt_at: string | null;
   error_code: string | null;
   using_previous_snapshot: boolean;

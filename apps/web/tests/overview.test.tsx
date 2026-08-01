@@ -14,6 +14,7 @@ const dataStatus: InventoryDataStatus = {
   source_modified_at: "2026-07-24T08:29:00.000Z",
   parser_name: "fixture-parser",
   parser_version: "1.0.0",
+  last_heartbeat_at: "2026-07-24T08:35:00.000Z",
   last_attempt_at: "2026-07-24T08:30:00.000Z",
   error_code: null,
   using_previous_snapshot: false,

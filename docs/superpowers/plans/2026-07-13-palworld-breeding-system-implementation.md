@@ -1,5 +1,6 @@
 # PalHatch Helper 分阶段实施计划
 
+- 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=completed
 - 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
 - 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1388,6 +1389,19 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
    - 验证：`pnpm check && cd apps/agent && uv run pytest && cd ../.. && supabase test db && pnpm --filter @palhatch/web test:e2e`
 
 ## 跨阶段变更规则
+
+## 2026-08-02 跨阶段修订：unchanged 心跳新鲜度与物品制作文案
+
+1. 先以 pgTAP 和 Web 失败测试锁定：旧存档修改时间但存在近期 `unchanged` 心跳时状态保持正常，
+   心跳真正超时后才过期；设备卡区分最近检测和上次上传；物品列名使用“可制作数量”。
+2. 追加 forward-only 迁移重定义浏览器安全状态 RPC，从当前世界未撤销同步设备读取最新心跳，
+   返回 `last_heartbeat_at` 并以其判断公共同步新鲜度；解析失败优先级与无设备回退保持不变。
+3. 更新 Phase 5 共享 Schema 并生成共享类型；概览、帕鲁库存、物品库存、数据状态、
+   顶部徽标和账号同步设备统一区分最近检测、库存快照与上传时间。
+4. 只修改中英文制作数量文案，不改变 `craftable_additional`、请求时配方计算、五分钟采样、趋势
+   曲线或“周期变化”实现。
+5. 局部验证后执行根 `pnpm check`、完整 Supabase 测试、受影响浏览器流程和 `git diff --check`；
+   不修改真实存档、`/opt/palworld` 或 Palworld/mihomo 容器，不部署生产、不推送远程仓库。
 
 ## 2026-08-01 跨阶段修订：存档载荷保留、公会箱、请求时产量与五分钟行内趋势
 

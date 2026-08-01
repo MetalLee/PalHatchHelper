@@ -17,6 +17,7 @@ import {
   prepareItemInventoryPage,
 } from "@/features/items/query";
 import { getGuildItemInventory } from "@/features/items/server";
+import { getInventoryDataStatus } from "@/features/pals/server";
 import { Phase5DataError } from "@/features/phase5-errors";
 import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { catalogLocaleFor } from "@/i18n/routing";
@@ -51,8 +52,12 @@ export default async function ItemsPage({
   if (context.binding === null) return <PlayerBindingSetup />;
 
   let inventory;
+  let dataStatus;
   try {
-    inventory = await getGuildItemInventory(catalogLocale);
+    [inventory, dataStatus] = await Promise.all([
+      getGuildItemInventory(catalogLocale),
+      getInventoryDataStatus(),
+    ]);
   } catch (error) {
     return (
       <ErrorState
@@ -81,11 +86,11 @@ export default async function ItemsPage({
     0,
   );
   const capturedAt =
-    inventory.captured_at === null ? (
+    dataStatus.last_heartbeat_at === null ? (
       t("notAvailable")
     ) : (
       <VisitorDateTime
-        value={inventory.captured_at}
+        value={dataStatus.last_heartbeat_at}
         locale={catalogLocale}
         options={{ dateStyle: "short", timeStyle: "short" }}
       />

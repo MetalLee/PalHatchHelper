@@ -201,11 +201,11 @@ export function OverviewDashboard({
             <div className="rounded-xl bg-white/72 p-3">
               <dt className="text-muted-foreground">{t("latestSync")}</dt>
               <dd className="mt-1 font-semibold text-foreground">
-                {dataStatus.captured_at === null ? (
+                {dataStatus.last_heartbeat_at === null ? (
                   t("noSuccessfulSync")
                 ) : (
                   <VisitorDateTime
-                    value={dataStatus.captured_at}
+                    value={dataStatus.last_heartbeat_at}
                     locale={catalogLocaleFor(locale)}
                     options={{ dateStyle: "short", timeStyle: "short" }}
                   />

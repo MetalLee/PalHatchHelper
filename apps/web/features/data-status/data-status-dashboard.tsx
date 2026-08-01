@@ -158,11 +158,11 @@ export function DataStatusDashboard({
         />
         <StatusCard
           label={t("latestUpdate")}
-          value={formatTime(data.captured_at)}
+          value={formatTime(data.last_heartbeat_at)}
           detail={
             <>
-              {t("lastAttempt", { date: "" })}
-              {formatTime(data.last_attempt_at)}
+              {t("latestDataUpdate", { date: "" })}
+              {formatTime(data.captured_at)}
             </>
           }
           icon={Clock3}
@@ -202,6 +202,11 @@ export function DataStatusDashboard({
           <ol className="mt-5 grid gap-4">
             {[
               {
+                label: t("lastHeartbeatLabel"),
+                value: formatTime(data.last_heartbeat_at),
+                icon: RefreshCw,
+              },
+              {
                 label: t("sourceModified"),
                 value: formatTime(data.source_modified_at),
                 icon: FileClock,
@@ -214,7 +219,7 @@ export function DataStatusDashboard({
               {
                 label: t("lastAttemptLabel"),
                 value: formatTime(data.last_attempt_at),
-                icon: RefreshCw,
+                icon: History,
               },
             ].map((event) => {
               const Icon = event.icon;

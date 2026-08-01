@@ -1,7 +1,22 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(50);
+select plan(51);
+
+insert into public.sync_devices (
+  id, owner_user_id, world_id, name, platform, token_hash, token_prefix,
+  app_version, last_seen_at
+) values (
+  '90000000-0000-4000-8000-000000000052',
+  '00000000-0000-4000-8000-000000000002',
+  '10000000-0000-4000-8000-000000000001',
+  'Phase 5 unchanged heartbeat fixture',
+  'linux-x64',
+  repeat('5', 64),
+  'pbs_phase5hb',
+  '0.2.1',
+  statement_timestamp()
+);
 
 select has_function(
   'public',
@@ -344,10 +359,28 @@ select is(
   'INVALID_PAGINATION',
   'invalid pagination is rejected with a structured stable code'
 );
+select ok(
+  public.get_inventory_data_status() #>> '{data,state}' = 'healthy'
+  and public.get_inventory_data_status() #>> '{data,last_heartbeat_at}' is not null,
+  'a recent unchanged device heartbeat keeps old but valid inventory healthy'
+);
+
+reset role;
+set local role service_role;
+update public.sync_devices
+   set last_seen_at = statement_timestamp() - interval '30 minutes'
+ where id = '90000000-0000-4000-8000-000000000052';
+reset role;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000002"}',
+  true
+);
+set local role authenticated;
 select is(
   public.get_inventory_data_status() #>> '{data,state}',
   'stale',
-  'old synthetic inventory is reported as stale'
+  'inventory is stale only after the latest device heartbeat expires'
 );
 select is(
   public.get_inventory_data_status() #>> '{data,game_data_state}',

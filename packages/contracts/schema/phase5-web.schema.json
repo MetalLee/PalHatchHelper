@@ -389,6 +389,7 @@
         "source_modified_at",
         "parser_name",
         "parser_version",
+        "last_heartbeat_at",
         "last_attempt_at",
         "error_code",
         "using_previous_snapshot",
@@ -411,6 +412,10 @@
         },
         "parser_name": { "type": ["string", "null"], "maxLength": 120 },
         "parser_version": { "type": ["string", "null"], "maxLength": 120 },
+        "last_heartbeat_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
         "last_attempt_at": {
           "type": ["string", "null"],
           "format": "date-time"

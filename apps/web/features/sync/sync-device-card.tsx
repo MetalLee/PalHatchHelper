@@ -262,7 +262,15 @@ export function SyncDeviceCard({
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {platformLabel(device.platform, t)} ·{" "}
-                    {device.app_version ?? t("versionUnknown")} ·{" "}
+                    {device.app_version ?? t("versionUnknown")}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {device.last_seen_at
+                      ? t("lastHeartbeat", {
+                          time: relativeTime(device.last_seen_at, locale),
+                        })
+                      : t("neverChecked")}{" "}
+                    ·{" "}
                     {device.last_snapshot_at
                       ? t("lastSnapshot", {
                           time: relativeTime(device.last_snapshot_at, locale),

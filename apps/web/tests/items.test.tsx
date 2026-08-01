@@ -156,7 +156,7 @@ describe("item inventory", () => {
     expect(screen.queryByText("raw-base-guid")).toBeNull();
     expect(screen.queryByText("item-nail")).toBeNull();
     expect(screen.queryByText("木材")).toBeNull();
-    expect(screen.getAllByText("可产出数量")).not.toHaveLength(0);
+    expect(screen.getAllByText("可制作数量")).not.toHaveLength(0);
     expect(screen.getByRole("img", { name: /钉子.*一小时/ })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /钉子/ }));

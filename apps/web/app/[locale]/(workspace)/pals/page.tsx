@@ -133,11 +133,11 @@ export default async function PalsPage({
   const passiveRanks = passiveRanksFromPage(page);
 
   const synchronizedAt =
-    summary.data_status.captured_at === null ? (
+    summary.data_status.last_heartbeat_at === null ? (
       t("noSync")
     ) : (
       <VisitorDateTime
-        value={summary.data_status.captured_at}
+        value={summary.data_status.last_heartbeat_at}
         locale={catalogLocale}
         options={{ dateStyle: "short", timeStyle: "short" }}
       />

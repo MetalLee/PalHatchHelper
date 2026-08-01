@@ -11,6 +11,7 @@ const baseStatus: InventoryDataStatus = {
   source_modified_at: "2026-07-25T01:07:30Z",
   parser_name: "palworld-save-tools",
   parser_version: "2.4.1",
+  last_heartbeat_at: "2026-07-25T01:12:00Z",
   last_attempt_at: "2026-07-25T01:08:10Z",
   error_code: null,
   using_previous_snapshot: false,
@@ -100,6 +101,7 @@ describe("data status dashboard", () => {
     expect(screen.getByText("信标状态")).toBeTruthy();
     expect(screen.getAllByText("数据同步正常").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("data-status-card")).toHaveLength(4);
+    expect(screen.getAllByText("最近检测").length).toBeGreaterThan(0);
     expect(screen.queryByText(/属性分布|库存趋势|计划趋势|热度图/)).toBeNull();
   });
 });

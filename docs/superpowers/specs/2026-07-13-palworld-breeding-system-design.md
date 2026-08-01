@@ -1,5 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
+- 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=completed
 - 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
 - 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1695,3 +1696,17 @@ Footer 和正文内部链接提供可抓取入口。
    五分钟采样及缺口、整页单请求与无 N+1、共享原料、替代配方、批量产出、禁止递归和配方环。
 4. 真实验收只使用原始存档的只读复制件和受控本地 Supabase。不得部署生产、修改 `/opt/palworld`、
    开放新公网端口、控制 Palworld/mihomo 容器或推送远程仓库，除非另行取得阶段批准。
+
+## 32. unchanged 心跳新鲜度与物品制作文案
+
+1. 公共 Sync 每次确认存档未变化后发送的 `unchanged` 心跳属于一次成功检测。已绑定世界的数据
+   新鲜度以未撤销同步设备最近心跳时间为准，不以存档最后修改时间代替；只有最近心跳超过既有
+   15 分钟阈值时才显示“已过期”。没有公共同步设备的既有世界继续使用原有安全回退语义。
+2. 浏览器安全状态投影显式返回可空的 `last_heartbeat_at`。顶部数据徽标、概览、帕鲁库存、物品
+   库存和数据状态页使用该值表达“最近检测”；有效快照捕获时间、存档修改时间与最近解析尝试继续
+   作为独立事实展示，不把未变化心跳伪装成一次新库存上传。
+3. 账号页同步设备同时展示最近检测时间与上次快照上传时间；在线状态继续由最近心跳和撤销状态
+   决定。中英文文案必须清楚区分 check/heartbeat 与 upload/snapshot。
+4. 物品库存列名“可产出数量”改为“可制作数量”，英文使用 `Craftable`；底层字段
+   `craftable_additional`、请求时确定性配方计算、配方合法性和数量均不改变。
+5. 本修订不改变五分钟采样、一小时曲线、“周期变化”的计算或展示语义。

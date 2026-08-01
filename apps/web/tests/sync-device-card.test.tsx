@@ -130,6 +130,27 @@ describe("SyncDeviceCard installation guidance", () => {
     expect(await screen.findByText(/^Linux x64 ·/)).toBeTruthy();
     expect(await screen.findByText(/^Windows x64 ·/)).toBeTruthy();
   });
+
+  it("shows the latest heartbeat separately from the latest uploaded snapshot", async () => {
+    const syncedDevice = {
+      ...device("linux-x64", "Heartbeat server"),
+      last_seen_at: new Date().toISOString(),
+      last_snapshot_at: "2026-07-30T00:00:00.000Z",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(response({ devices: [syncedDevice] })),
+    );
+
+    render(
+      <AppLocaleProvider locale="zh">
+        <SyncDeviceCard hasBinding />
+      </AppLocaleProvider>,
+    );
+
+    expect(await screen.findByText(/最近检测/)).toBeTruthy();
+    expect(screen.getByText(/上次上传/)).toBeTruthy();
+  });
 });
 
 function device(platform: string, name: string) {
