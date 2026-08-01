@@ -257,7 +257,14 @@ export async function LandingPage({
                 {t("heroEyebrow")}
               </p>
               <h1 className="mt-3 text-4xl font-bold tracking-[-0.045em] text-foreground text-balance sm:text-5xl lg:text-6xl lg:leading-[1.08]">
-                {t("heroTitle")}
+                {locale === "zh" ? (
+                  <>
+                    <span className="block">幻兽帕鲁</span>
+                    <span className="block">服务器控制台</span>
+                  </>
+                ) : (
+                  t("heroTitle")
+                )}
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground [text-wrap:pretty] sm:text-lg sm:leading-8">
                 {t("heroDescription")}

@@ -3,6 +3,7 @@ import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { SiteHeader } from "../components/layout/site-header";
+import { PalElementIcons } from "../components/pals/pal-element-icons";
 import { PalPortrait } from "../components/pals/pal-portrait";
 import { PassiveBadge } from "../components/pals/passive-badge";
 import { PageError } from "../components/states/page-error";
@@ -258,7 +259,7 @@ describe("Forest Healing design system", () => {
 
     const image = screen.getByRole("img", { name: "幻悦蝶头像" });
     expect(decodeURIComponent(image.getAttribute("src") ?? "")).toContain(
-      "/pal-assets/872e4a79af5b/pals/missing-pal.webp",
+      "/pal-assets/pals/missing-pal.webp",
     );
     fireEvent.error(image);
 
@@ -267,6 +268,15 @@ describe("Forest Healing design system", () => {
     ).toBeTruthy();
     expect(screen.getByText("#103")).toBeTruthy();
     expect(screen.queryByRole("img", { name: "幻悦蝶头像" })).toBeNull();
+  });
+
+  it("uses the stable element ID to load the local element icon", () => {
+    render(<PalElementIcons elementTypes={["Fire"]} />);
+
+    const elementIcon = screen.getByRole("img", { name: "火属性" });
+    expect(
+      decodeURIComponent(elementIcon.querySelector("img")?.src ?? ""),
+    ).toContain("/pal-assets/elements/fire.webp");
   });
 
   it("renders an accessible page error with a recovery action", () => {

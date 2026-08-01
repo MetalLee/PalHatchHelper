@@ -483,7 +483,7 @@ describe("pal inventory", () => {
     const portrait = screen.getByRole("img", { name: "棉悠悠头像" });
     expect(portrait.getAttribute("width")).toBe("56");
     expect(decodeURIComponent(portrait.getAttribute("src") ?? "")).toContain(
-      "/pal-assets/872e4a79af5b/pals/test_parent_a.webp",
+      "/pal-assets/pals/test_parent_a.webp",
     );
     fireEvent.error(portrait);
     expect(
