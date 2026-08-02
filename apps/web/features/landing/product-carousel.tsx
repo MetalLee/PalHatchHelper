@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChartNoAxesCombined,
   CircleDashed,
   ChevronLeft,
   ChevronRight,
@@ -11,7 +12,6 @@ import {
   Pause,
   Play,
   Search,
-  Sparkles,
   Users,
   UserRound,
   Venus,
@@ -24,7 +24,10 @@ import { PassiveBadge } from "@/components/pals/passive-badge";
 import { getCopy } from "@/i18n/client";
 import type { AppLocale } from "@/i18n/routing";
 import { palPortraitPath } from "@/lib/pal-assets";
+import { itemIconPath } from "@/lib/pal-assets";
 import { cn } from "@/lib/utils";
+
+import { ItemInventorySparkline } from "../items/item-inventory-sparkline";
 
 const AUTOPLAY_DELAY_MS = 6000;
 
@@ -71,7 +74,10 @@ export function ProductCarousel({ locale }: Readonly<{ locale: AppLocale }>) {
       content: <InventorySlide locale={locale} />,
     },
     { label: t("carouselRoute"), content: <RouteSlide locale={locale} /> },
-    { label: t("carouselPlans"), content: <PlansSlide locale={locale} /> },
+    {
+      label: t("carouselItems"),
+      content: <ItemMonitorSlide locale={locale} />,
+    },
   ];
 
   useEffect(() => {
@@ -533,107 +539,139 @@ function RouteSlide({ locale }: Readonly<{ locale: AppLocale }>) {
   );
 }
 
-function PlansSlide({ locale }: Readonly<{ locale: AppLocale }>) {
+function ItemMonitorSlide({ locale }: Readonly<{ locale: AppLocale }>) {
   const t = getCopy(locale, "Landing");
-  const passives = getPreviewPassives(locale);
-  const plans = [
+  const items = [
     {
-      id: "route-a",
-      palId: "bastet",
-      title: t("carouselPalMau"),
-      status: t("carouselPlanReady"),
-      saved: t("carouselPlanSaved"),
-      statusClass: "bg-emerald-100 text-emerald-800",
-      passives: [
-        passives.serious,
-        passives.artisan,
-        passives.lucky,
-        passives.nimble,
+      id: "wood",
+      name: t("carouselItemWood"),
+      quantity: 1248,
+      change: 64,
+      craftable: null,
+      trend: [
+        1120, 1136, 1148, 1152, 1176, 1184, 1196, 1208, 1212, 1220, 1232, 1184,
+        1248,
       ],
-      generations: "3",
-      steps: "4",
-      missing: "0",
     },
     {
-      id: "route-b",
-      palId: "jellyfishghost",
-      title: t("carouselPalJellroy"),
-      status: t("carouselPlanNeedsInventory"),
-      saved: t("carouselPlanSavedEarlier"),
-      statusClass: "bg-amber-100 text-amber-900",
-      passives: [
-        passives.artisan,
-        passives.lucky,
-        passives.serious,
-        passives.nimble,
-      ],
-      generations: "2",
-      steps: "3",
-      missing: "1",
+      id: "stone",
+      name: t("carouselItemStone"),
+      quantity: 864,
+      change: -32,
+      craftable: null,
+      trend: [928, 920, 912, 912, 904, 896, 888, 896, 888, 880, 872, 896, 864],
+    },
+    {
+      id: "cloth",
+      name: t("carouselItemCloth"),
+      quantity: 96,
+      change: 24,
+      craftable: 128,
+      trend: [72, 72, 80, 80, 88, 88, 80, 88, 96, 104, 104, 72, 96],
+    },
+    {
+      id: "fiber",
+      name: t("carouselItemFiber"),
+      quantity: 386,
+      change: 48,
+      craftable: null,
+      trend: [312, 320, 320, 328, 336, 344, 352, 360, 344, 352, 368, 338, 386],
+    },
+    {
+      id: "coal",
+      name: t("carouselItemCoal"),
+      quantity: 214,
+      change: -18,
+      craftable: null,
+      trend: [256, 248, 248, 240, 240, 232, 224, 232, 224, 224, 232, 232, 214],
     },
   ] as const;
   return (
-    <div className="grid gap-2.5">
-      {plans.map((plan) => (
-        <article
-          key={plan.id}
-          data-plan-card
-          data-pal-id={plan.palId}
-          className="overflow-hidden rounded-2xl border border-glass-border bg-white/92 shadow-soft"
-        >
-          <div className="flex min-w-0 items-center gap-3 p-3">
-            <Image
-              src={palPortraitPath(plan.palId)}
-              alt=""
-              width={48}
-              height={48}
-              className="size-12 shrink-0 rounded-2xl border border-white bg-white object-contain shadow-sm"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className={cn(
-                    "shrink-0 rounded-full px-2 py-1 text-[0.68rem] font-bold",
-                    plan.statusClass,
-                  )}
+    <div className="grid gap-3">
+      <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-border bg-white/88 px-3 text-sm text-muted-foreground shadow-sm">
+        <Search aria-hidden="true" className="size-4 shrink-0" />
+        <span className="truncate">{t("carouselItemSearch")}</span>
+        <span className="ml-auto shrink-0 rounded-lg bg-secondary px-2 py-1 text-xs font-bold text-secondary-foreground">
+          {t("carouselItemCount")}
+        </span>
+      </div>
+      <div className="grid gap-1.5">
+        {items.map((item) => {
+          const changeClass =
+            item.change > 0 ? "text-primary" : "text-destructive";
+          const change = `${item.change > 0 ? "+" : ""}${item.change.toLocaleString(locale)}`;
+          return (
+            <article
+              key={item.id}
+              data-item-monitor-row
+              data-item-id={item.id}
+              className="min-[480px]:min-h-[4.5rem] rounded-xl border border-glass-border bg-white/92 p-2 shadow-soft min-[480px]:p-3"
+            >
+              <div
+                data-item-monitor-content
+                className="grid min-w-0 grid-cols-[minmax(3.5rem,1fr)_2.5rem_2.4rem_2.4rem_3.75rem] items-center gap-1 min-[480px]:grid-cols-[minmax(8rem,1fr)_3.5rem_3.75rem_4rem_8rem] min-[480px]:gap-2"
+              >
+                <div className="flex min-w-0 items-center gap-1.5 min-[480px]:gap-2.5">
+                  <Image
+                    src={itemIconPath(item.id)}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="size-8 shrink-0 rounded-lg border border-border/70 bg-muted/45 object-contain shadow-xs min-[480px]:size-12 min-[480px]:rounded-xl"
+                  />
+                  <h3 className="truncate text-xs font-bold text-foreground min-[480px]:text-lg">
+                    {item.name}
+                  </h3>
+                </div>
+                <div className="min-w-0 text-right min-[480px]:pr-0.5">
+                  <p className="truncate text-[0.5rem] font-medium text-muted-foreground min-[480px]:text-[0.65rem]">
+                    {t("carouselItemQuantity")}
+                  </p>
+                  <p className="text-xs font-bold tabular-nums text-foreground min-[480px]:text-lg">
+                    {item.quantity.toLocaleString(locale)}
+                  </p>
+                </div>
+                <div className="min-w-0 text-right min-[480px]:pr-0.5">
+                  <p className="truncate text-[0.5rem] font-medium text-muted-foreground min-[480px]:text-[0.65rem]">
+                    {t("carouselItemPeriodChange")}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-xs font-bold tabular-nums min-[480px]:text-lg",
+                      changeClass,
+                    )}
+                  >
+                    {change}
+                  </p>
+                </div>
+                <div className="min-w-0 text-right min-[480px]:pr-0.5">
+                  <p className="truncate text-[0.5rem] font-medium text-muted-foreground min-[480px]:text-[0.65rem]">
+                    {t("carouselItemCraftable")}
+                  </p>
+                  <p className="text-xs font-bold tabular-nums text-foreground min-[480px]:text-lg">
+                    {Math.max(item.craftable ?? 0, 0).toLocaleString(locale)}
+                  </p>
+                </div>
+                <div
+                  data-item-monitor-chart
+                  className="min-w-0 w-[3.75rem] min-[480px]:w-32"
                 >
-                  {plan.status}
-                </span>
-                <span className="truncate text-[0.68rem] text-muted-foreground">
-                  {plan.saved}
-                </span>
+                  <ItemInventorySparkline
+                    label={t("carouselItemTrendAria", { item: item.name })}
+                    points={[...item.trend]}
+                    currentQuantity={item.quantity}
+                    locale={locale}
+                    className="h-8 min-w-0 rounded-md min-[480px]:h-12"
+                  />
+                </div>
               </div>
-              <h3 className="mt-1.5 truncate text-base font-bold text-foreground">
-                {plan.title}
-              </h3>
-            </div>
-          </div>
-          <div className="border-t border-border/60 px-3 py-2.5">
-            <p className="sr-only">{t("carouselPlanPassives")}</p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {plan.passives.map((passive) => (
-                <PassiveBadge
-                  key={passive.name}
-                  name={passive.name}
-                  rank={passive.rank}
-                  className="min-h-6 w-full justify-start px-2 py-0.5 text-[0.68rem]"
-                />
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-border/60 border-t border-border/60 bg-muted/35 py-2">
-            <CompactMetric
-              value={plan.generations}
-              label={t("carouselGenerations")}
-            />
-            <CompactMetric value={plan.steps} label={t("carouselSteps")} />
-            <CompactMetric value={plan.missing} label={t("carouselMissing")} />
-          </div>
-        </article>
-      ))}
-      <div className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 text-sm font-bold text-primary">
-        <Sparkles aria-hidden="true" className="size-4" />
-        {t("carouselPlanView")}
+            </article>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-3 py-2.5 text-xs font-semibold text-emerald-900">
+        <ChartNoAxesCombined aria-hidden="true" className="size-4 shrink-0" />
+        <span>{t("carouselItemHint")}</span>
       </div>
     </div>
   );

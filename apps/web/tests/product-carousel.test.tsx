@@ -57,7 +57,7 @@ describe("landing product carousel", () => {
         <ProductCarousel locale={locale} />,
       );
       const cards = container.querySelectorAll(
-        "[data-inventory-card], [data-route-node], [data-plan-card]",
+        "[data-inventory-card], [data-route-node]",
       );
 
       for (const card of cards) {
@@ -140,10 +140,12 @@ describe("landing product carousel", () => {
     expect(
       chikipiCard?.querySelector(".passive-badge")?.getAttribute("data-rank"),
     ).toBe("4");
-    expect(container.querySelectorAll("[data-plan-card]")).toHaveLength(2);
-    expect(getAllByText("公会库存")).toHaveLength(1);
+    expect(container.querySelectorAll("[data-item-monitor-row]")).toHaveLength(
+      5,
+    );
+    expect(getAllByText("公会帕鲁")).toHaveLength(1);
     expect(getAllByText("配种路线树")).toHaveLength(1);
-    expect(getAllByText("收藏计划")).toHaveLength(1);
+    expect(getAllByText("物品监控")).toHaveLength(1);
     expect(queryByText("PalBeacon 控制台")).toBeNull();
     expect(activeSlide(container)).toContain("棉悠悠");
 
@@ -195,7 +197,26 @@ describe("landing product carousel", () => {
     expect(activeSlide(container)).toContain("海月灵");
 
     fireEvent.click(getByRole("button", { name: "下一张" }));
-    expect(activeSlide(container)).toContain("刚刚收藏");
+    expect(activeSlide(container)).toContain("木材");
+    expect(activeSlide(container)).toContain("数量");
+    expect(activeSlide(container)).toContain("周期变化");
+    expect(activeSlide(container)).toContain("可制作数量");
+    expect(activeSlide(container)).not.toContain("—");
+    expect(
+      container.querySelectorAll(
+        '[data-carousel-slide][data-active="true"] [data-item-monitor-chart]',
+      ),
+    ).toHaveLength(5);
+    for (const row of container.querySelectorAll("[data-item-monitor-row]")) {
+      expect(
+        row.querySelector("[data-item-monitor-content]")?.className,
+      ).toContain(
+        "min-[480px]:grid-cols-[minmax(8rem,1fr)_3.5rem_3.75rem_4rem_8rem]",
+      );
+      expect(
+        row.querySelector("[data-item-monitor-chart]")?.className,
+      ).toContain("min-[480px]:w-32");
+    }
   });
 
   it("does not autoplay when reduced motion is requested", () => {

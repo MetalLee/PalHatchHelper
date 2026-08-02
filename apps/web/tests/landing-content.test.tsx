@@ -106,9 +106,12 @@ describe("localized public landing content", () => {
     expect(hero!.querySelectorAll("a")).toHaveLength(2);
     expect(hero!.textContent).not.toContain("了解存档同步");
     expect(container.querySelectorAll("[data-carousel-slide]")).toHaveLength(3);
-    expect(container.textContent).toContain("公会库存");
+    expect(container.textContent).toContain("公会帕鲁");
+    expect(container.textContent).toContain("物品库存变化");
+    expect(container.textContent).toContain("基地位置和数量");
+    expect(container.textContent).toContain("五分钟趋势");
     expect(container.textContent).toContain("配种路线树");
-    expect(container.textContent).toContain("收藏计划");
+    expect(container.textContent).toContain("物品监控");
     expect(container.textContent).toContain("npm install -g palbeacon-cli");
     expect(container.textContent).toContain("palbeacon init");
     expect(container.textContent).toContain("palbeacon run");
@@ -180,9 +183,12 @@ describe("localized public landing content", () => {
     expect(container.textContent).toContain("save");
     expect(container.textContent).toContain("guild");
     expect(container.querySelectorAll("[data-carousel-slide]")).toHaveLength(3);
-    expect(container.textContent).toContain("Guild inventory");
+    expect(container.textContent).toContain("Guild Pals");
+    expect(container.textContent).toContain("item inventory changes");
+    expect(container.textContent).toContain("base locations and quantities");
+    expect(container.textContent).toContain("five-minute trend");
     expect(container.textContent).toContain("Breeding route tree");
-    expect(container.textContent).toContain("Saved plans");
+    expect(container.textContent).toContain("Item monitoring");
     expect(main.getAllByText("palbeacon init").length).toBeGreaterThan(0);
     expect(main.getAllByText("palbeacon run").length).toBeGreaterThan(0);
     expect(main.getByText(/The complete save is not uploaded/)).toBeTruthy();
@@ -241,7 +247,7 @@ describe("localized public landing content", () => {
       name: string;
       acceptedAnswer: { text: string };
     }>;
-    expect(faq).toHaveLength(9);
+    expect(faq).toHaveLength(10);
     for (const item of faq) {
       expect(container.textContent).toContain(item.name);
       expect(container.textContent).toContain(item.acceptedAnswer.text);

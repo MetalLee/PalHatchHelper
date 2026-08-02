@@ -1,6 +1,7 @@
 import {
   ArrowDown,
   ArrowRight,
+  ChartNoAxesCombined,
   ChevronRight,
   Cloud,
   Database,
@@ -186,7 +187,7 @@ export async function LandingPage({
     navFaq: t("navFaq"),
     navConsole: t("navConsole"),
   };
-  const faqItems: LandingFaqItem[] = Array.from({ length: 9 }, (_, index) => {
+  const faqItems: LandingFaqItem[] = Array.from({ length: 10 }, (_, index) => {
     const number = [
       "One",
       "Two",
@@ -197,6 +198,7 @@ export async function LandingPage({
       "Seven",
       "Eight",
       "Nine",
+      "Ten",
     ][index]!;
     return {
       question: t(`faq${number}Question`),
@@ -218,6 +220,7 @@ export async function LandingPage({
   ] as const;
   const features = [
     [PackageSearch, t("inventoryTitle"), t("inventoryBody")],
+    [ChartNoAxesCombined, t("itemInventoryTitle"), t("itemInventoryBody")],
     [GitBranch, t("breedingTitle"), t("breedingBody")],
     [Sparkles, t("plansTitle"), t("plansBody")],
   ] as const;
@@ -397,7 +400,7 @@ export async function LandingPage({
               description={t("featuresDescription")}
             />
             <SystemFlow t={t} />
-            <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {features.map(([Icon, title, body]) => (
                 <article
                   key={title}

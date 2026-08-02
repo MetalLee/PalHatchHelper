@@ -1,6 +1,9 @@
 # PalHatch Helper 分阶段实施计划
 
 - 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
+- 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
+- 2026-08-02 Landing 轮播改为公会帕鲁与物品监控：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
+- 2026-08-02 Landing 物品监控紧凑单行布局：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=completed
 - 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
 - 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1389,6 +1392,38 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
    - 验证：`pnpm check && cd apps/agent && uv run pytest && cd ../.. && supabase test db && pnpm --filter @palhatch/web test:e2e`
 
 ## 跨阶段变更规则
+
+## 2026-08-02 跨阶段修订：Landing 物品监控紧凑单行布局
+
+1. 先以失败测试锁定五行固定物品预览、每行单一紧凑网格，以及 60px 趋势图宽度。
+2. 将物品监控每行改为图标/名称、数量、周期变化、可制作数量和趋势图同排，增加纤维与煤炭，
+   保留木材、石头、布料和合理的固定趋势数据。
+3. 运行轮播局部测试、Web format/lint/typecheck/test/build 与 `git diff --check`；不改真实库存页面、
+   数据库、同步协议、周期变化或可制作数量计算。
+4. 根据视觉验收，在 480px 以上放大物品图标、数值字体、行高和趋势图宽度，名称列占用剩余空间；
+   静态预览中的缺省可制作数量显示 `0`。用测试拒绝破折号并锁定扩展布局类。
+
+## 2026-08-02 跨阶段修订：Landing 轮播改为公会帕鲁与物品监控
+
+1. 先以轮播失败测试锁定页签“公会帕鲁”、第三屏“物品监控”、三行物品示例与每行趋势图；同时
+   保留已验收的固定配种路线和三屏自动播放/手动控制语义。
+2. 删除收藏计划轮播组件，改用本地 `wood`、`stone`、`cloth` 图标和双语名称。固定每行数量、
+   13 个五分钟趋势点、周期变化及可制作数量显示，仅作为公开静态预览。
+3. 复用物品页的 Sparkline 组件和图标路径，保证趋势图的可访问标签、响应式最小宽度与视觉语义；
+   不引入数据请求、不改动物品库存计算和周期变化函数。
+4. 运行受影响轮播测试、完整 Web format/lint/typecheck/test/build 与 `git diff --check`；不修改
+   数据库、同步协议、真实存档、生产环境或远程仓库。
+
+## 2026-08-02 跨阶段修订：Landing 物品库存趋势与基地数量介绍
+
+1. 先增加 Landing 与 SEO 失败测试，锁定中英文服务端正文包含物品库存变化、基地位置/数量与五分钟趋势，
+   且 Landing metadata 覆盖物品库存搜索词并保持英文描述长度约束。
+2. 最小扩展公开 Landing 的 Hero、认领引导、核心能力卡和 FAQ；核心能力区改为响应式四卡布局，
+   不增加客户端数据请求、私有数据、公开路由或产品承诺。
+3. 更新本地化 Landing metadata、Open Graph 文案、关键词、SoftwareApplication 描述和 FAQ JSON-LD，
+   使可见文本与结构化文本都反映当前真实的公会总量、基地数量和一小时五分钟趋势能力。
+4. 完成 Web 格式、lint、typecheck、完整单元测试、生产构建与 `git diff --check`；不修改物品采样、
+   周期变化、数据库、同步协议或生产环境。
 
 ## 2026-08-02 跨阶段修订：unchanged 心跳新鲜度与物品制作文案
 
