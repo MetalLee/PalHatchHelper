@@ -1,6 +1,9 @@
 # PalHatch Helper 第一版系统设计
 
 - 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
+- 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
+- 2026-08-02 Landing 轮播改为公会帕鲁与物品监控：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
+- 2026-08-02 Landing 物品监控紧凑单行布局：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=completed
 - 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
 - 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1710,3 +1713,38 @@ Footer 和正文内部链接提供可抓取入口。
 4. 物品库存列名“可产出数量”改为“可制作数量”，英文使用 `Craftable`；底层字段
    `craftable_additional`、请求时确定性配方计算、配方合法性和数量均不改变。
 5. 本修订不改变五分钟采样、一小时曲线、“周期变化”的计算或展示语义。
+
+## 33. Landing 物品库存趋势与基地数量介绍
+
+1. 公开首页以面向玩家的中英文文案说明已经实现的物品库存能力：素材与食物的公会总量、各基地
+   数量、最近一小时五分钟趋势，以及公会箱只计入总量而不归属某个基地。不得描述自动补货、生产
+   效率、服务器状态或其他未实现的监控能力。
+2. Hero、首次认领后的工作台引导、核心能力区和 FAQ 都应提及物品库存；能力区使用独立卡片说明
+   数量、基地位置与趋势的关系，并在小屏幕保持无横向溢出的响应式网格。
+3. 首页元数据、可见正文及 JSON-LD FAQ 保持一致。中英文 SEO 标题、描述和关键词应包含
+   `item inventory` / “物品库存”、趋势和基地库存等用户可搜索的表达；英文描述维持 120–160 字符。
+4. 本修订只变更公开 Landing、双语文案、SEO、测试和设计记录；不改数据库、物品采样、库存算法、
+   同步协议、真实存档或生产环境。
+
+## 34. Landing 轮播：公会帕鲁与物品监控
+
+1. 首页轮播的三个页签固定为“公会帕鲁 / 配种路线树 / 物品监控”（英文为 `Guild Pals / Breeding
+   route tree / Item monitoring`）。“公会库存”不得作为帕鲁列表的标题；“收藏计划”轮播内容移除。
+2. 物品监控页使用固定且合理的公开预览数据，不查询 Session、数据库或用户库存。它至少展示三个
+   可用本地物品图标、已本地化的物品名称、数量和最近一小时共 13 个五分钟趋势点；示例可以展示
+   周期变化与可制作数量，但不能伪装为玩家实时数据或推断生产效率。
+3. 示例物品使用真实本地资源对应的木材、石头和布料；数值与曲线须表达合理的补货、消耗及制作后
+   波动。小屏以紧凑行展示名称与数量，曲线必须可访问且不能横向溢出。
+4. 本修订只影响 Landing 轮播、双语消息、测试和设计记录，不改变物品库存查询、周期变化计算、
+   可制作数量算法、同步协议或任何生产数据。
+
+## 35. Landing 物品监控紧凑单行布局
+
+1. 物品监控轮播的每个预览物品必须在一行中同时呈现图标、名称、数量、周期变化、可制作数量与
+   最近一小时趋势。曲线采用紧凑固定宽度，名称可在极窄宽度截断，但不得将同一物品拆为两行或
+   产生横向溢出。
+2. 固定示例扩展至五种合理素材：木材、石头、布料、纤维和煤炭。所有条目仍使用本地图标与静态
+   13 点五分钟序列，不查询真实库存，也不改变数据采样/计算。
+3. 在轮播可用宽度达到 480px 时，每行使用更大的图标、文字、行高和 128px 趋势图；名称列获取剩余
+   宽度，避免在名称与数量间留出大片空白。可制作数量必须显示为非负整数，没有可制作配方时显示 `0`，
+   不使用破折号作为数值。

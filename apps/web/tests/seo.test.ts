@@ -8,11 +8,11 @@ const copy = vi.hoisted(() => ({
       keywords: "甲,乙",
     },
     LandingMetadata: {
-      title: "幻兽帕鲁服务器控制台｜存档同步与公会配种 - PalBeacon",
+      title: "幻兽帕鲁服务器控制台｜物品库存趋势与公会配种 - PalBeacon",
       description:
-        "PalBeacon 是幻兽帕鲁服务器控制台：只读同步服务器存档，集中查看个人与公会帕鲁库存，并协作规划可执行的多代配种路线。",
-      keywords: "幻兽帕鲁存档同步,帕鲁库存",
-      ogLineOne: "同步帕鲁存档",
+        "PalBeacon 是幻兽帕鲁服务器控制台：只读同步服务器存档，查看帕鲁与物品库存、数量和基地趋势，并协作规划多代配种路线。",
+      keywords: "幻兽帕鲁存档同步,帕鲁库存,帕鲁物品库存",
+      ogLineOne: "追踪物品库存趋势",
       ogLineTwo: "规划真正可执行的配种路线",
     },
     PublicContent: {
@@ -38,11 +38,12 @@ const copy = vi.hoisted(() => ({
       keywords: "one,two",
     },
     LandingMetadata: {
-      title: "Palworld Server Console | Save Sync & Guild Breeding - PalBeacon",
+      title:
+        "Palworld Server Console | Item Inventory Trends & Guild Breeding - PalBeacon",
       description:
-        "PalBeacon is a Palworld server console for read-only save sync, shared guild inventory, and collaborative multi-generation breeding plans.",
-      keywords: "Palworld save sync,Palworld inventory",
-      ogLineOne: "Sync your save",
+        "PalBeacon is a Palworld server console for read-only save sync, item inventory trends by base, guild inventory, and practical multi-generation breeding plans.",
+      keywords: "Palworld save sync,Palworld inventory,Palworld item inventory",
+      ogLineOne: "Track item inventory trends",
       ogLineTwo: "Build a breeding plan you can follow",
     },
     PublicContent: {
@@ -133,12 +134,16 @@ describe("public search metadata", () => {
     expect(description).not.toBe("");
     expect(description.length).toBeGreaterThanOrEqual(120);
     expect(description.length).toBeLessThanOrEqual(160);
+    expect(enMessages.LandingMetadata.keywords).toContain(
+      "Palworld item inventory",
+    );
     expect(chineseMetadata.description).toBe(
       zhMessages.LandingMetadata.description,
     );
     expect(zhMessages.LandingMetadata.description).toBe(
-      "PalBeacon 是幻兽帕鲁服务器控制台：只读同步服务器存档，集中查看个人与公会帕鲁库存，并协作规划可执行的多代配种路线。",
+      "PalBeacon 是幻兽帕鲁服务器控制台：只读同步服务器存档，查看帕鲁与物品库存、数量和基地趋势，并协作规划多代配种路线。",
     );
+    expect(zhMessages.LandingMetadata.keywords).toContain("帕鲁物品库存");
     expect(englishMetadata.alternates).toEqual({
       canonical,
       languages: {
