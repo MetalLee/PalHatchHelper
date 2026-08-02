@@ -1,5 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
+- 2026-08-03 物品库存列顺序与周期变化边界修订：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-02 Landing 轮播改为公会帕鲁与物品监控：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1748,3 +1749,14 @@ Footer 和正文内部链接提供可抓取入口。
 3. 在轮播可用宽度达到 480px 时，每行使用更大的图标、文字、行高和 128px 趋势图；名称列获取剩余
    宽度，避免在名称与数量间留出大片空白。可制作数量必须显示为非负整数，没有可制作配方时显示 `0`，
    不使用破折号作为数值。
+
+## 36. 物品库存列顺序与周期变化边界
+
+本节覆盖第 35 节中物品监控列顺序的旧约束。
+
+1. 真实物品库存列表与 Landing 物品监控预览统一按“数量、可制作数量、周期变化、最近一小时趋势”
+   的顺序展示；桌面表头、行内容、移动端字段标签和 Landing 响应式网格保持同一阅读顺序。
+2. 真实列表的“周期变化”只比较最近两个相邻且已采样的五分钟时间点。当前时间桶尚未采样而在
+   趋势数组尾部出现 `null` 时，使用尾部之前的最新有效点及其相邻前一点，不得因此显示为 `0`。
+3. 最近有效点的相邻前一点缺失或不存在时，周期变化显示中性 `—`，不得跨越采样缺口计算，也不得把
+   未知变化伪装为库存不变。该规则不改变五分钟采样、曲线、物品总量或可制作数量算法。

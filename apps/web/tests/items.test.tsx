@@ -52,6 +52,85 @@ function inventoryItem(
 }
 
 describe("item inventory", () => {
+  it("uses the latest two adjacent observed periods when the current bucket is pending", () => {
+    const item = inventoryItem("item-pending", "待采样物品", 12);
+    item.trend_1h = [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      8,
+      12,
+      null,
+    ];
+
+    render(
+      <ItemInventoryList
+        items={[item]}
+        baseLabels={{ "raw-base-guid": "基地A" }}
+        catalogLocale="zh-CN"
+      />,
+    );
+
+    expect(screen.getByText("+4")).toBeTruthy();
+  });
+
+  it("does not report a period change across a sampling gap", () => {
+    const item = inventoryItem("item-gap", "缺口物品", 12);
+    item.trend_1h = [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      8,
+      null,
+      12,
+      null,
+    ];
+
+    render(
+      <ItemInventoryList
+        items={[item]}
+        baseLabels={{ "raw-base-guid": "基地A" }}
+        catalogLocale="zh-CN"
+      />,
+    );
+
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("orders craftable quantity before period change", () => {
+    const { container } = render(
+      <ItemInventoryList
+        items={[inventoryItem("item-order", "顺序物品", 12)]}
+        baseLabels={{ "raw-base-guid": "基地A" }}
+        catalogLocale="zh-CN"
+      />,
+    );
+
+    const header = container.querySelector('[aria-hidden="true"]');
+    const labels = Array.from(header?.children ?? []).map(
+      (element) => element.textContent,
+    );
+    expect(labels.slice(0, 4)).toEqual([
+      "物品",
+      "公会总量",
+      "可制作数量",
+      "周期变化",
+    ]);
+  });
+
   it("uses themed positive and destructive colors for period changes", () => {
     const increased = inventoryItem("item-increased", "增加物品", 12);
     increased.trend_1h = [

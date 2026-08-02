@@ -208,10 +208,16 @@ describe("landing product carousel", () => {
       ),
     ).toHaveLength(5);
     for (const row of container.querySelectorAll("[data-item-monitor-row]")) {
+      const labels = Array.from(
+        row.querySelectorAll(
+          "[data-item-monitor-content] > div > p:first-child",
+        ),
+      ).map((label) => label.textContent);
+      expect(labels).toEqual(["数量", "可制作数量", "周期变化"]);
       expect(
         row.querySelector("[data-item-monitor-content]")?.className,
       ).toContain(
-        "min-[480px]:grid-cols-[minmax(8rem,1fr)_3.5rem_3.75rem_4rem_8rem]",
+        "min-[480px]:grid-cols-[minmax(8rem,1fr)_3.5rem_4rem_3.75rem_8rem]",
       );
       expect(
         row.querySelector("[data-item-monitor-chart]")?.className,

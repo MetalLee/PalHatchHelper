@@ -1,5 +1,6 @@
 # PalHatch Helper 分阶段实施计划
 
+- 2026-08-03 物品库存列顺序与周期变化边界修订：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-02 Landing 轮播改为公会帕鲁与物品监控：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1392,6 +1393,17 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
    - 验证：`pnpm check && cd apps/agent && uv run pytest && cd ../.. && supabase test db && pnpm --filter @palhatch/web test:e2e`
 
 ## 跨阶段变更规则
+
+## 2026-08-03 跨阶段修订：物品库存列顺序与周期变化边界
+
+1. 先增加 Web 失败测试，覆盖当前五分钟桶尚未采样时尾部 `null` 仍使用最近两个相邻有效点、采样
+   缺口显示 `—`，以及真实列表和 Landing 预览的列顺序。
+2. 最小修改物品列表周期变化的取点逻辑：从最后一个有效采样点向前比较相邻时间桶，不再以当前
+   总量减去固定排除最后一个槽位后的非空值。采样、数据库 RPC、共享契约与可制作数量计算保持不变。
+3. 在真实库存的桌面、移动布局和 Landing 单行网格中，将“可制作数量”置于“周期变化”之前；Landing
+   在 480px 以上同步调整两个数值列宽，保留原有无横向溢出与趋势图宽度要求。
+4. 运行受影响 Web 测试、格式、lint、strict typecheck、完整 Web 测试、生产构建与 `git diff --check`；
+   不修改真实存档、`/opt/palworld`、数据库、同步协议或生产环境。
 
 ## 2026-08-02 跨阶段修订：Landing 物品监控紧凑单行布局
 
