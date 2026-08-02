@@ -613,6 +613,11 @@ pals[]
    能从受控 fixture 证明仓库对公会开放时，`location_access_scope=guild`；私人仓库为
    `player`；格式未知或证据不足时为 `unresolved`，且不得自动进入其他玩家的公会共享池。
 10. 库存数量异常下降时进入待审核状态。
+11. 次元帕鲁仓库中的 `CharacterID` 若仅因 ASCII 字母大小写与同一快照中的普通库存拼写不同，
+    且两者按既有 Stable ID 规则得到相同 ID，Parser 可将其映射为同一帕鲁稳定 ID；每个实例的
+    原始拼写仍保留在审计元数据中。该兼容仅适用于次元仓库帕鲁 ID，不适用于普通库存之间、
+    被动或物品 ID，也不得接受 Unicode/NFKC 等非 ASCII 大小写差异，其他碰撞继续以
+    `GAME_ID_NORMALIZATION_COLLISION` 拒绝整批同步。
 
 默认异常下降阈值：新快照帕鲁总数低于上一有效快照的 50%，且绝对减少超过 50 只时，不自动发布。
 

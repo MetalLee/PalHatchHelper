@@ -210,6 +210,8 @@ const EN_MESSAGES: LocalizedMessages = {
     PARSER_BINARY_INVALID: "The bundled Parser executable is invalid.",
     PARSER_BINARY_HASH_MISMATCH:
       "The bundled Parser failed its integrity check.",
+    GAME_ID_NORMALIZATION_COLLISION:
+      "The save contains conflicting game IDs that differ only after normalization. PalBeacon skipped this attempt without replacing the last valid inventory.",
     UNKNOWN_ERROR: "Something went wrong. Try again later.",
   },
 };
@@ -298,6 +300,8 @@ const ZH_CN_MESSAGES: LocalizedMessages = {
     PARSER_MANIFEST_INVALID: "内置 Parser 清单无效。",
     PARSER_BINARY_INVALID: "内置 Parser 可执行文件无效。",
     PARSER_BINARY_HASH_MISMATCH: "内置 Parser 未通过完整性校验。",
+    GAME_ID_NORMALIZATION_COLLISION:
+      "存档包含规范化后冲突的游戏 ID；PalBeacon 已安全跳过本轮，不会替换上一份有效库存。",
     UNKNOWN_ERROR: "发生错误，请稍后重试。",
   },
 };

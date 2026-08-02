@@ -1437,6 +1437,16 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
 4. 完成 Web 格式、lint、typecheck、完整单元测试、生产构建与 `git diff --check`；不修改物品采样、
    周期变化、数据库、同步协议或生产环境。
 
+## 2026-08-03 跨阶段修订：次元仓库帕鲁 ID 大小写兼容
+
+1. 先用 Parser 失败测试复现普通库存 `ThunderDog_Ice` 与次元仓库 `Thunderdog_Ice` 的真实
+   ASCII 大小写差异，并锁定原始拼写审计字段保持不变。
+2. 只允许次元仓库 CharacterID 的 ASCII 大小写变体复用同一稳定 ID；普通库存、被动、物品及
+   Unicode/NFKC 碰撞继续失败关闭，不修改配种关系、目录事实或真实存档。
+3. CLI 为 `GAME_ID_NORMALIZATION_COLLISION` 增加可执行的中英文错误说明，避免降级为通用错误。
+4. 使用固定 Go 1.26.5 容器运行 Parser 测试与构建，并运行 Sync 格式、lint、typecheck、测试、
+   build 和包验证；发布 npm、部署生产或替换已安装 CLI 仍需单独批准。
+
 ## 2026-08-02 跨阶段修订：unchanged 心跳新鲜度与物品制作文案
 
 1. 先以 pgTAP 和 Web 失败测试锁定：旧存档修改时间但存在近期 `unchanged` 心跳时状态保持正常，

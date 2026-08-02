@@ -386,6 +386,37 @@ describe("command-line interface", () => {
     expect(runtime.removeSignalListener).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    [
+      "en" as const,
+      "This sync attempt failed: The save contains conflicting game IDs that differ only after normalization. PalBeacon skipped this attempt without replacing the last valid inventory.",
+    ],
+    [
+      "zh-CN" as const,
+      "本轮同步失败：存档包含规范化后冲突的游戏 ID；PalBeacon 已安全跳过本轮，不会替换上一份有效库存。",
+    ],
+  ])("explains stable ID collisions in %s", async (locale, expected) => {
+    const errors: string[] = [];
+    const sync = vi
+      .fn<RunRuntime["syncOnce"]>()
+      .mockRejectedValueOnce(new Error("GAME_ID_NORMALIZATION_COLLISION"))
+      .mockRejectedValueOnce(new DeviceAuthorizationError());
+    const runtime: RunRuntime = {
+      loadConfig: async () => config,
+      syncOnce: sync,
+      log: vi.fn(),
+      error: (message) => errors.push(message),
+      addSignalListener: vi.fn(),
+      removeSignalListener: vi.fn(),
+      wait: async () => undefined,
+    };
+
+    await expect(runContinuously(runtime, locale)).rejects.toBeInstanceOf(
+      DeviceAuthorizationError,
+    );
+    expect(errors).toEqual([expected]);
+  });
+
   it("documents the install-first user flow without operational internals", async () => {
     const readme = await readFile(
       new URL("../README.md", import.meta.url),
