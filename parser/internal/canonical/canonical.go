@@ -195,7 +195,7 @@ func Build(
 		}
 		sourcePalID := strings.TrimSpace(source.CharacterID)
 		isBoss := source.IsBoss || strings.HasPrefix(strings.ToLower(sourcePalID), "boss_")
-		palID, err := palIDs.mapID(sourcePalID)
+		palID, err := palIDs.mapID(sourcePalID, source.InDimensionalStorage)
 		if err != nil {
 			if err.Error() == "GAME_ID_NORMALIZATION_COLLISION" {
 				return Snapshot{}, nil, err
@@ -213,7 +213,7 @@ func Build(
 		passives := make([]string, 0, len(sourcePassives))
 		metadataPassives := make([]string, 0, len(sourcePassives))
 		for _, raw := range sourcePassives {
-			mapped, mapErr := passiveIDs.mapID(raw)
+			mapped, mapErr := passiveIDs.mapID(raw, false)
 			if mapErr != nil {
 				if mapErr.Error() == "GAME_ID_NORMALIZATION_COLLISION" {
 					return Snapshot{}, nil, mapErr
@@ -307,7 +307,7 @@ func Build(
 			continue
 		}
 		stackKeys[key] = source
-		itemID, err := itemIDs.mapID(strings.TrimSpace(source.ItemID))
+		itemID, err := itemIDs.mapID(strings.TrimSpace(source.ItemID), false)
 		if err != nil {
 			if err.Error() == "GAME_ID_NORMALIZATION_COLLISION" {
 				return Snapshot{}, nil, err
@@ -376,20 +376,56 @@ func normalizedItemInventoryStatus(value string) string {
 	}
 }
 
-type stableIDMap struct{ sourceByID map[string]string }
+type stableIDSource struct {
+	value                 string
+	allowASCIICaseVariant bool
+}
 
-func newStableIDMap() *stableIDMap { return &stableIDMap{sourceByID: map[string]string{}} }
+type stableIDMap struct{ sourceByID map[string]stableIDSource }
 
-func (m *stableIDMap) mapID(source string) (string, error) {
+func newStableIDMap() *stableIDMap {
+	return &stableIDMap{sourceByID: map[string]stableIDSource{}}
+}
+
+func (m *stableIDMap) mapID(source string, allowASCIICaseVariant bool) (string, error) {
 	stable, err := NormalizeStableID(source)
 	if err != nil {
 		return "", err
 	}
-	if previous, exists := m.sourceByID[stable]; exists && previous != source {
+	if previous, exists := m.sourceByID[stable]; exists && previous.value != source {
+		if (allowASCIICaseVariant || previous.allowASCIICaseVariant) &&
+			equalASCIICaseVariant(previous.value, source) {
+			return stable, nil
+		}
 		return "", fmt.Errorf("GAME_ID_NORMALIZATION_COLLISION")
 	}
-	m.sourceByID[stable] = source
+	m.sourceByID[stable] = stableIDSource{
+		value: source, allowASCIICaseVariant: allowASCIICaseVariant,
+	}
 	return stable, nil
+}
+
+func equalASCIICaseVariant(left, right string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range len(left) {
+		leftByte := left[index]
+		rightByte := right[index]
+		if leftByte == rightByte {
+			continue
+		}
+		if leftByte >= 'A' && leftByte <= 'Z' {
+			leftByte += 'a' - 'A'
+		}
+		if rightByte >= 'A' && rightByte <= 'Z' {
+			rightByte += 'a' - 'A'
+		}
+		if leftByte != rightByte || leftByte > 0x7f {
+			return false
+		}
+	}
+	return true
 }
 
 func boundedLevel(value int32, warnings warningSet) *int {

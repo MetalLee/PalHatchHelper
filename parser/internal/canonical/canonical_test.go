@@ -194,6 +194,79 @@ func TestStableIDCollisionFailsClosed(t *testing.T) {
 	}
 }
 
+func TestDimensionalStorageCharacterIDCaseVariantKeepsStableIDAndSourceEvidence(t *testing.T) {
+	world := &sav.World{Pals: []sav.Pal{
+		{InstanceID: "storage-pal", CharacterID: "ThunderDog_Ice", Gender: "male"},
+		{
+			InstanceID: "dimensional-pal", CharacterID: "Thunderdog_Ice", Gender: "female",
+			InDimensionalStorage: true, StorageOwnerUID: "player-1", SlotIndex: 50,
+		},
+	}}
+
+	snapshot, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Pals) != 2 {
+		t.Fatalf("unexpected Pal count: %d", len(snapshot.Pals))
+	}
+	byID := map[string]Pal{}
+	for _, pal := range snapshot.Pals {
+		byID[pal.InstanceUID] = pal
+	}
+	for _, instanceID := range []string{"storage-pal", "dimensional-pal"} {
+		if byID[instanceID].PalID != "thunderdog_ice" {
+			t.Fatalf("%s Pal ID = %q; want thunderdog_ice", instanceID, byID[instanceID].PalID)
+		}
+	}
+	if byID["storage-pal"].Metadata.SourceInternalName != "ThunderDog_Ice" ||
+		byID["dimensional-pal"].Metadata.SourceInternalName != "Thunderdog_Ice" {
+		t.Fatalf("source evidence was not preserved: %#v", byID)
+	}
+}
+
+func TestDimensionalStorageNFKCVariantStillFailsClosed(t *testing.T) {
+	world := &sav.World{Pals: []sav.Pal{
+		{InstanceID: "storage-pal", CharacterID: "Kelvin"},
+		{InstanceID: "dimensional-pal", CharacterID: "Ｋｅｌｖｉｎ", InDimensionalStorage: true},
+	}}
+
+	_, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+
+	if err == nil || err.Error() != "GAME_ID_NORMALIZATION_COLLISION" {
+		t.Fatalf("expected collision failure, got %v", err)
+	}
+}
+
+func TestDimensionalStorageCharacterIDCaseVariantIsOrderIndependent(t *testing.T) {
+	world := &sav.World{Pals: []sav.Pal{
+		{InstanceID: "dimensional-pal", CharacterID: "Thunderdog_Ice", InDimensionalStorage: true},
+		{InstanceID: "storage-pal", CharacterID: "ThunderDog_Ice"},
+	}}
+
+	_, _, err := Build(
+		world,
+		"fixture-world",
+		sav.ContainerFormat{Magic: "PlM", SaveType: 0x31},
+		time.Unix(0, 0),
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCanonicalItemStacksPreserveResolvedBaseOwnership(t *testing.T) {
 	world := &sav.World{
 		Bases: []sav.BaseCamp{{
