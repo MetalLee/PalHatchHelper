@@ -588,13 +588,6 @@ function ItemMonitorSlide({ locale }: Readonly<{ locale: AppLocale }>) {
   ] as const;
   return (
     <div className="grid gap-3">
-      <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-border bg-white/88 px-3 text-sm text-muted-foreground shadow-sm">
-        <Search aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">{t("carouselItemSearch")}</span>
-        <span className="ml-auto shrink-0 rounded-lg bg-secondary px-2 py-1 text-xs font-bold text-secondary-foreground">
-          {t("carouselItemCount")}
-        </span>
-      </div>
       <div className="grid gap-1.5">
         {items.map((item) => {
           const changeClass =
@@ -609,7 +602,7 @@ function ItemMonitorSlide({ locale }: Readonly<{ locale: AppLocale }>) {
             >
               <div
                 data-item-monitor-content
-                className="grid min-w-0 grid-cols-[minmax(3.5rem,1fr)_2.5rem_2.4rem_2.4rem_3.75rem] items-center gap-1 min-[480px]:grid-cols-[minmax(8rem,1fr)_3.5rem_3.75rem_4rem_8rem] min-[480px]:gap-2"
+                className="grid min-w-0 grid-cols-[minmax(3.5rem,1fr)_2.5rem_2.4rem_2.4rem_3.75rem] items-center gap-1 min-[480px]:grid-cols-[minmax(8rem,1fr)_3.5rem_4rem_3.75rem_8rem] min-[480px]:gap-2"
               >
                 <div className="flex min-w-0 items-center gap-1.5 min-[480px]:gap-2.5">
                   <Image
@@ -633,6 +626,14 @@ function ItemMonitorSlide({ locale }: Readonly<{ locale: AppLocale }>) {
                 </div>
                 <div className="min-w-0 text-right min-[480px]:pr-0.5">
                   <p className="truncate text-[0.5rem] font-medium text-muted-foreground min-[480px]:text-[0.65rem]">
+                    {t("carouselItemCraftable")}
+                  </p>
+                  <p className="text-xs font-bold tabular-nums text-foreground min-[480px]:text-lg">
+                    {Math.max(item.craftable ?? 0, 0).toLocaleString(locale)}
+                  </p>
+                </div>
+                <div className="min-w-0 text-right min-[480px]:pr-0.5">
+                  <p className="truncate text-[0.5rem] font-medium text-muted-foreground min-[480px]:text-[0.65rem]">
                     {t("carouselItemPeriodChange")}
                   </p>
                   <p
@@ -642,14 +643,6 @@ function ItemMonitorSlide({ locale }: Readonly<{ locale: AppLocale }>) {
                     )}
                   >
                     {change}
-                  </p>
-                </div>
-                <div className="min-w-0 text-right min-[480px]:pr-0.5">
-                  <p className="truncate text-[0.5rem] font-medium text-muted-foreground min-[480px]:text-[0.65rem]">
-                    {t("carouselItemCraftable")}
-                  </p>
-                  <p className="text-xs font-bold tabular-nums text-foreground min-[480px]:text-lg">
-                    {Math.max(item.craftable ?? 0, 0).toLocaleString(locale)}
                   </p>
                 </div>
                 <div

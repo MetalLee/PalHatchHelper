@@ -16,19 +16,31 @@ import { itemIconPath } from "@/lib/pal-assets";
 
 import { ItemInventorySparkline } from "./item-inventory-sparkline";
 
-function periodChange(item: GuildItemInventoryItem): number {
-  const previousQuantity = item.trend_1h
-    .slice(0, -1)
-    .findLast((quantity): quantity is number => quantity !== null);
+function periodChange(item: GuildItemInventoryItem): number | null {
+  const latestObservedIndex = item.trend_1h.findLastIndex(
+    (quantity) => quantity !== null,
+  );
+  if (latestObservedIndex < 1) return null;
 
-  return previousQuantity === undefined ? 0 : item.quantity - previousQuantity;
+  const latestQuantity = item.trend_1h[latestObservedIndex];
+  const previousQuantity = item.trend_1h[latestObservedIndex - 1];
+  if (
+    typeof latestQuantity !== "number" ||
+    typeof previousQuantity !== "number"
+  ) {
+    return null;
+  }
+
+  return latestQuantity - previousQuantity;
 }
 
-function formatPeriodChange(change: number, locale: string): string {
+function formatPeriodChange(change: number | null, locale: string): string {
+  if (change === null) return "—";
   return `${change > 0 ? "+" : ""}${change.toLocaleString(locale)}`;
 }
 
-function periodChangeTone(change: number): string {
+function periodChangeTone(change: number | null): string {
+  if (change === null) return "text-muted-foreground";
   if (change > 0) return "text-primary";
   if (change < 0) return "text-destructive";
   return "text-foreground";
@@ -127,8 +139,8 @@ export function ItemInventoryList({
       >
         <span>{t("item")}</span>
         <span className="text-right">{t("quantity")}</span>
-        <span className="text-right">{t("periodChange")}</span>
         <span className="text-right">{t("craftableAmount")}</span>
+        <span className="text-right">{t("periodChange")}</span>
         <span>{t("trend1h")}</span>
         <span>{t("distribution")}</span>
         <span />
@@ -163,22 +175,22 @@ export function ItemInventoryList({
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="text-[11px] text-muted-foreground sm:hidden">
-                      {t("periodChange")}
-                    </p>
-                    <p
-                      className={`text-lg font-bold tabular-nums ${periodChangeTone(change)}`}
-                    >
-                      {formatPeriodChange(change, catalogLocale)}
-                    </p>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-[11px] text-muted-foreground sm:hidden">
                       {t("craftableAmount")}
                     </p>
                     <p className="text-lg font-bold tabular-nums text-foreground">
                       {item.capacity?.craftable_additional.toLocaleString(
                         catalogLocale,
                       ) ?? "—"}
+                    </p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-[11px] text-muted-foreground sm:hidden">
+                      {t("periodChange")}
+                    </p>
+                    <p
+                      className={`text-lg font-bold tabular-nums ${periodChangeTone(change)}`}
+                    >
+                      {formatPeriodChange(change, catalogLocale)}
                     </p>
                   </div>
                   <ItemInventorySparkline
