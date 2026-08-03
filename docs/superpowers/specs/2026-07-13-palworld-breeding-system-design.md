@@ -1,15 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 2026-08-03 账号邮箱、活动服务器成员与邀请绑定修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
-- 2026-08-03 物品库存列顺序与周期变化边界修订：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
-- 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-02 Landing 轮播改为公会帕鲁与物品监控：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-02 Landing 物品监控紧凑单行布局：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=completed
-- 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
-- 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 文档状态：已完成设计评审；2026-07-30 Landing 轮播真实名称与配方修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户语言、目录 ID 隐藏、卡片密度/阴影与视口分页修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订、Boss/公会库存修订和库存位置/次元帕鲁仓库修订已批准；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
+- 修订状态：截至 2026-08-03，全部修订 design=approved 且自动化门禁通过。implementation：2026-07-28 中英文 i18n 与 2026-07-31 Catalog 2.0、物品库存与递归配方标注 in_progress（Catalog 2.0 仍在实施；i18n 已被后续双语修订依赖）、其余 completed；production_deploy：2026-07-27 路线语义去重、2026-07-24 库存位置/次元帕鲁仓库、2026-08-01 存档载荷保留/公会箱/请求时产量/五分钟行内趋势、Phase 6 已完成，其余（含 2026-08-02/08-03 全部修订）not_started。完整修订索引见实施计划文档。
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -1730,8 +1721,6 @@ Footer 和正文内部链接提供可抓取入口。
    数量、基地位置与趋势的关系，并在小屏幕保持无横向溢出的响应式网格。
 3. 首页元数据、可见正文及 JSON-LD FAQ 保持一致。中英文 SEO 标题、描述和关键词应包含
    `item inventory` / “物品库存”、趋势和基地库存等用户可搜索的表达；英文描述维持 120–160 字符。
-4. 本修订只变更公开 Landing、双语文案、SEO、测试和设计记录；不改数据库、物品采样、库存算法、
-   同步协议、真实存档或生产环境。
 
 ## 34. Landing 轮播：公会帕鲁与物品监控
 
@@ -1742,8 +1731,6 @@ Footer 和正文内部链接提供可抓取入口。
    周期变化与可制作数量，但不能伪装为玩家实时数据或推断生产效率。
 3. 示例物品使用真实本地资源对应的木材、石头和布料；数值与曲线须表达合理的补货、消耗及制作后
    波动。小屏以紧凑行展示名称与数量，曲线必须可访问且不能横向溢出。
-4. 本修订只影响 Landing 轮播、双语消息、测试和设计记录，不改变物品库存查询、周期变化计算、
-   可制作数量算法、同步协议或任何生产数据。
 
 ## 35. Landing 物品监控紧凑单行布局
 

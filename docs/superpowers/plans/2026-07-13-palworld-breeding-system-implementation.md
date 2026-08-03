@@ -1,16 +1,7 @@
 # PalHatch Helper 分阶段实施计划
 
-- 2026-08-03 账号邮箱、活动服务器成员与邀请绑定修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
-- 2026-08-03 物品库存列顺序与周期变化边界修订：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
-- 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-02 Landing 轮播改为公会帕鲁与物品监控：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-02 Landing 物品监控紧凑单行布局：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
-- 2026-08-01 存档载荷保留、公会箱、请求时产量与五分钟行内趋势修订：design=approved、implementation=completed、production_deploy=completed
-- 2026-07-31 Catalog 2.0、物品库存与递归配方修订：design=approved、implementation=in_progress、production_deploy=not_started
-- 修订状态：2026-07-31 公共 Sync 世界身份、存档发现与公会有效性修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
+- 修订状态：截至 2026-08-03，全部修订 design=approved 且自动化门禁通过。implementation 除 2026-07-31 Catalog 2.0、物品库存与递归配方（in_progress，见文末对应章节）外均 completed；production_deploy 除 2026-07-27 路线语义去重、2026-07-24 库存位置/次元帕鲁仓库、2026-08-01 存档载荷保留/公会箱/请求时产量/五分钟行内趋势、Phase 6 已完成外，其余（含 2026-08-02/08-03 全部修订）not_started。已完成修订在本计划中只保留一行索引，内容已并入正式规格；正式规格是唯一需求来源。
 - 日期：2026-07-13
-- 状态：2026-07-30 Landing 轮播真实名称与配方修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-30 公开双语首页与搜索引擎收录修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 顶部品牌、数据徽标与 GitHub 入口修订 design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started；2026-07-29 未绑定引导、Steam 头像与导航收口修订 design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 中英文 i18n 与语言路由修订 design=approved、implementation=in_progress、production_deploy=not_started；2026-07-28 全局被动单排交替三角纹理修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 已选被动定宽与计划卡片左对齐修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 计划网格与配种被动布局修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 配种工作台目标与被动布局、五代上限和 Phase 5 验收提速修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-28 我的计划与配种路线视觉收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 配种工作台创建页聚焦与被动效果说明修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 全局被动品级视觉与库存被动多选修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 帕鲁库存用户体验收口修订 implementation=completed、affected_automated_gates=passed、production_deploy=not_started；2026-07-27 路线语义去重、2000+ 库存容量与“我的计划”收藏化修订 implementation=completed、automated_gates=passed、production_deploy=completed；2026-07-24 库存快照 24 小时保留修订 implementation=completed、automated_gates=passed、production_deploy=not_started；Boss/公会库存修订 implementation=completed、automated_gates=passed；库存位置/次元帕鲁仓库修订 implementation=completed、automated_gates=passed、production_deploy=completed；Phase 4 implementation=completed、automated_gates=passed、real_data_acceptance=completed、local_test_publish=completed、production_publish=not_started；Phase 5 implementation=completed、automated_gates=passed；Phase 6 implementation=completed、automated_gates=passed、local_integration=completed、production_deploy=completed
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
 
@@ -386,13 +377,9 @@
 
 ## Phase 4：配种数据版本和确定性配种算法
 
-### 当前进度（2026-07-16）
+### 当前进度
 
-- Phase 4A/4B 仅作为实现检查点，不改变本节的统一验收范围。
-- 已完成受审计来源入口、精确基础目录/provenance 绑定、六类非配种事实发布门禁、确定性两层搜索、实例分配、候选物理去重、四模式全候选池排名和完整评分明细。
-- 数据库已启用与引擎一致的四套 v2 评分配置；真实本地 Claim 必须经精确 published 目录、content hash、world 和固定库存快照校验后才能进入引擎。
-- Build `24181105` 的真实七类目录已完成人工批准、本地测试 world 发布、回滚与恢复演练；Phase 4 的 `real_data_acceptance`、`local_test_publish` 和后续 Phase 8 生产发布均已完成。
-- 2026-07-20 追加库存感知修订：目标路线必须支持 `ready/needs_inventory` 分层、缺失父母需求、真实库存覆盖率、禁止目标零步完成、增量保留有界搜索候选，并升级算法与评分版本；历史固定结果保持不变。
+- Phase 4A/4B 仅作为实现检查点，不改变本节的统一验收范围。已完成受审计来源入口、确定性两层搜索、实例分配、候选物理去重、四模式全候选池排名与完整评分明细；Build `24181105` 真实七类目录已完成人工批准、本地测试 world 发布与回滚/恢复演练，`real_data_acceptance`、`local_test_publish` 与后续 Phase 8 生产发布均已完成。2026-07-20 追加库存感知修订（`ready/needs_inventory` 分层、缺失父母需求、真实库存覆盖率、禁止目标零步完成、增量保留有界候选）已并入规格 §11；历史固定结果保持不变。
 
 ### 阶段目标
 
@@ -466,15 +453,9 @@
 
 ## Phase 5：登录、概览和帕鲁列表
 
-### 当前进度（2026-07-15）
+### 当前进度
 
-- `implementation=completed`、`automated_gates=passed`；并行交付边界已由 `docs/decisions/0005-phase5-parallel-delivery-boundary.md` 批准。
-- 独立使用 Phase 1 RLS/RPC、Phase 3 脱敏库存以及本地或预览 Supabase。
-- 不要求也不得绕过 Phase 4 的真实数据人工验收和生产发布门禁。
-- 2026-07-27 概览页信息层级精简为 Hero、最近收藏与数据状态；库存统计保留在帕鲁列表页，概览不再为已删除卡片发起库存分页 RPC。
-- 2026-07-27 全局数据状态提示收敛到桌面/移动导航入口和 `/data-status` 详情；概览、库存与配种器只保留中性快照/版本事实，不重复展示过期或解析异常告警。
-- 2026-07-27 桌面导航改为固定选中框与独立水平滑动 Hover 框，统一无边框强调色和果冻反馈；库存入口统一使用爪印图标，首页收藏项目补充 Hover/焦点反馈。
-- 2026-07-27 帕鲁库存用户语言、目录内部 ID 隐藏、紧凑指标卡、统一卡片阴影和视口分页修订已批准，按本计划末尾跨阶段修订顺序交付。
+- `implementation=completed`、`automated_gates=passed`；并行交付边界已由 `docs/decisions/0005-phase5-parallel-delivery-boundary.md` 批准。独立使用 Phase 1 RLS/RPC、Phase 3 脱敏库存与本地/预览 Supabase，不得绕过 Phase 4 真实数据人工验收和生产发布门禁。2026-07-27 起概览、导航、数据状态与库存页修订已并入规格 §17，按文末修订索引交付。
 
 ### 阶段目标
 
@@ -545,9 +526,9 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 ## Phase 6：配种器、异步任务和路线比较
 
-### 当前状态（2026-07-16）
+### 当前状态
 
-- Phase 4 `real_data_acceptance=completed` 且 `local_test_publish=completed`；Phase 6 `implementation=completed`、`automated_gates=passed`、`local_integration=completed`、`production_deploy=completed`。生产发布由 Phase 8 受控流程完成。
+- Phase 6 `implementation=completed`、`automated_gates=passed`、`local_integration=completed`、`production_deploy=completed`（生产发布由 Phase 8 受控流程完成）；依赖的 Phase 4 `real_data_acceptance=completed`、`local_test_publish=completed`。
 
 ### 阶段目标
 
@@ -692,635 +673,115 @@ Vercel 回滚上一预览/生产构建；数据库无破坏性变化，功能路
 
 ## 2026-07-28 跨阶段修订：中英文 i18n 与语言路由
 
-### 交付顺序
-
-1. 更新正式规格、本计划与 ADR，固定 `/zh`、`/en` 顶层动态语言段、UI/游戏内容分层、历史结果
-   回退和语言选择器交互。
-2. 增加失败测试，覆盖无前缀地址重定向、locale 鉴权、查询参数保留、API/静态资源排除、消息键
-   完整性、语言切换器位置与键盘语义；确认失败来自当前无语言段和硬编码中文行为。
-3. 引入 `next-intl`，建立 locale 配置、请求消息与导航封装；将所有页面迁入 `app/[locale]`，组合
-   现有 Supabase middleware，保留 API 无前缀和私有缓存边界。
-4. 按 Auth、Shell、Overview、Pals、Breeder、Plans、Data Status、Account、Admin 命名空间迁移
-   全部 UI、Metadata、ARIA、日期、数字和状态文案；页面链接、表单 action、客户端导航和动态 URL
-   统一保留 locale。
-5. 追加前向数据库迁移，为库存分页、任务详情和收藏列表增加显式 locale 的新版本 RPC；已有
-   `get_breeder_form_context` 传入映射后的目录 locale。共享 Schema 更新后重新生成 TS/Python 与
-   Database 类型，不在两端复制 DTO。
-6. 新目录发布门禁校验中英文玩家可见键覆盖；历史版本不修改，当前语言缺失时使用中性降级且
-   不泄露稳定内部 ID。搜索只匹配当前语言名称和图鉴编号。
-7. AI 请求、模板和展示记录语言；标签使用稳定代码。历史自由文本语言不匹配时用相同路线事实
-   生成当前语言模板，不重复运行算法、不改变配方或评分。
-8. 开发中每层只运行一次失败基线与一次局部验证；最终状态运行一次根 `pnpm check`、完整
-   Supabase 测试、受影响中英文桌面/移动浏览器流程和 `git diff --check`，聚合命令覆盖的检查
-   不再单独重复。
-
-### 回滚与生产约束
-
-- 数据库只追加新 RPC/列/约束，旧 RPC 与历史物化任务保持可读；Web 回滚继续使用旧无 locale
-  接口。目录、算法、评分、库存快照、真实存档和 `/opt/palworld` 不修改。
-- 新增的唯一生产依赖是经本修订批准的 `next-intl`；不新增公网端口，不访问生产凭证，不执行
-  生产部署或远程推送。生产发布仍需单独明确批准。
-- 部署时顺序为向前数据库迁移、兼容 Agent、Web；任一门禁失败停止，不让新 Web 调用尚未存在的
-  locale-aware RPC。
+- 已完成；内容并入正式规格 §17.13、§26。唯一新增生产依赖 `next-intl`（已批准）。
 
 ## 2026-07-28 跨阶段修订：全局被动单排交替三角纹理
 
-### 交付顺序
-
-1. 更新正式规格与本计划，明确所有全局被动徽标只使用一排跨越完整徽标高度、朝向交替的三角
-   纹理；rank 色板、文字对比、负面语义和业务事实保持不变。
-2. 增加失败测试，锁定纹理由顶边与底边交替锚定、水平重复且不再使用徽标垂直中心作为共同原点。
-3. 最小修改全局 `.passive-badge::before` CSS；不修改 `PassiveBadge` 组件、调用方、外部资产或
-   数据契约。
-4. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次 Web 格式、lint、typecheck、
-   完整 test、build、Phase 6 浏览器纹理验证和 `git diff --check`。
-
-### 回滚与生产约束
-
-- 本修订只修改规格、计划、全局 Web CSS 和测试，不修改数据库、共享 Schema、算法、评分、库存、
-  真实存档或 `/opt/palworld`，不新增依赖、公网端口、远程推送或生产部署。
-- 应用回滚恢复上一 Web 构建即可；所有被动事实和已有物化路线不受影响。
-
-### 完成验证
-
-- 失败基线：纹理相关 2 项测试中 1 项按预期失败，锁定旧 `50% 50%` 中心原点产生的上下两排；
-  另一项既有 Tailwind source 检查通过。
-- 局部验证：同一组 2 项全部通过。
-- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 112 项测试和 Next.js 生产构建
-  全部通过；Phase 6 浏览器纹理流程 1 项通过。
-- 当前环境使用 Node.js 26.3.0，仓库声明为 Node.js 22.x；命令只产生 engine warning。浏览器
-  fixture 缺少测试帕鲁图片并使用既有降级展示，不影响纹理断言。
+- 已完成；内容并入正式规格 §17.5。
 
 ## 2026-07-28 跨阶段修订：已选被动定宽与计划卡片左对齐
 
-### 交付顺序
-
-1. 更新正式规格与本计划，固定已选被动每列 20rem 上限和窄屏收缩、计划卡片紧凑左对齐网格、
-   零至两个目标被动预留第二行以及底部入口对齐；数据库、共享契约、配种事实和算法保持不变。
-2. 增加失败测试，覆盖已选被动列宽规则、计划网格左对齐与紧凑间距、被动区两行预留和卡片底部
-   入口布局；失败必须来自现有等分拉伸、居中网格和内容高度随被动数量变化的真实行为。
-3. 最小修改 `PassiveSkillPicker` 与 `PlanList`；复用帕鲁列表的紧凑网格间距，保留 32rem 卡片
-   上限、被动品级视觉、44 像素移除点击区和移动端无横向滚动行为。
-4. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次 Web 格式、lint、typecheck、
-   完整 test、build、受影响 Phase 6/7 浏览器验证和 `git diff --check`，不重复聚合命令已覆盖的检查。
-
-### 回滚与生产约束
-
-- 本修订只修改规格、计划和 Web 展示，不修改数据库迁移、共享 Schema、算法、评分、库存快照、
-  真实存档或 `/opt/palworld`，不新增依赖、公网端口、远程推送或生产部署。
-- 应用回滚恢复上一 Web 构建即可；收藏关系、任务、物化路线和版本审计不受影响。
-
-### 完成验证
-
-- 失败基线：计划与配种器相关 43 项测试中 2 项按预期失败，分别锁定旧的等分拉伸已选被动列和
-  居中计划网格；其余 41 项通过。
-- 局部验证：同一组 43 项全部通过；随后补充零、一、两个被动统一预留两行的边界覆盖。
-- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 111 项测试和 Next.js 生产构建
-  全部通过；受影响 Phase 6/7 浏览器流程 2 项通过。
-- 当前环境使用 Node.js 26.3.0，仓库声明为 Node.js 22.x；命令只产生 engine warning。浏览器
-  fixture 缺少测试帕鲁图片并使用既有降级展示，不影响流程与布局断言。
+- 已完成；内容并入正式规格 §17.6、§17.8。
 
 ## 2026-07-28 跨阶段修订：计划网格与配种被动布局
 
-### 交付顺序
-
-1. 更新正式规格与本计划，固定计划卡片紧凑居中网格、已选被动等分自适应宽度、候选徽标固定
-   20rem 宽度和删除一键清空操作；数据库、共享契约、配种事实和算法保持不变。
-2. 增加失败测试，覆盖计划卡片使用自动适配的 32rem 网格、配种页不存在清空按钮、已选徽标
-   两列等宽且高度固定、候选徽标不随名称长度变化，以及逐项移除图标保持清晰对比。
-3. 最小修改 `PlanList`、`PassiveSkillPicker` 和局部徽标样式；已选徽标在窄屏随网格列收缩，候选
-   徽标在可用宽度不足 20rem 时降为 100%，不改变全局 rank 品级视觉。
-4. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次 Web 格式、lint、typecheck、
-   完整 test、build、受影响浏览器验证和 `git diff --check`，不重复聚合命令已覆盖的检查。
-
-### 回滚与生产约束
-
-- 本修订只修改规格、计划和 Web 展示，不修改数据库迁移、共享 Schema、算法、评分、库存快照、
-  真实存档或 `/opt/palworld`，不新增依赖、公网端口或生产部署。
-- 应用回滚恢复上一 Web 构建即可；收藏关系、任务和物化路线不受影响。
-
-### 完成验证
-
-- 失败基线：计划与配种器相关 43 项测试中 2 项按预期失败，分别锁定旧两列分散网格和旧被动
-  定宽/清空行为；修正一次无效 ARIA 定位后，被动测试由缺少候选固定宽度类真实失败。
-- 局部验证：同一组 43 项测试全部通过。
-- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 110 项测试和 Next.js 生产构建
-  全部通过；首次并行 typecheck 与 build 因 `.next/types` 重建竞态失败，构建完成后只重跑该失败
-  检查并通过。
-- 浏览器验证：首次全套运行因已有进程占用 3000、开发服务器切换到 3001 而访问了错误端口；改用
-  独立端口后，受影响 Phase 6/7 共 2 项通过，覆盖候选徽标等宽/320px 上限、已选徽标填满网格列、
-  28px 固定高度、无清空按钮及收藏路线流程。
+- 已完成；内容并入正式规格 §17.8。
 
 ## 2026-07-28 跨阶段修订：配种工作台目标与被动布局、五代上限和 Phase 5 验收提速
 
-### 交付顺序
-
-1. 更新正式规格与本计划，固定已选目标层级、被动两列布局、十字宽度、一行三角纹理、新请求
-   五代上限、历史结果兼容和 Phase 5 浏览器验收的最小关键闭环。
-2. 增加一次失败测试，覆盖 72 像素已选目标头像、重复被动标题消失、已选被动两列且不拉伸、
-   配种页徽标固定宽度、六代新请求/新设置被 Web、共享契约和数据库拒绝。
-3. 最小修改配种器组件与全局被动纹理；不改变 rank、负面事实、配方、算法评分或历史路线载荷。
-4. 请求 Schema 与 Agent 搜索输入上限改为五，结果投影继续接受历史八代数据；追加前向数据库
-   迁移保护新任务和新运行设置，不编辑已应用迁移。
-5. Phase 5 浏览器验收删除纯样式与已有单元/pgTAP 覆盖的重复场景，把库存范围、被动 AND、
-   分页和共享合并为一个玩家主流程；保留登录错误、未绑定、移动端无横向滚动、隐私边界、
-   Phase 6–8 核心流程。运行前保留一次数据库重置，删除验收结束后的重复全库重置。
-6. 开发中只运行一次失败基线和一次受影响局部验证；最终状态运行一次根 `pnpm check`、完整
-   Supabase 测试、精简后的 Phase 5 browser acceptance 与 `git diff --check`，不重复聚合命令
-   已覆盖的检查。
-
-### 回滚与生产约束
-
-- Web 与验收脚本可随应用回滚；数据库只追加写入保护，历史任务、路线和设置版本不原地修改。
-- 不修改真实存档、配种关系、评分、`/opt/palworld`、Palworld/mihomo 容器或公网端口。
-- 提交、PR、合并与远程推送按本次用户明确授权执行；不执行 Vercel、Supabase 或 Agent 生产部署。
-
-### 完成验证
-
-- 失败基线以单个 Web 用例确认重复标题仍存在；实现后 Web 受影响 43 项与契约受影响 9 项通过。
-- 本地 Supabase 从空库重放全部迁移，schema lint 无错误，18 个 pgTAP 文件共 400 项通过。
-- 根聚合检查的格式、lint、类型、110 项 Web 测试、30 项契约测试和生产构建通过；Agent 相关
-  运行设置测试修正后 2 项通过。当前机器缺少 `gcc`，3 个既有 Oodle ABI 临时 shim 测试无法
-  建立；其余 236 项 Agent 测试通过、4 项跳过，该环境限制交由 GitHub CI 覆盖。
-- 精简后的 browser acceptance 从 16 个场景减少为 12 个；首次运行 10 项通过、1 项因合并流程
-  缺少清除筛选而失败、1 项跳过，只修正并重跑该失败场景后通过。Phase 6 的 72 像素头像、
-  两列徽标、单行纹理和五代输入浏览器断言已在首次运行通过。
+- 已完成；新请求五代上限与历史八代结果只读兼容已并入正式规格 §17.6，Phase 5 浏览器验收精简见规格 §20.3。
 
 ## 2026-07-28 跨阶段修订：我的计划与配种路线视觉收口
 
-### 交付顺序
-
-1. 先更新正式规格和本计划，固定玩家语言、计划卡片密度、Hero/登录背景精简、计划详情层级和
-   路线树连接几何；数据库、共享契约、配方、算法和评分事实保持不变。
-2. 增加一次失败测试，覆盖收藏数量摘要卡消失、计划详情无 Hero、登录与 Hero 背景无白云、
-   “我的计划”与配种工作台 Hero 无右侧装饰图标、计划卡片 32rem 上限、被动两列且不拉伸、
-   亲本无“本步骤需保留”，以及每个子代只有一个箭头且分支终点与箭头左侧锚点重合。
-3. 精简 `/plans`：使用玩家语言重写 Hero、卡片和空状态，删除整张收藏数量摘要卡；计划卡片在
-   移动端全宽、桌面端最大 32rem 并居中，想要的被动使用两列最小内容行高。
-4. 删除 `/plans/[routeId]` 的整个 Hero，把紧凑目标摘要提升为页面开头和唯一一级标题；保存时间、
-   收藏/库存状态并入摘要。计划详情使用“配种路线”“想要的被动”“推荐依据”“查看原配种结果”
-   等玩家语言，技术事实保留在“本次计算依据”折叠区并改用玩家可理解标签。
-5. 移除 `/plans` 与 `/breeder` Hero 右侧纯装饰图标及预留空间；从共享 CSS 风景中删除登录页和
-   所有业务 Hero 上方白云，不改变其他山丘、树叶和焦点/交互状态。
-6. 计划详情与配种工作台复用相同的紧凑 `BreedingRouteTree` 配置；亲本节点只展示库存被动，
-   被动网格不使用固定最小高度。桌面连接按子代分组，两条亲本分支汇合到共享锚点，再由唯一
-   水平末段和 marker 指向子代，普通/特殊配方共用几何。
-7. 开发中只运行一次最小失败测试和一次受影响局部验证；最终状态运行一次 Web 格式、lint、
-   typecheck、完整 test、build、受影响 Phase 6/7 浏览器验证和 `git diff --check`。聚合命令已经
-   覆盖的检查不再单独重复执行。
-
-### 回滚与生产约束
-
-- 本修订只修改规格、计划和 Web 展示；不修改数据库迁移、共享 Schema、算法、评分、库存快照、
-  真实存档或 `/opt/palworld`，不新增依赖或公网端口。
-- 应用回滚恢复上一 Web 构建即可，收藏关系、物化路线和版本审计事实不受影响。
-- 代码提交、PR 与合并按用户明确授权执行；不执行 Vercel、Supabase 或 Agent 生产部署。
-
-### 完成验证
-
-- 失败基线：3 个相关测试文件共 51 个用例中 5 个按预期失败，分别锁定摘要卡、详情 Hero、白云、
-  计算依据文案和路线连接几何。
-- 局部验证：同一组 51 个用例全部通过。
-- 最终 Web 验证：Prettier、ESLint、TypeScript、17 个测试文件共 110 个用例和 Next.js 生产构建
-  全部通过。
-- 浏览器验证：Phase 7 通过；Phase 6 首次在隔离服务冷启动登录阶段超时，服务预热后仅重跑该
-  失败用例并通过。未重跑已通过的 Phase 7。
-- 运行环境使用 Node.js 26.3.0，仓库声明为 Node.js 22.x；所有命令均仅产生 engine warning，
-  未影响验证结果。
+- 已完成；内容并入正式规格 §17.8、§17.9。
 
 ## 2026-07-27 跨阶段修订：配种工作台创建页聚焦与被动效果说明
 
-### 交付顺序
-
-1. 先更新正式规格和本计划，固定页面层级、玩家语言、目标选择器收口和被动效果文本投影。
-2. 增加失败测试：Hero 使用“配种工作台”且重复标题消失；目标选择框选中后直接包含头像、名称和
-   图鉴编号且不再出现摘要卡；被动候选显示效果文本而不显示“正面”“负面”；表单上下文从同一
-   游戏数据和 locale 返回效果文本。
-3. 追加前向迁移替换 `get_breeder_form_context`，通过 `description_key` 关联本地化效果文本；旧迁移
-   不修改，缺失效果保持 null。
-4. 扩展 Phase 6 共享 Schema 的 `BreederPassiveOption.effect_text` 并重新生成 TypeScript/Pydantic
-   模型，不复制 DTO，不改变 `rank`、`is_negative`、任务输入或算法。
-5. 精简创建页重复标题，统一三个核心区块的字体、圆角和交互状态；目标选择框内联头像、名称和编号；
-   被动列表使用效果说明并提供诚实降级；技术事实以“本次计算依据”收纳并使用玩家语言。
-6. 开发中运行一次最小失败验证和一次受影响局部验证；最终状态运行一次根 `pnpm check`、完整
-   Supabase 测试、Phase 6 Web E2E 与 `git diff --check`，不重复聚合命令已覆盖的检查。
-
-### 回滚与生产约束
-
-- 数据库只追加函数定义迁移；应用回滚可忽略新增 JSON 字段，旧任务和路线不变。
-- 不修改配种关系、算法、评分、库存快照、真实存档或 `/opt/palworld`，不新增生产依赖或端口。
-- 本修订只发布代码与 PR，不执行生产部署；生产发布仍需单独批准。
-
-### 完成状态
-
-- Web 格式、lint、类型检查、109 项单元测试与生产构建通过；共享契约 28 项测试通过。
-- 完整 Supabase 套件 18 个文件、400 项断言通过；Phase 6 iPhone 浏览器全流程通过。
-- 根聚合检查在 Agent 段因当前环境缺少 `gcc`，3 项临时 Oodle ABI 测试桩无法建立；其余 237 项
-  Agent 测试通过、4 项跳过。该既有环境限制不影响本修订的 Web、契约、数据库与浏览器验收。
+- 已完成；内容并入正式规格 §17.6。
 
 ## 2026-07-27 跨阶段修订：全局被动品级视觉与库存被动多选
 
-### 交付顺序
-
-1. 先更新正式规格和本计划，固定 rank 视觉映射、三角纹理、AND 语义和四项上限。
-2. 增加失败测试：重复 `passive` URL 参数去重并限制四项；库存 RPC 只返回同时拥有全部所选
-   被动的帕鲁；筛选选项投影 rank/负面事实；多选、取消、清空及分页保留全部选择。
-3. 追加前向 `list_available_pals_page_v3` 迁移，保留 v2 兼容和已有头目、公会所有权、位置、
-   图鉴排序与目录 ID 隐藏语义；v3 接受被动数组并为被动 facet 返回 rank/负面事实。
-4. 更新共享 Phase 5 Schema 与生成类型；库存页从同一固定版本 facet 构造全页被动事实，避免
-   额外 rank 查询。
-5. 全局 `PassiveBadge` 使用本地 CSS 三角拼接纹理和 rank 颜色；库存筛选 Popover 使用同一
-   badge，标题使用“被动技能”，选项按配种工作台的 rank 降序和稳定 ID 顺序排列；保留 Radix
-   Command 键盘导航、清晰焦点、可访问选择状态和移动端可用尺寸。
-6. 开发中只运行一次最小失败验证和一次受影响局部验证；最终状态运行一次根 `pnpm check`、
-   完整 Supabase 测试、Phase 5 Web E2E 与 `git diff --check`，不重复聚合命令已覆盖的检查。
-
-### 回滚与生产约束
-
-- 数据库只新增 v3 RPC，不修改或删除 v2；应用回滚继续使用 v2 单选接口。
-- 不改变目录 rank、`is_negative`、库存快照、配种算法或评分，不读取生产数据库或真实存档。
-- 不热链或复制 PalDB 纹理资产，不新增生产依赖、生产部署或远程推送。
+- 已完成；内容并入正式规格 §17.5。
 
 ## 2026-07-27 跨阶段修订：帕鲁库存用户体验收口
 
-### 交付顺序
-
-1. 先更新正式规格和本计划，固定玩家语言、目录内部 ID 隐藏、总数语义、卡片层级与视口分页
-   行为；内部契约、确定性算法和版本审计 ID 不变。
-2. 只为功能行为增加失败测试：库存 RPC 不再接受帕鲁内部 ID 查询，名称/图鉴编号保持可用；
-   配种目标和被动不再由内部 ID 命中；浮动分页只在库存区域可见且正常流分页未接管时启用。
-   纯文案、间距、阴影和图标外观不新增失败测试。
-3. 追加前向数据库迁移，从两个库存分页 RPC 中删除 `pal_id` 查询分支；不得修改已应用迁移。
-4. 收口库存与配种器玩家界面中的帕鲁/被动内部 ID，使用本地化名称、图鉴编号和中性未知降级；
-   内部 ID 继续用于数据库关联、契约、React key、图片索引和任务提交。
-5. 压缩库存指标卡，固定“帕鲁总数”为当前用户完整可用库存；视图切换改为带可访问名称和
-   Tooltip 的 44px 图标按钮；Card 类表面统一为贴合底部的 shadcn 阴影层级。
-6. 使用 IntersectionObserver 实现正常流/浮动分页交接，保留服务器分页与快照上下文，处理
-   safe-area、键盘焦点、reduced-motion 和最后一行内容避让。
-7. 开发中每个失败检查和受影响局部检查只运行一次；最终状态运行一次根 `pnpm check`、完整
-   Supabase 测试、受影响 Web E2E 和 `git diff --check`，聚合命令已覆盖的检查不重复执行。
-
-### 回滚与生产约束
-
-- 数据库变更只追加函数定义迁移；应用回滚可保留“不支持内部 ID 搜索”的更严格用户查询语义。
-- 不修改算法、目录事实、库存快照或真实存档，不访问生产密钥，不执行生产部署或远程推送。
-- 浮动分页只增加浏览器端视口观察，不改变页码、快照上下文和 RLS 权限边界。
-
-### 完成状态
-
-- Web 格式、lint、类型检查、相关单元测试与生产构建通过；完整 Supabase 套件的 393 项断言通过，
-  Phase 5 库存流程与 Phase 6 配种流程浏览器验证通过。
-- 根聚合检查的受影响 Web/契约部分通过；Agent 测试段因当前环境缺少 `gcc`，有 3 项临时 Oodle
-  ABI 测试桩无法建立（其余 237 项通过、4 项跳过），不影响本修订的 Web 与数据库验收结论。
+- 已完成；内容并入正式规格 §17.5。
 
 ## 2026-07-27 跨阶段修订：路线语义去重与 2000+ 库存容量
 
-### 交付顺序
-
-1. 先更新正式规格和本计划，固定最终路线等价关系、代表选择顺序和容量门槛。
-2. 增加失败测试：同种不同实例/性别朝向只返回一条路线，优先额外被动更少的实例；软目标按语义路线计数；2048 个以上库存不触发默认节点或时间上限。
-3. 在库存叶子入队和中间状态组合前按固定长度语义签名压缩；最终序列化后再执行一次路线级语义去重作为边界保护。
-4. 语义重复代表先比较可行性与缺口，再比较非目标被动数量、借用、尝试成本、模式评分和稳定物理签名；不改变配方合法性与基础评分公式。
-5. 得到至少三条 `ready` 语义路线后停止缺库存补充搜索；保留默认 200,000 节点和 30 秒硬限制并升级算法/评分版本。
-6. 开发中只运行一次最小失败测试和一次受影响局部验证；最终状态运行一次根 `pnpm check`、完整 Supabase 测试及 `git diff --check`，不重复聚合命令已覆盖的检查。
-
-### 回滚与生产约束
-
-- 算法与评分版本前向新增，历史任务继续固定旧版本；应用回滚不会重写历史结果。
-- 压力测试只使用合成库存和本地目录，不读取生产数据库、真实存档或凭证。
-- 本修订不修改 `/opt/palworld`、不推送远程仓库；生产部署须单独明确批准，已于 2026-07-27
-  获批并完成。
+- 已完成并完成生产部署；内容并入正式规格 §11.3。
 
 ## 2026-07-24 跨阶段修订：数据库库存快照 24 小时保留
 
-### 交付顺序
-
-1. 更新正式规格、Phase 3 与 Phase 7 计划语义。
-2. 先增加 pgTAP 与 Agent 失败测试，覆盖权限、边界、最新保护、业务历史和调度调用。
-3. 追加前向迁移，实现审计存根、实例生命周期、执行计划依赖和受控分批清理。
-4. Save Worker 每轮同步后调用清理 RPC；清理失败只告警，不回滚已经成功发布的最新库存。
-5. 运行局部数据库/Agent 测试，再以根目录 `pnpm check` 和完整 Supabase 测试覆盖最终状态。
-
-### 回滚与生产约束
-
-- 应用回滚时停止调用清理 RPC；已清理的库存载荷不自动恢复，历史物化方案仍可读。
-- 数据库迁移只前向追加；需要撤销能力时追加补偿迁移，不能编辑已应用迁移。
-- 首次生产启用前记录快照与明细表体积、死元组和 autovacuum 状态。常规清理只释放可复用空间，
-  不自动执行 `VACUUM FULL`、`CLUSTER` 或其他高锁维护。
-- 生产部署仍必须遵守 Phase 8 审批、备份、秘密和端口边界。
+- 已完成；最终保留语义由正式规格 §8.2 取代（成功载荷 30 分钟、审计存根、受控分批清理 RPC）。
 
 ## 2026-07-24 跨阶段修订：Boss ID 与公会所有库存
 
-### 交付顺序
-
-1. 更新正式规格中的库存稳定 ID、所有权类型、共享池和列表展示语义。
-2. 先增加 Parser/Agent/pgTAP/Web 失败测试，覆盖 Boss 前缀、公会基地所有权、跨公会隔离和
-   nullable owner 的计划生命周期。
-3. 在 CanonicalSnapshot 标准化边界去除一层 `boss_` 及仅用于头目随从角色的 `_otomo`
-   后缀，保留原始内部名；库存校验同时接受当前版本 `catalog_pals` 和受审计
-   `pal_name.PAL_NAME_*` 本地化事实，但配种计算仍只接受 `catalog_pals`。新增
-   `player/guild/unresolved` 所有权契约并追加数据库迁移。
-4. 统一库存列表、配种运行事实和路线展示；历史不可变快照不原地修改，旧 Boss 映射继续作为
-   兼容保护。
-5. 升级 Parser 身份并对 Agent 自有只读快照执行 reparse，生成新的不可变 latest 快照。
-6. 局部验证后仅对最终状态运行一次根目录聚合检查、完整 Supabase 测试和部署前检查。
-
-### 回滚与生产约束
-
-- 应用回滚保留新增所有权列和不可变快照；旧版本把未知所有权安全视为 `unresolved`。
-- 数据库只追加迁移，不修改已应用迁移或历史 `pal_snapshot_items`。
-- 生产重解析只读取 Agent 自有快照，不直接解析或修改真实源存档。
-- 生产部署继续遵守 Phase 8 的备份、不可变镜像、回滚和端口约束。
+- 已完成；内容并入正式规格 §6.3、§9.4、§11.2。
 
 ## 2026-07-24 跨阶段修订：头目标志、精确位置与次元帕鲁仓库
 
-### 交付顺序
-
-1. 先更新正式规格，明确 `is_boss`、位置事实、访问范围和次元帕鲁仓库的保守共享规则。
-2. 增加 Parser/Agent/契约/pgTAP/Web 失败测试，覆盖显式 `IsBoss` 与 `boss_` 前缀合并、
-   Base UID/工作位、普通终端页格、DPS 页格、私人/公会/未知访问范围和跨公会隔离。
-3. 扩展 CanonicalSnapshot 与生成模型；数据库只追加新迁移，旧不可变快照不回填，新字段对
-   历史 Parser 版本保持安全的 null/unknown 兼容。
-4. Parser 读取同一 Agent 快照中显式声明的 `_dps.sav`，不直接扫描源存档；原始容器 GUID
-   只用于内部关联。无法由受控 fixture 证明共享设置时输出 `unresolved`，不得猜测。
-5. 统一库存列表、配种运行事实、路线与计划位置投影；页码和格号只由绝对槽位派生。
-6. 提升 Parser 身份，对 Agent 自有只读快照 reparse；检查 DPS 带来的输出体积、实例 UID
-   冲突和库存骤降/增长保护。
-7. 开发中只运行最小相关测试；最终状态运行一次根 `pnpm check`、完整 Supabase 测试和
-   `git diff --check`，聚合命令已覆盖的检查不重复执行。
-
-### 回滚与生产约束
-
-- 应用回滚保留追加列和历史快照；旧应用把新位置或访问范围安全降级为未知。
-- 数据库迁移只前向追加，不修改已应用迁移或历史 `pal_snapshot_items`。
-- 生产 Parser 只读取 Agent 自有不可变快照；任何 DPS 解码、实例 UID 或共享语义异常均保留
-  上一有效库存。
-- 首次生产启用前完成备份和 dry-run，镜像使用 Git SHA 与 digest；只重启 PalHatchHelper
-  服务，不操作 Palworld 或 mihomo。
+- 已完成并完成生产部署；内容并入正式规格 §6.3、§9.4。
 
 ## 2026-07-29 跨阶段修订：普通用户公共 Sync 安装流程
 
-### 交付顺序
-
-1. 在正式规格中固定 `npm install -g`、无参数 `init` 与前台 `run` 的最短流程，同时保留
-   只读快照、Parser、脱敏、鉴权、设备配对和生产运维边界。
-2. 增加失败测试，覆盖默认 PalBeacon 地址、仅两个交互问题、成功提示、高级覆盖参数、
-   移除 `--sync-now`、已有配置确认/`--force`、首轮立即同步、信号退出、精简帮助与 README。
-3. 最小调整 Sync CLI：默认 URL 固定为 `https://www.palbeacon.app`，`init` 只配对并保存，
-   已有配置必须确认或显式强制；`run` 继续在首轮完成后才进入 300 秒等待。
-4. 把 npm README 收敛为约 30 至 40 行的普通用户文档；许可证、Parser 源码说明和第三方通知
-   继续由 npm 文件清单与包验证脚本保证，不放入普通用户主文档。
-5. 账户页使用中英文三步响应式卡片展示安装、配对和启动，配对码独立复制，高级非交互命令
-   默认折叠；普通界面不展示 URL、systemd、ACL、Parser 或迁移流程。
-6. 更新受影响的高级运维示例以移除失效参数，但不删除 systemd、Save Worker 切换、迁移、
-   验证或回滚能力。局部验证后执行 Sync/Web 全套检查、根聚合检查、npm dry-run 打包、精确 tgz
-   验证、秘密/真实存档检查与 `git diff --check`。
-
-### 回滚与生产约束
-
-- 应用回滚可恢复上一 CLI 与 Web；本修订不修改数据库、共享契约、存档事实、Parser、配种关系、
-  算法、评分或生产运行状态。
-- 不执行 npm publish、生产 migration、Vercel/Agent 部署、远程推送、Palworld/mihomo 操作或
-  Save Worker 切换；不在 postinstall 中执行系统级命令。
+- 已完成；内容并入正式规格 §24。
 
 ## 2026-07-29 跨阶段修订：公共 Sync 文档与 CLI 本地化
 
-### 交付顺序
-
-1. 正式规格固定 npm README 英文默认、同包简体中文跳转、CLI 系统语言检测顺序、英文回退与
-   `--locale` 显式覆盖语义。
-2. 增加一次失败测试，覆盖英文默认帮助、中文显式/系统 locale、无法识别时英文回退、无效显式
-   locale、命令前后覆盖以及 README 双语入口。
-3. 集中定义 CLI 英文与简体中文消息；帮助、初始化、持续同步、状态、离线检查、退出和错误共享
-   同一 locale。配置中的新同步结果保存稳定代码，展示时兼容既有中文结果。
-4. 把 npm README 改为英文并新增随包发布的简体中文版；包校验确认两个文档和默认英文帮助均可用。
-5. 只对最终状态执行一次 Sync 的 format、lint、typecheck、完整 test、build、npm dry-run/包验证和
-   `git diff --check`；聚合命令已覆盖的检查不重复执行。
-
-### 回滚与生产约束
-
-- 本修订只修改 Sync 文档、CLI 展示与测试，不修改数据库、共享契约、Parser、存档事实、配种算法、
-  `/opt/palworld` 或生产运行状态。
-- 不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖；应用回滚可恢复上一 CLI，已有设备配置
-  与配对凭据保持兼容。
+- 已完成；内容并入正式规格 §24 第 8 项。
 
 ## 2026-07-29 跨阶段修订：未绑定引导、Steam 头像与导航收口
 
-### 交付顺序
-
-1. 正式规格固定 Steam 头像优先、数据状态只保留用户菜单入口、未绑定页面复用同步卡片与 FAQ，
-   并固定 `palbeacon-cli` 包名、`palbeacon` CLI 名及三步命令在说明上方的顺序。
-2. 增加一次失败测试，覆盖头像图片与首字母降级、桌面主导航不再出现数据状态、同步安装第一步
-   命令顺序、FAQ 三类说明，以及各未绑定页面不再渲染 `PLAYER_BINDING_REQUIRED` 错误组件。
-3. 工作区布局只读查询当前用户 Steam 身份头像并传给共享 Header；复用现有 Radix AvatarImage，
-   保留加载失败后的 AvatarFallback、下拉键盘语义和现有 CSP 白名单。
-4. 提取可复用的未绑定同步引导，组合现有 `SyncDeviceCard` 与新 FAQ 卡片；概览、库存、配种器、
-   配种结果、计划列表/详情和数据状态页在无绑定时直接返回该引导，账号页也在同步卡片后展示 FAQ。
-5. 开发中只运行一次受影响失败基线与一次局部验证；最终状态运行一次 Web format、lint、typecheck、
-   完整 test、build 和 `git diff --check`，聚合命令已覆盖的检查不重复执行。
-
-### 回滚与生产约束
-
-- 本修订只修改规格、计划与 Web 展示/只读 Steam 头像查询，不修改数据库、共享契约、Sync CLI、
-  存档事实、Parser、配种算法、`/opt/palworld` 或生产运行状态。
-- 不新增依赖、公网端口，不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖。
+- 已完成；内容并入正式规格 §17.11。
 
 ## 2026-07-29 跨阶段修订：顶部品牌、数据徽标与 GitHub 入口
 
-### 交付顺序
-
-1. 正式规格固定 Logo 与页面标题只保留 PalBeacon、数据徽标的三态短文案和 GitHub 外链位置、
-   点击区与可访问语义。
-2. 增加一次失败测试，覆盖中英文 Metadata、Logo 替代文本/副标题移除、未绑定/最新/已过期映射、
-   桌面徽标只位于数据状态菜单项右侧，以及 GitHub 入口位于语言切换器左侧。
-3. 提取可复用 GitHub 图标入口并放入桌面、移动与登录页语言控件组；复用现有 Button、内联 GitHub
-   标记和焦点样式，不新增依赖。
-4. 工作区布局根据角色绑定与库存状态生成三态菜单徽标；Header 删除菜单外的独立状态入口，移动
-   菜单保持同一行右侧徽标。
-5. 更新中英文消息与受影响浏览器品牌验收；局部验证后对最终状态运行一次 Web format、lint、
-   typecheck、完整 test、build 和 `git diff --check`，不重复聚合命令已覆盖的检查。
-
-### 回滚与生产约束
-
-- 本修订只修改规格、计划和 Web 展示，不修改数据库、共享契约、Sync CLI、存档事实、Parser、
-  配种算法、`/opt/palworld` 或生产运行状态。
-- 不新增依赖、公网端口，不执行生产部署、远程推送或现有 tgz 覆盖；应用回滚恢复上一 Web 构建。
-
-### 完成验证
-
-- 失败基线：品牌、登录与 Header 的 3 个测试文件中 5 项按预期失败，分别锁定旧 Metadata、Logo
-  替代文本/副标题、菜单外状态入口和缺少 GitHub 入口。
-- 局部验证：同一组 3 个测试文件共 19 项通过。
-- 最终 Web 验证：受影响文件 Prettier 检查、ESLint、TypeScript、28 个测试文件共 155 项测试和
-  Next.js 生产构建全部通过。
-- Phase 5 本地浏览器验收在隔离端口与仓库本地 Supabase fixture 上完成：11 项通过、1 项按健康
-  状态条件预期跳过；覆盖页面标题、Logo、GitHub 外链、未绑定同步引导、三态徽标、移动菜单及
-  Phase 5–8 核心流程。
+- 已完成；内容并入正式规格 §25。
 
 ## 2026-07-30 跨阶段修订：公开双语首页与搜索引擎收录
 
-本次修订不改变 Phase 1–7 的业务协议、数据库结构、认证流程或确定性配种算法，仅在现有能力之上补齐公开产品入口和搜索引擎边界。
-
-交付顺序：
-
-1. 先将 `/zh` 与 `/en` 从工作台重定向改为无需登录的静态 Server Component 首页，并保持 `/` 的 next-intl 语言跳转。
-2. 首页文案只呈现当前代码已实现的只读同步、角色认领、库存、公会共享、多代路线、只读计划保存和数据状态能力；不宣称计划执行进度或候选子代确认已经实现。
-3. 以统一站点配置生成 canonical、hreflang、Open Graph、JSON-LD、sitemap 和 robots，正式域名固定为 `https://www.palbeacon.app`。
-4. 登录页、workspace、管理员页和动态私有页同时使用页面 metadata 与 middleware `X-Robots-Tag` 阻止索引，不改变既有 Session Cookie、Steam 回调和 `next` 参数。
-5. 使用现有 Vitest、Playwright 和生产构建验证公开页面、私有路由保护、SEO 输出与无 JavaScript 首屏正文。
-
-回滚边界：公开首页、SEO 路由、翻译与 noindex 响应头均可独立回滚；不得回滚或修改同步协议、上传载荷、角色认领、认证、数据库 migration 或配种算法。
+- 已完成；内容并入正式规格 §26。
 
 ## 2026-07-30 跨阶段修订：公开首页信息收口与工作台轮播
 
-1. 先增加失败测试，锁定 `Keep your Palworld visible` 主标题、服务器控制台短说明、Hero 仅两个 CTA、
-   三个工作台轮播画面以及开发者式提示移除。
-2. 将轮播实现为最小局部 Client Component，固定展示公会库存、抽象合法性无关的路线树布局和收藏
-   计划界面；不接入认证、用户查询或业务 API，不新增轮播依赖。
-3. 自动轮播提供上一张、下一张、页签和暂停控制；悬停/聚焦时暂停，reduced-motion 下默认不自动
-   播放。所有画面在初始 HTML 中保留，避免主要产品信息依赖 hydration 才出现。
-4. 收短中英文工作流、功能、安全和 FAQ 文案，移除重复特性及实现校验口吻；标题使用平衡换行、
-   正文使用优化换行，并在 320、390、768、1024 和 1440 像素视口检查孤字与溢出。
-5. 最终运行受影响单元测试、Web lint、typecheck、完整测试、生产构建、Playwright 桌面/移动验收和
-   `git diff --check`，不改变 SEO URL、认证、同步协议、数据库或配种算法。
+- 已完成；内容并入正式规格 §26。
 
 ## 2026-07-30 跨阶段修订：轮播层级与首页通信示意
 
-1. 增加失败测试，锁定轮播标题只出现于页签、路线画面具有五个抽象树节点、核心能力区具有四个
-   通信节点，并统一 Footer 品牌句。
-2. 删除三个轮播画面的 PalBeacon 控制台眉题和重复页标题，把空间让给库存、路线树和收藏计划本身。
-3. 使用响应式 HTML/CSS 与装饰性 SVG 连线绘制简化路线依赖树；节点只使用目标、中间亲本和库存
-   亲本角色，不构造新的配种事实。
-4. 在核心能力区绘制 Palworld 服务器、同机同步工具、PalBeacon 云端和玩家浏览器的数据流，准确
-   标注本地读取、HTTPS 主动同步和权限内查看，不改变任何真实通信协议。
-5. 完成中英文、320–1440 像素、reduced-motion、单元测试、Playwright 与生产构建验证。
+- 已完成；内容并入正式规格 §26。
 
 ## 2026-07-30 跨阶段修订：路线轮播代际布局
 
-1. 依据产品参考图增加失败测试，固定“初始亲本、第 1 代、第 2 代”三列、五张节点卡和四条汇合连线。
-2. 初始亲本与第 1 代亲本分别上下排列，曲线箭头把两个亲本汇合到同列顶部的下一代子代；最终目标
-   位于第 2 代顶部，阅读方向固定从左到右。
-3. 节点压缩复用真实路线卡的头像、角色、库存状态、性别和被动视觉；展示名称保持抽象，不新增或
-   暗示任何配种事实。
-4. 320–420 像素保留三列结构但隐藏次要所有者/位置信息，桌面显示完整摘要；不得产生横向溢出。
-5. 只修改 Landing 展示、翻译、测试和对应设计记录，不修改配种算法、配方、库存或计划数据。
+- 已完成；内容并入正式规格 §26 第 10 项。
 
 ## 2026-07-30 跨阶段修订：轮播内容密度与被动品级
 
-1. 增加失败测试，锁定公会库存四张卡均展示所有者、路线节点继续保留所有者与位置、收藏计划同时
-   展示两张卡，并校验示例被动对应的真实 rank。
-2. 压缩路线树节点间距、头像和重复标签，不删除所有者、位置、状态、性别或被动；同步缩短树画布，
-   避免路线画面单独撑高整个轮播。
-3. 公会库存卡使用明确的所有者行并调整卡片高度；收藏计划改为两张纵向排列的紧凑收藏卡，让三个
-   slide 的有效内容高度接近，不用固定空白占位。
-4. Landing 复用全局 `PassiveBadge`。根据当前目录与 PalDB 品级，认真、工匠精神、稀有、灵活分别
-   使用 rank 1、3、4、1；不复制外部纹理、不新增另一套颜色映射。
-5. 在 320、390 与 1440 像素检查三个画面的内容高度、换行和横向溢出，再运行 Web 单元测试、格式、
-   lint、typecheck、生产构建、Landing Playwright 与 `git diff --check`。
-6. 依据真实库存卡参考，把公会库存卡固定为头像/名称、所有者/位置、被动三层，移除身份与详情间的
-   多余分割线，并把皮皮鸡示例改为 rank 4 的“稀有”。路线树至少一个亲本使用公会成员所有者，
-   库存位置展示具体终端页码；当前两步路线显示 2 代，最终目标汇总四个亲本被动并显示目标被动数 4。
-7. 增加失败测试锁定公开顶部导航的顶端透明态、滚动毛玻璃态、纯图标 GitHub 入口和弹出式语言菜单；
-   将 Header 提取为最小 Client Component，只监听滚动位置，不读取 Session。桌面与移动端复用现有
-   `GitHubLink` 和 `LocaleSwitcher`，完成键盘、reduced-motion、320–1440 像素和生产构建验证。
-8. 顶栏滚动视觉使用单一 smoothstep 曲线连续驱动背景透明度、blur、saturate、边框与阴影，在较长
-   滚动区间内慢入慢出；测试分别采样顶端、前段、中段和稳定态，禁止恢复为阈值式整段模糊切换。
-9. 以用户提供的灯塔图为编辑目标生成透明、居中的方形母版，再用高质量预乘 Alpha 缩放统一派生
-   512px、180px 与 16/32/48px 图标；用 SHA-256 与 PNG RGBA 测试锁定四份交付资产，浏览器分别
-   在浅色和深色背景检查 Header、manifest 和 favicon，禁止残留色键或暗色底。
-10. 收口 Landing 能力卡文案，Footer 增加开发者邮件入口；移除语言布局中固定的图标 metadata，
-    让 Next.js 从本地图标文件生成带内容指纹的应用图标 URL，并以单元测试和生产构建 HTML 校验。
-11. 删除 Footer 中重复的 GitHub、控制台和语言入口；在英文路线轮播中固定状态/性别同排、完整
-    被动可见和精简提示单行展示，并以 620px 浏览器几何断言覆盖截图中的换行与裁切问题。
+- 已完成；内容并入正式规格 §26 第 13 项。
 
 ## 2026-07-30 跨阶段修订：Landing 轮播真实名称与配方
 
-本修订覆盖此前“抽象名称、合法性无关”的轮播展示约束，但不改变任何业务配方、确定性算法或用户
-数据。交付顺序：
-
-1. 先更新正式规格，再增加失败测试，逐一锁定库存、路线与收藏卡头像 Stable ID 对应的英文和中文
-   目录名称，并拒绝 `Parent A`、`Target Pal A`、`亲本 A`、`目标帕鲁 A` 等抽象种类名。
-2. 固定路线使用已验收目录中的两步关系：`carbunclo + sheepball -> bastet`，再由
-   `bastet + naughtycat -> jellyfishghost`；测试同时锁定五个节点顺序、Pal ID 与本地化名称。
-3. 同一 Pal 在库存、路线和收藏画面复用同一本地化名称键，头像继续来自当前 content hash 的本地
-   资产；不由 AI 猜名字或配方，不运行生产查询，也不把固定示例描述成当前用户库存。
-4. 最小修改 Landing 组件、英中翻译和相关测试；完成 Web format、lint、strict typecheck、受影响
-   单元测试、production build 与 `git diff --check` 后单独提交。
+- 已完成；内容并入正式规格 §26 第 10 项。
 
 ## 2026-07-30 跨阶段修订：P0 SEO 首页定位与四个公开搜索入口
 
-1. 锁定最新 `main`、现有首页 H1、sitemap 数量及 Sync CLI 的平台、命令、世界发现、只读快照和
-   脱敏上传事实；公开文案遇到需求与实现冲突时以实际实现和正式规格为准并明确限制。
-2. 先增加失败测试，覆盖首页双语 H1/副标题/三 CTA/四入口、八个公开路由、唯一 H1、CLI 命令、
-   同语言内部链接、十组 metadata、十项 sitemap、JSON-LD、语言切换和公开 middleware 不查 Session。
-3. 提取最小共享公开 Header/Footer、Breadcrumb、内容布局、FAQ、CTA、metadata 与结构化数据；
-   四类页面保持 Server Component 和静态生成，正文不查询 Supabase 或用户数据。
-4. 首页使用短产品 H1，并把品牌句降为 eyebrow；新增四张 locale-aware 内容卡和第三个存档同步 CTA，
-   保留现有轮播及登录/控制台目标。
-5. 更新 sitemap 为十个公开 URL，保留 robots 与全部私有 noindex/鉴权边界。公开 middleware 仅对已知
-   公开路由直接继续，不改变登录、workspace 或 admin 的 Session 刷新和跳转逻辑。
-6. 局部测试通过后，对最终状态执行 Web format、lint、typecheck、完整单元测试、相关 Playwright、
-   production build、十个 URL 的本地生产服务 curl/HTML/JSON-LD 检查与 `git diff --check`。
-
-### 回滚与生产约束
-
-- 本修订只修改公开 Web 展示、消息、SEO 配置、测试与文档，不修改数据库、Sync 协议、CLI、认证
-  流程、配种关系、算法、真实存档、`/opt/palworld`、容器或公网端口。
-- 不执行 Vercel/Supabase/Agent 生产部署、远程推送、Search Console 或 Bing 提交；这些动作仍需
-  独立人工授权和平台凭据。
+- 已完成；内容并入正式规格 §27。
 
 ## 2026-07-30 跨阶段修订：登录页返回公开首页入口
 
-1. 先增加登录页失败测试，锁定桌面左侧品牌区存在本地化“了解 PalBeacon”链接并以根路径交给
-   locale-aware 导航生成当前语言首页地址。
-2. 复用现有 Button、翻译消息和 next-intl Link 增加入口，保持 44 像素点击区、键盘焦点和登录页
-   响应式布局；不复制路由前缀、不使用 JavaScript `onClick`。
-3. 运行登录页局部测试、Web lint/typecheck/test/build 与 `git diff --check`；不修改认证、Session、
-   `next` 参数、数据库、Sync 协议、配种算法或生产环境。
+- 已完成；内容并入正式规格 §28。
 
 ## 2026-07-30 跨阶段修订：Landing Hero CTA 收口
 
-1. 更新失败测试，将 Hero 的真实链接数量从三个锁定为两个，并拒绝继续显示“了解存档同步”。
-2. 删除第三个 locale-aware CTA 及其英中文案；保留“开始使用”“打开控制台”和首页内容卡、Footer
-   中的存档同步入口，不改变公开路由、metadata、sitemap 或认证流程。
-3. 与登录页入口改动合并执行 Web 最终验证和 `git diff --check`。
+- 已完成；内容并入正式规格 §29。
 
 ## 2026-07-31 跨阶段修订：公共 Sync 世界身份、存档发现与公会有效性
 
-### 交付顺序
-
-1. 正式规格固定显式世界 UID、备份目录过滤、真实多世界错误和未知公会保守同步语义。
-2. 增加失败测试，覆盖配置迁移、`init` 持久化、`run`/`inspect` 显式传参、活动世界优先、
-   `backup`/`backups` 排除、真实多世界保留以及未知名称公会与共享资格清理。
-3. 配置升级为向前兼容的新版本；从最终真实世界目录提取 32 位十六进制 UID，旧配置加载时
-   原地安全迁移并保留设备令牌，不增加第三个交互问题。
-4. 存档发现优先接受用户直接指定的世界根，并在父目录搜索时跳过已知非活动备份目录；仍拒绝
-   符号链接和多个独立活动世界。
-5. ParserAdapter 通过显式选项设置世界 UID；公共脱敏边界排除未知名称公会、清理无效引用，
-   对关联库存采用个人或 unresolved 保守降级并关闭共享资格。
-6. 运行 Sync 局部测试和最终 package 级 format、lint、typecheck、test、build、打包验证及
-   `git diff --check`；不访问真实存档、不连接生产 API、不执行上传。
-
-### 回滚与生产约束
-
-- 配置迁移保留既有设备 ID、令牌、服务地址和同步状态；旧 CLI 回滚无法理解新版本配置时需重新
-  `init`，不得通过删除或改写真实存档解决。
-- 本修订不修改 Parser 事实算法、共享契约、数据库、`/opt/palworld`、Palworld/mihomo 容器或
-  生产运行状态；不执行 npm publish、生产部署、远程推送或现有 tgz 覆盖。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §30。
 
 ## 2026-07-31 跨阶段修订：Phase 5 浏览器验收再精简
 
-1. Phase 5 Playwright 删除公开 Landing 的五个重复场景：双语页面/SEO 聚合断言、窄屏排版、四个
-   公开指南逐页导航、英文轮播精确几何和根路径语言协商。
-2. Landing 的服务端内容、轮播事实、公开路由、canonical/hreflang、sitemap、robots 与 middleware
-   继续由现有快速 Vitest 和生产构建覆盖；不删除这些功能门禁。
-3. 保留登录失败与成功、未绑定同步引导、移动端无横向溢出、库存筛选/分享/分页/范围、隐私与
-   越权、公会隔离、数据状态、配种任务与路线比较、计划收藏和管理员主流程。
-4. 先以 Playwright 测试清单确认旧套件仍包含五个低价值场景，再删除对应文件；最终运行 Web 单元
-   测试、精简后的 Phase 5 browser acceptance、格式检查和 `git diff --check`。
-5. 本修订只改变测试分层与 CI 时间，不修改公开页面、认证、数据库、Sync 协议、配种算法、生产
-   环境或 `/opt/palworld`。
-
+- 已完成；内容并入正式规格 §20.3。
 ## Phase 8：管理员功能、部署和端到端验收
 
 ### 阶段目标
@@ -1397,129 +858,35 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
 
 ## 2026-08-03 跨阶段修订：账号邮箱、活动服务器成员与邀请绑定
 
-1. 先增加 Web、共享契约和 pgTAP 失败测试，覆盖 Steam 内部邮箱显示为未绑定、真实邮箱保持显示、
-   已撤销服务器不返回、活动服务器成员默认展开、每行自认领/邀请操作、登录返回邀请页和明确确认。
-2. 追加 forward-only 迁移，建立只保存 Token SHA-256 的一次性角色绑定邀请；提供活动服务器成员查询、
-   邀请创建/预览/接受和可换绑的自助认领 RPC。所有写入在事务中重新校验服务器所有权、撤销状态、
-   最新快照、邀请有效期和角色唯一绑定，并返回稳定错误码。
-3. 换绑只替换当前账号的 `player_bindings` 并记录绑定事实，不删除或修改配种任务、路线、收藏、库存
-   快照和历史结果；目标成员已绑定或发生并发竞争时安全失败。
-4. 更新 Sync 共享 JSON Schema 并重新生成 TypeScript/Python/数据库类型；Web API 只返回浏览器安全的
-   服务器、成员和邀请摘要，不泄露其他账号身份或明文 Token。
-5. 账号页保持 Steam 虚拟邮箱的认证用途，只在展示层识别严格内部格式并显示本地化“未绑定”。同步
-   卡片使用现有 shadcn/Tailwind 组件，活动服务器成员默认展开，每行提供至少 44 像素点击区、清晰
-   焦点和复制成功反馈；邀请确认页在登录后显示核对摘要，不自动接受。
-6. 开发中只运行最小失败基线和受影响局部验证；最终状态执行根 `pnpm check`、完整本地 Supabase
-   测试、受影响登录/账号/绑定浏览器流程和 `git diff --check`，聚合检查已覆盖的命令不重复执行。
-
-### 回滚与生产约束
-
-- 数据库仅追加新表/RPC/策略；Web 回滚后邀请数据可保留且不可被旧界面消费。若需撤销能力，使用
-  补偿迁移 revoke 新 RPC，不编辑已应用迁移。
-- 不修改 Steam Auth 内部邮箱、真实存档、`/opt/palworld`、同步上传协议、配种关系、算法、评分、
-  Palworld/mihomo 容器或公网端口；不执行生产部署、远程推送或生产凭据访问。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §37。
 
 ## 2026-08-03 跨阶段修订：物品库存列顺序与周期变化边界
 
-1. 先增加 Web 失败测试，覆盖当前五分钟桶尚未采样时尾部 `null` 仍使用最近两个相邻有效点、采样
-   缺口显示 `—`，以及真实列表和 Landing 预览的列顺序。
-2. 最小修改物品列表周期变化的取点逻辑：从最后一个有效采样点向前比较相邻时间桶，不再以当前
-   总量减去固定排除最后一个槽位后的非空值。采样、数据库 RPC、共享契约与可制作数量计算保持不变。
-3. 在真实库存的桌面、移动布局和 Landing 单行网格中，将“可制作数量”置于“周期变化”之前；Landing
-   在 480px 以上同步调整两个数值列宽，保留原有无横向溢出与趋势图宽度要求。
-4. 运行受影响 Web 测试、格式、lint、strict typecheck、完整 Web 测试、生产构建与 `git diff --check`；
-   不修改真实存档、`/opt/palworld`、数据库、同步协议或生产环境。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §36。
 
 ## 2026-08-02 跨阶段修订：Landing 物品监控紧凑单行布局
 
-1. 先以失败测试锁定五行固定物品预览、每行单一紧凑网格，以及 60px 趋势图宽度。
-2. 将物品监控每行改为图标/名称、数量、周期变化、可制作数量和趋势图同排，增加纤维与煤炭，
-   保留木材、石头、布料和合理的固定趋势数据。
-3. 运行轮播局部测试、Web format/lint/typecheck/test/build 与 `git diff --check`；不改真实库存页面、
-   数据库、同步协议、周期变化或可制作数量计算。
-4. 根据视觉验收，在 480px 以上放大物品图标、数值字体、行高和趋势图宽度，名称列占用剩余空间；
-   静态预览中的缺省可制作数量显示 `0`。用测试拒绝破折号并锁定扩展布局类。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §35。
 
 ## 2026-08-02 跨阶段修订：Landing 轮播改为公会帕鲁与物品监控
 
-1. 先以轮播失败测试锁定页签“公会帕鲁”、第三屏“物品监控”、三行物品示例与每行趋势图；同时
-   保留已验收的固定配种路线和三屏自动播放/手动控制语义。
-2. 删除收藏计划轮播组件，改用本地 `wood`、`stone`、`cloth` 图标和双语名称。固定每行数量、
-   13 个五分钟趋势点、周期变化及可制作数量显示，仅作为公开静态预览。
-3. 复用物品页的 Sparkline 组件和图标路径，保证趋势图的可访问标签、响应式最小宽度与视觉语义；
-   不引入数据请求、不改动物品库存计算和周期变化函数。
-4. 运行受影响轮播测试、完整 Web format/lint/typecheck/test/build 与 `git diff --check`；不修改
-   数据库、同步协议、真实存档、生产环境或远程仓库。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §34。
 
 ## 2026-08-02 跨阶段修订：Landing 物品库存趋势与基地数量介绍
 
-1. 先增加 Landing 与 SEO 失败测试，锁定中英文服务端正文包含物品库存变化、基地位置/数量与五分钟趋势，
-   且 Landing metadata 覆盖物品库存搜索词并保持英文描述长度约束。
-2. 最小扩展公开 Landing 的 Hero、认领引导、核心能力卡和 FAQ；核心能力区改为响应式四卡布局，
-   不增加客户端数据请求、私有数据、公开路由或产品承诺。
-3. 更新本地化 Landing metadata、Open Graph 文案、关键词、SoftwareApplication 描述和 FAQ JSON-LD，
-   使可见文本与结构化文本都反映当前真实的公会总量、基地数量和一小时五分钟趋势能力。
-4. 完成 Web 格式、lint、typecheck、完整单元测试、生产构建与 `git diff --check`；不修改物品采样、
-   周期变化、数据库、同步协议或生产环境。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §33。
 
 ## 2026-08-03 跨阶段修订：次元仓库帕鲁 ID 大小写兼容
 
-1. 先用 Parser 失败测试复现普通库存 `ThunderDog_Ice` 与次元仓库 `Thunderdog_Ice` 的真实
-   ASCII 大小写差异，并锁定原始拼写审计字段保持不变。
-2. 只允许次元仓库 CharacterID 的 ASCII 大小写变体复用同一稳定 ID；普通库存、被动、物品及
-   Unicode/NFKC 碰撞继续失败关闭，不修改配种关系、目录事实或真实存档。
-3. CLI 为 `GAME_ID_NORMALIZATION_COLLISION` 增加可执行的中英文错误说明，避免降级为通用错误。
-4. 使用固定 Go 1.26.5 容器运行 Parser 测试与构建，并运行 Sync 格式、lint、typecheck、测试、
-   build 和包验证；发布 npm、部署生产或替换已安装 CLI 仍需单独批准。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §9.4 第 11 项。
 
 ## 2026-08-02 跨阶段修订：unchanged 心跳新鲜度与物品制作文案
 
-1. 先以 pgTAP 和 Web 失败测试锁定：旧存档修改时间但存在近期 `unchanged` 心跳时状态保持正常，
-   心跳真正超时后才过期；设备卡区分最近检测和上次上传；物品列名使用“可制作数量”。
-2. 追加 forward-only 迁移重定义浏览器安全状态 RPC，从当前世界未撤销同步设备读取最新心跳，
-   返回 `last_heartbeat_at` 并以其判断公共同步新鲜度；解析失败优先级与无设备回退保持不变。
-3. 更新 Phase 5 共享 Schema 并生成共享类型；概览、帕鲁库存、物品库存、数据状态、
-   顶部徽标和账号同步设备统一区分最近检测、库存快照与上传时间。
-4. 只修改中英文制作数量文案，不改变 `craftable_additional`、请求时配方计算、五分钟采样、趋势
-   曲线或“周期变化”实现。
-5. 局部验证后执行根 `pnpm check`、完整 Supabase 测试、受影响浏览器流程和 `git diff --check`；
-   不修改真实存档、`/opt/palworld` 或 Palworld/mihomo 容器，不部署生产、不推送远程仓库。
+- 已完成（production_deploy=not_started）；内容并入正式规格 §32。
 
 ## 2026-08-01 跨阶段修订：存档载荷保留、公会箱、请求时产量与五分钟行内趋势
 
-本修订覆盖 Phase 3 和 2026-07-24 的 24 小时成功载荷保留语义，以及 Catalog 2.0 修订中的
-仅基地物理容器和入库产量计算实现。失败/拒绝审计记录仍可保留 24 小时；小时/日聚合保留期不变。
-固定交付顺序如下：
-
-1. 先更新正式规格和本计划，固定 30 分钟成功载荷、公会箱、请求时批量产量和五分钟行内趋势；
-   生产部署保持未批准。
-2. 增加失败契约、Parser、Agent、pgTAP 和 Web 测试，覆盖 29:59/30:00 边界、最新保护、物品清理
-   实际调度、同哈希重发、公会箱 GUID 关联/冲突/去重、公共 Sync 脱敏、整页批量产量、固定快照、
-   五分钟未变化采样和离线缺口。
-3. 追加 forward-only 迁移，为物品快照增加载荷清理标记与部分唯一索引，合并帕鲁/物品受控清理；
-   清理按数据库 `created_at`、小批次和单世界锁执行，私有 Save Worker 与公共上传/心跳均调用，
-   失败只告警。成功审计存根、最新载荷、物化路线、收藏、共享偏好和派生长期趋势保持可用。
-4. Parser 从 `GuildExtraSaveDataMap` 中只接受可证明的 `GuildItemStorage` 容器 GUID，新增
-   `guild_chest` 类型。公会箱 resolved 堆栈必须有公会但无基地；冲突和未知公会安全降级。
-   数据库公会总量计入、基地总量排除，Web 明确展示公会箱数量。
-5. 停止 Agent 构建和上传快照产量，数据库不再把 `item_inventory_recipe_capacities` 用作查询事实。
-   将现有确定性算法迁到共享 TypeScript 包；物品页一次请求至多 300 个候选，BFF 固定最新物品
-   快照与目录版本后逐目标独立计算，不在 PostgreSQL 递归、不产生每行 RPC、不写回结果。
-6. 新增两小时保留的五分钟公会采样。新快照和已验证 `unchanged` 轮询均采样；离线桶保持 null。
-   物品 RPC 以共享 UTC 时间轴和每行 13 个紧凑点一次返回，行内使用无新增依赖的轻量 SVG 曲线；
-   既有小时/日详情保持不变。
-7. 局部验证通过后，对最终状态执行根 `pnpm check`、Parser Go 测试、完整本地 Supabase pgTAP、
-   目录最大规模产量基准、受影响 Web 浏览器流程和 `git diff --check`。缺失工具必须由容器或 CI
-   补齐并记录真实结果，不以未执行检查声称完成。
-8. 检查秘密和禁止资产后提交分支、创建 PR、等待并修复必需检查，直至合入 `main`；不执行
-   Supabase/Vercel/Agent 生产部署，不修改真实存档、`/opt/palworld` 或 Palworld/mihomo 容器。
-
-实施验证结果：固定目录共 1264 条物品配方、271 个素材/食物页面候选；在每个候选物料均有
-9999 库存的高分支压力场景中，共享 TypeScript 计算器整页耗时约 524 ms。数据库只执行一次
-权限过滤后的集合化上下文读取，不执行递归计算，因此保留整页批量计算，不降级为单物品请求。
-根 `pnpm check` 的格式、lint、类型、单元测试、构建、Agent 与基础设施回归均通过；补齐 Parser
-1.4.3 引用后，版本一致性、禁止资产和秘密扫描门禁也通过。本地 Supabase 26 个文件共 583 项
-pgTAP、数据库并发测试、固定 Go 1.26.5 全量测试/vet/fuzz 和可复现 Linux 构建均通过。
+- 已完成并完成生产部署；内容并入正式规格 §8.2、§31.3、§31.4。
 
 ## 2026-07-31 跨阶段修订：Catalog 2.0、物品库存与递归配方
 

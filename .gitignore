@@ -40,3 +40,6 @@ parser/build/
 # Local .NET extractor build products.
 tools/palworld-catalog-extractor/**/bin/
 tools/palworld-catalog-extractor/**/obj/
+
+# Local Reasonix editor/tool config.
+reasonix.toml
