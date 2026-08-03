@@ -6,7 +6,11 @@ export interface SyncApiContractsContracts {
   SyncHeartbeatRequest: SyncHeartbeatRequest;
   SyncPairingCodeResponse: SyncPairingCodeResponse;
   SyncDevice: SyncDevice;
+  SyncServerMember: SyncServerMember;
   SyncClaimablePlayer: SyncClaimablePlayer;
+  SyncBindingInvitationCreated: SyncBindingInvitationCreated;
+  SyncBindingInvitationPreview: SyncBindingInvitationPreview;
+  SyncBindingInvitationAccepted: SyncBindingInvitationAccepted;
 }
 export interface SyncPairRequest {
   code: string;
@@ -38,6 +42,17 @@ export interface SyncDevice {
   last_snapshot_at: string | null;
   revoked_at: string | null;
   created_at: string;
+  members: SyncServerMember[];
+}
+export interface SyncServerMember {
+  player_id: string;
+  nickname: string;
+  level: number | null;
+  guild_name: string | null;
+  world_name: string;
+  discriminator: string;
+  is_bound: boolean;
+  is_current_user: boolean;
 }
 export interface SyncClaimablePlayer {
   player_id: string;
@@ -46,4 +61,21 @@ export interface SyncClaimablePlayer {
   guild_name: string | null;
   world_name: string;
   discriminator: string;
+}
+export interface SyncBindingInvitationCreated {
+  invitation_path: string;
+  expires_at: string;
+}
+export interface SyncBindingInvitationPreview {
+  player_id: string;
+  nickname: string;
+  level: number | null;
+  guild_name: string | null;
+  world_name: string;
+  device_name: string;
+  discriminator: string;
+  expires_at: string;
+}
+export interface SyncBindingInvitationAccepted {
+  player_id: string;
 }

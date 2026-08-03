@@ -1,5 +1,6 @@
 # PalHatch Helper 分阶段实施计划
 
+- 2026-08-03 账号邮箱、活动服务器成员与邀请绑定修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-03 物品库存列顺序与周期变化边界修订：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1393,6 +1394,30 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
    - 验证：`pnpm check && cd apps/agent && uv run pytest && cd ../.. && supabase test db && pnpm --filter @palhatch/web test:e2e`
 
 ## 跨阶段变更规则
+
+## 2026-08-03 跨阶段修订：账号邮箱、活动服务器成员与邀请绑定
+
+1. 先增加 Web、共享契约和 pgTAP 失败测试，覆盖 Steam 内部邮箱显示为未绑定、真实邮箱保持显示、
+   已撤销服务器不返回、活动服务器成员默认展开、每行自认领/邀请操作、登录返回邀请页和明确确认。
+2. 追加 forward-only 迁移，建立只保存 Token SHA-256 的一次性角色绑定邀请；提供活动服务器成员查询、
+   邀请创建/预览/接受和可换绑的自助认领 RPC。所有写入在事务中重新校验服务器所有权、撤销状态、
+   最新快照、邀请有效期和角色唯一绑定，并返回稳定错误码。
+3. 换绑只替换当前账号的 `player_bindings` 并记录绑定事实，不删除或修改配种任务、路线、收藏、库存
+   快照和历史结果；目标成员已绑定或发生并发竞争时安全失败。
+4. 更新 Sync 共享 JSON Schema 并重新生成 TypeScript/Python/数据库类型；Web API 只返回浏览器安全的
+   服务器、成员和邀请摘要，不泄露其他账号身份或明文 Token。
+5. 账号页保持 Steam 虚拟邮箱的认证用途，只在展示层识别严格内部格式并显示本地化“未绑定”。同步
+   卡片使用现有 shadcn/Tailwind 组件，活动服务器成员默认展开，每行提供至少 44 像素点击区、清晰
+   焦点和复制成功反馈；邀请确认页在登录后显示核对摘要，不自动接受。
+6. 开发中只运行最小失败基线和受影响局部验证；最终状态执行根 `pnpm check`、完整本地 Supabase
+   测试、受影响登录/账号/绑定浏览器流程和 `git diff --check`，聚合检查已覆盖的命令不重复执行。
+
+### 回滚与生产约束
+
+- 数据库仅追加新表/RPC/策略；Web 回滚后邀请数据可保留且不可被旧界面消费。若需撤销能力，使用
+  补偿迁移 revoke 新 RPC，不编辑已应用迁移。
+- 不修改 Steam Auth 内部邮箱、真实存档、`/opt/palworld`、同步上传协议、配种关系、算法、评分、
+  Palworld/mihomo 容器或公网端口；不执行生产部署、远程推送或生产凭据访问。
 
 ## 2026-08-03 跨阶段修订：物品库存列顺序与周期变化边界
 

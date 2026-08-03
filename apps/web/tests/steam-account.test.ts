@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   fetchSteamProfile,
+  isInternalSteamEmail,
   resolveSteamLogin,
   resolveSteamLink,
   SteamAccountError,
@@ -47,6 +48,16 @@ const profile = {
 };
 
 describe("Steam to Supabase account bridge", () => {
+  it("recognizes only the internal Steam bridge email used for display hiding", () => {
+    expect(
+      isInternalSteamEmail("steam+76561198000000000@auth.palbeacon.invalid"),
+    ).toBe(true);
+    expect(isInternalSteamEmail("player@example.com")).toBe(false);
+    expect(isInternalSteamEmail("steam+short@auth.palbeacon.invalid")).toBe(
+      false,
+    );
+  });
+
   it("uses a safe profile fallback when Steam Web API is unavailable", async () => {
     const fetcher = vi.fn(async () => {
       throw new Error("offline");

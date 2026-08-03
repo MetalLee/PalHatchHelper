@@ -184,12 +184,16 @@ export type {
   InventoryValidationWarning,
 } from "./generated/inventory-sync";
 export type {
+  SyncBindingInvitationAccepted,
+  SyncBindingInvitationCreated,
+  SyncBindingInvitationPreview,
   SyncClaimablePlayer,
   SyncDevice,
   SyncHeartbeatRequest,
   SyncPairingCodeResponse,
   SyncPairRequest,
   SyncPairResponse,
+  SyncServerMember,
 } from "./generated/sync-api";
 export type {
   BreedingDataDiffCounts,

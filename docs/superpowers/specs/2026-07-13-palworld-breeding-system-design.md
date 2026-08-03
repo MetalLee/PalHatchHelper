@@ -1,5 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
+- 2026-08-03 账号邮箱、活动服务器成员与邀请绑定修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-03 物品库存列顺序与周期变化边界修订：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
 - 2026-08-02 unchanged 心跳新鲜度与物品制作文案修订：design=approved、implementation=completed、affected_automated_gates=passed、browser_acceptance=passed、production_deploy=not_started
 - 2026-08-02 Landing 物品库存趋势与基地数量介绍：design=approved、implementation=completed、affected_automated_gates=passed、production_deploy=not_started
@@ -1765,3 +1766,28 @@ Footer 和正文内部链接提供可抓取入口。
    趋势数组尾部出现 `null` 时，使用尾部之前的最新有效点及其相邻前一点，不得因此显示为 `0`。
 3. 最近有效点的相邻前一点缺失或不存在时，周期变化显示中性 `—`，不得跨越采样缺口计算，也不得把
    未知变化伪装为库存不变。该规则不改变五分钟采样、曲线、物品总量或可制作数量算法。
+
+## 37. 账号邮箱、活动服务器成员与邀请绑定
+
+1. 通过 Steam 登录首次创建的 Supabase Auth 用户继续使用
+   `steam+<steam-id>@auth.palbeacon.invalid` 作为服务端会话桥接标识，不原地修改认证数据；账号页必须
+   把这一内部虚拟邮箱显示为“未绑定 / Not linked”。具有真实邮箱、之后再绑定 Steam 的账号继续显示
+   真实邮箱。
+2. 账号页“存档同步”区域只返回当前用户拥有且 `revoked_at is null` 的配对服务器。服务器撤销成功后
+   整张服务器卡和其成员列表立即消失，不再以“已撤销”状态保留在普通账号界面。尚未完成首次同步的
+   活动服务器显示等待存档同步的空状态。
+3. 已完成同步的活动服务器默认展开最新有效快照中的完整玩家成员列表。每行保留“这是我”并增加
+   “邀请绑定”；只展示昵称、区分码、等级、公会、世界和绑定状态，不泄露其他账号 UUID、邮箱或
+   Steam 身份。
+4. “这是我”允许未绑定账号首次认领，也允许已绑定账号换绑到同一活动服务器中的未绑定成员。
+   换绑必须在单一事务中替换 `player_bindings`，不得删除或改写既有配种任务、物化路线、收藏、库存
+   快照或其他历史结果。目标成员已经绑定时拒绝；并发竞争只允许一个事务成功。
+5. 配对服务器所有者可以为其最新有效快照中的未绑定成员生成一次性邀请链接。邀请默认 24 小时
+   有效；同一成员生成新邀请时撤销此前未消费邀请。数据库只保存高熵 Token 的 SHA-256，不保存
+   明文链接。邀请在使用、过期、服务器撤销、成员被其他账号绑定或重新生成后失效。
+6. 接收者打开本地化邀请地址后，未登录时先经既有登录流程并保留返回地址；登录后先查看服务器、
+   世界、公会与角色摘要，再明确确认接受。接受者若已有角色绑定，同样按第 4 项执行安全换绑；打开
+   链接不得自动绑定。邀请页面和 API 使用私有无缓存、noindex/noarchive 边界与稳定错误码。
+7. 绑定邀请、接受和自助换绑只能由受鉴权 RPC 完成。创建邀请必须证明发起者拥有目标世界的未撤销
+   配对服务器；接受时再次锁定并校验邀请、服务器、最新快照、目标玩家和双方绑定状态。普通用户
+   不能列出其他用户服务器或邀请，也不能直接写入邀请表或 `player_bindings`。

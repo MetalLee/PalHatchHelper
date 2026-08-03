@@ -10,7 +10,9 @@ const pairing = {
 };
 
 describe("SyncDeviceCard installation guidance", () => {
-  const copy = vi.fn(async () => undefined);
+  const copy = vi
+    .fn<(text: string) => Promise<void>>()
+    .mockResolvedValue(undefined);
 
   beforeEach(() => {
     Object.defineProperty(navigator, "clipboard", {
@@ -151,6 +153,85 @@ describe("SyncDeviceCard installation guidance", () => {
     expect(await screen.findByText(/最近检测/)).toBeTruthy();
     expect(screen.getByText(/上次上传/)).toBeTruthy();
   });
+
+  it("expands active server members and keeps claim available for a bound account", async () => {
+    const activeServer = {
+      ...device("linux-x64", "Guild server"),
+      world_id: "10000000-0000-4000-8000-000000000001",
+      members: [
+        {
+          player_id: "30000000-0000-4000-8000-000000000099",
+          nickname: "New guild member",
+          level: 22,
+          guild_name: "Fixture Guild",
+          world_name: "Fixture World",
+          discriminator: "#abc123",
+          is_bound: false,
+          is_current_user: false,
+        },
+      ],
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response({ devices: [activeServer] }))
+      .mockResolvedValueOnce(
+        response({
+          invitation_path:
+            "/zh/account/binding-invitations/abcdefghijklmnopqrstuvwxyzABCDEFG1234567890_",
+          expires_at: "2026-08-04T00:00:00.000Z",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <AppLocaleProvider locale="zh">
+        <SyncDeviceCard hasBinding />
+      </AppLocaleProvider>,
+    );
+
+    expect(await screen.findByText("New guild member")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "这是我" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "邀请绑定" }));
+    await waitFor(() => expect(copy).toHaveBeenCalledTimes(1));
+    expect(copy.mock.calls[0]?.[0]).toContain(
+      "/zh/account/binding-invitations/",
+    );
+    expect(await screen.findByText("邀请链接已复制")).toBeTruthy();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/sync/binding-invitations",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("does not render a revoked server returned by a stale response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        response({
+          devices: [
+            {
+              ...device("linux-x64", "Revoked server"),
+              revoked_at: "2026-08-03T00:00:00.000Z",
+              members: [],
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(
+      <AppLocaleProvider locale="zh">
+        <SyncDeviceCard hasBinding />
+      </AppLocaleProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText("Revoked server")).toBeNull(),
+    );
+  });
 });
 
 function device(platform: string, name: string) {
@@ -165,6 +246,7 @@ function device(platform: string, name: string) {
     last_snapshot_at: null,
     revoked_at: null,
     created_at: "2026-07-30T00:00:00.000Z",
+    members: [],
   };
 }
 

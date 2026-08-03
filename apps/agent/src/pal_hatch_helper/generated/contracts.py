@@ -1192,6 +1192,19 @@ class SyncPairingCodeResponse(BaseModel):
     expires_at: AwareDatetime
 
 
+class SyncServerMember(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    player_id: UUID
+    nickname: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    level: int | None
+    guild_name: Annotated[str, Field(max_length=160)] | None
+    world_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    discriminator: Annotated[str, Field(pattern="^#[0-9a-f]{6}$")]
+    is_bound: bool
+    is_current_user: bool
+
+
 class SyncDevice(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -1205,6 +1218,36 @@ class SyncDevice(BaseModel):
     last_snapshot_at: AwareDatetime | None
     revoked_at: AwareDatetime | None
     created_at: AwareDatetime
+    members: list[SyncServerMember]
+
+
+class SyncBindingInvitationCreated(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    invitation_path: Annotated[
+        str,
+        Field(pattern="^/(zh|en)/account/binding-invitations/[A-Za-z0-9_-]{43}$"),
+    ]
+    expires_at: AwareDatetime
+
+
+class SyncBindingInvitationPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    player_id: UUID
+    nickname: Annotated[str, Field(min_length=1), Field(max_length=120)]
+    level: int | None
+    guild_name: Annotated[str, Field(max_length=160)] | None
+    world_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
+    device_name: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    discriminator: Annotated[str, Field(pattern="^#[0-9a-f]{6}$")]
+    expires_at: AwareDatetime
+
+
+class SyncBindingInvitationAccepted(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    player_id: UUID
 
 
 class SyncClaimablePlayer(BaseModel):

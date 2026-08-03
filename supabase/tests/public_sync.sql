@@ -363,11 +363,9 @@ select lives_ok(
   $$ select public.claim_synced_player('30000000-0000-4000-8000-000000000098') $$,
   'a device owner can claim one player from the latest synced snapshot'
 );
-select throws_ok(
+select lives_ok(
   $$ select public.claim_synced_player('30000000-0000-4000-8000-000000000097') $$,
-  'P0001',
-  'USER_ALREADY_BOUND',
-  'one Auth user cannot bind a second game player'
+  'an already-bound Auth user can rebind to another unbound game player'
 );
 
 reset role;
@@ -386,7 +384,7 @@ select set_config(
 );
 set local role authenticated;
 select throws_ok(
-  $$ select public.claim_synced_player('30000000-0000-4000-8000-000000000098') $$,
+  $$ select public.claim_synced_player('30000000-0000-4000-8000-000000000097') $$,
   'P0001',
   'PLAYER_ALREADY_CLAIMED',
   'the unique binding prevents a competing user from claiming the same player'

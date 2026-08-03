@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -25,6 +28,18 @@ const payload = {
 };
 
 describe("public Sync shared contracts", () => {
+  it("defines browser-safe server member and binding invitation payloads", () => {
+    const schema = JSON.parse(
+      readFileSync(
+        resolve(import.meta.dirname, "../schema/sync-api.schema.json"),
+        "utf8",
+      ),
+    ) as { $defs?: Record<string, unknown> };
+    expect(schema.$defs).toHaveProperty("SyncServerMember");
+    expect(schema.$defs).toHaveProperty("SyncBindingInvitationCreated");
+    expect(schema.$defs).toHaveProperty("SyncBindingInvitationPreview");
+  });
+
   it("validates the existing InventoryPublishPayload at the cloud boundary", () => {
     expect(parseInventoryPublishPayload(payload)).toEqual(payload);
     expect(() =>
