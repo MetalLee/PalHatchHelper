@@ -63,6 +63,30 @@
         "expires_at": { "type": "string", "format": "date-time" }
       }
     },
+    "SyncServerMember": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "player_id",
+        "nickname",
+        "level",
+        "guild_name",
+        "world_name",
+        "discriminator",
+        "is_bound",
+        "is_current_user"
+      ],
+      "properties": {
+        "player_id": { "type": "string", "format": "uuid" },
+        "nickname": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "level": { "type": ["integer", "null"] },
+        "guild_name": { "type": ["string", "null"], "maxLength": 160 },
+        "world_name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "discriminator": { "type": "string", "pattern": "^#[0-9a-f]{6}$" },
+        "is_bound": { "type": "boolean" },
+        "is_current_user": { "type": "boolean" }
+      }
+    },
     "SyncDevice": {
       "type": "object",
       "additionalProperties": false,
@@ -76,7 +100,8 @@
         "last_seen_at",
         "last_snapshot_at",
         "revoked_at",
-        "created_at"
+        "created_at",
+        "members"
       ],
       "properties": {
         "id": { "type": "string", "format": "uuid" },
@@ -91,7 +116,55 @@
           "format": "date-time"
         },
         "revoked_at": { "type": ["string", "null"], "format": "date-time" },
-        "created_at": { "type": "string", "format": "date-time" }
+        "created_at": { "type": "string", "format": "date-time" },
+        "members": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SyncServerMember" }
+        }
+      }
+    },
+    "SyncBindingInvitationCreated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["invitation_path", "expires_at"],
+      "properties": {
+        "invitation_path": {
+          "type": "string",
+          "pattern": "^/(zh|en)/account/binding-invitations/[A-Za-z0-9_-]{43}$"
+        },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SyncBindingInvitationPreview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "player_id",
+        "nickname",
+        "level",
+        "guild_name",
+        "world_name",
+        "device_name",
+        "discriminator",
+        "expires_at"
+      ],
+      "properties": {
+        "player_id": { "type": "string", "format": "uuid" },
+        "nickname": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "level": { "type": ["integer", "null"] },
+        "guild_name": { "type": ["string", "null"], "maxLength": 160 },
+        "world_name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "device_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "discriminator": { "type": "string", "pattern": "^#[0-9a-f]{6}$" },
+        "expires_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "SyncBindingInvitationAccepted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["player_id"],
+      "properties": {
+        "player_id": { "type": "string", "format": "uuid" }
       }
     },
     "SyncClaimablePlayer": {

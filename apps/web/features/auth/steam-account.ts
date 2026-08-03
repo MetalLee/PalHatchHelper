@@ -157,6 +157,10 @@ export function internalSteamEmail(steamId: string): string {
   return `steam+${steamId}@auth.palbeacon.invalid`;
 }
 
+export function isInternalSteamEmail(email: string): boolean {
+  return /^steam\+\d{17}@auth\.palbeacon\.invalid$/.test(email);
+}
+
 export async function resolveSteamLogin(
   dependencies: SteamAccountDependencies,
   steamId: string,

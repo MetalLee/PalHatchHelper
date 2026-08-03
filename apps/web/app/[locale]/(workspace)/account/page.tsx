@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { requireUserContext } from "@/features/auth/server";
+import { isInternalSteamEmail } from "@/features/auth/steam-account";
 import { PlayerBindingSetup } from "@/features/sync/player-binding-setup";
 import { requireAppLocale } from "@/i18n/server-locale";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -46,7 +47,9 @@ export default async function AccountPage({
             <div className="min-w-0 rounded-2xl bg-muted/55 p-4">
               <dt>{t("email")}</dt>
               <dd className="mt-1 break-all font-semibold text-foreground">
-                {context.email}
+                {isInternalSteamEmail(context.email)
+                  ? t("notLinked")
+                  : context.email}
               </dd>
             </div>
             <div className="min-w-0 rounded-2xl bg-muted/55 p-4">

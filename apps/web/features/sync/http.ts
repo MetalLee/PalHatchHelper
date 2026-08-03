@@ -37,6 +37,8 @@ export function syncError(error: unknown): NextResponse {
     PLAYER_ALREADY_CLAIMED: 409,
     USER_ALREADY_BOUND: 409,
     SYNC_DEVICE_NOT_FOUND: 404,
+    BINDING_INVITATION_INVALID: 404,
+    BINDING_INVITATION_EXPIRED: 410,
   };
   const stableCode = code in statuses ? code : "SYNC_UNAVAILABLE";
   return NextResponse.json(

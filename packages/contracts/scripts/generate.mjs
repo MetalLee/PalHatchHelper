@@ -67,7 +67,11 @@ const bundledContractModels = {
     "SyncHeartbeatRequest",
     "SyncPairingCodeResponse",
     "SyncDevice",
+    "SyncServerMember",
     "SyncClaimablePlayer",
+    "SyncBindingInvitationCreated",
+    "SyncBindingInvitationPreview",
+    "SyncBindingInvitationAccepted",
   ],
   "game-catalog": [
     "GameCatalogManifest",

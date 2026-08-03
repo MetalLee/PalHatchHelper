@@ -1,6 +1,42 @@
 import { expect, test, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
 const fixturePassword = "palhatch-local-fixture";
+const invitationPlayerId = "30000000-0000-4000-8000-000000000090";
+const invitationDeviceId = "90000000-0000-4000-8000-000000000090";
+
+async function createBindingInvitationFixture() {
+  const url = process.env.PALHATCH_E2E_SUPABASE_URL;
+  const serviceRole = process.env.PALHATCH_E2E_SERVICE_ROLE_KEY;
+  if (url !== "http://127.0.0.1:54321" || !serviceRole) {
+    throw new Error("Binding invitation E2E requires local Supabase");
+  }
+  const service = createClient(url, serviceRole, {
+    auth: { persistSession: false },
+  });
+  const player = await service.from("players").insert({
+    id: invitationPlayerId,
+    world_id: "10000000-0000-4000-8000-000000000001",
+    guild_id: "20000000-0000-4000-8000-000000000001",
+    game_player_uid: "fixture-invitation-player",
+    nickname: "邀请测试成员",
+    level: 41,
+    last_seen_at: "2026-07-13T09:00:00Z",
+  });
+  if (player.error) throw player.error;
+  const device = await service.from("sync_devices").insert({
+    id: invitationDeviceId,
+    owner_user_id: "00000000-0000-4000-8000-000000000002",
+    world_id: "10000000-0000-4000-8000-000000000001",
+    name: "邀请测试服务器",
+    platform: "linux-x64",
+    token_hash: "c".repeat(64),
+    token_prefix: "pbs_e2etest1",
+    last_seen_at: "2026-07-13T09:00:00Z",
+    last_snapshot_at: "2026-07-13T09:00:00Z",
+  });
+  if (device.error) throw device.error;
+}
 
 async function login(page: Page, email = "player-a@palhatch.fixture.invalid") {
   await page.goto("/zh/login");
@@ -48,6 +84,57 @@ test("unbound test account receives the sync setup", async ({ page }) => {
   await expect(
     menu.getByRole("link", { name: /数据状态.*未绑定/ }),
   ).toBeVisible();
+});
+
+test("an invited user returns from login and explicitly accepts the member binding", async ({
+  page,
+  context,
+}) => {
+  const testPort = process.env.PALHATCH_E2E_PORT ?? "3000";
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: `http://127.0.0.1:${testPort}`,
+  });
+  await createBindingInvitationFixture();
+  await login(page);
+  await page.goto("/zh/account");
+
+  await expect(page.getByText("邀请测试服务器")).toBeVisible();
+  await expect(page.getByText("邀请测试成员")).toBeVisible();
+  const memberRow = page
+    .locator("div")
+    .filter({ has: page.getByText("邀请测试成员", { exact: true }) })
+    .filter({ has: page.getByRole("button", { name: "邀请绑定" }) })
+    .last();
+  await expect(memberRow.getByRole("button", { name: "这是我" })).toBeEnabled();
+  const invitationResponsePromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/sync/binding-invitations") &&
+      response.request().method() === "POST",
+  );
+  await memberRow.getByRole("button", { name: "邀请绑定" }).click();
+  const invitationResponse = await invitationResponsePromise;
+  expect(invitationResponse.status()).toBe(201);
+  const invitation = (await invitationResponse.json()) as {
+    invitation_path: string;
+  };
+  await expect(page.getByText("邀请链接已复制")).toBeVisible();
+
+  const logout = await page.request.post("/api/auth/logout");
+  expect(logout.ok()).toBeTruthy();
+  await page.goto(invitation.invitation_path);
+  await expect(page).toHaveURL(/\/zh\/login\?next=/);
+  await page.getByLabel("邮箱").fill("unbound@palhatch.fixture.invalid");
+  await page.getByLabel("密码").fill(fixturePassword);
+  await page.getByRole("button", { name: "登录" }).click();
+  await expect(page).toHaveURL(invitation.invitation_path, { timeout: 15_000 });
+  await expect(
+    page.getByRole("heading", { name: /邀请测试成员/ }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "确认绑定" }).click();
+  await expect(page.getByText("角色绑定成功")).toBeVisible();
+  await page.goto("/zh/account");
+  await expect(page.getByText("邀请测试成员", { exact: true })).toBeVisible();
 });
 
 test("overview stays within a 390px viewport and uses CSS-only hero scenery", async ({

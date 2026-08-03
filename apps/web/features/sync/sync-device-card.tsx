@@ -1,8 +1,10 @@
 "use client";
 
-import type { SyncClaimablePlayer, SyncDevice } from "@palhatch/contracts";
+import type {
+  SyncBindingInvitationCreated,
+  SyncDevice,
+} from "@palhatch/contracts";
 import {
-  CheckCircle2,
   ChevronDown,
   Copy,
   Link2,
@@ -10,6 +12,8 @@ import {
   RefreshCw,
   Server,
   Trash2,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -33,34 +37,26 @@ export function SyncDeviceCard({
   const t = useCopy("Sync");
   const unavailableText = t("unavailable");
   const [devices, setDevices] = useState<SyncDevice[]>([]);
-  const [players, setPlayers] = useState<SyncClaimablePlayer[]>([]);
   const [pairing, setPairing] = useState<PairingCode | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [deviceResponse, playerResponse] = await Promise.all([
-      fetch("/api/sync/devices", { cache: "no-store" }),
-      hasBinding
-        ? Promise.resolve(null)
-        : fetch("/api/sync/claimable-players", { cache: "no-store" }),
-    ]);
-    if (!deviceResponse.ok || (playerResponse !== null && !playerResponse.ok)) {
+    const deviceResponse = await fetch("/api/sync/devices", {
+      cache: "no-store",
+    });
+    if (!deviceResponse.ok) {
       throw new Error("SYNC_UNAVAILABLE");
     }
     const deviceBody = (await deviceResponse.json()) as {
       devices?: SyncDevice[];
     };
-    const playerBody =
-      playerResponse === null
-        ? { players: [] }
-        : ((await playerResponse.json()) as {
-            players?: SyncClaimablePlayer[];
-          });
-    setDevices(deviceBody.devices ?? []);
-    setPlayers(playerBody.players ?? []);
-  }, [hasBinding]);
+    setDevices(
+      (deviceBody.devices ?? []).filter((device) => device.revoked_at === null),
+    );
+  }, []);
 
   useEffect(() => {
     void reload().catch(() => setError(unavailableText));
@@ -101,7 +97,10 @@ export function SyncDeviceCard({
   }
 
   async function claim(playerId: string) {
+    if (hasBinding && !window.confirm(t("rebindConfirm"))) return;
     setPending(true);
+    setError(null);
+    setNotice(null);
     try {
       const response = await fetch("/api/sync/claim", {
         method: "POST",
@@ -113,6 +112,36 @@ export function SyncDeviceCard({
       window.location.assign(`/${locale}/overview`);
     } catch {
       setError(t("claimFailed"));
+      setPending(false);
+    }
+  }
+
+  async function invite(deviceId: string, playerId: string) {
+    setPending(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/sync/binding-invitations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          device_id: deviceId,
+          player_id: playerId,
+          locale,
+        }),
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("INVITE_FAILED");
+      const result = (await response.json()) as SyncBindingInvitationCreated;
+      const invitationUrl = new URL(
+        result.invitation_path,
+        window.location.origin,
+      ).toString();
+      await navigator.clipboard.writeText(invitationUrl);
+      setNotice(t("inviteCopied"));
+    } catch {
+      setError(t("inviteFailed"));
+    } finally {
       setPending(false);
     }
   }
@@ -153,6 +182,15 @@ export function SyncDeviceCard({
           <Alert variant="destructive" role="alert">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
+        ) : null}
+        {notice !== null ? (
+          <p
+            className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800"
+            role="status"
+            aria-live="polite"
+          >
+            {notice}
+          </p>
         ) : null}
 
         <ol className="grid gap-3 lg:grid-cols-3" aria-label={t("stepsLabel")}>
@@ -251,34 +289,34 @@ export function SyncDeviceCard({
             devices.map((device) => (
               <div
                 key={device.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-muted/45 p-4"
+                className="grid gap-4 rounded-2xl border border-border/70 bg-muted/35 p-4"
               >
-                <div className="min-w-0">
-                  <p className="flex items-center gap-2 font-semibold text-foreground">
-                    <span
-                      className={`size-2 rounded-full ${isOnline(device.last_seen_at) && device.revoked_at === null ? "bg-emerald-500" : "bg-slate-400"}`}
-                    />
-                    {device.name}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {platformLabel(device.platform, t)} ·{" "}
-                    {device.app_version ?? t("versionUnknown")}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {device.last_seen_at
-                      ? t("lastHeartbeat", {
-                          time: relativeTime(device.last_seen_at, locale),
-                        })
-                      : t("neverChecked")}{" "}
-                    ·{" "}
-                    {device.last_snapshot_at
-                      ? t("lastSnapshot", {
-                          time: relativeTime(device.last_snapshot_at, locale),
-                        })
-                      : t("neverSynced")}
-                  </p>
-                </div>
-                {device.revoked_at === null ? (
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 font-semibold text-foreground">
+                      <span
+                        className={`size-2 rounded-full ${isOnline(device.last_seen_at) ? "bg-emerald-500" : "bg-slate-400"}`}
+                      />
+                      {device.name}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {platformLabel(device.platform, t)} ·{" "}
+                      {device.app_version ?? t("versionUnknown")}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {device.last_seen_at
+                        ? t("lastHeartbeat", {
+                            time: relativeTime(device.last_seen_at, locale),
+                          })
+                        : t("neverChecked")}{" "}
+                      ·{" "}
+                      {device.last_snapshot_at
+                        ? t("lastSnapshot", {
+                            time: relativeTime(device.last_snapshot_at, locale),
+                          })
+                        : t("neverSynced")}
+                    </p>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -289,61 +327,94 @@ export function SyncDeviceCard({
                     <Trash2 aria-hidden="true" className="size-4" />
                     {t("revoke")}
                   </Button>
-                ) : (
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {t("revoked")}
-                  </span>
-                )}
+                </div>
+
+                <section
+                  className="grid gap-3 border-t border-border/70 pt-4"
+                  aria-labelledby={`server-members-${device.id}`}
+                >
+                  <div>
+                    <h3
+                      id={`server-members-${device.id}`}
+                      className="flex items-center gap-2 font-bold text-foreground"
+                    >
+                      <Users
+                        aria-hidden="true"
+                        className="size-4 text-primary"
+                      />
+                      {t("serverMembers")}
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("membersDescription")}
+                    </p>
+                  </div>
+                  {device.world_id === null ? (
+                    <p className="rounded-xl bg-background/70 p-3 text-sm text-muted-foreground">
+                      {t("awaitingFirstSync")}
+                    </p>
+                  ) : (device.members ?? []).length === 0 ? (
+                    <p className="rounded-xl bg-background/70 p-3 text-sm text-muted-foreground">
+                      {t("noMembers")}
+                    </p>
+                  ) : (
+                    (device.members ?? []).map((member) => (
+                      <div
+                        key={member.player_id}
+                        className="grid gap-3 rounded-xl bg-background/75 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                      >
+                        <div className="min-w-0">
+                          <p className="flex flex-wrap items-center gap-2 font-semibold text-foreground">
+                            <span>{member.nickname}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {member.discriminator}
+                            </span>
+                            {member.is_current_user ? (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                                {t("currentCharacter")}
+                              </span>
+                            ) : member.is_bound ? (
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+                                {t("memberBound")}
+                              </span>
+                            ) : null}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {member.guild_name ?? t("noGuild")} ·{" "}
+                            {member.level === null
+                              ? t("levelUnknown")
+                              : t("level", { level: member.level })}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:flex">
+                          <Button
+                            size="sm"
+                            type="button"
+                            disabled={pending || member.is_bound}
+                            onClick={() => void claim(member.player_id)}
+                          >
+                            {t("claim")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            disabled={pending || member.is_bound}
+                            onClick={() =>
+                              void invite(device.id, member.player_id)
+                            }
+                          >
+                            <UserPlus aria-hidden="true" className="size-4" />
+                            {t("invite")}
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </section>
               </div>
             ))
           )}
         </div>
-
-        {!hasBinding && players.length > 0 ? (
-          <div className="grid gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-            <div>
-              <h3 className="flex items-center gap-2 font-bold text-foreground">
-                <CheckCircle2
-                  aria-hidden="true"
-                  className="size-5 text-primary"
-                />
-                {t("claimTitle")}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("claimDescription")}
-              </p>
-            </div>
-            {players.map((player) => (
-              <div
-                key={player.player_id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/70 p-3"
-              >
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {player.nickname}{" "}
-                    <span className="text-xs text-muted-foreground">
-                      {player.discriminator}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {player.guild_name ?? t("noGuild")} ·{" "}
-                    {player.level === null
-                      ? t("levelUnknown")
-                      : t("level", { level: player.level })}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  type="button"
-                  disabled={pending}
-                  onClick={() => void claim(player.player_id)}
-                >
-                  {t("claim")}
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : null}
 
         <Button
           variant="ghost"

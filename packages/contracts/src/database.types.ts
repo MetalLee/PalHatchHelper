@@ -2627,6 +2627,74 @@ export type Database = {
           },
         ];
       };
+      player_binding_invitations: {
+        Row: {
+          id: string;
+          sync_device_id: string;
+          inviter_user_id: string;
+          player_id: string;
+          token_hash: string;
+          expires_at: string;
+          consumed_at: string | null;
+          accepted_by_user_id: string | null;
+          revoked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          sync_device_id: string;
+          inviter_user_id: string;
+          player_id: string;
+          token_hash: string;
+          expires_at: string;
+          consumed_at?: string | null;
+          accepted_by_user_id?: string | null;
+          revoked_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          sync_device_id?: string;
+          inviter_user_id?: string;
+          player_id?: string;
+          token_hash?: string;
+          expires_at?: string;
+          consumed_at?: string | null;
+          accepted_by_user_id?: string | null;
+          revoked_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_binding_invitations_accepted_by_user_id_fkey";
+            columns: ["accepted_by_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_binding_invitations_inviter_user_id_fkey";
+            columns: ["inviter_user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_binding_invitations_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_binding_invitations_sync_device_id_fkey";
+            columns: ["sync_device_id"];
+            isOneToOne: false;
+            referencedRelation: "sync_devices";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       player_bindings: {
         Row: {
           user_id: string;
@@ -3168,6 +3236,12 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      accept_player_binding_invitation: {
+        Args: {
+          p_token_hash: string;
+        };
+        Returns: string;
+      };
       admin_bind_player: {
         Args: {
           p_user_id: string;
@@ -3319,6 +3393,15 @@ export type Database = {
         };
         Returns: Json;
       };
+      create_player_binding_invitation: {
+        Args: {
+          p_device_id: string;
+          p_player_id: string;
+          p_token_hash: string;
+          p_ttl_seconds?: number;
+        };
+        Returns: Json;
+      };
       create_sync_pairing_code: {
         Args: {
           p_code_hash: string;
@@ -3438,6 +3521,12 @@ export type Database = {
       get_latest_inventory_snapshot_for_agent: {
         Args: {
           p_world_id: string;
+        };
+        Returns: Json;
+      };
+      get_player_binding_invitation: {
+        Args: {
+          p_token_hash: string;
         };
         Returns: Json;
       };
@@ -3661,6 +3750,20 @@ export type Database = {
           last_snapshot_at: string;
           revoked_at: string;
           created_at: string;
+        }[];
+      };
+      list_sync_server_members: {
+        Args: Record<string, never>;
+        Returns: {
+          device_id: string;
+          player_id: string;
+          nickname: string;
+          level: number;
+          guild_name: string;
+          world_name: string;
+          discriminator: string;
+          is_bound: boolean;
+          is_current_user: boolean;
         }[];
       };
       mark_admin_catalog_upload_ready: {
