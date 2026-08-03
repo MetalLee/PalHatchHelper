@@ -4,55 +4,97 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingInvitationConfirmation } from "@/features/sync/binding-invitation-confirmation";
 import { AppLocaleProvider } from "@/i18n/client";
 
+const token = "a".repeat(43);
+
+const preview = {
+  device_name: "Fixture Server",
+  world_name: "Fixture World",
+  expires_at: "2026-08-04T00:00:00.000Z",
+  players: [
+    {
+      player_id: "30000000-0000-4000-8000-000000000099",
+      nickname: "Invited Player",
+      level: 42,
+      guild_name: "Fixture Guild",
+      discriminator: "#abc123",
+    },
+    {
+      player_id: "30000000-0000-4000-8000-000000000098",
+      nickname: "Second Player",
+      level: 33,
+      guild_name: null,
+      discriminator: "#def456",
+    },
+  ],
+};
+
 describe("binding invitation confirmation", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("previews the invited member and never rebinds before explicit confirmation", async () => {
+  it("lists unbound members and binds only after choosing and confirming", async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce(response(preview))
       .mockResolvedValueOnce(
-        response({
-          player_id: "30000000-0000-4000-8000-000000000099",
-          nickname: "Invited Player",
-          level: 42,
-          guild_name: "Fixture Guild",
-          world_name: "Fixture World",
-          device_name: "Fixture Server",
-          discriminator: "#abc123",
-          expires_at: "2026-08-04T00:00:00.000Z",
-        }),
-      )
-      .mockResolvedValueOnce(
-        response({
-          player_id: "30000000-0000-4000-8000-000000000099",
-        }),
+        response({ player_id: "30000000-0000-4000-8000-000000000099" }),
       );
     vi.stubGlobal("fetch", fetchMock);
 
     render(
       <AppLocaleProvider locale="zh">
-        <BindingInvitationConfirmation token={"a".repeat(43)} />
+        <BindingInvitationConfirmation token={token} />
       </AppLocaleProvider>,
     );
 
     expect(
-      await screen.findByRole("heading", {
-        name: "Invited Player #abc123",
-      }),
+      await screen.findByRole("heading", { name: "Fixture Server" }),
     ).toBeTruthy();
-    expect(screen.getByText(/不会改变既有配种任务和收藏/)).toBeTruthy();
+    expect(screen.getByText("Fixture World")).toBeTruthy();
+    expect(screen.getByText("Invited Player")).toBeTruthy();
+    expect(screen.getByText("Second Player")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      `/api/sync/binding-invitations/${"a".repeat(43)}`,
+      `/api/sync/binding-invitations/${token}`,
       expect.objectContaining({ cache: "no-store" }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "确认绑定" }));
+    const accept = screen.getByRole("button", { name: "确认绑定" });
+    expect((accept as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole("radio", { name: /Invited Player/ }));
+    expect((accept as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(accept);
     expect(await screen.findByText("角色绑定成功")).toBeTruthy();
     expect(fetchMock).toHaveBeenLastCalledWith(
-      `/api/sync/binding-invitations/${"a".repeat(43)}`,
-      expect.objectContaining({ method: "POST" }),
+      `/api/sync/binding-invitations/${token}`,
+      expect.objectContaining({
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          player_id: "30000000-0000-4000-8000-000000000099",
+        }),
+      }),
     );
+  });
+
+  it("shows an empty state when every member is already linked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(response({ ...preview, players: [] })),
+    );
+
+    render(
+      <AppLocaleProvider locale="zh">
+        <BindingInvitationConfirmation token={token} />
+      </AppLocaleProvider>,
+    );
+
+    expect(await screen.findByText(/该服务器所有角色都已被绑定/)).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "确认绑定" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 });
 

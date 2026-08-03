@@ -883,9 +883,9 @@
   "BindingInvitation": {
     "eyebrow": "角色邀请",
     "title": "确认角色绑定",
-    "description": "核对服务器和游戏角色后，再决定是否绑定到当前账号。",
+    "description": "核对服务器信息，从该服务器的角色中选择你的游戏角色后绑定到当前账号。",
     "loading": "正在验证邀请…",
-    "reviewDescription": "请确认这是你在该服务器中的游戏角色。",
+    "reviewDescription": "请选择你在该服务器中的游戏角色。",
     "server": "配对服务器",
     "world": "世界",
     "guild": "公会",
@@ -900,8 +900,10 @@
     "successDescription": "现在可以使用该角色的权限内库存继续规划。",
     "openWorkspace": "打开工作台",
     "expired": "邀请已过期，请让服务器配对者重新生成。",
-    "invalid": "邀请已失效，可能已被使用、撤销或该角色已绑定。",
-    "unavailable": "暂时无法验证邀请，请稍后重试。"
+    "invalid": "邀请已失效，可能已过期、被撤销或目标角色已绑定。",
+    "unavailable": "暂时无法验证邀请，请稍后重试。",
+    "chooseRole": "选择角色",
+    "noAvailableRoles": "该服务器所有角色都已被绑定，请让配对服务器所有者重新生成邀请。"
   },
   "Sync": {
     "title": "存档同步",
@@ -959,7 +961,7 @@
     "faqTitle": "常见问题",
     "faqDescription": "第一次同步时，这些说明可以帮你确认角色、目录和数据安全。",
     "faqMatchingQuestion": "角色匹配是怎么完成的？",
-    "faqMatchingAnswer": "设备完成首次同步后，这里会列出该世界的服务器成员。点击“这是我”可以认领或换绑到未绑定角色；也可以复制邀请链接请另一位玩家确认绑定。",
+    "faqMatchingAnswer": "点击“这是我”可以认领或换绑到未绑定角色；也可以复制服务器邀请链接，请其他玩家打开后选择自己的角色绑定。",
     "faqSaveDirectoryQuestion": "Palworld 存档目录怎么选？",
     "faqSaveDirectoryAnswer": "选择包含 Level.sav 和 Players 文件夹的世界目录。init 会检查目录结构；有多个世界时，请选择你要同步的那个世界。",
     "faqSafetyQuestion": "存档数据安全吗？",

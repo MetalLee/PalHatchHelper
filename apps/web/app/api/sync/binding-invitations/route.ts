@@ -22,14 +22,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await readLimitedJson(request, 4096)) as {
       device_id?: unknown;
-      player_id?: unknown;
       locale?: unknown;
     };
     if (
       typeof body.device_id !== "string" ||
       !uuidPattern.test(body.device_id) ||
-      typeof body.player_id !== "string" ||
-      !uuidPattern.test(body.player_id) ||
       (body.locale !== "zh" && body.locale !== "en")
     ) {
       throw new SyncHttpError("SYNC_REQUEST_INVALID", 400);
@@ -49,7 +46,6 @@ export async function POST(request: NextRequest) {
       "create_player_binding_invitation",
       {
         p_device_id: body.device_id,
-        p_player_id: body.player_id,
         p_token_hash: hashBindingInvitationToken(token),
         p_ttl_seconds: 86400,
       },

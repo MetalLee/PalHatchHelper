@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,6 @@ export function SyncDeviceCard({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const deviceResponse = await fetch("/api/sync/devices", {
@@ -100,7 +100,6 @@ export function SyncDeviceCard({
     if (hasBinding && !window.confirm(t("rebindConfirm"))) return;
     setPending(true);
     setError(null);
-    setNotice(null);
     try {
       const response = await fetch("/api/sync/claim", {
         method: "POST",
@@ -116,19 +115,14 @@ export function SyncDeviceCard({
     }
   }
 
-  async function invite(deviceId: string, playerId: string) {
+  async function invite(deviceId: string) {
     setPending(true);
     setError(null);
-    setNotice(null);
     try {
       const response = await fetch("/api/sync/binding-invitations", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          device_id: deviceId,
-          player_id: playerId,
-          locale,
-        }),
+        body: JSON.stringify({ device_id: deviceId, locale }),
         cache: "no-store",
       });
       if (!response.ok) throw new Error("INVITE_FAILED");
@@ -138,7 +132,7 @@ export function SyncDeviceCard({
         window.location.origin,
       ).toString();
       await navigator.clipboard.writeText(invitationUrl);
-      setNotice(t("inviteCopied"));
+      toast.success(t("inviteCopied"));
     } catch {
       setError(t("inviteFailed"));
     } finally {
@@ -182,15 +176,6 @@ export function SyncDeviceCard({
           <Alert variant="destructive" role="alert">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        ) : null}
-        {notice !== null ? (
-          <p
-            className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800"
-            role="status"
-            aria-live="polite"
-          >
-            {notice}
-          </p>
         ) : null}
 
         <ol className="grid gap-3 lg:grid-cols-3" aria-label={t("stepsLabel")}>
@@ -333,20 +318,32 @@ export function SyncDeviceCard({
                   className="grid gap-3 border-t border-border/70 pt-4"
                   aria-labelledby={`server-members-${device.id}`}
                 >
-                  <div>
-                    <h3
-                      id={`server-members-${device.id}`}
-                      className="flex items-center gap-2 font-bold text-foreground"
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3
+                        id={`server-members-${device.id}`}
+                        className="flex items-center gap-2 font-bold text-foreground"
+                      >
+                        <Users
+                          aria-hidden="true"
+                          className="size-4 text-primary"
+                        />
+                        {t("serverMembers")}
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("membersDescription")}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      disabled={pending || device.world_id === null}
+                      onClick={() => void invite(device.id)}
                     >
-                      <Users
-                        aria-hidden="true"
-                        className="size-4 text-primary"
-                      />
-                      {t("serverMembers")}
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t("membersDescription")}
-                    </p>
+                      <UserPlus aria-hidden="true" className="size-4" />
+                      {t("invite")}
+                    </Button>
                   </div>
                   {device.world_id === null ? (
                     <p className="rounded-xl bg-background/70 p-3 text-sm text-muted-foreground">
@@ -385,7 +382,7 @@ export function SyncDeviceCard({
                               : t("level", { level: member.level })}
                           </p>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 sm:flex">
+                        <div className="grid gap-2 sm:flex sm:justify-end">
                           <Button
                             size="sm"
                             type="button"
@@ -393,18 +390,6 @@ export function SyncDeviceCard({
                             onClick={() => void claim(member.player_id)}
                           >
                             {t("claim")}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            type="button"
-                            disabled={pending || member.is_bound}
-                            onClick={() =>
-                              void invite(device.id, member.player_id)
-                            }
-                          >
-                            <UserPlus aria-hidden="true" className="size-4" />
-                            {t("invite")}
                           </Button>
                         </div>
                       </div>

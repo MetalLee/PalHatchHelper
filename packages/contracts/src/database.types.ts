@@ -2632,7 +2632,7 @@ export type Database = {
           id: string;
           sync_device_id: string;
           inviter_user_id: string;
-          player_id: string;
+          player_id: string | null;
           token_hash: string;
           expires_at: string;
           consumed_at: string | null;
@@ -2644,7 +2644,7 @@ export type Database = {
           id?: string;
           sync_device_id: string;
           inviter_user_id: string;
-          player_id: string;
+          player_id?: string | null;
           token_hash: string;
           expires_at: string;
           consumed_at?: string | null;
@@ -2656,7 +2656,7 @@ export type Database = {
           id?: string;
           sync_device_id?: string;
           inviter_user_id?: string;
-          player_id?: string;
+          player_id?: string | null;
           token_hash?: string;
           expires_at?: string;
           consumed_at?: string | null;
@@ -3239,6 +3239,7 @@ export type Database = {
       accept_player_binding_invitation: {
         Args: {
           p_token_hash: string;
+          p_player_id: string;
         };
         Returns: string;
       };
@@ -3396,7 +3397,6 @@ export type Database = {
       create_player_binding_invitation: {
         Args: {
           p_device_id: string;
-          p_player_id: string;
           p_token_hash: string;
           p_ttl_seconds?: number;
         };

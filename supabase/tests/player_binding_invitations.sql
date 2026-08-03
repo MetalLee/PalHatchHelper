@@ -1,36 +1,30 @@
 begin;
 set local search_path = public, extensions;
 
-select plan(27);
+select plan(33);
 
 select has_table(
   'public',
   'player_binding_invitations',
-  'one-time player binding invitations have a dedicated store'
-);
-select has_function(
-  'public',
-  'list_sync_server_members',
-  array[]::text[],
-  'active server members are projected by a browser-safe RPC'
+  'server-level binding invitations have a dedicated store'
 );
 select has_function(
   'public',
   'create_player_binding_invitation',
-  array['uuid', 'uuid', 'text', 'integer'],
-  'device owners create hashed invitations through an RPC'
+  array['uuid', 'text', 'integer'],
+  'device owners create server-level hashed invitations through an RPC'
 );
 select has_function(
   'public',
   'get_player_binding_invitation',
   array['text'],
-  'authenticated recipients preview an invitation through an RPC'
+  'authenticated recipients preview a server invitation and its unbound members'
 );
 select has_function(
   'public',
   'accept_player_binding_invitation',
-  array['text'],
-  'authenticated recipients accept an invitation transactionally'
+  array['text', 'uuid'],
+  'authenticated recipients choose and bind an unbound member transactionally'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.player_binding_invitations', 'select'),
@@ -51,6 +45,12 @@ insert into public.players (
     '10000000-0000-4000-8000-000000000001',
     '20000000-0000-4000-8000-000000000001',
     'binding-invite-player-96', 'Replacement Member', 26, '2026-07-13T09:00:00Z'
+  ),
+  (
+    '30000000-0000-4000-8000-000000000097',
+    '10000000-0000-4000-8000-000000000001',
+    '20000000-0000-4000-8000-000000000001',
+    'binding-invite-player-97', 'Claimable Member', 27, '2026-07-13T09:00:00Z'
   );
 insert into public.sync_devices (
   id, owner_user_id, world_id, name, platform, token_hash, token_prefix, revoked_at
@@ -66,6 +66,12 @@ insert into public.sync_devices (
     '00000000-0000-4000-8000-000000000002',
     '10000000-0000-4000-8000-000000000001',
     'Revoked binding fixture', 'linux-x64', repeat('b', 64), 'pbs_revoke12', now()
+  ),
+  (
+    '90000000-0000-4000-8000-000000000097',
+    '00000000-0000-4000-8000-000000000002',
+    null,
+    'Unsynced binding fixture', 'linux-x64', repeat('c', 64), 'pbs_unsynced', null
   );
 
 select set_config(
@@ -75,85 +81,90 @@ select set_config(
 );
 set local role authenticated;
 
-select is(
-  (
-    select count(*)::integer from public.list_sync_devices()
-     where id in (
-       '90000000-0000-4000-8000-000000000095',
-       '90000000-0000-4000-8000-000000000096'
-     )
-  ),
-  1,
-  'the browser device list excludes revoked servers'
-);
-select is(
-  (
-    select count(*)::integer from public.list_sync_server_members()
-     where device_id = '90000000-0000-4000-8000-000000000095'
-       and player_id in (
-       '30000000-0000-4000-8000-000000000095',
-       '30000000-0000-4000-8000-000000000096'
-     )
-  ),
-  2,
-  'an active server owner sees latest snapshot members'
-);
-select is(
-  (
-    select concat_ws('|', is_bound::text, is_current_user::text)
-      from public.list_sync_server_members()
-     where device_id = '90000000-0000-4000-8000-000000000095'
-       and player_id = '30000000-0000-4000-8000-000000000001'
-  ),
-  'true|true',
-  'the member projection marks the current bound character without exposing an account id'
-);
 select lives_ok(
-  $$ select public.claim_synced_player('30000000-0000-4000-8000-000000000096') $$,
-  'an already-bound device owner can choose This is me for an unbound member'
+  $$
+    select public.create_player_binding_invitation(
+      '90000000-0000-4000-8000-000000000095',
+      repeat('1', 64),
+      86400
+    )
+  $$,
+  'an active server owner can create one server-level invitation'
 );
 
 reset role;
 select is(
   (
-    select player_id::text from public.player_bindings
-     where user_id = '00000000-0000-4000-8000-000000000002'
+    select token_hash from public.player_binding_invitations
+     where token_hash = repeat('1', 64)
   ),
-  '30000000-0000-4000-8000-000000000096',
-  'self-service claiming atomically replaces the existing binding'
+  repeat('1', 64),
+  'only the supplied SHA-256 token hash is persisted'
 );
-select is(
+select ok(
   (
-    select status::text from public.breeding_jobs
-     where id = '60000000-0000-4000-8000-000000000001'
+    select player_id is null from public.player_binding_invitations
+     where token_hash = repeat('1', 64)
   ),
-  'pending',
-  'self-service rebinding preserves existing breeding job state'
+  'a server-level invitation is not bound to any single member'
 );
-update public.player_bindings
-   set player_id = '30000000-0000-4000-8000-000000000001'
- where user_id = '00000000-0000-4000-8000-000000000002';
 
 set local role authenticated;
 select lives_ok(
   $$
     select public.create_player_binding_invitation(
       '90000000-0000-4000-8000-000000000095',
-      '30000000-0000-4000-8000-000000000095',
-      repeat('1', 64),
+      repeat('3', 64),
       86400
     )
   $$,
-  'an active server owner can create a hashed member invitation'
+  'regenerating a server invitation succeeds'
 );
 reset role;
-select is(
+select ok(
   (
-    select token_hash from public.player_binding_invitations
-     where player_id = '30000000-0000-4000-8000-000000000095'
+    select revoked_at is not null from public.player_binding_invitations
+     where token_hash = repeat('1', 64)
   ),
-  repeat('1', 64),
-  'only the supplied SHA-256 token hash is persisted'
+  'regenerating revokes the previous server invitation'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000003"}',
+  true
+);
+set local role authenticated;
+select throws_ok(
+  $$
+    select public.create_player_binding_invitation(
+      '90000000-0000-4000-8000-000000000095',
+      repeat('2', 64),
+      86400
+    )
+  $$,
+  'P0001',
+  'SYNC_DEVICE_NOT_FOUND',
+  'another account cannot invite members from a server it does not own'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000002"}',
+  true
+);
+set local role authenticated;
+select throws_ok(
+  $$
+    select public.create_player_binding_invitation(
+      '90000000-0000-4000-8000-000000000097',
+      repeat('7', 64),
+      86400
+    )
+  $$,
+  'P0001',
+  'SYNC_DEVICE_NOT_FOUND',
+  'a paired server that has not synced yet cannot be invited'
 );
 
 select set_config(
@@ -163,13 +174,28 @@ select set_config(
 );
 set local role authenticated;
 select is(
-  public.get_player_binding_invitation(repeat('1', 64))->>'nickname',
-  'Invited Member',
-  'a logged-in recipient can preview the invited character'
+  public.get_player_binding_invitation(repeat('3', 64))->>'device_name',
+  'Active binding fixture',
+  'a logged-in recipient can preview the paired server'
+);
+select is(
+  public.get_player_binding_invitation(repeat('3', 64))->>'world_name',
+  'Fixture Local World',
+  'the preview includes the synced world name'
+);
+select is(
+  jsonb_array_length(public.get_player_binding_invitation(repeat('3', 64))->'players'),
+  3,
+  'candidates contain only unbound members from the latest snapshot'
 );
 select lives_ok(
-  $$ select public.accept_player_binding_invitation(repeat('1', 64)) $$,
-  'an already-bound recipient can explicitly accept and rebind'
+  $$
+    select public.accept_player_binding_invitation(
+      repeat('3', 64),
+      '30000000-0000-4000-8000-000000000095'
+    )
+  $$,
+  'an already-bound recipient can explicitly accept and rebind to a chosen member'
 );
 reset role;
 select is(
@@ -188,36 +214,91 @@ select is(
   'processing',
   'invitation rebinding preserves the recipient existing breeding job state'
 );
-set local role authenticated;
-select throws_ok(
-  $$ select public.accept_player_binding_invitation(repeat('1', 64)) $$,
-  'P0001',
-  'BINDING_INVITATION_INVALID',
-  'a consumed invitation cannot be reused'
-);
 
-reset role;
 select set_config(
   'request.jwt.claims',
   '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000004"}',
   true
 );
 set local role authenticated;
+select lives_ok(
+  $$
+    select public.accept_player_binding_invitation(
+      repeat('3', 64),
+      '30000000-0000-4000-8000-000000000096'
+    )
+  $$,
+  'a second user can use the same server link to bind another unbound member'
+);
+reset role;
+select is(
+  (
+    select player_id::text from public.player_bindings
+     where user_id = '00000000-0000-4000-8000-000000000004'
+  ),
+  '30000000-0000-4000-8000-000000000096',
+  'the second recipient binds their own chosen member'
+);
+select ok(
+  (
+    select consumed_at is null from public.player_binding_invitations
+     where token_hash = repeat('3', 64)
+  ),
+  'accepting does not consume the shared link for later users'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000005"}',
+  true
+);
+set local role authenticated;
+select is(
+  (
+    select count(*)::integer
+      from jsonb_array_elements(
+        public.get_player_binding_invitation(repeat('3', 64))->'players'
+      )
+     where value->>'player_id' in (
+       '30000000-0000-4000-8000-000000000095',
+       '30000000-0000-4000-8000-000000000096'
+     )
+  ),
+  0,
+  'members bound through the shared link disappear from the candidate list'
+);
+select is(
+  jsonb_array_length(public.get_player_binding_invitation(repeat('3', 64))->'players'),
+  3,
+  'rebinding frees the previous characters back into the candidate pool'
+);
 select throws_ok(
   $$
-    select public.create_player_binding_invitation(
-      '90000000-0000-4000-8000-000000000095',
-      '30000000-0000-4000-8000-000000000096',
-      repeat('2', 64),
-      86400
+    select public.accept_player_binding_invitation(
+      repeat('3', 64),
+      '30000000-0000-4000-8000-000000000095'
     )
   $$,
   'P0001',
-  'SYNC_DEVICE_NOT_FOUND',
-  'another account cannot invite members from a server it does not own'
+  'PLAYER_ALREADY_CLAIMED',
+  'a member already bound by another account cannot be chosen'
 );
 
-reset role;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000002"}',
+  true
+);
+set local role authenticated;
+select lives_ok(
+  $$ select public.claim_synced_player('30000000-0000-4000-8000-000000000097') $$,
+  'a paired device owner can still self-claim a remaining member'
+);
+select lives_ok(
+  $$ select public.get_player_binding_invitation(repeat('3', 64)) $$,
+  'self-service claiming does not consume the shared server link'
+);
+
 select set_config(
   'request.jwt.claims',
   '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000002"}',
@@ -228,23 +309,11 @@ select lives_ok(
   $$
     select public.create_player_binding_invitation(
       '90000000-0000-4000-8000-000000000095',
-      '30000000-0000-4000-8000-000000000096',
-      repeat('3', 64),
-      86400
+      repeat('5', 64),
+      300
     )
   $$,
-  'the owner can create an invitation for another unbound member'
-);
-select lives_ok(
-  $$
-    select public.create_player_binding_invitation(
-      '90000000-0000-4000-8000-000000000095',
-      '30000000-0000-4000-8000-000000000096',
-      repeat('4', 64),
-      86400
-    )
-  $$,
-  'regenerating an invitation succeeds for the same unbound member'
+  'the owner can create a short-lived server invitation'
 );
 reset role;
 select ok(
@@ -252,14 +321,37 @@ select ok(
     select revoked_at is not null from public.player_binding_invitations
      where token_hash = repeat('3', 64)
   ),
-  'regenerating revokes the previous invitation'
+  'creating a new server invitation revokes the previous one'
+);
+update public.player_binding_invitations
+   set expires_at = now() - interval '1 minute',
+       created_at = now() - interval '2 hours'
+ where token_hash = repeat('5', 64);
+
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000005"}',
+  true
+);
+set local role authenticated;
+select throws_ok(
+  $$ select public.get_player_binding_invitation(repeat('5', 64)) $$,
+  'P0001',
+  'BINDING_INVITATION_EXPIRED',
+  'an expired invitation cannot be previewed'
 );
 
+select set_config(
+  'request.jwt.claims',
+  '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000002"}',
+  true
+);
 set local role authenticated;
 select lives_ok(
   $$ select public.revoke_sync_device('90000000-0000-4000-8000-000000000095') $$,
   'the owner can revoke the server after creating an invitation'
 );
+reset role;
 select is(
   (
     select count(*)::integer from public.list_sync_devices()
@@ -269,7 +361,7 @@ select is(
   'a revoked server disappears from the owner device list immediately'
 );
 select throws_ok(
-  $$ select public.get_player_binding_invitation(repeat('4', 64)) $$,
+  $$ select public.get_player_binding_invitation(repeat('5', 64)) $$,
   'P0001',
   'BINDING_INVITATION_INVALID',
   'revoking a server invalidates its outstanding invitations'

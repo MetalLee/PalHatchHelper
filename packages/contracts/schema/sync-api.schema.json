@@ -135,7 +135,7 @@
         "expires_at": { "type": "string", "format": "date-time" }
       }
     },
-    "SyncBindingInvitationPreview": {
+    "SyncBindingInvitationPlayer": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -143,20 +143,28 @@
         "nickname",
         "level",
         "guild_name",
-        "world_name",
-        "device_name",
-        "discriminator",
-        "expires_at"
+        "discriminator"
       ],
       "properties": {
         "player_id": { "type": "string", "format": "uuid" },
         "nickname": { "type": "string", "minLength": 1, "maxLength": 120 },
         "level": { "type": ["integer", "null"] },
         "guild_name": { "type": ["string", "null"], "maxLength": 160 },
-        "world_name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "discriminator": { "type": "string", "pattern": "^#[0-9a-f]{6}$" }
+      }
+    },
+    "SyncBindingInvitationPreview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["device_name", "world_name", "expires_at", "players"],
+      "properties": {
         "device_name": { "type": "string", "minLength": 1, "maxLength": 80 },
-        "discriminator": { "type": "string", "pattern": "^#[0-9a-f]{6}$" },
-        "expires_at": { "type": "string", "format": "date-time" }
+        "world_name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "players": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SyncBindingInvitationPlayer" }
+        }
       }
     },
     "SyncBindingInvitationAccepted": {

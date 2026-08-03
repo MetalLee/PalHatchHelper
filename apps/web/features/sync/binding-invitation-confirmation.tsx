@@ -1,7 +1,7 @@
 "use client";
 
 import type { SyncBindingInvitationPreview } from "@palhatch/contracts";
-import { CheckCircle2, LoaderCircle, UserRoundCheck } from "lucide-react";
+import { CheckCircle2, LoaderCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { VisitorDateTime } from "@/components/formatters/visitor-date-time";
@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppLocale, useCopy } from "@/i18n/client";
+import { cn } from "@/lib/utils";
 
 export function BindingInvitationConfirmation({
   token,
@@ -18,6 +19,7 @@ export function BindingInvitationConfirmation({
   const [preview, setPreview] = useState<SyncBindingInvitationPreview | null>(
     null,
   );
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -50,11 +52,14 @@ export function BindingInvitationConfirmation({
   }, [token]);
 
   async function accept() {
+    if (selectedPlayerId === null) return;
     setPending(true);
     setErrorCode(null);
     try {
       const response = await fetch(`/api/sync/binding-invitations/${token}`, {
         method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ player_id: selectedPlayerId }),
         cache: "no-store",
       });
       const body = (await response.json()) as { error_code?: string };
@@ -114,13 +119,10 @@ export function BindingInvitationConfirmation({
     <Card className="border-glass-border bg-card/90 py-0 shadow-soft">
       <CardContent className="grid gap-5 p-5 sm:p-6">
         <div className="flex items-start gap-3">
-          <UserRoundCheck
-            aria-hidden="true"
-            className="mt-0.5 size-6 text-primary"
-          />
+          <Users aria-hidden="true" className="mt-0.5 size-6 text-primary" />
           <div>
             <h2 className="text-xl font-bold text-foreground">
-              {preview.nickname} {preview.discriminator}
+              {preview.device_name}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {t("reviewDescription")}
@@ -131,17 +133,62 @@ export function BindingInvitationConfirmation({
         <dl className="grid gap-3 sm:grid-cols-2">
           <InvitationFact label={t("server")} value={preview.device_name} />
           <InvitationFact label={t("world")} value={preview.world_name} />
-          <InvitationFact
-            label={t("guild")}
-            value={preview.guild_name ?? t("noGuild")}
-          />
-          <InvitationFact
-            label={t("level")}
-            value={
-              preview.level === null ? t("levelUnknown") : String(preview.level)
-            }
-          />
         </dl>
+
+        {preview.players.length === 0 ? (
+          <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+            {t("noAvailableRoles")}
+          </p>
+        ) : (
+          <div
+            role="radiogroup"
+            aria-label={t("chooseRole")}
+            className="grid gap-3"
+          >
+            {preview.players.map((player) => (
+              <button
+                key={player.player_id}
+                type="button"
+                role="radio"
+                aria-checked={selectedPlayerId === player.player_id}
+                onClick={() => setSelectedPlayerId(player.player_id)}
+                className={cn(
+                  "grid gap-3 rounded-xl border border-border/70 bg-background/75 p-3 text-left transition-colors",
+                  "sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center",
+                  "hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                  selectedPlayerId === player.player_id &&
+                    "border-primary bg-primary/5 ring-1 ring-primary",
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="flex flex-wrap items-center gap-2 font-semibold text-foreground">
+                    <span>{player.nickname}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {player.discriminator}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {player.guild_name ?? t("noGuild")} ·{" "}
+                    {player.level === null
+                      ? t("levelUnknown")
+                      : t("level", { level: player.level })}
+                  </p>
+                </div>
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "size-5 shrink-0 rounded-full border-2 border-muted-foreground/40 transition-colors",
+                    selectedPlayerId === player.player_id && "border-primary",
+                  )}
+                >
+                  {selectedPlayerId === player.player_id ? (
+                    <span className="block size-full scale-[0.55] rounded-full bg-primary" />
+                  ) : null}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
           {t("rebindNotice")}
@@ -156,7 +203,7 @@ export function BindingInvitationConfirmation({
         </p>
         <Button
           type="button"
-          disabled={pending}
+          disabled={pending || selectedPlayerId === null}
           onClick={() => void accept()}
           className="justify-self-start"
         >
@@ -188,7 +235,8 @@ function invitationError(code: string, t: InvitationCopy): string {
   if (code === "BINDING_INVITATION_EXPIRED") return t("expired");
   if (
     code === "BINDING_INVITATION_INVALID" ||
-    code === "PLAYER_ALREADY_CLAIMED"
+    code === "PLAYER_ALREADY_CLAIMED" ||
+    code === "PLAYER_NOT_CLAIMABLE"
   ) {
     return t("invalid");
   }

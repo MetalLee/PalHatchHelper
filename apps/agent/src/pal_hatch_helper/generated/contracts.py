@@ -1231,17 +1231,23 @@ class SyncBindingInvitationCreated(BaseModel):
     expires_at: AwareDatetime
 
 
-class SyncBindingInvitationPreview(BaseModel):
+class SyncBindingInvitationPlayer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     player_id: UUID
     nickname: Annotated[str, Field(min_length=1), Field(max_length=120)]
     level: int | None
     guild_name: Annotated[str, Field(max_length=160)] | None
-    world_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
-    device_name: Annotated[str, Field(min_length=1), Field(max_length=80)]
     discriminator: Annotated[str, Field(pattern="^#[0-9a-f]{6}$")]
+
+
+class SyncBindingInvitationPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    device_name: Annotated[str, Field(min_length=1), Field(max_length=80)]
+    world_name: Annotated[str, Field(min_length=1), Field(max_length=160)]
     expires_at: AwareDatetime
+    players: list[SyncBindingInvitationPlayer]
 
 
 class SyncBindingInvitationAccepted(BaseModel):

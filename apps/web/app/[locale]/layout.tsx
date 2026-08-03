@@ -11,6 +11,7 @@ import {
 import { notFound } from "next/navigation";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { brand } from "@/config/brand";
 import { siteVerificationMetadata } from "@/config/seo";
 import { siteConfig } from "@/config/site";
@@ -65,6 +66,10 @@ export default async function RootLayout({
             <TooltipProvider>{children}</TooltipProvider>
           </AppLocaleProvider>
         </NextIntlClientProvider>
+        <Toaster
+          position="top-right"
+          offset="calc(env(safe-area-inset-top) + 5.25rem)"
+        />
         <Analytics />
       </body>
     </html>

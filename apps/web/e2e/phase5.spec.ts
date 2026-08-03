@@ -133,20 +133,19 @@ test("an invited user returns from login and explicitly accepts the member bindi
 
     await expect(page.getByText("邀请测试服务器")).toBeVisible();
     await expect(page.getByText("邀请测试成员")).toBeVisible();
-    const memberRow = page
-      .locator("div")
-      .filter({ has: page.getByText("邀请测试成员", { exact: true }) })
-      .filter({ has: page.getByRole("button", { name: "邀请绑定" }) })
-      .last();
+    const membersSection = page
+      .getByLabel("服务器成员")
+      .filter({ has: page.getByText("邀请测试成员") });
+    await expect(membersSection).toBeVisible();
     await expect(
-      memberRow.getByRole("button", { name: "这是我" }),
+      membersSection.getByRole("button", { name: "这是我" }),
     ).toBeEnabled();
     const invitationResponsePromise = page.waitForResponse(
       (response) =>
         response.url().endsWith("/api/sync/binding-invitations") &&
         response.request().method() === "POST",
     );
-    await memberRow.getByRole("button", { name: "邀请绑定" }).click();
+    await membersSection.getByRole("button", { name: "邀请绑定" }).click();
     const invitationResponse = await invitationResponsePromise;
     expect(invitationResponse.status()).toBe(201);
     const invitation = (await invitationResponse.json()) as {
@@ -165,8 +164,9 @@ test("an invited user returns from login and explicitly accepts the member bindi
       timeout: 15_000,
     });
     await expect(
-      page.getByRole("heading", { name: /邀请测试成员/ }),
+      page.getByRole("heading", { name: /邀请测试服务器/ }),
     ).toBeVisible();
+    await page.getByRole("radio", { name: /邀请测试成员/ }).click();
 
     const acceptanceResponsePromise = page.waitForResponse(
       (response) =>

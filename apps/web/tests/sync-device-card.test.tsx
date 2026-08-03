@@ -1,8 +1,17 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 import { AppLocaleProvider } from "@/i18n/client";
 import { SyncDeviceCard } from "@/features/sync/sync-device-card";
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
 
 const pairing = {
   code: "ABCD-EFGH",
@@ -24,6 +33,7 @@ describe("SyncDeviceCard installation guidance", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     copy.mockClear();
+    vi.mocked(toast.success).mockClear();
   });
 
   it("shows install, pair and run as the default three-step flow", async () => {
@@ -154,7 +164,7 @@ describe("SyncDeviceCard installation guidance", () => {
     expect(screen.getByText(/上次上传/)).toBeTruthy();
   });
 
-  it("expands active server members and keeps claim available for a bound account", async () => {
+  it("keeps the invite action on the server members heading and copies the server link", async () => {
     const activeServer = {
       ...device("linux-x64", "Guild server"),
       world_id: "10000000-0000-4000-8000-000000000001",
@@ -189,20 +199,49 @@ describe("SyncDeviceCard installation guidance", () => {
       </AppLocaleProvider>,
     );
 
-    expect(await screen.findByText("New guild member")).toBeTruthy();
+    const membersSection = await screen
+      .findByRole("heading", { name: "服务器成员" })
+      .then((heading) => heading.closest("section"));
+    expect(membersSection).not.toBeNull();
+    expect(
+      within(membersSection as HTMLElement).getByRole("button", {
+        name: "邀请绑定",
+      }),
+    ).toBeTruthy();
     expect(
       (screen.getByRole("button", { name: "这是我" }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "邀请绑定" }));
+    const memberRow = within(membersSection as HTMLElement)
+      .getByText("New guild member")
+      .closest("div");
+    expect(
+      within(memberRow as HTMLElement).queryByRole("button", {
+        name: "邀请绑定",
+      }),
+    ).toBeNull();
+
+    fireEvent.click(
+      within(membersSection as HTMLElement).getByRole("button", {
+        name: "邀请绑定",
+      }),
+    );
     await waitFor(() => expect(copy).toHaveBeenCalledTimes(1));
     expect(copy.mock.calls[0]?.[0]).toContain(
       "/zh/account/binding-invitations/",
     );
-    expect(await screen.findByText("邀请链接已复制")).toBeTruthy();
+    await waitFor(() =>
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith("邀请链接已复制"),
+    );
     expect(fetchMock).toHaveBeenLastCalledWith(
       "/api/sync/binding-invitations",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          device_id: activeServer.id,
+          locale: "zh",
+        }),
+      }),
     );
   });
 

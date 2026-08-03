@@ -71,6 +71,7 @@ const bundledContractModels = {
     "SyncClaimablePlayer",
     "SyncBindingInvitationCreated",
     "SyncBindingInvitationPreview",
+    "SyncBindingInvitationPlayer",
     "SyncBindingInvitationAccepted",
   ],
   "game-catalog": [

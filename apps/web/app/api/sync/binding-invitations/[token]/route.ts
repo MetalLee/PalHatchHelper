@@ -8,10 +8,17 @@ import {
   bindingInvitationTokenPattern,
   hashBindingInvitationToken,
 } from "@/features/sync/binding-invitations";
-import { syncError, syncPrivateHeaders } from "@/features/sync/http";
+import {
+  readLimitedJson,
+  syncError,
+  syncPrivateHeaders,
+} from "@/features/sync/http";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 async function authenticatedClient() {
   const supabase = await createServerSupabaseClient();
@@ -52,7 +59,7 @@ export async function GET(
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
@@ -61,6 +68,18 @@ export async function POST(
       return NextResponse.json(
         { error_code: "BINDING_INVITATION_INVALID" },
         { status: 404, headers: syncPrivateHeaders },
+      );
+    }
+    const body = (await readLimitedJson(request, 4096)) as {
+      player_id?: unknown;
+    };
+    if (
+      typeof body.player_id !== "string" ||
+      !uuidPattern.test(body.player_id)
+    ) {
+      return NextResponse.json(
+        { error_code: "SYNC_REQUEST_INVALID" },
+        { status: 400, headers: syncPrivateHeaders },
       );
     }
     const { supabase, authenticated } = await authenticatedClient();
@@ -72,7 +91,10 @@ export async function POST(
     }
     const { data, error } = await supabase.rpc(
       "accept_player_binding_invitation",
-      { p_token_hash: hashBindingInvitationToken(token) },
+      {
+        p_token_hash: hashBindingInvitationToken(token),
+        p_player_id: body.player_id,
+      },
     );
     if (error) throw error;
     const result: SyncBindingInvitationAccepted = { player_id: data };

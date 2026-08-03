@@ -883,9 +883,9 @@
   "BindingInvitation": {
     "eyebrow": "Character invitation",
     "title": "Confirm character link",
-    "description": "Review the server and game character before linking it to this account.",
+    "description": "Review the server and choose the game character that belongs to you before linking it to this account.",
     "loading": "Validating invitation…",
-    "reviewDescription": "Confirm that this is your game character on this server.",
+    "reviewDescription": "Select the character that belongs to you on this server.",
     "server": "Paired server",
     "world": "World",
     "guild": "Guild",
@@ -900,8 +900,10 @@
     "successDescription": "You can now continue planning with the inventory available to this character.",
     "openWorkspace": "Open workspace",
     "expired": "This invitation has expired. Ask the paired server owner to create another one.",
-    "invalid": "This invitation is no longer valid. It may have been used, revoked, or the character is already linked.",
-    "unavailable": "The invitation cannot be validated right now. Try again later."
+    "invalid": "This invitation is no longer valid. It may have expired, been revoked, or the character is already linked.",
+    "unavailable": "The invitation cannot be validated right now. Try again later.",
+    "chooseRole": "Choose your character",
+    "noAvailableRoles": "Every character on this server is already linked. Ask the paired server owner to create a new invitation."
   },
   "Sync": {
     "title": "Save synchronization",
@@ -959,7 +961,7 @@
     "faqTitle": "Frequently asked questions",
     "faqDescription": "Use these notes to confirm character matching, save selection, and data safety before your first sync.",
     "faqMatchingQuestion": "How does character matching work?",
-    "faqMatchingAnswer": "After the first sync, server members appear here. Select “This is me” to claim or relink to an unlinked character, or copy an invitation link for another player to confirm.",
+    "faqMatchingAnswer": "Select “This is me” to claim or relink to an unlinked character, or copy a server invitation link for other players to open and link their own character.",
     "faqSaveDirectoryQuestion": "Which Palworld save directory should I choose?",
     "faqSaveDirectoryAnswer": "Choose the world directory containing Level.sav and the Players folder. init validates the structure; if you have several worlds, select the one you want to sync.",
     "faqSafetyQuestion": "Is my save data safe?",

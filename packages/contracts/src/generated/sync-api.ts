@@ -10,6 +10,7 @@ export interface SyncApiContractsContracts {
   SyncClaimablePlayer: SyncClaimablePlayer;
   SyncBindingInvitationCreated: SyncBindingInvitationCreated;
   SyncBindingInvitationPreview: SyncBindingInvitationPreview;
+  SyncBindingInvitationPlayer: SyncBindingInvitationPlayer;
   SyncBindingInvitationAccepted: SyncBindingInvitationAccepted;
 }
 export interface SyncPairRequest {
@@ -67,14 +68,17 @@ export interface SyncBindingInvitationCreated {
   expires_at: string;
 }
 export interface SyncBindingInvitationPreview {
+  device_name: string;
+  world_name: string;
+  expires_at: string;
+  players: SyncBindingInvitationPlayer[];
+}
+export interface SyncBindingInvitationPlayer {
   player_id: string;
   nickname: string;
   level: number | null;
   guild_name: string | null;
-  world_name: string;
-  device_name: string;
   discriminator: string;
-  expires_at: string;
 }
 export interface SyncBindingInvitationAccepted {
   player_id: string;
