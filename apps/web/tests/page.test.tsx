@@ -80,9 +80,9 @@ describe("login page", () => {
     expect(screen.getByText("忘记密码？").getAttribute("aria-disabled")).toBe(
       "true",
     );
-    expect(screen.getByText("注册账号").getAttribute("aria-disabled")).toBe(
-      "true",
-    );
+    expect(
+      screen.getByRole("link", { name: "注册账号" }).getAttribute("href"),
+    ).toBe("/register?next=%2Fzh%2Foverview");
     expect(screen.queryByText("管理员备用登录")).toBeNull();
     expect(
       screen.queryByText(
@@ -109,9 +109,7 @@ describe("login page", () => {
     expect(steamIcon?.getAttribute("height")).toBe("20");
     expect(screen.queryByText(/RLS.*RPC 授权/)).toBeNull();
     expect(screen.queryByText("仅使用当前系统已提供的账号登录。")).toBeNull();
-    expect(
-      screen.queryByRole("link", { name: /注册|游客|忘记密码/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("link", { name: /游客|忘记密码/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /上传存档/ })).toBeNull();
   });
 

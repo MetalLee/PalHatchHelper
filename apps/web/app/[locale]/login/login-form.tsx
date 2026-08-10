@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppLocale, useCopy } from "@/i18n/client";
+import { Link } from "@/i18n/navigation";
 import { safeNextPath } from "@/features/auth/safe-next";
 
 export function LoginForm({
@@ -173,13 +174,12 @@ export function LoginForm({
       {passwordLoginEnabled ? (
         <p className="text-center text-xs leading-5 text-muted-foreground">
           {t("noAccount")}{" "}
-          <span
-            aria-disabled="true"
-            className="cursor-not-allowed font-semibold text-primary/65"
-            title={t("registerUnavailable")}
+          <Link
+            className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline"
+            href={`/register?next=${encodeURIComponent(destination)}`}
           >
             {t("register")}
-          </span>
+          </Link>
         </p>
       ) : null}
     </div>
@@ -195,6 +195,7 @@ function steamErrorMessage(
   if (code === "STEAM_ASSERTION_INVALID" || code === "STEAM_ID_INVALID") {
     return t("steamVerificationFailed");
   }
+  if (code === "EMAIL_CONFIRMATION_FAILED") return t("emailConfirmationFailed");
   return t("steamUnavailable");
 }
 
@@ -202,4 +203,5 @@ type SteamErrorMessageKey =
   | "steamConflict"
   | "steamStateInvalid"
   | "steamVerificationFailed"
+  | "emailConfirmationFailed"
   | "steamUnavailable";

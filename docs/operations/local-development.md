@@ -17,7 +17,7 @@ Web/Agent 本地开发允许不配置 Supabase：`APP_ENV=development` 时 Agent
 
 `.env.local` 使用 `NEXT_PUBLIC_APP_URL` 作为 Web 的唯一公开 URL 来源，不另设重复的
 `PALBEACON_PUBLIC_URL`。Steam OpenID 在本地仍要求浏览器可通过 HTTPS 回调；纯单元测试会 mock Steam HTTP，
-不会访问真实 Steam。开发 fixture 需要邮箱登录时设置 `ENABLE_PASSWORD_LOGIN=true`。
+不会访问真实 Steam。邮箱登录与注册设置 `ENABLE_PASSWORD_LOGIN=true`；本地 Supabase 配置已启用 signup。
 
 公开登录与 Sync Route 所需服务端变量：
 

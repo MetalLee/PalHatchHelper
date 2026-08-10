@@ -1,6 +1,6 @@
 # PalHatch Helper 分阶段实施计划
 
-- 修订状态：截至 2026-08-03，全部修订 design=approved 且自动化门禁通过。implementation 除 2026-07-31 Catalog 2.0、物品库存与递归配方（in_progress，见文末对应章节）外均 completed；production_deploy 除 2026-07-27 路线语义去重、2026-07-24 库存位置/次元帕鲁仓库、2026-08-01 存档载荷保留/公会箱/请求时产量/五分钟行内趋势、Phase 6 已完成外，其余（含 2026-08-02/08-03 全部修订）not_started。已完成修订在本计划中只保留一行索引，内容已并入正式规格；正式规格是唯一需求来源。
+- 修订状态：截至 2026-08-10，全部修订 design=approved 且自动化门禁通过。implementation 除 2026-07-31 Catalog 2.0、物品库存与递归配方（in_progress，见文末对应章节）外均 completed；production_deploy 除 2026-07-27 路线语义去重、2026-07-24 库存位置/次元帕鲁仓库、2026-08-01 存档载荷保留/公会箱/请求时产量/五分钟行内趋势、Phase 6 已完成外，其余（含 2026-08-10 邮箱账号注册）not_started。已完成修订在本计划中只保留一行索引，内容已并入正式规格；正式规格是唯一需求来源。
 - 日期：2026-07-13
 - 唯一需求来源：`docs/superpowers/specs/2026-07-13-palworld-breeding-system-design.md`
 - 交付原则：每个阶段独立验收；数据库、契约、算法与部署均保持可回滚；任何阶段都不修改 `/opt/palworld` 或帕鲁原始存档。
@@ -855,6 +855,10 @@ Vercel 回滚上一构建；Agent Compose 切回上一不可变镜像并仅重�
    - 验证：`pnpm check && cd apps/agent && uv run pytest && cd ../.. && supabase test db && pnpm --filter @palhatch/web test:e2e`
 
 ## 跨阶段变更规则
+
+## 2026-08-10 跨阶段修订：邮箱账号注册
+
+- 已完成（production_deploy=not_started）；内容并入正式规格 §17.12 与 §37。
 
 ## 2026-08-03 跨阶段修订：账号邮箱、活动服务器成员与邀请绑定
 

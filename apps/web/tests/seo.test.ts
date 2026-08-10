@@ -30,6 +30,7 @@ const copy = vi.hoisted(() => ({
         "将私人服务器成员的帕鲁库存安全同步到控制台，在受控共享范围内协作查找亲本、计算路线并执行配种计划。",
     },
     Login: { metadataTitle: "登录 | PalBeacon" },
+    Register: { metadataTitle: "注册 | PalBeacon" },
   },
   en: {
     Metadata: {
@@ -61,6 +62,7 @@ const copy = vi.hoisted(() => ({
         "Sync guild Pal inventories into one server console, control sharing, find usable parents, and collaborate on breeding routes and saved plans.",
     },
     Login: { metadataTitle: "Sign in | PalBeacon" },
+    Register: { metadataTitle: "Register | PalBeacon" },
   },
 }));
 
@@ -71,7 +73,12 @@ vi.mock("next-intl/server", () => ({
     namespace,
   }: {
     locale: "zh" | "en";
-    namespace: "Metadata" | "LandingMetadata" | "PublicContent" | "Login";
+    namespace:
+      | "Metadata"
+      | "LandingMetadata"
+      | "PublicContent"
+      | "Login"
+      | "Register";
   }) => {
     const messages = copy[locale][namespace] as Record<string, string>;
     return (key: string) => messages[key];
@@ -83,6 +90,7 @@ import { generateMetadata as generateLayoutMetadata } from "../app/[locale]/layo
 import { generateMetadata as generateLandingMetadata } from "../app/[locale]/page";
 import { generateMetadata as generateGuildInventoryMetadata } from "../app/[locale]/guild-pal-inventory/page";
 import { generateMetadata as generateLoginMetadata } from "../app/[locale]/login/page";
+import { generateMetadata as generateRegisterMetadata } from "../app/[locale]/register/page";
 import { generateMetadata as generateSaveSyncMetadata } from "../app/[locale]/palworld-save-sync/page";
 import { generateMetadata as generatePassiveRouteMetadata } from "../app/[locale]/passive-breeding-route/page";
 import { generateMetadata as generateSavePlannerMetadata } from "../app/[locale]/save-breeding-planner/page";
@@ -279,7 +287,7 @@ describe("public search metadata", () => {
       expect(english.alternates?.languages).toEqual(expectedAlternates);
     }
     expect(JSON.stringify(entries)).not.toMatch(
-      /overview|login|pals|breeder|plans|admin|data-status/,
+      /overview|login|register|pals|breeder|plans|admin|data-status/,
     );
   });
 
@@ -310,6 +318,20 @@ describe("private route indexing controls", () => {
     "localizes and noindexes the %s login page",
     async (locale, title) => {
       const metadata = await generateLoginMetadata({
+        params: Promise.resolve({ locale }),
+      });
+      expect(metadata.title).toEqual({ absolute: title });
+      expect(metadata.robots).toEqual(privatePageMetadata.robots);
+    },
+  );
+
+  it.each([
+    ["zh", "注册 | PalBeacon"],
+    ["en", "Register | PalBeacon"],
+  ] as const)(
+    "localizes and noindexes the %s registration page",
+    async (locale, title) => {
+      const metadata = await generateRegisterMetadata({
         params: Promise.resolve({ locale }),
       });
       expect(metadata.title).toEqual({ absolute: title });

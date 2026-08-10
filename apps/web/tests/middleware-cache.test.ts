@@ -135,18 +135,20 @@ describe("protected response caching", () => {
     }
   });
 
-  it("adds noindex response headers to the public sign-in screen", async () => {
+  it("adds noindex response headers to public authentication screens", async () => {
     authState.authenticated = false;
-    const response = await middleware(
-      new NextRequest("https://example.invalid/zh/login"),
-    );
+    for (const path of ["/zh/login", "/zh/register"]) {
+      const response = await middleware(
+        new NextRequest(`https://example.invalid${path}`),
+      );
 
-    expect(response.headers.get("x-robots-tag")).toBe(
-      "noindex, nofollow, noarchive",
-    );
-    expect(response.headers.get("cache-control")).toBe(
-      "private, no-store, max-age=0",
-    );
+      expect(response.headers.get("x-robots-tag")).toBe(
+        "noindex, nofollow, noarchive",
+      );
+      expect(response.headers.get("cache-control")).toBe(
+        "private, no-store, max-age=0",
+      );
+    }
   });
 
   it("serves every indexable public route without querying the user session", async () => {

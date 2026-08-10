@@ -1,6 +1,6 @@
 # PalHatch Helper 第一版系统设计
 
-- 修订状态：截至 2026-08-03，全部修订 design=approved 且自动化门禁通过。implementation：2026-07-28 中英文 i18n 与 2026-07-31 Catalog 2.0、物品库存与递归配方标注 in_progress（Catalog 2.0 仍在实施；i18n 已被后续双语修订依赖）、其余 completed；production_deploy：2026-07-27 路线语义去重、2026-07-24 库存位置/次元帕鲁仓库、2026-08-01 存档载荷保留/公会箱/请求时产量/五分钟行内趋势、Phase 6 已完成，其余（含 2026-08-02/08-03 全部修订）not_started。完整修订索引见实施计划文档。
+- 修订状态：截至 2026-08-10，全部修订 design=approved 且自动化门禁通过。implementation：2026-07-28 中英文 i18n 与 2026-07-31 Catalog 2.0、物品库存与递归配方标注 in_progress（Catalog 2.0 仍在实施；i18n 已被后续双语修订依赖）、其余（含 2026-08-10 邮箱账号注册）completed；production_deploy：2026-07-27 路线语义去重、2026-07-24 库存位置/次元帕鲁仓库、2026-08-01 存档载荷保留/公会箱/请求时产量/五分钟行内趋势、Phase 6 已完成，其余（含 2026-08-10 邮箱账号注册）not_started。完整修订索引见实施计划文档。
 - 日期：2026-07-13
 - 代码仓库：`https://github.com/MetalLee/PalHatchHelper.git`
 - 服务器端部署目录：`/data/projects/PalHatchHelper`
@@ -1206,6 +1206,7 @@ FAQ 卡片。同步卡片必须让用户可直接完成安装、设备配对、�
 
 ```text
 /login
+/register
 /overview
 /pals
 /breeder
@@ -1778,3 +1779,8 @@ Footer 和正文内部链接提供可抓取入口。
 7. 绑定邀请、接受和自助换绑只能由受鉴权 RPC 完成。创建邀请必须证明发起者拥有目标世界的未撤销
    配对服务器；接受时再次锁定并校验邀请、服务器、最新快照、目标玩家和双方绑定状态。普通用户
    不能列出其他用户服务器或邀请，也不能直接写入邀请表或 `player_bindings`。
+8. 邮箱账号通过本地化 `/register` 页面注册，收集 1 至 80 个字符的显示名称、有效邮箱和 8 至 128
+   个字符的密码，并由 Supabase Auth 创建默认 `player` Profile。注册接口使用稳定错误码、私有无缓存
+   与 noindex/noarchive 边界；启用邮箱确认时必须经受控回调换取会话，未启用时可直接进入原安全返回
+   地址。注册页与登录页必须保留邀请等受支持的安全返回地址，且不能把 Supabase 错误文本直接暴露
+   给浏览器。

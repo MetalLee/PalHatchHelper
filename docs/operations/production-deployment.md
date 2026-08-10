@@ -28,7 +28,7 @@ Vercel Production 只允许：
 - `NEXT_PUBLIC_APP_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`（仅 Server Route）
 - `STEAM_WEB_API_KEY`（可选；未配置不阻断登录）
-- `ENABLE_PASSWORD_LOGIN=false`
+- `ENABLE_PASSWORD_LOGIN=true`
 - `SYNC_MAX_PAYLOAD_BYTES=5242880`
 - `SYNC_PAIRING_CODE_TTL_SECONDS=600`
 
@@ -37,6 +37,8 @@ Vercel Production 只允许：
 重复的 `PALBEACON_PUBLIC_URL`。Steam 后台必须允许正式 HTTPS 域名回调到
 `/api/auth/steam/callback`。上线前检查构建产物和日志中不含 Service Role、magic-link token hash、Steam Key
 或设备 token。
+Supabase Auth 必须启用邮箱注册，并允许正式域名的 `/api/auth/confirm` 作为邮箱确认跳转地址；
+注册验证同时覆盖无需确认时的直接会话和启用确认邮件时的回调流程。
 
 ## 部署前检查
 

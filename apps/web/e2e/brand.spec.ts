@@ -42,9 +42,9 @@ test("PalBeacon login and workspace branding stay responsive", async ({
     "aria-disabled",
     "true",
   );
-  await expect(page.getByText("注册账号")).toHaveAttribute(
-    "aria-disabled",
-    "true",
+  await expect(page.getByRole("link", { name: "注册账号" })).toHaveAttribute(
+    "href",
+    /\/zh\/register\?next=/,
   );
   await expect(
     page.getByRole("img", { name: "PalBeacon" }).first(),

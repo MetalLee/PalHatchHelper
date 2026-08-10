@@ -24,6 +24,8 @@ const publicPaths = new Set([
   "/guild-pal-inventory",
 ]);
 
+const authenticationPaths = new Set(["/login", "/register"]);
+
 export function withPrivateCacheHeaders(response: NextResponse): NextResponse {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Vary", "Cookie");
@@ -100,7 +102,7 @@ export async function middleware(request: NextRequest) {
       copyResponseCookies(NextResponse.redirect(loginUrl), response),
     );
   }
-  if (user !== null && normalizedPathname === "/login") {
+  if (user !== null && authenticationPaths.has(normalizedPathname)) {
     return withPrivateCacheHeaders(
       copyResponseCookies(
         NextResponse.redirect(new URL(`/${locale}/overview`, request.url)),
@@ -108,7 +110,7 @@ export async function middleware(request: NextRequest) {
       ),
     );
   }
-  if (normalizedPathname === "/login") {
+  if (authenticationPaths.has(normalizedPathname)) {
     return withPrivateCacheHeaders(response);
   }
   if (

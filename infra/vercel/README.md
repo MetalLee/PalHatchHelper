@@ -11,7 +11,7 @@
 - `NEXT_PUBLIC_APP_URL`
 
 Web Server Route 另需服务端 `SUPABASE_SERVICE_ROLE_KEY`，并支持可选的 `STEAM_WEB_API_KEY`、
-`ENABLE_PASSWORD_LOGIN=false`、`SYNC_MAX_PAYLOAD_BYTES=5242880` 和
+`ENABLE_PASSWORD_LOGIN=true`、`SYNC_MAX_PAYLOAD_BYTES=5242880` 和
 `SYNC_PAIRING_CODE_TTL_SECONDS=600`。禁止创建 `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`、
 `NEXT_PUBLIC_STEAM_WEB_API_KEY`、`NEXT_PUBLIC_OPENAI_API_KEY`、`NEXT_PUBLIC_AGENT_TOKEN` 或任何其他
 公开秘密。Agent 的 Service Role 和 AI 凭证仍只存在于权限为 `0600` 的服务器 `.env.production`。
@@ -24,3 +24,5 @@ Web Server Route 另需服务端 `SUPABASE_SERVICE_ROLE_KEY`，并支持可选�
 
 Steam OpenID 回调固定为 `<NEXT_PUBLIC_APP_URL>/api/auth/steam/callback`。检查登录、绑定和 Sync API 响应
 均为 `private, no-store`，并检查构建产物与日志不含 Service Role、Steam Key、magic-link token hash 或设备 token。
+Supabase Auth 必须启用邮箱注册，并把 `<NEXT_PUBLIC_APP_URL>/api/auth/confirm` 纳入允许的邮箱确认跳转；
+关闭邮箱注册时必须同时把 `ENABLE_PASSWORD_LOGIN` 改为 `false`，避免展示不可完成的注册流程。
